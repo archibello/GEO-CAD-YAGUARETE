@@ -50,6 +50,17 @@ INGECAD/    el plugin de IngeCAD (codigo/geocad)
 Cada versión se arma con `python3 COMUN/build.py` y trae su
 `COMUN/CAMBIOS_<versión>.txt`.
 
+## Autor
+
+**Arq. Fernando Pablo Bellocchio** · Posadas, Misiones, Argentina.
+
+## Contacto
+
+Ideas, problemas y propuestas: en [Issues](../../issues).
+¿Trabajás en algo parecido o afín (QGIS, CAD, catastro, agrimensura,
+urbanismo)? Escribí: la idea es conectar con otros usuarios y proyectos.
+
 ## Licencia
 
-[GPL-3.0-or-later](LICENSE).
+© 2026 Fernando Pablo Bellocchio.
+[GPL-3.0-or-later](LICENSE): libre para usar, estudiar, modificar y compartir.
