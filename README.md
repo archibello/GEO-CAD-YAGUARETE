@@ -54,6 +54,8 @@ Cada versión se arma con `python3 COMUN/build.py` y trae su
 
 **Arq. Fernando Pablo Bellocchio** · Posadas, Misiones, Argentina.
 
+Desarrollado con la ayuda de [Claude](https://claude.com/claude-code) (Anthropic).
+
 ## Contacto
 
 Ideas, problemas y propuestas: en [Issues](../../issues).
