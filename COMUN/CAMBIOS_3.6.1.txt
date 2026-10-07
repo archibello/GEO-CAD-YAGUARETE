@@ -1,0 +1,19 @@
+GeoCAD - versión 3.6.1
+======================
+CORRECCIÓN (IngeCAD): la escala escrita en el desplegable no se aplicaba
+(07/10/2026).
+
+- Problema (informado por Fernando): en 3.6.0 se podía escribir 1/100 en el
+  desplegable de escala de la ventana gráfica, pero Enter no hacía nada. Las
+  escalas que no están en la lista, como 1:75, eran imposibles de poner.
+  1:100 o 2:1 a veces parecían andar sólo porque coinciden con un renglón de
+  la lista.
+- Causa: en un desplegable editable el teclado lo recibe el desplegable y él
+  se lo pasa a su texto por dentro, sin pasar por el filtro donde GeoCAD
+  escuchaba el Enter. La prueba de 3.6.0 mandaba las teclas directo al texto
+  y por eso no lo vio.
+- Arreglo: GeoCAD escucha el Enter (y Escape) en el desplegable mismo.
+- Verificado en la ventana real de IngeCAD, con el foco en el desplegable y
+  las teclas una por una, como el teclado: 1/75 -> 1:75, 1:100, 1/250 ->
+  1:250, 2:1; Escape vuelve a la escala que tenía. Con la 3.6.0 la misma
+  prueba falla (1/75 y 1/250 no se aplican).

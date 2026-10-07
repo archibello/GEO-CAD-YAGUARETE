@@ -1,0 +1,24 @@
+GeoCAD - DESARROLLO
+===================
+
+Código
+  COMUN/nucleo/            lo COMPARTIDO (buzon, bloqueo, config, crs, opciones,
+                           actualizar, angulos, modulos, modulos_ui). Se edita
+                           SÓLO acá: build.py lo copia a los dos lados.
+  INGECAD/codigo/geocad/   plugin de IngeCAD (menú «GeoCAD»)
+  QGIS/codigo/geocad/      complemento de QGIS (menú «GeoCAD»)
+
+Después de tocar el núcleo:  python3 COMUN/build.py --sincronizar
+
+Armar una versión
+  1. Escribir COMUN/CAMBIOS_<versión>.txt
+  2. python3 COMUN/build.py <versión>
+     -> VERSIONES/GeoCAD <versión>/GeoCad Tool/ (instalador único, .sh, zip QGIS)
+     -> VERSIONES/GeoCAD <versión>/ (CAMBIOS, LEEME, GeoCAD_<versión>.zip)
+     Sincroniza el núcleo y el número de versión. No pisa versiones entregadas.
+
+Pruebas (COMUN/pruebas)
+  Necesitan en PYTHONPATH: el código de IngeCAD (github.com/ingelibre/ingecad),
+  ezdxf (github.com/mozman/ezdxf, carpeta src) y pyshp (GeospatialPython/pyshp,
+  carpeta src); y GDAL_GPKG apuntando a autotest/ogr/data/gpkg del repositorio
+  de GDAL. Correr cada una:  python3 COMUN/pruebas/test_<nombre>.py  -> «TODO OK ...»

@@ -1,0 +1,22 @@
+GeoCAD - versión 2.3.1
+======================
+EMPALME: resaltado mientras se elige (pedido de Fernando, 05/10/2026).
+
+- Al pasar el cursor sobre un objeto que el empalme puede tomar, se marca en
+  azul grueso: así se ve qué va a tomar el clic antes de hacerlo. En una
+  polilínea se marca sólo el TRAMO bajo el cursor (el que interviene).
+- El primer objeto (o tramo) elegido queda marcado en azul hasta terminar.
+- Con el primero elegido, al pasar sobre el segundo se ve en naranja punteado
+  el arco que va a quedar (o la esquina, con radio 0). Si el radio no entra o
+  la combinación no corresponde, no aparece: el aviso llega al hacer clic.
+- Con la opción Polilínea se marca la polilínea entera.
+- Lo que no se puede empalmar (textos, cotas...) no se marca.
+- Sólo con el módulo «Empalme estilo AutoCAD» activo; el FILLET de IngeCAD
+  queda como venía.
+
+Por dentro: la vista previa usa exactamente el mismo cálculo que el empalme,
+así que lo que se ve es lo que queda.
+
+Probado sin interfaz gráfica: 16 grupos de pruebas automáticas (test_empalme
+suma el resaltado: tramo bajo el cursor, elegido, vista previa, radio que no
+entra, opción Polilínea y que un error en el resaltado no rompe la vista).

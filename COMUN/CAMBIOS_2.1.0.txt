@@ -1,0 +1,36 @@
+GeoCAD - versión 2.1.0
+======================
+Etapas 2, 3 y 4: Dibujo CAD, Bloques, Papel y Capas entran a GeoCAD como
+módulos de QGIS. Con esto, todo lo desarrollado hasta ahora vive en un solo
+complemento por programa.
+
+QGIS (menú «GeoCAD» > Módulos...)
+- Dibujo CAD: la línea de comandos y las barras Dibujo, Edición y Texto CAD,
+  PROPIEDADES, UNIDADES, entrada dinámica (antes el complemento Dibujo CAD
+  16.3, sin cambios en cómo se dibuja).
+- Bloques CAD: BLOQUE, INSERT, WBLOQUE, LIMPIA y su barra (necesita Dibujo).
+- Espacio papel: pestañas Modelo / Presentaciones, PRESENTACION, VENTANAS,
+  BLOQVENT, TRAZAR (necesita Dibujo).
+- Capas CAD: el Administrador de capas estilo AutoCAD y la barra Capas
+  (antes Layer Properties 6.7).
+- Lo que esos complementos ponían en el menú Complementos ahora está en los
+  submenús GeoCAD > Dibujo CAD y GeoCAD > Capas CAD.
+- Se siguen encontrando entre sí como antes: los comandos de capa (CAPA,
+  AISLARCAPA, LAYOFF...) en la línea de comandos, los colores por capa de
+  los textos y bloques, las presentaciones.
+- Al activar un módulo, si el complemento suelto de antes está instalado se
+  retira (se descarga y su carpeta queda como .anterior-Dibujo_CAD /
+  .anterior-Layer_Properties). Sus ajustes se conservan.
+- Prender o apagar cualquiera de estos módulos se aplica al instante, sin
+  reiniciar QGIS.
+
+NÚCLEO
+- Prueba automática nueva: los ángulos del núcleo (los que usa IngeCAD) y los
+  de Dibujo CAD dan exactamente lo mismo para grados, GMS, deflexiones I/D,
+  rumbos, centesimales y radianes, con y sin tramo anterior.
+
+IngeCAD: sin cambios (mismo número de versión que QGIS).
+
+Probado sin interfaz gráfica: 14 grupos de pruebas automáticas (nuevo:
+test_submodulos). Dibujo CAD y Layer Properties no se pueden arrancar sin
+QGIS real: su prueba es la de las ventanas reales (sección Q).

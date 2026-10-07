@@ -1,0 +1,1 @@
+Núcleo común de GeoCAD: el ÚNICO lugar donde se editan los módulos compartidos por QGIS e IngeCAD.

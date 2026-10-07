@@ -1,0 +1,42 @@
+GeoCAD - versión 3.7.0
+======================
+FUNCIÓN NUEVA (IngeCAD): vista previa de impresión y editor de plumas,
+módulo «Vista previa y plumas» (07/10/2026).
+
+- Problema: IngeCAD imprime con tablas de plumas .ctb (verificado: 0,13 /
+  0,50 / 1,00 mm salen así en el PDF), pero no tenía cómo editarlas ni
+  cómo ver el resultado antes de imprimir: la pantalla y LWT no muestran
+  la .ctb.
+- VISTAPREVIA (barra GeoCAD y GeoCAD > Impresión): la presentación como
+  sale impresa: hoja blanca de su tamaño real, escala de cada ventana
+  gráfica (con el espacio papel de 3.5.0) y plumas de la .ctb. Rueda =
+  zoom, arrastrar = mover, Ajustar hoja, Tamaño real. Se puede probar otra
+  tabla de plumas desde la misma ventana (queda en la presentación, con
+  deshacer). Imprimir... abre PLOT.
+- PLUMAS (barra GeoCAD y GeoCAD > Impresión): editor de la tabla de
+  plumas como el de AutoCAD (STYLESMANAGER). Una pluma por color de
+  AutoCAD: 1 Rojo, 2 Amarillo, 3 Verde, 4 Cian, 5 Azul, 6 Magenta,
+  7 Blanco/Negro y 8 a 255. Para una o varias plumas a la vez (Ctrl /
+  Mayús + clic): color de impresión (del objeto, negro o cualquiera),
+  grosor de línea (del objeto o 0,05 a 2,11 mm), tramado (intensidad),
+  escala de grises y descripción. Guardar / Guardar como...
+- Las tablas se guardan en formato .ctb de AutoCAD en la carpeta de plumas
+  de IngeCAD (~/.var/app/org.ingecad.IngeCAD/config/IngeCAD/PlotStyles).
+  Antes de reemplazar una tabla queda un respaldo <nombre>.ctb.bak, y el
+  archivo nuevo se verifica antes de cambiarlo.
+- Page Setup: bajo «Plot style table (pen assignments)», los botones
+  «Editar plumas...» y «Vista previa...». La vista previa usa lo elegido
+  en la ventana sin aplicarlo: al cerrarla la presentación queda
+  exactamente como estaba.
+- Sólo tablas por color (.ctb); las tablas con nombre (.stb) todavía no se
+  editan. La vista previa trabaja en las presentaciones (no en el Modelo).
+- Se prende y apaga en GeoCAD > Módulos... («Vista previa y plumas»).
+  Apagado, IngeCAD queda como venía. No se modifica ningún archivo de
+  IngeCAD.
+- Verificado dentro de IngeCAD (sin pantalla): grilla a 1:100 en A3 con
+  monochrome.ctb, acad.ctb y una tabla nueva (rojo -> negro 0,50 mm, azul
+  -> 1,00 mm al 50 %); Page Setup con los botones y la página provisoria
+  deshecha sin rastro.
+- Pruebas: corrieron 17 de 27 (todas OK, incluida la nueva test_impresion;
+  test_modulos al día con el módulo nuevo). Las 8 que usan pyshp y las 2
+  que usan los datos de GDAL no se pudieron correr en este equipo.

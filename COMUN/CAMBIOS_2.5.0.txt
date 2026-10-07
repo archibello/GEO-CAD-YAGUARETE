@@ -1,0 +1,39 @@
+GeoCAD - versión 2.5.0
+======================
+CHAFLÁN estilo AutoCAD para IngeCAD (módulo nuevo «Chaflán estilo AutoCAD»),
+hecho sobre el Empalme de GeoCAD: la misma geometría, con un bisel recto en
+lugar del arco.
+
+Por qué: el CHAMFER de IngeCAD tiene los problemas que tenía el FILLET, y más:
+  - sólo líneas sueltas: rechaza polilíneas («CHAMFER works on pairs of lines»);
+  - con líneas que se cruzan conserva siempre el extremo lejano, no el lado tocado;
+  - los pedazos y el bisel nacen en la capa actual: pierden capa, color y el
+    vínculo con QGIS;
+  - con distancias 0 deja una línea de largo cero en vez de la esquina;
+  - sólo tiene las opciones Distancia y Recortar.
+
+Con el módulo activo, CHA / CHAFLAN / CHAMFER abren el chaflán de GeoCAD:
+- Opciones como AutoCAD: desHacer, Polilínea, Distancia, Ángulo, Recortar,
+  métOdo, Múltiple; Mayús en el segundo objeto = esquina.
+- Distancia: dist1 sobre el PRIMER objeto tocado, dist2 sobre el segundo
+  (Enter en la segunda = igual a la primera).
+- Ángulo: longitud sobre el primero y ángulo desde él.
+- Distancias 0: la esquina, sin bisel (como AutoCAD).
+- Dos tramos de una polilínea, línea + polilínea (quedan unidas), dos
+  polilíneas (quedan unidas en una).
+- Líneas que se cruzan: conserva el lado tocado.
+- Polilínea: achaflana todos los vértices que entran y dice cuántos eran
+  demasiado cortos.
+- Recortar apagado: quedan los originales y se agrega el bisel.
+- Conserva capa, color y el vínculo con QGIS; el bisel toma las propiedades
+  de los dos si son iguales.
+- Resaltado como el Empalme: lo que toma el clic, el primero elegido y el
+  bisel en naranja antes del clic.
+- Barra GeoCAD: Empalme, Chaflán, Partir en punto.
+
+Por dentro: empalme.py ahora tiene «puntos de extensión» (la pieza de la
+esquina, las distancias de cada rama, los mensajes) y chaflan.py sólo cambia
+eso. Lo que se mejore en uno, lo recibe el otro.
+
+Probado sin interfaz gráfica: 18 grupos de pruebas automáticas (nuevo:
+test_chaflan, que también comprueba los defectos del CHAMFER nativo).

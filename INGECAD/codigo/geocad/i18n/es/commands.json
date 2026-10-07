@@ -1,0 +1,114 @@
+{
+  "_": "Nombres en español de los comandos de GeoCAD. Los nombres en inglés siguen funcionando.",
+  "SHPCONNECT": {
+    "name": "CONECTARSHP"
+  },
+  "SHPSTATUS": {
+    "name": "ESTADOSHP"
+  },
+  "SHPCHECKIN": {
+    "name": "GUARDARSHP"
+  },
+  "SHPINFO": {
+    "name": "INFOSHP"
+  },
+  "SHPATTR": {
+    "name": "ATRIBUTOSHP"
+  },
+  "SHPRELEASE": {
+    "name": "DESCONECTARSHP"
+  },
+  "SHPCONFIG": {
+    "name": "CONFIGSIG"
+  },
+  "QGISSAVE": {
+    "name": "DEVOLVERQGIS"
+  },
+  "SHPTABLE": {
+    "name": "TABLASIG"
+  },
+  "SHPQUERY": {
+    "name": "CONSULTASIG"
+  },
+  "SHPSPATIAL": {
+    "name": "UBICACIONSIG"
+  },
+  "SHPTHEME": {
+    "name": "TEMATICO"
+  },
+  "SHPTHEMEOFF": {
+    "name": "QUITARTEMATICO"
+  },
+  "SHPLABEL": {
+    "name": "ROTULOSIG"
+  },
+  "SHPLABELOFF": {
+    "name": "QUITARROTULOS"
+  },
+  "SHPNEW": {
+    "name": "NUEVOSIG"
+  },
+  "QGISSAVESEL": {
+    "name": "DEVOLVERSEL"
+  },
+  "ANGREL": {
+    "name": "ANGREL"
+  },
+  "RIGHTCLICK": {
+    "name": "BOTONDERECHO"
+  },
+  "QGISUPDATE": {
+    "name": "ACTUALIZARGEOCAD"
+  },
+  "GEOCADMODULES": {
+    "name": "MODULOSGEOCAD"
+  },
+  "GEOCADABOUT": {
+    "name": "ACERCAGEOCAD"
+  },
+  "GEOFILLET": {
+    "name": "EMPALMEGEOCAD"
+  },
+  "BREAKATPOINT": {
+    "name": "PARTEENPUNTO"
+  },
+  "GEOCHAMFER": {
+    "name": "CHAFLANGEOCAD"
+  },
+  "GEOBLOCK": {
+    "name": "BLOQUEGEOCAD"
+  },
+  "GEOREFEDIT": {
+    "name": "EDITARENSITIO"
+  },
+  "GEOREFSAVE": {
+    "name": "GUARDARBLOQUE"
+  },
+  "GEOREFDISCARD": {
+    "name": "DESCARTARBLOQUE"
+  },
+  "GEOREFADD": {
+    "name": "AGREGARABLOQUE"
+  },
+  "GEOREFREMOVE": {
+    "name": "QUITARDEBLOQUE"
+  },
+  "GEOINSERT": {
+    "name": "INSERTARGEOCAD"
+  },
+  "GEOBLOCKBASE": {
+    "name": "PUNTOBASEBLOQUE"
+  },
+  "SELECT": {
+    "name": "SELECCIONA"
+  },
+  "GEOFILTER": {
+    "name": "FILTRO"
+  },
+  "GEOPREVIEW": {
+    "name": "VISTAPREVIA"
+  },
+  "GEOPLOTSTYLES": {
+    "name": "PLUMAS"
+  }
+}

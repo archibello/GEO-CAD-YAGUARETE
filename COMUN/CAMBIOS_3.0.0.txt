@@ -1,0 +1,42 @@
+GeoCAD - versión 3.0.0
+======================
+ETAPA 5, GIS to CAD / CAD to GIS: las capas de QGIS llegan a IngeCAD con
+sus capas CAD, sus colores y sus rótulos, y los cambios vuelven (06/10/2026).
+
+QGIS -> IngeCAD (al enviar)
+- Capas: cada valor de LAYER_CODE llega como una capa de IngeCAD con el
+  color, el tipo de línea y el grosor del administrador de Capas. Si en el
+  dibujo ya hay una capa con ese nombre que no es de la conexión, se llama
+  <conexión>-<código> (nunca se mezcla con lo que ya había). Los objetos sin
+  LAYER_CODE (capa «0») quedan en la capa de la conexión, como antes.
+- Colores: el color propio de cada objeto (CAD_COLOR; vacío = PorCapa). En
+  capas sin el módulo Capas, el color con que QGIS dibuja cada objeto
+  (símbolo simple, categorizado, graduado...).
+- Rótulos: las etiquetas de QGIS llegan como textos en la capa
+  <conexión>-ROTULOS, con el mismo texto (campo o expresión), color, altura
+  y giro: paralelos a la línea si en QGIS van paralelos, con el giro
+  definido por datos si lo tiene. La altura en mm o puntos se pasa a metros
+  con la escala del mapa al enviar (o la que se fije): un rótulo de 2,5 mm a
+  1:1000 llega con 2,5 m, y guarda con el dibujo la misma relación que en
+  QGIS. QUITARROTULOS los borra.
+- Las «consignas» se fijan ANTES de enviar: en QGIS, Propiedades de la capa >
+  Etiquetas (qué texto, tamaño, giro); en GeoCAD > Configuración común, tres
+  opciones nuevas: mandar capas y colores, mandar rótulos y la escala para
+  la altura de los rótulos (0 = la del mapa).
+
+IngeCAD -> QGIS (al guardar), si la tabla tiene LAYER_CODE / CAD_COLOR
+- Un objeto pasado a otra capa cambia su LAYER_CODE; un cambio de color se
+  guarda en CAD_COLOR (PorCapa = vacío, como en Capas).
+- Lo que se dibuja sobre una de las capas de LAYER_CODE es un objeto nuevo
+  de la conexión y nace con ese LAYER_CODE.
+- ESTADOSHP lo cuenta; desconectar avisa si hay cambios de capa o color
+  sin guardar. Todo con respaldo y control de conflictos, como siempre, y
+  cada paso se deshace con U.
+
+Envíos de antes (o con las opciones apagadas): todo como en la 2.8.1.
+
+Probado sin interfaz gráfica: 23 grupos de pruebas automáticas, todos OK.
+Nuevas: test_estilo (IngeCAD: capas, colores, rótulos, guardar de vuelta en
+el shapefile, deshacer, desconectar) y test_presentacion (QGIS: lectura de
+capas, simbología y etiquetas sobre capas de verdad, en QGIS 3.40 y 4.2).
+Falta: verlo en los programas (pruebas manuales G1 a G8).

@@ -1,0 +1,57 @@
+GeoCAD - versión 3.2.0
+======================
+FILTRO (FI): filtros de selección como el FILTER de AutoCAD, en IngeCAD
+(06/10/2026). Va en el módulo Selección.
+
+La orden
+- FILTRO, FI o FILTER, o el botón del embudo en la barra GeoCAD (y en
+  GeoCAD > Dibujo). Abre «Filtros de selección de objetos», como en AutoCAD:
+    lista de condiciones arriba;
+    Seleccionar filtro + operador y valor (o X / Y para los puntos);
+    «Elegir...» muestra los valores que hay en el dibujo (capas, bloques,
+    estilos, conexiones...);
+    Agregar a la lista / Sustituir / Agregar objeto seleccionado <;
+    Editar elemento / Suprimir / Borrar lista;
+    Filtros guardados: Actual, Guardar como, Suprimir lista de filtros actual;
+    Aplicar / Cancelar.
+- Después de Aplicar pide «Designar objetos a filtrar» (W, C, WP, CP, F,
+  ALL...); Enter = todo el dibujo. Si ya había objetos seleccionados, se
+  filtran ésos sin preguntar. Lo que cumple queda seleccionado para la
+  orden siguiente (y como selección previa, P).
+- No se eligen objetos de capas apagadas, inutilizadas o bloqueadas.
+
+Dentro de otra orden
+- En cualquier «Designar objetos» (BORRA, DESPLAZA, COPIA...) se escribe FI
+  (o 'FILTER): se arma el filtro y se suman los objetos de todo el dibujo
+  que lo cumplen; con R antes, se quitan; U deshace.
+- «FI <nombre>» usa un filtro guardado sin abrir la ventana.
+
+Condiciones
+- Tipos: arco, bloque, círculo, cota, directriz, elipse, imagen, línea,
+  línea auxiliar, polilínea, punto, rayo, sombreado, spline, texto, texto
+  múltiple.
+- Geometría: centro y radio de arco y círculo, diámetro de círculo, centro
+  de elipse, inicio y fin de línea, posición de punto, texto y bloque.
+- Textos y nombres: nombre de bloque, etiqueta y valor de atributo, valor,
+  altura, giro y estilo de texto, patrón de sombreado, estilo de cota.
+- Generales: color (número, nombre, PorCapa, PorBloque), capa, tipo de
+  línea, escala de tipo de línea, grosor (mm), elevación, espesor.
+- De GeoCAD (AutoCAD no los tiene): largo, área de los cerrados, polilínea
+  cerrada, conexión de QGIS, valor de un campo de la tabla de QGIS, rótulo
+  de QGIS, fondo de rótulo, símbolo de punto de GeoCAD.
+- Operadores = != < <= > >= y * (cualquiera). Los textos no distinguen
+  mayúsculas, aceptan comodines * y ? y la coma separa opciones
+  («MUROS,EJES»). La coma decimal también vale.
+- Grupos ** Comenzar/Terminar Y, O, XO, NO (XO lleva dos, NO uno). La lista
+  muestra los grupos con sangría y avisa si quedan sin cerrar.
+- Una propiedad de un tipo (p. ej. el radio de un círculo) sólo la cumplen
+  los objetos de ese tipo, como en AutoCAD.
+
+Filtros guardados
+- Se guardan en ~/.config/geocad/filtros.json y valen para todos los
+  dibujos. El último aplicado queda como «*sin nombre».
+
+Lo que no se incluyó (no se ajusta a IngeCAD): sólidos 3D, cuerpos y
+regiones, cara 3D, material, estilo de trazado, ventanas gráficas, formas
+SHX, tolerancias, trace, multilínea, vector normal e identificador de
+Xdata.

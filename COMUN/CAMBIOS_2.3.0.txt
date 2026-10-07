@@ -1,0 +1,29 @@
+GeoCAD - versión 2.3.0
+======================
+EMPALME estilo AutoCAD para IngeCAD (módulo nuevo «Empalme estilo AutoCAD»).
+
+Por qué: el FILLET de IngeCAD no acepta polilíneas («FILLET joins lines, arcs
+and circles») —y casi todo lo que llega de QGIS son polilíneas— y con dos
+líneas que se cruzan no respeta el lado que se tocó.
+
+Con el módulo activo, F / EMPALME / FILLET abren el empalme de GeoCAD:
+- Mismas opciones que AutoCAD: deshacer, Polilínea, Radio, Recortar,
+  Múltiple, y Mayús en el segundo objeto = esquina (radio 0).
+- Dos tramos contiguos de una misma polilínea (abierta o cerrada): redondea
+  ese vértice.
+- Línea + tramo extremo de una polilínea: quedan unidas en una polilínea
+  (la polilínea puede estar dibujada en cualquier sentido).
+- Dos polilíneas por sus tramos extremos: quedan unidas en una sola.
+- Líneas que se cruzan: conserva el lado donde se hizo clic.
+- Líneas paralelas, arcos y círculos: igual que el FILLET de IngeCAD.
+- Si algo no corresponde (tramo interior, tramo en arco, radio que no entra,
+  tramos no contiguos) lo explica en la línea de comandos.
+- Apagado el módulo (GeoCAD > Módulos...), vuelve el FILLET de IngeCAD tal cual.
+- Al abrir IngeCAD después de actualizar, GeoCAD ofrece el módulo nuevo.
+
+Ojo con datos SIG: unir dos objetos conectados a una capa (línea + polilínea,
+dos polilíneas) deja uno solo; al devolver a QGIS, el otro figura como borrado
+(Cambios pendientes lo muestra antes de guardar).
+
+Probado sin interfaz gráfica: 16 grupos de pruebas automáticas (nuevo:
+test_empalme, que también comprueba que el FILLET nativo fallaba en esos casos).

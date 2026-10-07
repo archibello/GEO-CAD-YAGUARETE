@@ -1,0 +1,17 @@
+GeoCAD - versión 3.3.1
+======================
+PROPIEDADES EN MASA: operaciones sobre el valor de cada objeto (06/10/2026).
+
+- En cualquier número de la paleta Properties (Ctrl+1) se puede escribir una
+  operación en lugar de un valor, y cada objeto la aplica sobre SU valor:
+      h/1,1      h*0.9      h+0,5      (h+1)*2
+  La variable puede ser h, x o v (da lo mismo). Abreviado:
+      *0.9   /1.1   +2      (= h*0.9, h/1.1, h+2)
+  Ejemplo: 40 textos de alturas distintas -> Altura: h*0.9 -> cada uno queda
+  al 90 % de la suya. También sirve para radio, diámetro, escala de
+  bloques, giro, ancho de polilínea, escala de sombreado...
+- Un número solo (2,5) se pone igual en todos, como antes. Para restar,
+  h-0,5 (un «-3» suelto es el número -3).
+- Todo el cambio se deshace con un solo U / Ctrl+Z.
+- Sólo números, + - * / y paréntesis; si lo escrito no es un número ni una
+  operación, la línea de comandos lo avisa y no se cambia nada.

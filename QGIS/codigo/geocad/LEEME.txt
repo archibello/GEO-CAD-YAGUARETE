@@ -1,0 +1,1 @@
+Código del complemento GeoCAD de QGIS. Los archivos del núcleo se editan en COMUN/nucleo y build.py los copia acá.

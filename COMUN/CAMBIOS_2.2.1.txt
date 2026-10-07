@@ -1,0 +1,16 @@
+GeoCAD - versión 2.2.1
+======================
+Correcciones de la primera prueba real (05/10/2026) y versiones ordenadas.
+
+- Módulos nuevos: cuando una versión trae módulos que antes no existían
+  (como Dibujo CAD, Bloques, Papel y Capas en QGIS, que la 2.0.0 mostraba
+  como «próximamente»), GeoCAD los ofrece al abrir el programa en vez de
+  dejarlos apagados por una elección vieja. Cancelar = quedan con su valor
+  por defecto (activados) y no se vuelve a preguntar.
+- La ventana «Módulos de GeoCAD» es más ancha: el título se leía cortado.
+- Versiones: cada versión queda en su propia carpeta
+      VERSIONES/GeoCAD <versión>/GeoCad Tool/
+  con el instalador único, INSTALAR_GeoCAD.sh y el .zip de QGIS; al lado,
+  CAMBIOS, LEEME y la entrega completa GeoCAD_<versión>.zip.
+  Las carpetas INGECAD/versiones, QGIS/versiones y COMUN/entregas ya no se
+  usan (se pueden borrar: todo está en VERSIONES).

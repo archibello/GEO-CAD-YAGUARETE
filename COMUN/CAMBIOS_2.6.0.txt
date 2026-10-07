@@ -1,0 +1,50 @@
+GeoCAD - versión 2.6.0
+======================
+BLOQUES para IngeCAD (módulo nuevo «Bloques: BLOQUE mejorado y edición en el
+lugar») y un diagnóstico para el Chaflán.
+
+Por qué: el BLOQUE de IngeCAD es rudimentario: pide el nombre en una ventana de
+varias líneas, guarda la geometría en coordenadas del dibujo, la referencia
+nace en la capa 0 y el punto base no se elige bien. Y no hay forma de editar
+un bloque en su lugar: BEDIT lo abre aparte, fuera del dibujo.
+
+BLOQUE (B / BLOQUE / BLOCK con el módulo activo):
+- Objetos: los ya elegidos, o «Designe los objetos del bloque».
+- Nombre en la línea de comandos (admite espacios). ? lista los bloques. Si
+  ya existe, ofrece redefinirlo: todas sus referencias se actualizan. Un
+  bloque no puede contenerse a sí mismo (se avisa).
+- Punto base con referencias a objetos: se suman Final, Medio, Centro e
+  Intersección, con una marca «punto base» en el cursor. O Centro /
+  abajo-Izquierda de los objetos.
+- Convertir (por defecto), Retener o Borrar los objetos; recuerda la elección.
+- La geometría del bloque queda relativa al punto base (como en cualquier
+  CAD) y cada objeto conserva su capa; la referencia va en la capa actual.
+- Se deshace en un paso.
+
+EDICIÓN EN EL LUGAR (doble clic sobre un bloque, o EDITARENSITIO):
+- El contenido aparece en su sitio (con la rotación y escala de esa
+  referencia) y se edita con cualquier herramienta, con todas las referencias
+  a objetos del dibujo alrededor.
+- Arriba aparece la barra «Editando el bloque…» con Guardar bloque,
+  Descartar, Agregar objetos y Quitar objetos.
+- Lo que se dibuje mientras tanto se suma al bloque; AGREGARABLOQUE suma
+  objetos del dibujo, QUITARDEBLOQUE deja objetos fuera.
+- GUARDARBLOQUE: actualiza la definición y TODAS las referencias, en un solo
+  paso que se puede deshacer.
+- DESCARTARBLOQUE: todo queda como estaba.
+- Mientras se edita: el deshacer no cruza el comienzo de la edición, el
+  dibujo no se guarda a medias (avisa), y si se cierra el dibujo la edición
+  se descarta sola.
+- Bloques con atributos: el doble clic sigue abriendo el editor de atributos
+  (EDITARENSITIO también los edita en el lugar). Referencias con escala
+  distinta en X e Y, MINSERT y referencias externas: se explica por qué no.
+
+CHAFLÁN: en las pruebas automáticas funciona en todas sus opciones; para ver
+qué pasa en IngeCAD, diagnostico_geocad.py (correr con AP dentro de IngeCAD)
+deja diagnostico_geocad.txt en la carpeta GeoCAD.
+
+Barra GeoCAD: Empalme, Chaflán, Partir en punto, Crear bloque, Editar bloque
+en el lugar.
+
+Probado sin interfaz gráfica: 19 grupos de pruebas automáticas (nuevo:
+test_bloques).

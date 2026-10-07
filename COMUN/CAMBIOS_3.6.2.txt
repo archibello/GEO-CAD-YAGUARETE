@@ -1,0 +1,21 @@
+GeoCAD - versión 3.6.2
+======================
+CORRECCIÓN (IngeCAD): la escala escrita seguía sin aplicarse en la
+computadora de Fernando (07/10/2026).
+
+- Problema: con 3.6.1 se escribía 1/74.3 en el desplegable de escala de la
+  ventana gráfica, pero Enter no hacía nada (el texto quedaba escrito).
+- Causa: la sesión es GNOME en Wayland con IBus (método de entrada). Con
+  IBus las teclas llegan al texto del desplegable por otro camino que se
+  saltea los filtros donde GeoCAD escuchaba el Enter. Las pruebas sin
+  pantalla no tienen IBus y por eso pasaban.
+- Arreglo: además de los filtros, GeoCAD escucha la señal propia del texto
+  «se apretó Enter», que Qt emite venga la tecla por donde venga. Si lo
+  escrito es un renglón de la lista (1:100...), no se aplica dos veces: un
+  solo U lo deshace.
+- Verificado en la ventana real de IngeCAD por los dos caminos (teclado común
+  y teclas entregadas por dentro, sin filtros, como con IBus): 1/73.5,
+  1:73,5 (coma), 1/75, 1/1234 se aplican; 1:500 de la lista + U vuelve a la
+  escala anterior.
+- Detalle conocido: con IBus, Escape no borra lo escrito (la escala no cambia;
+  basta elegir o escribir otra).

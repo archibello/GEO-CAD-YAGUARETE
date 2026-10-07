@@ -1,0 +1,39 @@
+GeoCAD - versión 2.7.0
+======================
+BLOQUES: cambiar el punto base de un bloque ya creado (05/10/2026).
+
+El problema: una vez creado el bloque, el punto base (centro de inserción)
+quedaba fijo. Corregirlo exigía descomponer y redefinir, y eso corría todas
+las copias del dibujo.
+
+Ahora: PUNTOBASEBLOQUE, con botón propio en la barra GeoCAD de IngeCAD
+(«Cambiar punto base del bloque») y en GeoCAD > Bloques.
+
+  1) Designe la referencia al bloque.
+  2) Precise el nuevo punto base: con referencias (Final, Medio, Centro,
+     Intersección, Nodo, Cuadrante e Inserción, aunque F3 esté apagado),
+     con el bloque iluminado y la marca «nuevo punto base» en el cursor.
+  3) «El bloque tiene N referencia(s). Las referencias:
+     [Mantener en su lugar/Desplazar] <Mantener>»
+       Mantener (por defecto): el dibujo no cambia; cada copia se corre lo
+         justo. Para corregir un punto base mal elegido.
+       Desplazar: las copias quedan donde están y el bloque se corre; los
+         atributos lo acompañan.
+     Recuerda la última elección.
+
+En la edición en el lugar (doble clic sobre un bloque): botón «Punto base»
+en la barra «Editando el bloque…». Se aplica al Guardar bloque, junto con
+los cambios del contenido, en UN solo paso para deshacer; Descartar lo
+descarta también.
+
+Cubre todas las copias (modelo, presentaciones y dentro de otros bloques),
+con escala, rotación, simetría y escala distinta en X e Y; bloques de
+GeoCAD (base 0,0) y nativos de IngeCAD (base en coordenadas del dibujo).
+No admite referencias externas ni bloques anónimos.
+
+Probado sin interfaz gráfica: 20 grupos de pruebas automáticas, todos OK.
+test_bloques amplía (sección 9): Mantener con 7 copias (girada, simétrica,
+X≠Y, anidadas, presentación) y deshacer/rehacer; bloque nativo; Desplazar
+con atributos; dentro de la edición en el lugar; test_modulos: el botón
+nuevo en la barra GeoCAD.
+Falta: verlo en IngeCAD (pruebas manuales K8 a K11).

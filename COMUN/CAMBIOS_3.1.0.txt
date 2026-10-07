@@ -1,0 +1,44 @@
+GeoCAD - versión 3.1.0
+======================
+ENVIAR A IngeCAD: las opciones se eligen al enviar, y los puntos llegan con
+su símbolo de QGIS (06/10/2026).
+
+Ventana «Enviar a IngeCAD» (QGIS)
+- Se abre cada vez que se envía, con lo elegido la última vez:
+    Qué mandar ........ seleccionados / lo que está en pantalla / capas visibles
+    Escala ............ la del mapa ahora (1:N) / otra
+    Capas y colores ... sí / no
+    Rótulos ........... todos / sólo los que QGIS muestra ahora / ninguno
+    Símbolos .......... puntos con su símbolo de QGIS, sí / no
+    Rótulos y símbolos  tamaño real aunque superen la parcela /
+                        achicarlos hasta que entren en su parcela
+- Ninguna opción descarta a la otra: se elige en cada envío. «No volver a
+  preguntar» envía directo con lo último elegido; se vuelve a pedir en
+  GeoCAD > Configuración común («Preguntar estas opciones...»).
+- «Enviar la capa activa» abre la misma ventana, sin «Qué mandar».
+
+Símbolos (puntos)
+- Cada punto llega como un bloque de IngeCAD con la forma de su símbolo
+  (círculo, cuadrado, rombo, triángulo, pentágono, hexágono, octógono,
+  estrella, cruz, X, línea, flecha; las demás, círculo), el tamaño pasado
+  de mm a metros con la escala elegida y el giro de QGIS (fijo o definido
+  por datos). El color es el del objeto.
+- El bloque ES el punto: moverlo en IngeCAD mueve el punto al devolver a
+  QGIS. Los bloques se llaman GEOCAD-SIMBOLO-<FORMA>.
+- El rótulo de un punto queda al costado de su símbolo.
+
+Rótulos «sólo los que QGIS muestra»
+- Los que QGIS dibuja en la vista actual: no van los que esconde por no
+  entrar o por chocar con otros, ni los que están fuera de la pantalla.
+
+«Achicar hasta que entren en su parcela»
+- El rótulo de un polígono se achica hasta entrar en su polígono; el de un
+  punto o el símbolo, hasta entrar en la parcela donde cae (los polígonos de
+  las capas visibles). Como mucho, a la décima parte. Lo que no cae en
+  ninguna parcela (p. ej. el nombre de una calle) va con su tamaño real.
+
+Probado sin interfaz gráfica: 23 grupos de pruebas automáticas, todos OK.
+test_estilo suma los símbolos (bloque, escala, giro, mover y guardar);
+test_presentacion suma símbolos, achicar a la parcela, rótulos visibles y la
+ventana (en QGIS 3.40 y 4.2).
+Falta: verlo en los programas (pruebas manuales G9 a G14).

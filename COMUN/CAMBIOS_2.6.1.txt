@@ -1,0 +1,35 @@
+GeoCAD - versión 2.6.1
+======================
+BLOQUES: retoques pedidos por Fernando (05/10/2026).
+
+1. Crear bloque (B / BLOQUE), en este orden:
+   - Designar los objetos.
+   - Los objetos quedan ILUMINADOS (azul) mientras se elige el punto base.
+   - Punto base CON referencias: se suman Final, Medio, Centro, Intersección,
+     Nodo y Cuadrante, aunque las referencias estén apagadas (F3); una
+     referencia de una vez (FIN, CEN...) manda. Marca «punto base» en el
+     cursor. También Centro / abajo-Izquierda de los objetos.
+   - Recién entonces, una ventana con la VISTA PREVIA del bloque (la cruz
+     amarilla es el punto base), el nombre (con la lista de los que hay),
+     Convertir / Retener / Borrar y el botón «Crear bloque». El nombre se
+     revisa mientras se escribe: si ya existe, avisa que se va a redefinir
+     y cuántas referencias cambian; si no sirve, no deja crear.
+   - Cancelar en la ventana vuelve a pedir el punto base (Esc sale).
+
+2. Insertar bloque (I / INSERT):
+   - Ventana con la lista de bloques, la vista previa, escala y rotación;
+     doble clic en la lista o «Insertar».
+   - El bloque sigue al cursor («fantasma») ya escalado y girado.
+   - Punto de inserción CON referencias: se suman Final, Medio, Centro,
+     Intersección, Nodo, Inserción y Cuadrante, aunque estén apagadas (F3).
+   - Opciones Escala, Rotación y Bloque (elegir otro) en la línea de comandos.
+   - La referencia va en la capa actual. Si el bloque tiene atributos, toman
+     sus valores por defecto (doble clic para editarlos).
+
+Sin la ventana (si algo falla con Qt) todo sigue por la línea de comandos:
+nombre, confirmación «¿Crear el bloque? [Sí/No/...]» y elección del bloque.
+
+Probado sin interfaz gráfica: 19 grupos de pruebas automáticas (test_bloques
+amplía: orden nuevo, resaltado, ventana con validación, INSERT con fantasma y
+referencias, referencias con F3 apagado). Las ventanas se probaron con un Qt
+de mentira (el dibujo de la vista previa y los datos que devuelven).

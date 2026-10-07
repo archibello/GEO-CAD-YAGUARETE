@@ -1,0 +1,20 @@
+GeoCAD - versión 3.6.0
+======================
+FUNCIÓN NUEVA (IngeCAD): escribir la escala de la ventana gráfica como en
+AutoCAD (07/10/2026). Parte del módulo «Espacio papel como AutoCAD».
+
+- En el desplegable de escala de la barra de ventanas (Viewports) ahora se
+  puede ESCRIBIR la escala y aplicarla con Enter, además de elegirla de la
+  lista:
+    1/100  o  1:100   -> 1:100
+    1/250, 1:75, 1:2,5 ... cualquier escala, aunque no esté en la lista
+    2:1               -> ampliación
+    1/100XP           -> también (como ZOOM nXP)
+    100               -> 1:100
+- Escape deja la escala que tenía. Una escala mal escrita avisa en la línea
+  de comandos y no cambia nada. Con la ventana bloqueada (VPLOCK) avisa.
+- Se deshace con U, como elegirla de la lista.
+- Sin autocompletar: «1:2» es 1:2 (no se completa a 1:20).
+- Apagado el módulo, el desplegable vuelve a ser sólo la lista de IngeCAD.
+- Verificado en la ventana real de IngeCAD: 1/250, 1:100, 1:2, 2:1, texto
+  inválido, Escape, elegir de la lista y U.

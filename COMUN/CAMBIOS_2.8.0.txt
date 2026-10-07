@@ -1,0 +1,44 @@
+GeoCAD - versión 2.8.0
+======================
+SELECCIÓN estilo AutoCAD en IngeCAD (06/10/2026). Módulo nuevo «Selección»,
+prendido por defecto; se apaga en GeoCAD > Módulos y IngeCAD queda como venía.
+
+Los problemas:
+- En «Designar objetos» (BORRA / E, DESPLAZA, COPIA, GIRA...) IngeCAD
+  ignoraba todo lo que se escribía: no existían WP, CP, F ni las demás.
+- No había orden SEL.
+- La línea de comandos autocompletaba las órdenes, también en medio de una
+  orden, y se metía en el trabajo.
+
+Ahora:
+1) En CUALQUIER «Designar objetos» se escriben las opciones de AutoCAD, en
+   inglés o en español:
+     W  / V      ventana (dos esquinas, en cualquier sentido)
+     C           captura
+     WP / PV     polígono ventana: lo que queda entero adentro
+     CP / PC     polígono captura: lo que toca o queda adentro
+     F  / B      borde: lo que toca la línea quebrada
+     ALL / TODO  todo lo que se puede elegir (capas prendidas, sin bloquear)
+     L  / UL     el último objeto dibujado
+     P           la selección previa (la de la orden anterior)
+     R  / E      quitar: los próximos objetos se quitan (clic, ventana o
+                 cualquier opción)
+     A           agregar (vuelve a sumar)
+     U  / H      deshace el último paso de la selección
+     ?           lista de opciones
+   En el polígono y el borde: clic o coordenadas escritas para cada punto,
+   U borra el último punto, Enter cierra. Se ve el polígono hasta el cursor:
+   azul continuo (ventana), verde punteado (captura), naranja (borde).
+   El clic, la ventana y la captura con el ratón siguen como siempre.
+2) SEL (en español SELECCIONA), con botón en la barra GeoCAD y en
+   GeoCAD > Dibujo: designar objetos con todas esas opciones y dejarlos
+   seleccionados para la orden siguiente (por ejemplo SEL, WP..., Enter, E).
+3) La línea de comandos ya no autocompleta: se ejecuta lo escrito, tal cual.
+
+Probado sin interfaz gráfica: 21 grupos de pruebas automáticas, todos OK.
+test_seleccion (nueva): opciones en inglés y español; WP con un polígono en U
+(la muesca no cuenta como adentro), CP, F que atraviesa un círculo; el
+recorrido completo en «Designar objetos» con R / A / U / ALL / L / P; la
+vista previa; los clics como vértices; el autocompletado apagado y vuelto a
+prender; el módulo apagado; SEL. test_modulos: el módulo y el botón nuevos.
+Falta: verlo en IngeCAD (pruebas manuales S1 a S8).

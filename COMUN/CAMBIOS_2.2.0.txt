@@ -1,0 +1,24 @@
+GeoCAD - versión 2.2.0
+======================
+INSTALADOR ÚNICO: un solo archivo instala y activa GeoCAD en IngeCAD y en
+QGIS a la vez.
+
+- INGECAD/versiones/instalar_geocad_<v>.py trae adentro las dos partes.
+- Forma recomendada, con los dos programas cerrados, en la Consola:
+      python3 instalar_geocad_2.2.0.py
+  (o doble clic en INSTALAR_GeoCAD.sh, en la entrega completa).
+  Encuentra IngeCAD (Flatpak o común) y todos los perfiles de QGIS 4 y 3
+  (Flatpak o común), copia GeoCAD, lo deja ACTIVADO en los dos (IngeCAD.conf
+  y QGIS4.ini, sin tocar ningún otro ajuste) y retira el Puente 1.x con copia.
+- También sirve con AP dentro de IngeCAD: instala IngeCAD y, si puede escribir
+  en la carpeta de QGIS, también QGIS; si no, avisa cómo terminar.
+- La primera vez que se abre cada programa, GeoCAD pregunta qué módulos usar
+  (en IngeCAD, ahora también cuando se instaló desde la Consola).
+- Las actualizaciones desde el menú GeoCAD siguen igual (y la de IngeCAD
+  también actualiza QGIS cuando puede).
+- La entrega completa (COMUN/entregas/GeoCAD_<v>.zip) trae el instalador,
+  INSTALAR_GeoCAD.sh, el .zip de QGIS como opcional, el LEEME y los cambios.
+
+Probado sin interfaz gráfica: 15 grupos de pruebas automáticas (nuevo:
+test_instalador_unico, con una carpeta personal armada igual que la de
+Fernando: IngeCAD y QGIS 4 en Flatpak y el Puente 1.4.0 activo).

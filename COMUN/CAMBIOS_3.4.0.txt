@@ -1,0 +1,29 @@
+GeoCAD - versión 3.4.0
+======================
+FUNCIÓN NUEVA: dos criterios más para los rótulos en «Enviar a IngeCAD»
+(07/10/2026).
+
+- Problema: con «Sólo los que QGIS muestra», al enviar una selección más
+  grande que la pantalla llegaban sólo los rótulos que se veían; los de los
+  objetos seleccionados fuera de la pantalla se perdían (QGIS sólo sabe qué
+  etiquetas dibuja en lo que muestra).
+- Rótulos, opciones de la ventana «Enviar a IngeCAD»:
+    · Todos (también los que QGIS no muestra)            -> como antes
+    · Sólo los que QGIS muestra ahora en pantalla         -> como antes
+    · NUEVO Los que QGIS muestra en pantalla + todos los de fuera:
+      en pantalla, el criterio de QGIS; fuera de la pantalla van siempre.
+      Rápido.
+    · NUEVO Los que QGIS mostraría en toda la zona enviada (más lento):
+      QGIS calcula sus etiquetas en toda la zona (la selección, la pantalla
+      o las capas completas), a la escala elegida, por tramos del tamaño de
+      la pantalla que se pisan entre sí. Sin fondos ráster. Si la zona es
+      enorme (más de 400 tramos) avisa y usa la opción anterior.
+    · Ninguno                                             -> como antes
+- POR DEFECTO: «en pantalla + todos los de fuera» (la primera de la lista).
+  Quien tenía guardado «Sólo los que QGIS muestra» pasa a ésta; quien tenía
+  «Todos» lo conserva.
+- Las dos nuevas se combinan con «Achicarlos hasta que entren en su
+  parcela» igual que las demás.
+- Se recuerda lo elegido (configuración común: «Qué rótulos mandar a
+  IngeCAD»).
+- Sólo cambia QGIS; IngeCAD recibe los rótulos igual que antes.

@@ -1,0 +1,1 @@
+Código del plugin GeoCAD de IngeCAD. Los archivos del núcleo (buzon, config, crs, angulos, modulos...) se editan en COMUN/nucleo y build.py los copia acá.

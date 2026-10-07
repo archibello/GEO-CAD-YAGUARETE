@@ -1,0 +1,31 @@
+GeoCAD - versión 3.1.1
+======================
+ENVIAR A IngeCAD: el fondo de las etiquetas, rótulos que se leen en el
+fondo oscuro y aviso si IngeCAD tiene otra versión (06/10/2026).
+
+Fondo de las etiquetas (QGIS -> IngeCAD)
+- El «Fondo» del formato de texto de QGIS (Propiedades de la capa >
+  Etiquetas > Fondo) llega con cada rótulo: círculo, elipse, cuadrado o
+  rectángulo, con el tamaño que le da QGIS (margen alrededor del texto,
+  tamaño fijo o porcentaje), su giro (con la etiqueta, desplazado o fijo) y
+  el color del borde (o el del relleno si no tiene borde).
+- Se dibuja en la capa <conexión>-ROTULOS, junto al texto: el círculo como
+  CÍRCULO, la elipse como ELIPSE y el cuadrado o rectángulo como polilínea
+  cerrada. QUITARROTULOS los borra junto con los textos.
+- Con «achicarlos hasta que entren en su parcela», se achica el fondo
+  completo (no sólo el texto) hasta que entra, y el texto con él.
+- Los fondos SVG y de símbolo de QGIS no se envían.
+
+Color de los rótulos
+- Un rótulo negro, casi negro, blanco o casi blanco llega en color 7: se ve
+  blanco en el fondo oscuro de IngeCAD y sale negro al imprimir. Antes un
+  gris muy oscuro llegaba casi invisible. Lo mismo para el borde del fondo.
+
+Aviso de versión
+- IngeCAD anuncia su versión de GeoCAD. Al enviar, si IngeCAD está abierto
+  con otra versión (o con una anterior a 3.1.1, que no la anuncia), QGIS lo
+  avisa en la barra de mensajes: hay que actualizar IngeCAD
+  (ACTUALIZARGEOCAD) o pueden no llegar rótulos, colores ni símbolos.
+
+Pruebas
+- La prueba de los dos lados ya no depende de que IngeCAD se pueda abrir.

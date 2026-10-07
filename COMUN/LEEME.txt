@@ -1,0 +1,182 @@
+GeoCAD — GIS to CAD y CAD to GIS
+================================
+
+QGIS e IngeCAD trabajando como un mismo sistema: ida y vuelta sobre
+GeoPackage (.gpkg) y shapefile (.shp) conservando atributos, con respaldo
+.zip, control de conflictos y validación antes de escribir; y el dibujo de
+IngeCAD al estilo de Dibujo CAD. Reemplaza al Puente IngeCAD-QGIS 1.x.
+
+MÓDULOS (nada invasivo)
+-----------------------
+Cada parte es un módulo que se elige al instalar y se cambia cuando se
+quiera en el menú GeoCAD > Módulos... Lo que no se elige no aparece en
+ningún menú ni cambia nada del programa.
+   IngeCAD: Puente con QGIS · Datos (barra y submenú) ·
+            Botón derecho = Enter · Empalme estilo AutoCAD ·
+            Chaflán estilo AutoCAD · Bloques · Partir en punto ·
+            Selección estilo AutoCAD · Ángulos relativos al tramo anterior
+   QGIS:    Puente con IngeCAD · Dibujo CAD · Bloques CAD · Espacio papel ·
+            Capas CAD (Layer Properties)
+
+INSTALACIÓN (una vez por computadora) — UN SOLO INSTALADOR
+-----------------------------------------------------------
+Con IngeCAD y QGIS cerrados, en la Consola:
+      python3 instalar_geocad_<versión>.py
+(o doble clic en INSTALAR_GeoCAD.sh, que hace lo mismo).
+
+Instala y deja ACTIVADO GeoCAD en IngeCAD y en QGIS (todos los perfiles de
+QGIS 4 y 3, Flatpak o comunes), retira lo que reemplaza (Puente 1.x) guardando
+una copia (.anterior-...) y no toca ningún otro ajuste. La primera vez que se
+abre cada programa, GeoCAD pregunta qué módulos usar; en QGIS además retira
+los complementos sueltos Dibujo CAD y Layer Properties si se eligen esos
+módulos.
+
+También se puede: en IngeCAD, AP con el mismo archivo (instala IngeCAD y, si
+puede, QGIS); o en QGIS, Instalar a partir de ZIP con geocad_qgis_<v>.zip
+(sólo QGIS).
+
+ACTUALIZAR (sin AP ni ZIP)
+--------------------------
+   IngeCAD: GeoCAD > Actualizar GeoCAD (IngeCAD y QGIS)...
+            (o ACTUALIZARGEOCAD; ACTUALIZARGEOCAD C cambia la carpeta)
+   QGIS:    GeoCAD > Actualizar GeoCAD (QGIS e IngeCAD)...
+   La primera vez pregunta la carpeta de actualizaciones: elegir
+   /media/satelite/Extreme SSD/GeoCAD (o donde se copien las entregas).
+   Busca la versión más nueva, muestra sus cambios, pide confirmación e
+   instala; después avisa al otro programa, que ofrece actualizarse también.
+   Las actualizaciones no vuelven a preguntar los módulos.
+
+Requisitos: los dos programas como Flatpak (o instalación común) y los datos
+dentro de la carpeta personal. Si los datos están en un disco externo, darle
+acceso a IngeCAD una vez, en una terminal:
+    flatpak override --user --filesystem=/media org.ingecad.IngeCAD
+Para que QGIS pueda abrir IngeCAD solo (opcional), una vez:
+    flatpak override --user --talk-name=org.freedesktop.Flatpak org.qgis.qgis
+
+USO
+---
+QGIS, menú «GeoCAD» (módulo Puente)
+  - Enviar a IngeCAD: usa el modo de la configuración común (por defecto, los
+    objetos seleccionados). Si IngeCAD está cerrado, intenta abrirlo; el pedido
+    lo espera. Mientras IngeCAD tiene una capa, QGIS la deja en solo lectura.
+  - Enviar los objetos seleccionados / lo que está en pantalla / las capas
+    visibles completas / la capa activa completa.
+  - Recargar las capas que editó IngeCAD
+  - Módulos..., Configuración común..., Actualizar GeoCAD, Acerca de GeoCAD
+  - Estado del puente...
+
+IngeCAD, menú «GeoCAD» (módulos Puente y Datos)
+  - Devolver todo a QGIS (DEVOLVERQGIS): guarda todas las capas con una
+    confirmación y QGIS las recarga solo.
+  - Devolver la selección a QGIS (DEVOLVERSEL): sólo los cambios de los objetos
+    elegidos; QGIS los deja seleccionados.
+  - Conectar datos SIG: toda la capa o sólo lo que se ve en pantalla. Conectar
+    de nuevo una capa ya conectada amplía la conexión.
+  - Datos > Tabla de atributos (TABLASIG): panel acoplable; filtra, ordena,
+    edita celdas (amarillo = cambio sin guardar, verde = objeto nuevo) y se
+    sincroniza con la selección del dibujo en los dos sentidos.
+  - Datos > Consulta por atributos (CONSULTASIG), por ejemplo:
+        MANZANA = 12 Y SUP_M2 > 500
+        TITULAR CONTIENE 'pérez' O PARTIDA EMPIEZA '01-'
+        FECHA ENTRE 01/01/2024 Y 31/12/2024
+        NO (EDIFICADO = V) Y OBS NO ES NULO
+  - Datos > Consulta por ubicación (UBICACIONSIG): dentro, toca o a una distancia
+    de una zona (polilínea cerrada, círculo u otro objeto).
+  - Datos > Temático (TEMATICO / QUITARTEMATICO): colores por categorías o rangos.
+    Sólo cambia el dibujo.
+  - Datos > Rótulos desde un campo (ROTULOSIG / QUITARROTULOS): en la capa
+    <capa>-ROTULOS; no son datos.
+  - Datos > Objeto nuevo con formulario (NUEVOSIG): elegir lo dibujado y cargar
+    sus atributos; valida tipos y campos obligatorios.
+  - Conectar datos SIG (CONECTARSHP), Atributos del objeto (INFOSHP),
+    Editar atributo (ATRIBUTOSHP), Cambios pendientes (ESTADOSHP),
+    Guardar cambios de una capa (GUARDARSHP), Desconectar (DESCONECTARSHP),
+    Configuración común (CONFIGSIG).
+
+IngeCAD, módulos «Botón derecho = Enter» y «Ángulos relativos»
+  - Botón derecho = Enter: termina la orden, acepta lo escrito y, sin orden
+    activa, repite la última. Ctrl + botón derecho: menú contextual.
+    Mayús + botón derecho: referencias a objetos. BOTONDERECHO (o
+    GeoCAD > Dibujo) lo prende y apaga.
+  - LÍNEA y POLILÍNEA, @distancia<ángulo: el ángulo es el INTERIOR en el
+    vértice, medido en sentido ANTIHORARIO desde el tramo anterior
+    (180 = sigue derecho, 90 = gira a la derecha, 270 = a la izquierda).
+    El primer tramo es absoluto (0 = este, antihorario).
+        @10<<45        fuerza ángulo absoluto
+        @10<30dI       deflexión 30° a la Izquierda (D = Derecha)
+        @10<N45d30'15"E  rumbo (siempre absoluto)
+        @10<45d30'15"  grados, minutos y segundos (también 50g, 0.78r)
+  - ANGREL: prende/apaga los ángulos relativos (A / D / I = interior /
+    DIR = desde la dirección del tramo, 0 = recto).
+
+QGIS, módulos Dibujo CAD, Bloques, Papel y Capas
+  Funcionan igual que los complementos Dibujo CAD 16.3 y Layer Properties
+  6.7: mismas barras, misma línea de comandos, mismos comandos. Lo que antes
+  estaba en el menú Complementos ahora está en GeoCAD > Dibujo CAD y
+  GeoCAD > Capas CAD. Apagar Bloques o Papel quita su barra y sus comandos
+  (BLOQUE, INSERT... / PRESENTACION, TRAZAR...).
+
+IngeCAD, módulo «Empalme estilo AutoCAD» (desde 2.3.0)
+  F / EMPALME / FILLET como en AutoCAD, también con polilíneas: dos tramos
+  de una polilínea (redondea el vértice), línea + polilínea y dos polilíneas
+  (quedan unidas), y en líneas que se cruzan conserva el lado tocado.
+  Opciones: deshacer, Polilínea, Radio, Recortar, Múltiple; Mayús = esquina.
+  Desde 2.3.1 resalta lo que toma el clic (en una polilínea, el tramo), deja
+  marcado el primer objeto y muestra en naranja el arco antes del clic.
+
+IngeCAD, módulo «Chaflán estilo AutoCAD» (desde 2.5.0)
+  CHA / CHAFLAN / CHAMFER como en AutoCAD, sobre la geometría del Empalme:
+  polilíneas, uniones, lado elegido, capa y vínculo con QGIS conservados.
+  Opciones: desHacer, Polilínea, Distancia, Ángulo, Recortar, métOdo,
+  Múltiple; Mayús = esquina; distancias 0 = esquina.
+
+IngeCAD, módulo «Bloques» (desde 2.6.0)
+  BLOQUE: objetos iluminados -> punto base con referencias (o Centro /
+  abajo-Izquierda) -> ventana con vista previa, nombre, Convertir / Retener /
+  Borrar y «Crear bloque» (redefinir actualiza todas las referencias).
+  INSERT: ventana con lista y vista previa; el bloque sigue al cursor y el
+  punto de inserción se toma con referencias. Referencias en la capa actual.
+  Doble clic sobre un bloque (o EDITARENSITIO): edición EN EL LUGAR. Lo que
+  se dibuja se suma (AGREGARABLOQUE / QUITARDEBLOQUE para elegir);
+  GUARDARBLOQUE actualiza todas las referencias en un paso; DESCARTARBLOQUE.
+  PUNTOBASEBLOQUE (desde 2.7.0, botón en la barra GeoCAD): volver a elegir
+  el punto base de un bloque ya creado, con referencias. Mantener (por
+  defecto): el dibujo no cambia; Desplazar: las referencias quedan y el
+  bloque se corre. Dentro de la edición en el lugar, botón «Punto base»:
+  se aplica al guardar, en el mismo paso.
+  Referencias sobre bloques (desde 2.8.1): Final, Medio, Centro,
+  Intersección... también sobre el contenido de los bloques, no sólo en el
+  punto de inserción.
+
+IngeCAD, módulo «Selección» (desde 2.8.0)
+  En cualquier «Designar objetos» (E, DESPLAZA, COPIA...) se escriben las
+  opciones de AutoCAD: W/V ventana, C captura, WP/PV y CP/PC polígonos,
+  F/B borde, ALL/TODO, L/UL último, P previa, R/E quitar, A agregar,
+  U/H deshacer, ? ayuda. SEL / SELECCIONA (botón en la barra GeoCAD): deja
+  los objetos seleccionados para la orden siguiente. La línea de comandos
+  no autocompleta.
+
+IngeCAD, módulo «Partir en punto» (desde 2.4.0)
+  PARTEENPUNTO / BREAKATPOINT: designe objeto y el punto de corte, con
+  referencias (se suman Final, Medio, Intersección y Cuadrante). El corte cae
+  sobre el objeto; antes del clic se ven los dos pedazos y sus largos.
+  Opciones: Múltiple, Deshacer, Objeto. Polilíneas cerradas se abren en el
+  punto; tramos en arco quedan en arco; las capas de QGIS conservan el
+  vínculo (el pedazo nuevo, con los mismos atributos).
+  Barra GeoCAD: Empalme, Chaflán, Partir en punto, Crear bloque, Editar bloque.
+
+SEGURIDAD DE LOS DATOS
+----------------------
+- Antes de escribir: respaldo .zip verificado en «_respaldos_ingecad» (junto
+  a los datos) y un registro de cada cambio (registro.jsonl).
+- Lo que no se editó no cambia (SHP: byte por byte).
+- Si un registro se cambió en QGIS y en IngeCAD a la vez, no se guarda nada
+  de esa capa y se avisa.
+- GeoPackage: todo dentro de una transacción; ante cualquier falla, la base
+  queda como estaba.
+- Sistemas de coordenadas: POSGAR 2007/98/94 y Campo Inchauspe (fajas 1-7)
+  y WGS 84 UTM. Nunca se reproyecta; no se mezclan sistemas en un dibujo.
+
+Configuración común: ~/.config/geocad/configuracion.json
+Módulos elegidos:    ~/.config/geocad/modulos.json
+(la leen y escriben los dos programas: los dos menús muestran lo mismo).

@@ -1,0 +1,17 @@
+GeoCAD - versión 3.3.2
+======================
+CORRECCIÓN: los polígonos que llegan de QGIS no cambiaban de color en
+IngeCAD (06/10/2026).
+
+- Causa: cuando el color de la simbología de QGIS no es uno de los 255 de
+  AutoCAD (p. ej. el marrón de las parcelas), el objeto llega con el color
+  ACI más parecido Y con su «color verdadero» RGB, para verse igual que en
+  QGIS. La paleta Properties y la barra de propiedades de IngeCAD cambiaban
+  sólo el ACI, y el RGB seguía mandando: en pantalla no cambiaba nada y al
+  devolver a QGIS volvía el color viejo.
+- Ahora, al elegir un color (en la paleta, en la barra de propiedades, o
+  PorCapa al cambiar de capa) se quita el RGB, como hace AutoCAD. Se ve el
+  color elegido y es el que vuelve a QGIS (CAD_COLOR).
+- Se deshace con U / Ctrl+Z (vuelve el RGB original).
+- Vale para cualquier objeto con color RGB, no sólo los de QGIS.
+- Va con el módulo «Propiedades en masa»; apagado, IngeCAD como venía.

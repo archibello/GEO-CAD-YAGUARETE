@@ -1,0 +1,29 @@
+GeoCAD - versión 3.3.0
+======================
+PROPIEDADES EN MASA: la paleta Properties de IngeCAD (Ctrl+1) cambia de una
+vez las propiedades de todos los objetos seleccionados (06/10/2026).
+Módulo nuevo «Propiedades en masa» (GeoCAD > Módulos...); apagado, la
+paleta queda como venía.
+
+Lo propio de cada tipo, en todos a la vez
+- Antes, con varios objetos la paleta sólo mostraba lo general (color, capa,
+  tipo y grosor de línea...). Ahora, con varios objetos del MISMO tipo, o
+  eligiendo el tipo en el desplegable de arriba («Texto (25)»), aparece su
+  sección: altura, giro, estilo y contenido de los textos; radio y diámetro
+  de círculos y arcos; escala y giro de bloques; ancho global y cerrada de
+  polilíneas; ángulo y escala de sombreados; posición X / Y...
+- Donde los valores difieren se ve *varies*; lo que se escribe va a todos.
+- Se deshace con U / Ctrl+Z, como cualquier cambio de la paleta.
+- En los números se puede escribir coma decimal (2,5).
+
+Atributos de los bloques
+- Con bloques seleccionados, sección «Atributos»: un renglón por etiqueta
+  (p. ej. NUM); lo que se escribe va a ese atributo de todos los bloques
+  elegidos que lo tienen. Se deshace con U.
+
+Totales (GeoCAD)
+- Con varios objetos: cantidad, largo total (líneas, arcos, círculos,
+  polilíneas, elipses, splines) y área total de los cerrados, con cuántos
+  objetos entran en cada cuenta. AutoCAD sólo dice *VARIES*.
+
+Junto con FILTRO (3.2.0): FI -> todos los rótulos -> Ctrl+1 -> Altura 2,5.

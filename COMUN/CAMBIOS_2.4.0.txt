@@ -1,0 +1,44 @@
+GeoCAD - versión 2.4.0
+======================
+PARTEENPUNTO (BREAKATPOINT) para IngeCAD (módulo nuevo «Partir en punto»),
+y una barra GeoCAD con nuestras herramientas de edición.
+
+Por qué: IngeCAD tiene PARTE (dos puntos) pero no «partir en punto». Usar PARTE
+con el mismo punto dos veces tiene problemas:
+  - en una polilínea cerrada se pierde el tramo de cierre;
+  - en un vértice deja un vértice repetido;
+  - un tramo en arco cortado queda recto;
+  - se pierden los anchos y el vínculo con QGIS (al devolver, los atributos
+    de ese objeto se perdían).
+
+PARTEENPUNTO (menú GeoCAD > Dibujo, barra GeoCAD, o escribiendo PARTEENPUNTO /
+BREAKATPOINT):
+- Designe objeto, después el punto de corte. Mientras se elige el punto se
+  suman las referencias Punto final, Medio, Intersección y Cuadrante a las
+  activas (si las referencias no están apagadas con F3; una referencia de
+  una vez, como FIN o INT, manda).
+- El punto se lleva SOBRE el objeto: cortar en la intersección con otra
+  línea, en el extremo de otra que no llega, o en cualquier punto, corta
+  exactamente en el objeto elegido.
+- Antes del clic: el objeto elegido en azul, los dos pedazos que van a quedar
+  en azul y verde, una X amarilla en el corte y los largos de cada pedazo.
+- Opciones: Múltiple (varios cortes seguidos; cada punto parte el pedazo
+  donde cae), Deshacer (el último corte), Objeto (elegir otro).
+- Polilínea cerrada: se abre en ese punto, sin perder nada.
+- En un vértice: corta ahí, sin vértices repetidos.
+- Tramo en arco: dos arcos exactos. Anchos: se interpolan en el corte.
+- Línea, arco, polilínea. Círculo: como en AutoCAD, no se parte en un solo
+  punto (se avisa). Un polígono de una capa de QGIS tampoco (quedaría abierto).
+- Capas de QGIS: los dos pedazos conservan el vínculo; al devolver, uno
+  conserva el registro y el otro pasa a ser un registro nuevo con los mismos
+  atributos (como «Dividir objetos» de QGIS).
+
+Barra GeoCAD: Empalme y Partir en punto, juntos al principio; detrás, si el
+módulo Datos está activo, los botones de Datos. Cada botón aparece sólo con
+su módulo activo.
+
+El resaltado del Empalme ahora también muestra lo que toma el clic con la
+referencia a objetos aplicada.
+
+Probado sin interfaz gráfica: 17 grupos de pruebas automáticas (nuevo:
+test_partir, que también comprueba los defectos de PARTE con un solo punto).

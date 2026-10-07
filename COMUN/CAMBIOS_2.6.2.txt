@@ -1,0 +1,25 @@
+GeoCAD - versión 2.6.2
+======================
+CHAFLÁN y EMPALME: corrección del lado en cruces con polilíneas
+(error encontrado por Fernando, 05/10/2026).
+
+El problema: en un cruce, el chaflán (y también el empalme, que comparte la
+misma geometría) tenía que quedar en el cuadrante que se toca, pero con
+polilíneas casi siempre quedaba en uno solo: el que dependía del SENTIDO en
+que se había dibujado cada polilínea. Con líneas sueltas andaba bien; las
+polilíneas de un solo tramo (PLINE, o lo que llega de QGIS) no.
+
+La causa: de una polilínea se conservaba siempre el lado que va hacia el
+resto de la polilínea (el vértice 1), sin mirar dónde se hizo clic. En una
+polilínea de un solo tramo ese «resto» depende sólo del sentido de dibujo.
+
+Ahora:
+- Polilínea de un tramo: como una línea, queda el lado tocado.
+- Polilínea de varios tramos, tocada en un tramo extremo: queda el lado que
+  sigue hacia el resto (como antes); si se toca el lado de afuera, lo
+  explica en vez de hacer otra cosa.
+
+Probado: 256 combinaciones (4 cuadrantes x sentido de cada línea x líneas /
+polilíneas / mezcla x cuál se toca primero x chaflán y empalme), en la prueba
+nueva test_cuadrantes. Antes fallaban 24 de 32 con dos polilíneas.
+20 grupos de pruebas automáticas.

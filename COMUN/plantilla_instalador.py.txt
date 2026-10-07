@@ -1,0 +1,264 @@
+# -*- coding: utf-8 -*-
+# GeoCAD @VERSION@ -- INSTALADOR ÚNICO: instala y activa GeoCAD en IngeCAD Y en QGIS.
+#
+# Dos formas de usarlo (cualquiera de las dos instala los dos programas):
+#   1) Desde la Consola, con los dos programas cerrados (la más completa):
+#          python3 instalar_geocad_@VERSION@.py
+#      (o doble clic en INSTALAR_GeoCAD.sh, que hace lo mismo)
+#   2) Desde IngeCAD: escribir AP (APPLOAD) y elegir este archivo.
+#      Si IngeCAD no puede escribir en la carpeta de QGIS (los Flatpak a veces
+#      no se ven entre sí), lo avisa y dice cómo terminar.
+#
+# Instala limpio: retira el Puente IngeCAD-QGIS 1.x y guarda una copia de lo
+# reemplazado (.anterior-...). Los dos complementos viajan adentro de este
+# archivo con su huella SHA-256: si algo llegó dañado, no instala nada.
+# La primera vez que se abre cada programa, GeoCAD pregunta qué módulos usar.
+import base64, hashlib, io, os, shutil, sys, zipfile
+from pathlib import Path
+
+PLUGIN_ID = "geocad"
+VERSION = "@VERSION@"
+OLD_IDS = ("puente_qgis", "conexion_shp")   # IngeCAD: Puente 1.x y versiones de prueba
+ZIP_SHA256 = "@ZIP_SHA@"
+FILES_SHA256 = @FILES_SHA@
+DATA = """
+@DATA@
+"""
+QGIS_ZIP_SHA256 = "@QGIS_SHA@"
+QGIS_DATA = """
+@QGIS_DATA@
+"""
+
+
+def _say(text):
+    try:
+        echo(text)                   # dentro de IngeCAD (APPLOAD)
+    except NameError:
+        print(text)
+
+
+def _home():
+    return Path(os.environ.get("HOME") or Path.home())
+
+
+# -- archivos .ini (IngeCAD.conf, QGIS4.ini): poner una clave sin tocar el resto ---------
+def _ini_poner(path, seccion, clave, valor):
+    path = Path(path)
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines() if path.exists() else []
+    head = "[" + seccion + "]"
+    if head not in lines:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines += [head, clave + "=" + valor]
+    else:
+        i = lines.index(head)
+        j = i + 1
+        hecho = False
+        while j < len(lines) and not lines[j].startswith("["):
+            if lines[j].split("=", 1)[0] == clave:
+                lines[j] = clave + "=" + valor
+                hecho = True
+                break
+            j += 1
+        if not hecho:
+            k = j
+            while k > i + 1 and not lines[k - 1].strip():
+                k -= 1
+            lines.insert(k, clave + "=" + valor)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".geocad-tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
+
+
+# -- IngeCAD -------------------------------------------------------------------------------
+def _zip_ingecad():
+    raw = base64.b64decode(DATA)
+    if hashlib.sha256(raw).hexdigest() != ZIP_SHA256:
+        raise RuntimeError("el instalador está dañado (huella distinta); no se instaló nada")
+    zf = zipfile.ZipFile(io.BytesIO(raw))
+    if zf.testzip() is not None:
+        raise RuntimeError("el contenido está dañado; no se instaló nada")
+    return zf
+
+
+def _copiar_ingecad(root, mgr=None):
+    """Copia el plugin a root/geocad (verificado) y retira lo viejo."""
+    zf = _zip_ingecad()
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    staging = root / (".instalando-" + PLUGIN_ID)
+    shutil.rmtree(staging, ignore_errors=True)
+    zf.extractall(staging)
+    for rel, sha in FILES_SHA256.items():
+        data = (staging / PLUGIN_ID / rel).read_bytes()
+        if hashlib.sha256(data).hexdigest() != sha:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise RuntimeError("archivo dañado: " + rel + "; no se instaló nada")
+    # el puente viejo deja de escuchar antes de reemplazarlo
+    for pid in (PLUGIN_ID,) + OLD_IDS:
+        old = sys.modules.get("ingecad_plugin_" + pid + ".puente")
+        if old is not None and hasattr(old, "shutdown"):
+            try:
+                old.shutdown()
+            except Exception:
+                pass
+    for pid in (PLUGIN_ID,) + OLD_IDS:
+        if mgr is not None and mgr.is_active(pid):
+            mgr.deactivate(pid)
+    target = root / PLUGIN_ID
+    previous = root / (".anterior-" + PLUGIN_ID)
+    if target.exists():
+        shutil.rmtree(previous, ignore_errors=True)
+        target.rename(previous)
+    for old in OLD_IDS:
+        if (root / old).exists():
+            guardado = root / (".anterior-" + old)
+            shutil.rmtree(guardado, ignore_errors=True)
+            (root / old).rename(guardado)
+        if mgr is not None:
+            mgr.loaded.pop(old, None)
+            try:
+                from PySide6.QtCore import QSettings
+                QSettings().setValue(mgr.SETTING.format(id=old), "false")
+            except Exception:
+                pass
+    (staging / PLUGIN_ID).rename(target)
+    shutil.rmtree(staging, ignore_errors=True)
+    return target
+
+
+def _ingecad_desde_adentro(host):
+    """AP dentro de IngeCAD: copia, activa y (la primera vez) pregunta los módulos."""
+    from core.plugins import user_plugins_dir
+
+    mgr = getattr(host, "plugins", None)
+    root = user_plugins_dir()
+    target = _copiar_ingecad(root, mgr)
+    for name in list(sys.modules):
+        if any(name.startswith("ingecad_plugin_" + pid) for pid in (PLUGIN_ID,) + OLD_IDS):
+            del sys.modules[name]
+    if mgr is None:
+        _say("GeoCAD copiado en " + str(target) + ". Reinicie IngeCAD.")
+        return
+    mgr.loaded.pop(PLUGIN_ID, None)
+    mgr.scan_dir(root, False)
+    loaded = mgr.loaded.get(PLUGIN_ID)
+    if loaded is None or not loaded.available:
+        reason = loaded.reason if loaded is not None else "no se encontró"
+        raise RuntimeError("se copió pero no se puede activar: " + reason)
+    mgr.set_enabled(PLUGIN_ID, True)
+    mgr.set_toolbar_enabled(PLUGIN_ID, True)          # la barra de Datos (si se elige)
+    _say("IngeCAD: GeoCAD " + VERSION + " instalado y activo (menú «GeoCAD»).")
+    pkg = "ingecad_plugin_" + PLUGIN_ID
+    try:
+        import importlib
+        importlib.import_module(pkg + ".ventanas").primera_eleccion(host, _say)
+    except Exception as exc:
+        _say("No se pudo mostrar la elección de módulos: " + str(exc))
+    try:
+        sys.modules[pkg].aplicar_modulos(host)
+    except Exception:
+        pass
+
+
+def _ingecad_desde_afuera():
+    """Consola: instala en cada IngeCAD que encuentre (Flatpak y/o común) y lo activa."""
+    home = _home()
+    hechos = []
+    for base in (home / ".var" / "app" / "org.ingecad.IngeCAD" / "config" / "IngeCAD",
+                 home / ".config" / "IngeCAD"):
+        if not base.is_dir():
+            continue
+        target = _copiar_ingecad(base / "plugins")
+        conf = base / "IngeCAD.conf"
+        _ini_poner(conf, "plugins", PLUGIN_ID + "\\enabled", "true")
+        _ini_poner(conf, "plugins", PLUGIN_ID + "\\toolbar", "true")
+        for old in OLD_IDS:
+            _ini_poner(conf, "plugins", old + "\\enabled", "false")
+        hechos.append(target)
+    return hechos
+
+
+# -- QGIS ----------------------------------------------------------------------------------
+def _perfiles_qgis():
+    home = _home()
+    for base in (home / ".var" / "app" / "org.qgis.qgis" / "data" / "QGIS",
+                 home / ".local" / "share" / "QGIS"):
+        for ver in ("QGIS4", "QGIS3"):
+            profiles = base / ver / "profiles"
+            if profiles.is_dir():
+                for p in sorted(profiles.iterdir()):
+                    if p.is_dir() and not p.name.startswith("."):
+                        yield p, ver
+
+
+def _qgis():
+    """Instala el complemento en cada perfil de QGIS que encuentre y lo activa."""
+    raw = base64.b64decode(QGIS_DATA)
+    if hashlib.sha256(raw).hexdigest() != QGIS_ZIP_SHA256:
+        raise RuntimeError("la parte de QGIS está dañada (huella distinta); no se instaló")
+    hechos, fallas = [], []
+    for perfil, ver in _perfiles_qgis():
+        try:
+            plugins = perfil / "python" / "plugins"
+            plugins.mkdir(parents=True, exist_ok=True)
+            staging = plugins / (".instalando-" + PLUGIN_ID)
+            shutil.rmtree(staging, ignore_errors=True)
+            zf = zipfile.ZipFile(io.BytesIO(raw))
+            if zf.testzip() is not None:
+                raise RuntimeError("zip dañado")
+            zf.extractall(staging)
+            if not (staging / PLUGIN_ID / "metadata.txt").is_file():
+                raise RuntimeError("no trae el complemento")
+            target, previous = plugins / PLUGIN_ID, plugins / (".anterior-" + PLUGIN_ID)
+            if target.exists():
+                shutil.rmtree(previous, ignore_errors=True)
+                target.rename(previous)
+            (staging / PLUGIN_ID).rename(target)
+            shutil.rmtree(staging, ignore_errors=True)
+            _ini_poner(perfil / "QGIS" / (ver + ".ini"), "PythonPlugins", PLUGIN_ID, "true")
+            hechos.append(ver + "/" + perfil.name)
+        except Exception as exc:
+            fallas.append(ver + "/" + perfil.name + ": " + str(exc))
+    return hechos, fallas
+
+
+def _informar_qgis():
+    try:
+        hechos, fallas = _qgis()
+    except Exception as exc:
+        hechos, fallas = [], [str(exc)]
+    if hechos:
+        _say("QGIS: GeoCAD " + VERSION + " instalado y activado (perfil " + ", ".join(hechos)
+             + "). Si QGIS estaba abierto, reinícielo.")
+    for f in fallas:
+        _say("QGIS: no se pudo instalar en " + f)
+    if not hechos:
+        _say("QGIS: no se encontró o no se pudo escribir su carpeta de complementos. "
+             "Para terminar, corra este mismo archivo desde la Consola: "
+             "python3 instalar_geocad_" + VERSION + ".py (o en QGIS: Instalar a partir de "
+             "ZIP con geocad_qgis_" + VERSION + ".zip).")
+    return hechos
+
+
+def _main():
+    if "host" in globals():                       # AP dentro de IngeCAD
+        _ingecad_desde_adentro(host)
+        _informar_qgis()
+        return
+    _say("GeoCAD " + VERSION + " — instalador único (IngeCAD y QGIS)")
+    hechos = _ingecad_desde_afuera()
+    if hechos:
+        _say("IngeCAD: GeoCAD instalado y activado en " + ", ".join(str(h) for h in hechos)
+             + ". Si IngeCAD estaba abierto, reinícielo.")
+    else:
+        _say("IngeCAD: no se encontró IngeCAD en esta computadora.")
+    _informar_qgis()
+    _say("Listo. La primera vez que abra cada programa, GeoCAD pregunta qué módulos usar.")
+
+
+try:
+    _main()
+except Exception as exc:
+    _say("No se instaló GeoCAD: " + str(exc))

@@ -1,0 +1,31 @@
+GeoCAD - versión 2.8.1
+======================
+BLOQUES: referencias a objetos sobre el contenido de los bloques (06/10/2026).
+
+El problema: IngeCAD le da a cada bloque una sola referencia, el punto de
+inserción. Final, Medio, Centro, Intersección... no funcionaban sobre las
+líneas y círculos de un bloque, en ninguna orden (INSERT, LÍNEA, DESPLAZA,
+PARTEENPUNTO...).
+
+Ahora, con el módulo Bloques prendido, cada bloque ofrece las referencias de
+lo que tiene adentro, ya ubicado como se ve: posición, giro, escala (también
+X distinta de Y), simetría y bloques anidados. Final, Medio, Centro,
+Cuadrante, Nodo, Intersección (también entre un bloque y otro objeto),
+Perpendicular, Tangente y Cercano. El punto de inserción sigue estando.
+Las referencias son del bloque (se elige y se mueve entero, como siempre).
+
+Bloques de GeoCAD (base 0,0) y nativos de IngeCAD (base en coordenadas del
+dibujo). Las referencias externas ya las tenía IngeCAD y no cambian.
+
+Velocidad: cada definición de bloque se calcula una vez y se ubica en cada
+copia. Medido: 2000 copias de un bloque de 45 objetos, más 20 000 líneas,
+se arman en 0,3 s (antes de este cuidado, 2,35 s); mover el cursor, 3 ms.
+Un bloque con más de 5000 objetos adentro (contando los anidados) queda
+sólo con el punto de inserción, como venía.
+
+Probado sin interfaz gráfica: 21 grupos de pruebas automáticas, todos OK.
+test_bloques amplía (sección 10): Final, Medio, Centro, Intersección con una
+línea suelta y Cuadrante, en bloques girados, escalados, espejados, anidados,
+nativos con base y con escala 1 x 3; editar el contenido; borrar el bloque;
+el límite de tamaño; el módulo apagado.
+Falta: verlo en IngeCAD (pruebas manuales K12 a K14).
