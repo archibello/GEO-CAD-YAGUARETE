@@ -1,0 +1,22 @@
+GeoCAD - versión 3.9.1
+======================
+MEJORA (IngeCAD): módulo «Cotas para el papel», pedidos de Fernando sobre
+la 3.9.0 (08/10/2026).
+
+- Ángulos en grados, minutos y segundos por defecto: las cotas angulares
+  de los estilos Acot-… dicen 16°41'57" en vez de 16.70°. La ventana
+  CREAR COTA suma «Ángulos»: Grados, minutos y segundos (por defecto) o
+  Grados decimales (con los decimales elegidos). Las longitudes no
+  cambian: siguen con sus decimales (0 = enteros).
+- DIMANGULAR (ACOANGULAR) en vivo: mientras se elige dónde va el arco, se
+  ve la cota entera (arco, cabeceras y texto) tal como queda al hacer
+  clic, con el estilo activo; como ya hacían la lineal y la alineada.
+  Antes sólo se veía una línea suelta desde el vértice. Vale para arco,
+  círculo, dos líneas y vértice + dos puntos, y respeta Cuadrante, Texto
+  y Mtexto.
+- Para cambiar un estilo ya creado a g/m/s: CREAR COTA con los mismos
+  valores (el estilo se actualiza y sus cotas se redibujan).
+- Se prende y apaga con el módulo («Cotas para el papel»). Apagado,
+  DIMANGULAR queda como venía. No se modifica ningún archivo de IngeCAD.
+- Pruebas: corrieron las 29 (todas OK; test_cotas suma g/m/s y la vista
+  previa de DIMANGULAR). La ventana se probó aparte con Qt sin pantalla.

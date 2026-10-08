@@ -1,0 +1,40 @@
+GeoCAD - versión 3.9.0
+======================
+FUNCIÓN NUEVA (IngeCAD): cotas para el papel, módulo «Cotas para el papel»
+(08/10/2026). Boceto de Fernando: propuesta_cotas/boceto_barra_cotas.png.
+
+- Problema: IngeCAD trae las órdenes de acotar y el administrador de
+  estilos, pero armar un estilo para una escala de papel (altura del texto
+  en mm de hoja con el dibujo en metros, DIMSCALE, cabecera, decimales) y
+  mantener las cotas en su capa era todo a mano.
+- CREAR COTA (CREARCOTA / GEODIMSETUP; barra GeoCAD y GeoCAD > Cotas): una
+  ventana con Escala del papel (elegir o escribir 1:100, 1/100, 100),
+  Estilo de texto (letra y altura en mm de hoja), Decimales (0 = enteros)
+  y Tipo de cabecera (trazo oblicuo, punto, flecha). Arma el estilo de cota
+  «Acot-100-6mm» (con decimales, «Acot-100-6mm-2d»), su estilo de texto
+  «Acot-<letra>» y su capa, y lo deja activo. Si el estilo ya existe, lo
+  actualiza (las cotas hechas con él se redibujan, como en AutoCAD). Se
+  deshace con U.
+- El DXF no admite «:» en los nombres de estilos ni de capas: por eso
+  «Acot-100-6mm» y no «1:100-6mm» (sigue el criterio de los «Acot-100» que
+  trae IngeCAD).
+- Cuentas: las medidas se escriben en mm de hoja y se pasan a unidades del
+  dibujo según $INSUNITS (sin unidad declarada se toma metros):
+  6 mm a 1:100 = 0,006 × 100 = 0,60 m de alto en el modelo. Cabeceras y
+  separaciones del ISO-25 de IngeCAD; separación del texto = 1/4 de su
+  altura; separador decimal coma.
+- MEDIR: botones de cota lineal (ACOLINEAL), alineada (ACOALINEADA) y
+  angular (ACOANGULAR): las órdenes de IngeCAD tal cual.
+- Capa automática: toda cota hecha con un estilo «Acot-<escala>-<altura>mm»
+  cae en «COTAS Acot-<escala>-<altura>mm» (gris oscuro 8, 0,15 mm), que se
+  crea si falta. La capa actual no cambia. Vale para cualquier orden de
+  cota (también DIM, QDIM, continuas...). La opción Capa de DIM manda.
+  Con otros estilos (ISO-25, Acot-100 de IngeCAD) todo sigue como venía.
+- Letra: se ofrecen Arial Black, Arial, Arial negrita, Liberation Sans,
+  ISOCP y Simplex. Si la letra no está instalada, IngeCAD usa una parecida.
+- Se prende y apaga en GeoCAD > Módulos... («Cotas para el papel»).
+  Apagado, IngeCAD queda como venía. No se modifica ningún archivo de
+  IngeCAD.
+- Pruebas: corrieron las 29 (todas OK, incluida la nueva test_cotas;
+  test_modulos al día con el módulo nuevo). La ventana se probó aparte con
+  Qt sin pantalla.

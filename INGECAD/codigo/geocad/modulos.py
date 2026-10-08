@@ -82,6 +82,12 @@ CATALOGO = {
                "AutoCAD (color 1 Rojo, 2 Amarillo... -> color de impresión, grosor, "
                "tramado). En Page Setup suma Editar... y Vista previa... junto a la "
                "tabla de plumas.", cambia_programa=True),
+        Modulo("cotas", "Cotas para el papel (CREAR COTA)",
+               "CREAR COTA arma un estilo de cota con la escala del papel, la letra, "
+               "la altura en mm de hoja, los decimales y la cabecera (p. ej. "
+               "«Acot-100-6mm»). Los botones de medir (lineal, alineada, angular) "
+               "acotan con él y cada cota cae en su capa «COTAS Acot-100-6mm».",
+               cambia_programa=True),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),

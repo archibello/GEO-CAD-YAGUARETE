@@ -1,0 +1,26 @@
+GeoCAD - versión 3.9.2
+======================
+MEJORA (IngeCAD): cota angular (ACOANGULAR / DIMANGULAR), pedidos de
+Fernando sobre la 3.9.1 (08/10/2026).
+
+- Ángulos de más de 180°: con dos líneas, IngeCAD sólo medía el ángulo o
+  su suplemento (hasta 180°). Ahora, como en el modo vértice, el lado del
+  cursor elige: dentro del ángulo, el INTERIOR (p. ej. 90°); fuera, el
+  EXTERIOR (270°). La cota se dibuja con el arco del lado de afuera. Los
+  lados son los tramos elegidos (desde el cruce hasta su punta más lejana).
+- Colores temporales: el lado bajo el cursor se resalta antes del clic; el
+  primer lado queda en azul y el segundo en verde hasta terminar.
+- El centro a la vista: una X amarilla en el vértice desde que se conoce
+  (con dos líneas, ya al pasar sobre la segunda, antes del clic) hasta el
+  final de la orden.
+- Junto al cursor: «Interior 90°0'0"» o «Exterior 270°0'0"», con el formato
+  del estilo activo (g/m/s o decimales).
+- Polilíneas: se pueden elegir tramos rectos de polilíneas (los lotes que
+  llegan de QGIS); IngeCAD sólo aceptaba LÍNEAS. Un tramo curvo avisa.
+- Referencias: al pedir el vértice y los puntos se suman Punto final,
+  Intersección, Centro y Medio (con F3 apagado no se fuerza nada). Al
+  elegir objetos IngeCAD no usa referencias: se ve el lado resaltado.
+- Todo se apaga con el módulo («Cotas para el papel»): DIMANGULAR vuelve a
+  ser el de IngeCAD. No se modifica ningún archivo de IngeCAD.
+- Pruebas: corrieron las 29 (todas OK; test_cotas suma lote de QGIS 90° /
+  270°, dos líneas 45° / 315°, tramo curvo, modo vértice y apagado).

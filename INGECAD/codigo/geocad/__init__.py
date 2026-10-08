@@ -21,7 +21,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import bloques, filtro, impresion, papel, propiedades, seleccion
+from . import bloques, cotas, filtro, impresion, papel, propiedades, seleccion
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .partir import PartirTool
@@ -30,7 +30,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.8.0"
+VERSION = "3.9.3"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -62,6 +62,7 @@ def _document_open(ctx, document):
     propiedades.instalar()
     papel.instalar()
     impresion.instalar()
+    cotas.instalar()
     bloques.instalar_referencias()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
@@ -147,6 +148,14 @@ def construir_spec() -> PluginSpec:
                          "GEOPLOTSTYLES": impresion.cmd_plumas})
         toolbar.append(ToolbarItem("Print preview (PREVIEW)", "GEOPREVIEW", _icon("vista_previa")))
         toolbar.append(ToolbarItem("Plot style table editor (pens)", "GEOPLOTSTYLES", _icon("plumas")))
+    if est["cotas"]:
+        commands["GEODIMSETUP"] = cotas.cmd_crear
+        toolbar += [
+            ToolbarItem("Create dimension style (DIMSETUP)", "GEODIMSETUP", _icon("crear_cota")),
+            ToolbarItem("Linear dimension (DIMLINEAR)", "DIMLINEAR", _icon("cota_lineal")),
+            ToolbarItem("Aligned dimension (DIMALIGNED)", "DIMALIGNED", _icon("cota_alineada")),
+            ToolbarItem("Angular dimension (DIMANGULAR)", "DIMANGULAR", _icon("cota_angular")),
+        ]
     if est["puente"]:
         tools.update({k: v for k, v in TOOL_CLASSES.items()
                       if k != "SHPCONFIG" and k not in DATA_TOOLS})
@@ -230,6 +239,17 @@ def construir_spec() -> PluginSpec:
             )),
             SEPARATOR,
         ]
+    if est["cotas"]:
+        menu += [
+            Submenu("Dimensions", (
+                MenuItem("Create dimension style (DIMSETUP)", "GEODIMSETUP", _icon("crear_cota")),
+                SEPARATOR,
+                MenuItem("Linear dimension (DIMLINEAR)", "DIMLINEAR", _icon("cota_lineal")),
+                MenuItem("Aligned dimension (DIMALIGNED)", "DIMALIGNED", _icon("cota_alineada")),
+                MenuItem("Angular dimension (DIMANGULAR)", "DIMANGULAR", _icon("cota_angular")),
+            )),
+            SEPARATOR,
+        ]
     menu += [
         MenuItem("Modules...", "GEOCADMODULES"),
         MenuItem("Shared settings...", "SHPCONFIG"),
@@ -239,7 +259,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.8.0",
+        version="3.9.3",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -284,5 +304,6 @@ seleccion.instalar()
 propiedades.instalar()
 papel.instalar()
 impresion.instalar()
+cotas.instalar()
 bloques.instalar_referencias()
 PLUGIN = construir_spec()

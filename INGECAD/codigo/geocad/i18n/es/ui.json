@@ -42,5 +42,10 @@
   "Selection filters (FILTER)": "Filtros de selección (FILTRO)",
   "Print preview (PREVIEW)": "Vista previa de impresión (VISTAPREVIA)",
   "Plot style table editor (pens)": "Editor de plumas (PLUMAS)",
-  "Printing": "Impresión"
+  "Printing": "Impresión",
+  "Create dimension style (DIMSETUP)": "Crear cota: escala, letra y cabecera (CREARCOTA)",
+  "Linear dimension (DIMLINEAR)": "Medir: cota lineal (ACOLINEAL)",
+  "Aligned dimension (DIMALIGNED)": "Medir: cota alineada (ACOALINEADA)",
+  "Angular dimension (DIMANGULAR)": "Medir: cota angular (ACOANGULAR)",
+  "Dimensions": "Cotas"
 }

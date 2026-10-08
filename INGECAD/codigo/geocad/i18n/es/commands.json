@@ -110,5 +110,8 @@
   },
   "GEOPLOTSTYLES": {
     "name": "PLUMAS"
+  },
+  "GEODIMSETUP": {
+    "name": "CREARCOTA"
   }
 }

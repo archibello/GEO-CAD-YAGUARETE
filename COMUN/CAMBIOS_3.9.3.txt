@@ -1,0 +1,28 @@
+GeoCAD - versión 3.9.3
+======================
+CORRECCIÓN (IngeCAD): precisión de los ángulos en grados, minutos y
+segundos, pedido de Fernando sobre la 3.9.2 (08/10/2026).
+
+- Problema: en la ventana de estilos de IngeCAD (DIMSTYLE > Primary Units)
+  la precisión de los ángulos en g/m/s era un número suelto (0 a 8), sin
+  decir qué escribe. Y ezdxf, que dibuja las cotas, escribía mal los
+  decimales de los segundos: con 5 no ponía decimales y con 6 a 8 los
+  rellenaba con ceros (34,400000").
+- Ventana de estilos de IngeCAD: con «Degrees minutes seconds», Precision
+  es la lista de AutoCAD: 0°, 0°00', 0°00'00", 0°00'00,0", 0°00'00,00",
+  0°00'00,000", 0°00'00,0000". Con otro formato vuelve el número.
+- CREAR COTA: junto a «Ángulos», la misma lista (por defecto 0°00'00").
+- El texto de la cota sigue la regla de AutoCAD (DIMADEC 0-1 grados, 2-3
+  minutos, 4 segundos, 5-8 décimas a diezmilésimas de segundo), con
+  minutos y segundos de dos cifras (45°05'03"), coma decimal y sin ceros
+  de relleno (DIMAZIN). Se redondea una sola vez: nunca 60".
+- Ángulos enteros sólo en grados: 90°, no 90°00'00" (también 30°00' -> 30°).
+- Atención: con la regla de AutoCAD, un estilo con precisión 3 escribe
+  grados y minutos (antes ezdxf ponía segundos). Elegir 0°00'00" en la
+  lista para tener los segundos.
+- Lo mismo junto al cursor de ACOANGULAR («Interior 90°»).
+- Todo se apaga con el módulo («Cotas para el papel»): IngeCAD y ezdxf
+  quedan como venían. No se modifica ningún archivo de IngeCAD ni de ezdxf.
+- Pruebas: corrieron las 29 (todas OK; test_cotas suma la precisión, los
+  enteros, el redondeo y el apagado). La ventana de estilos de IngeCAD y
+  CREAR COTA se probaron aparte con Qt sin pantalla.
