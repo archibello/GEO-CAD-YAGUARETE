@@ -1,0 +1,21 @@
+GeoCAD - versión 3.10.1
+=======================
+RETOQUE ESTÉTICO: las barras ordenadas por temas (08/10/2026).
+
+- IngeCAD, barra GeoCAD: los botones van agrupados por tema y con una línea
+  entre uno y otro, en este orden:
+  Selección (SEL, Filtro) | Datos (Tabla, Consultas, Temático, Rótulos,
+  Nuevo) | Edición (Empalme, Chaflán, Partir) | Bloques | Cotas |
+  Impresión (Vista previa, Plumas) | QGIS (devolver selección y todo).
+  Un tema apagado no deja dos líneas seguidas. IngeCAD no acepta líneas en
+  la barra de un plugin: GeoCAD las pone cuando IngeCAD termina de armarla
+  (al arrancar, al cambiar los módulos o al prenderla en Complementos).
+  Las barras de los otros plugins quedan como vienen.
+- QGIS: las barras siguen separadas (Dibujo, Edición, Texto, Bloques...).
+  Edición CAD empieza por Seleccionar y tiene líneas entre los temas:
+  Seleccionar | Desplaza, Copia, Gira, Borra | Simetría, Alinea, Estira,
+  Desfase | Recorta, Alarga, Empalme | Partir en punto, Partir, Descompone
+  | Divide, Mide | Propiedades. Los botones hacen lo mismo que antes.
+- Pruebas: corrieron las 29 (todas OK; test_modulos suma el orden y las
+  líneas de las dos barras). La barra de IngeCAD, verificada con el Qt de
+  IngeCAD sin pantalla.

@@ -23,6 +23,7 @@ from qgis.PyQt.QtCore import QTimer
 from .commands import CommandManager, CommandSpec
 from .maptool import KeyGuard
 from .edit_commands import EDIT_COMMANDS, oops
+
 from .block_commands import BlockCommand, InsertCommand, purge, wblock
 from .curves import ArcCommand, CircleCommand
 from .rectang import RectangCommand
@@ -33,6 +34,16 @@ from .cmdline import CommandLine
 from .compat import QAction, exec_dialog, accepted_code, qt
 from .settings import save_units
 from .units_dialog import UnitsDialog
+
+#: La barra Edición CAD por temas: primero seleccionar (3.10.1).
+EDIT_GRUPOS = (
+    ('SELECT',),
+    ('MOVE', 'COPY', 'ROTATE', 'ERASE'),
+    ('MIRROR', 'ALIGN', 'STRETCH', 'OFFSET'),
+    ('TRIM', 'EXTEND', 'FILLET'),
+    ('BREAKATPOINT', 'BREAK', 'EXPLODE'),
+    ('DIVIDE', 'MEASURE'),
+)
 
 ICON_DIR = os.path.join(os.path.dirname(__file__), 'icons')
 MENU = '&Dibujo CAD'
@@ -165,12 +176,24 @@ class DibujoCADPlugin:
         # ---- barra Edición CAD
         self.edit_toolbar = self.iface.addToolBar('Edición CAD')
         self.edit_toolbar.setObjectName('EdicionCADToolbar')
+        por_nombre = {}
         for name, aliases, cls, title, types, desc, ico in EDIT_COMMANDS:
             self.mgr.register(CommandSpec(name, aliases, cls, 'interactive', title, types, True,
                                           'edición', desc))
-            al = ', '.join(a for a in aliases[:3])
-            self._action(ico, '%s (%s) — %s' % (title, al, desc),
-                         lambda t=title: self.run_command(t), toolbar=self.edit_toolbar)
+            por_nombre[name] = (aliases, title, desc, ico)
+        # botones por temas, con una línea entre uno y otro (3.10.1)
+        sueltos = [n for n in por_nombre if not any(n in g for g in EDIT_GRUPOS)]
+        for grupo in EDIT_GRUPOS + (tuple(sueltos),):
+            grupo = [n for n in grupo if n in por_nombre]
+            if not grupo:
+                continue
+            if self.edit_toolbar.actions():
+                self.edit_toolbar.addSeparator()
+            for name in grupo:
+                aliases, title, desc, ico = por_nombre[name]
+                al = ', '.join(a for a in aliases[:3])
+                self._action(ico, '%s (%s) — %s' % (title, al, desc),
+                             lambda t=title: self.run_command(t), toolbar=self.edit_toolbar)
 
         self.mgr.register(CommandSpec('OOPS', ('UPS', 'RECUPERAR'), lambda: oops(self.mgr), title='UPS',
                                       group='edición', description='Recupera lo borrado por el último BORRA'))
@@ -238,6 +261,7 @@ class DibujoCADPlugin:
         self.props = PropertiesPanel(self.iface, self.mgr, self.iface.mainWindow())
         self.iface.addDockWidget(qt('DockWidgetArea', 'RightDockWidgetArea'), self.props)
         self.props.hide()
+        self.edit_toolbar.addSeparator()
         self.a_props = self._action('properties', 'Propiedades (PROPIEDADES / PR / Ctrl+1) — ver y modificar '
                                     'los objetos seleccionados', self.props.setVisible, checkable=True,
                                     toolbar=self.edit_toolbar)

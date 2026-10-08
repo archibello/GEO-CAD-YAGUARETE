@@ -23,7 +23,8 @@ mods = import_module("ingecad_plugin_geocad.modulos")
 T = par.PartirTool
 assert lp.spec.tools.get("BREAKATPOINT") is T
 assert any(getattr(i, "command", "") == "BREAKATPOINT" for i in lp.spec.toolbar)
-assert [i.command for i in lp.spec.toolbar][:3] == ["FILLET", "CHAMFER", "BREAKATPOINT"]   # las nuestras, juntas
+_b = [i.command for i in lp.spec.toolbar]; _k = _b.index("FILLET")
+assert _b[_k:_k + 3] == ["FILLET", "CHAMFER", "BREAKATPOINT"]   # las nuestras, juntas
 
 
 class Services:

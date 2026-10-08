@@ -1,0 +1,13 @@
+GeoCAD - versión 3.10.2
+=======================
+CORRIGE 3.10.1 (08/10/2026): en IngeCAD las líneas entre temas de la barra
+GeoCAD casi no se veían con el tema oscuro (Fernando: «no se aprecia»).
+
+- IngeCAD, barra GeoCAD: entre tema y tema va ahora un divisor con el mismo
+  dibujo que el agarre de la barra (los puntitos de la izquierda), idea de
+  Fernando. Lo pinta el estilo de IngeCAD, así sigue al tema claro u oscuro,
+  con un poco de aire a cada lado. El orden por temas sigue igual:
+  Selección | Datos | Edición | Bloques | Cotas | Impresión | QGIS.
+- QGIS: sin cambios desde 3.10.1 (Edición CAD con líneas, Seleccionar primero).
+- Pruebas: corrieron las 29 (todas OK). La barra, verificada con el Qt de
+  IngeCAD sin pantalla y con tema oscuro (imagen de la barra).

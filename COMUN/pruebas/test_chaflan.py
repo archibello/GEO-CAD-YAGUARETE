@@ -22,7 +22,8 @@ enl = import_module("ingecad_plugin_geocad.enlace")
 mods = import_module("ingecad_plugin_geocad.modulos")
 T = cha.ChaflanTool
 assert lp.spec.tools.get("GEOCHAMFER") is T
-assert [i.command for i in lp.spec.toolbar][:3] == ["FILLET", "CHAMFER", "BREAKATPOINT"]
+_b = [i.command for i in lp.spec.toolbar]; _k = _b.index("FILLET")
+assert _b[_k:_k + 3] == ["FILLET", "CHAMFER", "BREAKATPOINT"]
 
 
 class Services:

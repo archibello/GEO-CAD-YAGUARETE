@@ -21,7 +21,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import bloques, cotas, filtro, impresion, papel, propiedades, seleccion
+from . import barra, bloques, cotas, filtro, impresion, papel, propiedades, seleccion
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .partir import PartirTool
@@ -30,7 +30,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.10.0"
+VERSION = "3.10.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -64,6 +64,7 @@ def _document_open(ctx, document):
     impresion.instalar()
     cotas.instalar()
     bloques.instalar_referencias()
+    barra.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
@@ -127,7 +128,7 @@ def construir_spec() -> PluginSpec:
     if est["seleccion"] and filtro.FiltroTool is not None:
         tools["GEOFILTER"] = filtro.FiltroTool  # en español FILTRO
         aliases.update({"FI": "GEOFILTER", "FILTER": "GEOFILTER"})
-    # nuestras herramientas de edición, juntas al principio de la barra GeoCAD
+    # la barra GeoCAD: el orden por temas lo pone barra.ordenar()
     if est["empalme"]:
         toolbar.append(ToolbarItem("AutoCAD-style fillet (FILLET)", "FILLET"))
     if est["chaflan"]:
@@ -259,13 +260,13 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.10.0",
+        version="3.10.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
         aliases=aliases,
         menu=tuple(menu),
-        toolbar=tuple(toolbar),
+        toolbar=tuple(barra.ordenar(toolbar)),
         options_page=_options_page,
         on_document_open=_document_open,
         i18n_dir=Path(__file__).parent / "i18n",
@@ -306,4 +307,5 @@ papel.instalar()
 impresion.instalar()
 cotas.instalar()
 bloques.instalar_referencias()
+barra.instalar()
 PLUGIN = construir_spec()

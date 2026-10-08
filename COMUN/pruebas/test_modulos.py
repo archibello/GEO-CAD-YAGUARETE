@@ -75,7 +75,7 @@ assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD Yaguar
 # apagar Datos: sin barra, sin submenú, sin comandos de Datos; el Puente sigue
 Mi.guardar("ingecad", {"datos": False}); host.calls.clear(); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec; todo = items(spec.menu)
-assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["FILLET", "CHAMFER", "BREAKATPOINT", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOPREVIEW", "GEOPLOTSTYLES", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR"]
+assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["SELECT", "GEOFILTER", "FILLET", "CHAMFER", "BREAKATPOINT", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW", "GEOPLOTSTYLES"]
 assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed" in host.calls
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
@@ -168,4 +168,66 @@ QDialog.abiertos.clear(); G._primer_inicio(); assert not QDialog.abiertos   # no
 Mq.guardar("qgis", {"capas": False}); assert not Mq.activo("qgis", "capas") and Mq.nuevos("qgis") == []
 assert QDialog.abiertos == [] or True
 print("ok módulos nuevos")
+
+# ---- 3.10.1: la barra GeoCAD de IngeCAD separada por temas ------------------------------
+from importlib import import_module as _im
+B = _im("ingecad_plugin_geocad.barra")
+todos = ["SELECT", "GEOFILTER", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPTHEME", "SHPLABEL",
+         "SHPNEW", "FILLET", "CHAMFER", "BREAKATPOINT", "BLOCK", "INSERT", "GEOREFEDIT",
+         "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW",
+         "GEOPLOTSTYLES", "QGISSAVESEL", "QGISSAVE"]
+assert B.cortes(todos) == [2, 8, 11, 15, 19, 21]         # 7 temas, 6 líneas
+_mezcla = [types.SimpleNamespace(command=c) for c in reversed(todos)]
+assert [i.command for i in B.ordenar(_mezcla)] == [c for t in B.ORDEN for c in reversed(todos)
+                                                     if B.TEMAS[c] == t]
+assert [i.command for i in pkg.construir_spec().toolbar][:2] == ["SELECT", "GEOFILTER"]
+assert B.cortes(["SELECT", "GEOFILTER", "SHPTABLE"]) == [2]   # un tema apagado no deja línea doble
+assert B.cortes([]) == [] and B.cortes(["FILLET"]) == []
+assert all(c in B.TEMAS for c in todos)
+
+
+class _Accion:
+    def __init__(self, sep=False):
+        self.sep = sep
+
+    def isSeparator(self):
+        return self.sep
+
+
+class _Barra:
+    def __init__(self, n):
+        self.lista = [_Accion() for _ in range(n)]
+
+    def actions(self):
+        return list(self.lista)
+
+    def insertWidget(self, antes, widget):
+        self.lista.insert(self.lista.index(antes), _Accion(True))
+
+
+B._divisor = lambda bar: None                            # sin Qt: sólo cuenta dónde van
+
+
+_spec = pkg.construir_spec()
+_b = _Barra(len(_spec.toolbar))
+B.separar(_b, _spec)
+_marcas = [a.isSeparator() for a in _b.lista]
+assert _marcas.count(True) == len(B.cortes(t.command for t in _spec.toolbar)) > 0
+assert not _marcas[0] and not _marcas[-1]
+_b2 = _Barra(3)                                          # no es nuestra barra: no se toca
+B.separar(_b2, _spec)
+assert not any(a.isSeparator() for a in _b2.lista)
+print("ok barra separada por temas")
+# ---- 3.10.1: QGIS, barra Edición CAD por temas (se lee el código: necesita QGIS para correr)
+import ast, re as _re
+_dib = Path(__file__).resolve().parents[2] / "QGIS" / "codigo" / "geocad" / "dibujo"
+_arbol = ast.parse((_dib / "plugin.py").read_text(encoding="utf-8"))
+_grupos = next(ast.literal_eval(n.value) for n in _arbol.body
+               if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "EDIT_GRUPOS")
+_edit = (_dib / "edit_commands.py").read_text(encoding="utf-8")
+_nombres = _re.findall(r"^    \('(\w+)', \(", _edit[_edit.index("EDIT_COMMANDS = ["):], _re.M)
+_planos = [n for g in _grupos for n in g]
+assert _grupos[0] == ("SELECT",) and len(_planos) == len(set(_planos))
+assert sorted(_planos) == sorted(_nombres), (_planos, _nombres)
+print("ok QGIS Edición CAD por temas")
 print("TODO OK MODULOS")
