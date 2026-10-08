@@ -156,4 +156,28 @@ assert not ET.depende_del_editor(_ed, _W(_W()))
 assert "clic_no_cierra(self, obj)" in Path(ET.__file__).read_text(encoding="utf-8")
 assert "QMessageBox.question(\n                self," in _src or "QMessageBox.question(" in _src
 print("ok ventanas del editor")
+
+# ---- 3.11.2: los textos se dibujan con la fuente elegida (fc-match, como el editor) ----
+TP = import_module("ingecad_plugin_geocad.tipografias")
+assert TP.consulta("DejaVu Sans", False, True) == "DejaVu Sans:italic"
+assert TP.consulta("A-B:C", True, True) == "A\\-B\\:C:bold:italic"
+_pedidos = []
+_orig = lambda **k: ("original", k["family"])
+_fbm = TP._envolver_find_best_match(_orig)
+_res = TP.resolver
+TP.resolver = lambda fam, w, it: (_pedidos.append((fam, w, it)), "CARA")[1]
+TP._activo[:] = [1e18, True]
+assert _fbm(family="Arial", weight=400, italic=True) == "CARA" and _pedidos == [("Arial", 400, True)]
+assert _fbm(family="sans-serif", italic=False) == ("original", "sans-serif")      # genéricas: ezdxf
+assert _fbm(family="Arial", italic=None) == ("original", "Arial")                 # sin pedido de cursiva
+TP._activo[:] = [1e18, False]                                                      # módulo apagado: como viene
+assert _fbm(family="Arial", weight=400, italic=True) == ("original", "Arial") and len(_pedidos) == 1
+TP.resolver = lambda fam, w, it: None                                              # fc-match no encontró nada
+TP._activo[:] = [1e18, True]
+assert _fbm(family="Arial", italic=False) == ("original", "Arial")
+TP.resolver = _res
+TP._resueltas.clear(); _fc = TP.fc_match; TP.fc_match = lambda *a: None
+assert TP.resolver("NoExiste", 400, False) is None and ("noexiste", False, False) in TP._resueltas
+TP.fc_match = _fc; TP._resueltas.clear(); TP._activo[:] = [0.0, False]
+print("ok fuentes de los textos")
 print("TODO OK PROPIEDADES")

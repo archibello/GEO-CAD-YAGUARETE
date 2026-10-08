@@ -1,0 +1,27 @@
+GeoCAD - versión 3.11.2
+=======================
+CORRECCIÓN (IngeCAD, módulo Propiedades): los textos se dibujan con la
+fuente elegida (08/10/2026, encontrado por Fernando con la 3.11.1).
+
+- Lo que pasaba: en el editor de texto se elegía fuente, negrita o cursiva,
+  OK, y el dibujo seguía igual (también en el papel y con REGEN); sólo el
+  subrayado se veía. El cambio SÍ quedaba guardado en el texto
+  ({\fArial|b0|i1;...}): fallaba el dibujo. Error de IngeCAD 0.6.5, también
+  sin GeoCAD.
+- Causas: 1) el dibujo busca las letras con ezdxf, que dentro del Flatpak
+  sólo conoce las ~90 fuentes del Flatpak; la lista «Fuente» del editor
+  muestra también las del sistema (~300). Arial no está en ninguna.
+  2) ezdxf compara el comienzo del nombre («DejaVu Sans» también es «DejaVu
+  Sans Mono») y busca la cursiva por «Italic» (DejaVu la llama «Oblique»):
+  todo terminaba en DejaVu Sans Mono normal.
+- Ahora cada fuente se busca como la busca el editor, con fontconfig
+  (fc-match, lo mismo que usa Qt): Arial -> Liberation Sans (su equivalente
+  libre), cursivas y negritas de verdad, y las fuentes del sistema (Ubuntu,
+  Noto...) se suman al dibujo al usarlas. Cada fuente se busca una vez.
+- Apagado el módulo Propiedades, como viene en IngeCAD.
+- Verificado con el IngeCAD real sin pantalla: al dibujar, Arial cursiva
+  usa LiberationSans-Italic, DejaVu Sans cursiva DejaVuSans-Oblique y Ubuntu
+  negrita cursiva Ubuntu-BI (del sistema); con el módulo apagado, DejaVu
+  Sans Mono como antes.
+- Pruebas: corrieron las 29 (todas OK; test_propiedades suma la búsqueda de
+  fuentes).
