@@ -1,0 +1,30 @@
+GeoCAD - versión 3.10.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo Bloques): bloques con DOS PUNTOS de
+inserción (08/10/2026). Ejemplo: el complemento Bloques GMS de QGIS.
+
+- BLOQUE: en la ventana «Crear bloque», botón «Segundo punto (opcional)...».
+  Se elige P2 en el dibujo con referencias (línea naranja desde el punto
+  base); la ventana vuelve con el nombre ya escrito y la vista previa
+  muestra la cruz amarilla (P1) y la X naranja (P2). «Quitar P2» lo saca.
+  Sin ventana: opción 2 (y SIN2) en «¿Crear el bloque?». Enter cuando pide
+  P2 = sin P2. Redefinir un bloque reemplaza también su P2 (deshacer lo
+  devuelve).
+- INSERT de un bloque con P2 (en la ventana, Escala y Rotación quedan
+  grises): P1 = punto de inserción, con referencias -> P2: el bloque se
+  escala y gira en vivo con la distancia y el ángulo P1-P2 -> primer
+  reflejo, sobre la perpendicular a P1-P2 por su punto medio (clic o R
+  alterna; P1 y P2 se cambian) -> Enter o botón derecho -> segundo reflejo,
+  sobre la línea P1-P2 (clic o R alterna) -> Enter inserta. Un solo
+  deshacer. Los reflejos existen sólo para los bloques con P2; los demás se
+  insertan como siempre.
+- Lo insertado es una referencia común (INSERT): escala, rotación y, si hubo
+  un reflejo, escala Y negativa. Se edita en el lugar con doble clic como
+  cualquier otra y la abre cualquier CAD.
+- P2 se guarda dentro del dibujo (XDATA «GEOCAD» del bloque): viaja con el
+  DXF y otros CAD lo conservan. PUNTOBASEBLOQUE lo corre junto con la
+  geometría.
+- Pruebas: corrieron las 29 (todas OK; test_bloques suma crear con P2 por
+  la línea de comandos y la ventana, redefinir, punto base, guardar y
+  abrir el DXF, e INSERT con las cuatro combinaciones de reflejos).
+  Ventanas verificadas con el Qt de IngeCAD sin pantalla.

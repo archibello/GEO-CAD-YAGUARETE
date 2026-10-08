@@ -81,10 +81,12 @@ class CrearBloque(Command):
 
     needs_regen = True
 
-    def __init__(self, nombre, base, fuentes, modo="C", capa=None):
+    def __init__(self, nombre, base, fuentes, modo="C", capa=None, p2=None):
         self.name = "BLOCK"
         self.nombre = nombre
         self.base = (float(base[0]), float(base[1]))
+        self.p2 = None if p2 is None else (float(p2[0]), float(p2[1]))    # en el dibujo
+        self._p2_viejo = None
         self.fuentes = list(fuentes)
         self.modo = modo
         self.capa = capa
@@ -104,8 +106,11 @@ class CrearBloque(Command):
             self._creado = True
         else:
             self._viejas = list(blk)
+            self._p2_viejo = p2_de(blk)
             for e in self._viejas:
                 blk.unlink_entity(e)
+        poner_p2(doc, blk, None if self.p2 is None else
+                 (self.p2[0] - self.base[0], self.p2[1] - self.base[1]))
         m = Matrix44.translate(-self.base[0], -self.base[1], 0)
         self._nuevas = []
         for e in self.fuentes:
@@ -141,6 +146,7 @@ class CrearBloque(Command):
                 blk.delete_entity(e)
             for e in self._viejas:
                 blk.add_entity(e)
+            poner_p2(doc, blk, self._p2_viejo)
         self._nuevas = []
         document.dirty = True
 
@@ -198,13 +204,109 @@ def mover(segs, dx, dy, escala=1.0, rotacion=0.0):
     return [(t(a), t(b)) for a, b in segs]
 
 
+# -- segundo punto de inserción (P2) -------------------------------------------------------
+# Un bloque puede llevar, además del punto base (P1), un segundo punto
+# opcional (P2), en coordenadas de la definición. Al insertarlo, P1 va donde se
+# hace clic y P2 donde se hace el segundo clic: el bloque se escala y gira con
+# esos dos puntos; después se puede reflejar sobre la perpendicular a P1-P2
+# (por su punto medio) y sobre la línea P1-P2. Queda una referencia (INSERT)
+# común, con escalas negativas si hubo reflejo. P2 se guarda como XDATA del
+# BLOCK_RECORD: viaja con el dibujo y otros CAD lo conservan sin usarlo.
+APPID_P2 = "GEOCAD"
+P2_TAG = "P2"
+
+# matriz afín (a, b, c, d, tx, ty): x' = a·x + b·y + tx ; y' = c·x + d·y + ty
+
+
+def p2_de(blk):
+    """El P2 del bloque (coordenadas de la definición) o None."""
+    try:
+        datos = list(blk.block_record.get_xdata(APPID_P2))
+    except Exception:  # noqa: BLE001 -- sin XDATA
+        return None
+    if len(datos) >= 3 and datos[0] == (1000, P2_TAG):
+        return (float(datos[1][1]), float(datos[2][1]))
+    return None
+
+
+def poner_p2(doc, blk, p2) -> None:
+    """Anota (o quita, con None) el P2 del bloque."""
+    rec = blk.block_record
+    if p2 is None:
+        rec.discard_xdata(APPID_P2)
+        return
+    if APPID_P2 not in doc.appids:
+        doc.appids.add(APPID_P2)
+    rec.set_xdata(APPID_P2, [(1000, P2_TAG), (1040, float(p2[0])), (1040, float(p2[1]))])
+
+
+def base_de(blk):
+    """El punto base de la definición (0, 0 en los bloques de GeoCAD)."""
+    b = blk.block.dxf.get("base_point", (0, 0, 0))
+    return (float(b[0]), float(b[1]))
+
+
+def aplicar(m, p):
+    a, b, c, d, tx, ty = m
+    return (a * p[0] + b * p[1] + tx, c * p[0] + d * p[1] + ty)
+
+
+def transformar(segs, m):
+    return [(aplicar(m, p), aplicar(m, q)) for p, q in segs]
+
+
+def afin_dos_puntos(base, p2, a, c):
+    """Escala uniforme + giro + traslado que lleva base -> a y p2 -> c."""
+    vx, vy = p2[0] - base[0], p2[1] - base[1]
+    wx, wy = c[0] - a[0], c[1] - a[1]
+    lv, lw = math.hypot(vx, vy), math.hypot(wx, wy)
+    if lv <= 1e-12 or lw <= 1e-12:
+        return None
+    ang = math.atan2(wy, wx) - math.atan2(vy, vx)
+    s = lw / lv
+    co, si = s * math.cos(ang), s * math.sin(ang)
+    return (co, -si, si, co, a[0] - (co * base[0] - si * base[1]),
+            a[1] - (si * base[0] + co * base[1]))
+
+
+def reflejar(m, a, c, sobre):
+    """``m`` seguida del reflejo sobre la línea P1-P2 (sobre="eje") o sobre
+    su perpendicular por el punto medio (sobre="perpendicular")."""
+    ux, uy = c[0] - a[0], c[1] - a[1]
+    n = math.hypot(ux, uy)
+    if n <= 1e-12:
+        return m
+    ux, uy = ux / n, uy / n
+    if sobre == "perpendicular":
+        dx, dy, px, py = -uy, ux, (a[0] + c[0]) / 2.0, (a[1] + c[1]) / 2.0
+    else:
+        dx, dy, px, py = ux, uy, a[0], a[1]
+    ra, rb, rd = 2 * dx * dx - 1, 2 * dx * dy, 2 * dy * dy - 1
+    rtx, rty = px - (ra * px + rb * py), py - (rb * px + rd * py)
+    A, B, C, D, TX, TY = m
+    return (ra * A + rb * C, ra * B + rb * D, rb * A + rd * C, rb * B + rd * D,
+            ra * TX + rb * TY + rtx, rb * TX + rd * TY + rty)
+
+
+def a_insercion(m, base):
+    """La matriz como INSERT: (punto de inserción, xscale, yscale, rotación°).
+    Un reflejo queda como yscale negativa (lo que hace cualquier CAD)."""
+    a, b, c, d, _tx, _ty = m
+    s = math.hypot(a, c)
+    rot = math.degrees(math.atan2(c, a)) % 360.0
+    ys = s if a * d - b * c > 0 else -s
+    return aplicar(m, base), s, ys, rot
+
+
 def _ventana(services):
     return getattr(services, "window", None)
 
 
 class BloqueTool(Tool):
     """BLOQUE: objetos (resaltados) -> punto base con referencias -> ventana
-    con la vista previa, el nombre y «Crear bloque»."""
+    con la vista previa, el nombre y «Crear bloque». En la ventana (o con la
+    opción 2 en la línea de comandos), un segundo punto opcional (P2) para
+    escalar, girar y reflejar al insertar."""
 
     wants_selection = True
     REFERENCIAS = frozenset({"END", "MID", "CEN", "INT", "NOD", "QUA"})
@@ -218,7 +320,9 @@ class BloqueTool(Tool):
         self._segs = []
         self._nombre = None
         self._base = None
-        self._paso = None           # "base", "nombre", "redefinir", "confirmar"
+        self._p2 = None             # segundo punto opcional, en el dibujo
+        self._sin_ventana = False
+        self._paso = None           # "base", "p2", "nombre", "redefinir", "confirmar"
 
     def selection_prompt(self) -> str:
         return "Designe los objetos del bloque (Enter para terminar):"
@@ -245,7 +349,7 @@ class BloqueTool(Tool):
         return self._paso == "nombre"
 
     def referencias_extra(self) -> frozenset:
-        return self.REFERENCIAS if self._paso == "base" else frozenset()
+        return self.REFERENCIAS if self._paso in ("base", "p2") else frozenset()
 
     def _doc(self):
         return getattr(self.ctx.services, "document", None)
@@ -272,26 +376,62 @@ class BloqueTool(Tool):
 
     def _tomar_base(self, punto) -> None:
         self._base = (float(punto[0]), float(punto[1]))
+        self._p2 = None
+        self._ventana()
+
+    def _p2_relativo(self):
+        if self._p2 is None:
+            return None
+        return (self._p2[0] - self._base[0], self._p2[1] - self._base[1])
+
+    def _ventana(self) -> None:
         from . import bloques_ui
 
         segs = mover(self._segs, -self._base[0], -self._base[1])
         try:
             r = bloques_ui.crear(_ventana(self.ctx.services), segs, self._nombres(),
-                                 len(self._ents), type(self).modo, self.validar)
+                                 len(self._ents), type(self).modo, self.validar,
+                                 nombre=self._nombre or "", p2=self._p2_relativo())
         except Exception as exc:  # noqa: BLE001 -- la ventana falló: por la línea de comandos
             self.ctx.echo(f"(sin ventana: {exc})")
             r = bloques_ui.SIN_QT
         if r is bloques_ui.SIN_QT:
+            self._sin_ventana = True
             self._paso = "nombre"
             self.prompt("Nombre del bloque o [?]:")
             return
         if r is None:                      # Cancelar: se vuelve a elegir el punto base
             self.ctx.echo("Creación cancelada: elija otro punto base o Esc para salir.")
+            self._nombre = None
             self._pedir_base()
             return
         type(self).modo = r["modo"]
-        self._nombre = r["nombre"]
+        self._nombre = r["nombre"] or None
+        if r.get("accion") == "p2":
+            self._pedir_p2()
+            return
+        if not r.get("p2", True):
+            self._p2 = None
         self._crear()
+
+    def _pedir_p2(self) -> None:
+        self._paso = "p2"
+        self.prompt("Precise el segundo punto P2 (escala y giro al insertar), con referencias "
+                    "<Enter = sin P2>:")
+
+    def _tomar_p2(self, punto) -> None:
+        p = (float(punto[0]), float(punto[1]))
+        if math.hypot(p[0] - self._base[0], p[1] - self._base[1]) <= 1e-9:
+            self.ctx.echo("P2 no puede coincidir con el punto base.")
+            return
+        self._p2 = p
+        self._volver_de_p2()
+
+    def _volver_de_p2(self) -> None:
+        if self._sin_ventana:
+            self._pedir_confirmacion()
+        else:
+            self._ventana()
 
     def on_option(self, text: str) -> bool:
         t = text.strip()
@@ -340,6 +480,10 @@ class BloqueTool(Tool):
                 type(self).modo = "R"; self._pedir_confirmacion()
             elif T[:1] == "B":
                 type(self).modo = "B"; self._pedir_confirmacion()
+            elif T in ("2", "P2", "SEGUNDO"):
+                self._pedir_p2()
+            elif T in ("SIN2", "SINP2"):
+                self._p2 = None; self._pedir_confirmacion()
             else:
                 self.ctx.echo("*Cancelar*")
                 self.ctx.finish()
@@ -348,9 +492,12 @@ class BloqueTool(Tool):
 
     def _pedir_confirmacion(self) -> None:
         self._paso = "confirmar"
+        p2 = (f", P2 ({self._p2[0]:.4g}, {self._p2[1]:.4g})" if self._p2 is not None
+              else ", sin P2")
         self.ctx.echo(f"Bloque «{self._nombre}»: {len(self._ents)} objeto(s), punto base "
-                      f"({self._base[0]:.4g}, {self._base[1]:.4g}), {self.MODOS[type(self).modo]}.")
-        self.prompt("¿Crear el bloque? [Sí/No/COnvertir/Retener/Borrar] <Sí>:")
+                      f"({self._base[0]:.4g}, {self._base[1]:.4g}){p2}, "
+                      f"{self.MODOS[type(self).modo]}.")
+        self.prompt("¿Crear el bloque? [Sí/No/COnvertir/Retener/Borrar/2º punto (2)/SIN2] <Sí>:")
 
     def _punto_caja(self, cual):
         c = caja(self._ents)
@@ -363,8 +510,14 @@ class BloqueTool(Tool):
     def on_point(self, point) -> None:
         if self._paso == "base":
             self._tomar_base(point)
+        elif self._paso == "p2":
+            self._tomar_p2(point)
 
     def on_enter(self) -> None:
+        if self._paso == "p2":              # sin P2
+            self._p2 = None
+            self._volver_de_p2()
+            return
         if self._paso in ("nombre", "confirmar"):
             self.on_option("")
             return
@@ -379,12 +532,13 @@ class BloqueTool(Tool):
         doc = self._doc()
         capa = current_layer_name(doc) if doc is not None else None
         modo = type(self).modo
-        self.ctx.execute(CrearBloque(self._nombre, self._base, self._ents, modo, capa))
+        self.ctx.execute(CrearBloque(self._nombre, self._base, self._ents, modo, capa, self._p2))
         accion = {"C": "y los objetos quedaron convertidos en él",
                   "R": "y los objetos quedaron como estaban",
                   "B": "y los objetos se borraron"}[modo]
+        p2 = (f", P2 ({self._p2[0]:.4g}, {self._p2[1]:.4g})" if self._p2 is not None else "")
         self.ctx.echo(f"Bloque «{self._nombre}» creado con {len(self._ents)} objeto(s), punto base "
-                      f"({self._base[0]:.4g}, {self._base[1]:.4g}), {accion}.")
+                      f"({self._base[0]:.4g}, {self._base[1]:.4g}){p2}, {accion}.")
         self.ctx.finish()
 
     def resaltado(self, cursor) -> dict:
@@ -396,6 +550,14 @@ class BloqueTool(Tool):
             if cursor is not None:
                 out["puntos"] = [tuple(cursor)]
                 out["textos"] = [(tuple(cursor), "punto base")]
+        elif self._paso == "p2":
+            out["elegido"] = self._segs
+            out["puntos"] = [self._base]
+            out["textos"] = [(self._base, "P1 punto base")]
+            if cursor is not None:
+                out["vista"] = [(self._base, tuple(cursor))]
+                out["puntos"].append(tuple(cursor))
+                out["textos"].append((tuple(cursor), "P2"))
         return out
 
 
@@ -403,7 +565,12 @@ class InsertarTool(Tool):
     """INSERTAR: ventana con la lista y la vista previa; después el bloque
     sigue al cursor («fantasma») y el punto de inserción se toma con
     referencias (se suman Final, Medio, Centro, Intersección, Nodo,
-    Inserción y Cuadrante, aunque estén apagadas)."""
+    Inserción y Cuadrante, aunque estén apagadas).
+
+    Bloque con segundo punto (P2): P1 (inserción) -> P2, que escala y gira el
+    bloque en vivo -> reflejo sobre la perpendicular a P1-P2 (clic alterna,
+    Enter sigue) -> reflejo sobre la línea P1-P2 (clic alterna, Enter
+    inserta). Los reflejos sólo existen para los bloques con P2."""
 
     REFERENCIAS = frozenset({"END", "MID", "CEN", "INT", "NOD", "INS", "QUA"})
     REFERENCIAS_SIEMPRE = True
@@ -411,12 +578,18 @@ class InsertarTool(Tool):
     rotacion = 0.0
     ultimo = None
     PROMPT = "Precise punto de inserción (con referencias) o [Escala/Rotación/Bloque]:"
+    PROMPT_P1 = "Precise P1, punto de inserción (con referencias) o [Bloque]:"
+    PROMPT_P2 = "Precise P2: escala y giro (con referencias):"
 
     def start(self) -> None:
         self.name = "INSERT"
         self._nombre = None
         self._await = None
         self._segs = []
+        self._dos = None            # (base, P2) del bloque, en la definición, o None
+        self._paso = None           # con P2: "p1", "p2", "perpendicular", "eje"
+        self._a = self._c = None
+        self._perp = self._eje = False
         self._elegir()
 
     def _doc(self):
@@ -432,6 +605,11 @@ class InsertarTool(Tool):
         except Exception:  # noqa: BLE001
             return []
 
+    def _tiene_p2(self, nombre) -> bool:
+        doc = self._doc()
+        blk = doc.doc.blocks.get(nombre) if doc is not None else None
+        return blk is not None and p2_de(blk) is not None
+
     def _elegir(self) -> None:
         from core.blockedit import editable_blocks
 
@@ -446,7 +624,7 @@ class InsertarTool(Tool):
         cls = type(self)
         try:
             r = bloques_ui.insertar(_ventana(self.ctx.services), nombres, self._segs_de,
-                                    cls.escala, cls.rotacion, cls.ultimo)
+                                    cls.escala, cls.rotacion, cls.ultimo, tiene_p2=self._tiene_p2)
         except Exception as exc:  # noqa: BLE001
             self.ctx.echo(f"(sin ventana: {exc})")
             r = bloques_ui.SIN_QT
@@ -463,14 +641,106 @@ class InsertarTool(Tool):
         self._nombre = r["nombre"]
         cls.ultimo, cls.escala, cls.rotacion = r["nombre"], r["escala"], r["rotacion"]
         self._segs = self._segs_de(self._nombre)
+        blk = self._doc().doc.blocks.get(self._nombre)
+        p2 = p2_de(blk) if blk is not None else None
+        self._dos = (base_de(blk), p2) if p2 is not None else None
+        self._a = self._c = None
+        self._perp = self._eje = False
+        if self._dos is not None:
+            self._paso = "p1"
+            self.prompt(self.PROMPT_P1)
+            return
+        self._paso = None
         self.prompt(self.PROMPT)
 
     def referencias_extra(self) -> frozenset:
+        if self._dos is not None:
+            return self.REFERENCIAS if self._paso in ("p1", "p2") else frozenset()
         return self.REFERENCIAS if self._nombre and self._await is None else frozenset()
+
+    # -- bloque con P2 --
+    def _matriz(self, c=None):
+        base, p2 = self._dos
+        c = self._c if c is None else c
+        m = afin_dos_puntos(base, p2, self._a, c)
+        if m is None:
+            return None
+        if self._perp:
+            m = reflejar(m, self._a, c, "perpendicular")
+        if self._eje:
+            m = reflejar(m, self._a, c, "eje")
+        return m
+
+    def _pedir_reflejo(self) -> None:
+        si = self._perp if self._paso == "perpendicular" else self._eje
+        que = ("Reflejo sobre la perpendicular a P1-P2" if self._paso == "perpendicular"
+               else "Reflejo sobre la línea P1-P2")
+        sigue = "siguiente" if self._paso == "perpendicular" else "insertar"
+        self.prompt(f"{que}: {'SÍ' if si else 'NO'}. Clic o [Reflejar] alterna "
+                    f"<Enter = {sigue}>:")
+
+    def _alternar(self) -> None:
+        if self._paso == "perpendicular":
+            self._perp = not self._perp
+        else:
+            self._eje = not self._eje
+        self._pedir_reflejo()
+
+    def _punto_dos(self, point) -> None:
+        p = (float(point[0]), float(point[1]))
+        if self._paso == "p1":
+            self._a = p
+            self._paso = "p2"
+            self.prompt(self.PROMPT_P2)
+        elif self._paso == "p2":
+            if math.hypot(p[0] - self._a[0], p[1] - self._a[1]) <= 1e-9:
+                self.ctx.echo("P2 no puede coincidir con P1.")
+                return
+            self._c = p
+            self._paso = "perpendicular"
+            self._pedir_reflejo()
+        else:
+            self._alternar()
+
+    def _insertar_dos(self) -> None:
+        from core import actions
+        from core.layers import current_layer_name
+
+        doc = self._doc()
+        capa = current_layer_name(doc) if doc is not None else "0"
+        nombre = self._nombre
+        (x, y), xs, ys, rot = a_insercion(self._matriz(), self._dos[0])
+
+        def fabrica(msp):
+            ref = msp.add_blockref(nombre, (x, y), dxfattribs={
+                "layer": capa, "xscale": xs, "yscale": ys, "zscale": xs, "rotation": rot})
+            try:
+                if any(e.dxftype() == "ATTDEF" for e in msp.doc.blocks.get(nombre)):
+                    ref.add_auto_attribs({})
+            except Exception:  # noqa: BLE001
+                pass
+            return ref
+
+        self.ctx.execute(actions.AddEntityCommand("INSERT", fabrica))
+        reflejos = [n for n, v in (("perpendicular", self._perp), ("sobre P1-P2", self._eje)) if v]
+        self.ctx.echo(f"«{nombre}» insertado con P1 ({self._a[0]:.4g}, {self._a[1]:.4g}) y P2 "
+                      f"({self._c[0]:.4g}, {self._c[1]:.4g}): escala {xs:g}, rotación {rot:.4g}°"
+                      + (f", reflejo {' y '.join(reflejos)}." if reflejos else "."))
+        self.ctx.finish()
 
     def on_option(self, text: str) -> bool:
         T = text.strip().upper().lstrip("_")
         cls = type(self)
+        if self._dos is not None:
+            if self._paso in ("perpendicular", "eje"):
+                if T in ("R", "REFLEJAR", "M", "MIRROR"):
+                    self._alternar()
+                    return True
+                return False
+            if T in ("B", "BLOQUE", "BLOCK"):
+                self._elegir()
+                return True
+            return False
         if self._await in ("escala", "rotacion"):
             try:
                 v = float(text.replace(",", "."))
@@ -501,6 +771,16 @@ class InsertarTool(Tool):
         return False
 
     def on_enter(self) -> None:
+        if self._dos is not None:
+            if self._paso == "perpendicular":
+                self._paso = "eje"
+                self._pedir_reflejo()
+                return
+            if self._paso == "eje":
+                self._insertar_dos()
+                return
+            self.ctx.finish()
+            return
         if self._await is not None:
             self._await = None
             self.prompt(self.PROMPT)
@@ -508,6 +788,9 @@ class InsertarTool(Tool):
         self.ctx.finish()
 
     def on_point(self, point) -> None:
+        if self._dos is not None and self._nombre:
+            self._punto_dos(point)
+            return
         if not self._nombre or self._await is not None:
             return
         from core import actions
@@ -535,11 +818,36 @@ class InsertarTool(Tool):
 
     def resaltado(self, cursor) -> dict:
         out = {"fantasma": [], "puntos": [], "textos": []}
+        if self._dos is not None and self._nombre:
+            return self._resaltado_dos(cursor, out)
         if self._nombre and self._await is None and cursor is not None:
             cls = type(self)
             out["fantasma"] = mover(self._segs, cursor[0], cursor[1], cls.escala, cls.rotacion)
             out["puntos"] = [tuple(cursor)]
             out["textos"] = [(tuple(cursor), self._nombre)]
+        return out
+
+    def _resaltado_dos(self, cursor, out) -> dict:
+        base, p2 = self._dos
+        if self._paso == "p1":
+            if cursor is not None:              # tal cual, con P1 en el cursor
+                d = (cursor[0] - base[0], cursor[1] - base[1])
+                out["fantasma"] = mover(self._segs, d[0], d[1])
+                out["puntos"] = [tuple(cursor), (p2[0] + d[0], p2[1] + d[1])]
+                out["textos"] = [(tuple(cursor), f"{self._nombre} · P1")]
+            return out
+        c = self._c if self._paso != "p2" else (tuple(cursor) if cursor is not None else None)
+        if c is None:
+            return out
+        m = self._matriz(c)
+        if m is None:
+            return out
+        out["fantasma"] = transformar(self._segs, m)
+        out["vista"] = [(self._a, c)]
+        out["puntos"] = [self._a, c]
+        texto = "P2" if self._paso == "p2" else (
+            "perpendicular" if self._paso == "perpendicular" else "línea P1-P2")
+        out["textos"] = [(self._a, "P1"), (c, texto)]
         return out
 
 
@@ -626,6 +934,9 @@ class CambiarPuntoBase(Command):
         m = Matrix44.translate(d.x, d.y, 0)
         for e in blk:
             e.transform(m)
+        p2 = p2_de(blk)                   # el P2 acompaña a la geometría
+        if p2 is not None:
+            poner_p2(doc, blk, (p2[0] + d.x, p2[1] + d.y))
         self.cambios = []
         for r, destino in zip(refs, destinos):
             anterior = Vec3(r.dxf.insert)
@@ -647,6 +958,9 @@ class CambiarPuntoBase(Command):
         m = Matrix44.translate(-d.x, -d.y, 0)
         for e in blk:
             e.transform(m)
+        p2 = p2_de(blk)
+        if p2 is not None:
+            poner_p2(document.doc, blk, (p2[0] - d.x, p2[1] - d.y))
         for r, anterior, corrimiento in self.cambios:
             r.dxf.insert = anterior
             if corrimiento is not None:

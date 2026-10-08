@@ -105,7 +105,7 @@ print("ok BLOQUE: resaltado, base, nombre, confirmar")
 ui = import_module("ingecad_plugin_geocad.bloques_ui")
 real_crear = ui.crear
 visto = {}
-def ventana(parent, segs, nombres, cantidad, modo, validar):
+def ventana(parent, segs, nombres, cantidad, modo, validar, **k):
     visto.update(segs=segs, nombres=nombres, cantidad=cantidad, modo=modo,
                  malo=validar("a/b"), vacio=validar(""), ok=validar("NUEVO"))
     return visto.get("respuesta")
@@ -157,7 +157,7 @@ w = Window()
 blk = w.document.doc.blocks.new("MESA"); blk.add_line((0, 0), (2, 0)); blk.add_circle((0, 0), 1)
 w.document.doc.layers.add("MUEBLES"); w.document.doc.header["$CLAYER"] = "MUEBLES"
 pedido = {}
-def ventana_ins(parent, nombres, segs_de, escala, rotacion, actual=None):
+def ventana_ins(parent, nombres, segs_de, escala, rotacion, actual=None, **k):
     pedido.update(nombres=nombres, segs=segs_de("MESA"))
     return {"nombre": "MESA", "escala": 2.0, "rotacion": 90.0}
 ui.insertar = ventana_ins
@@ -454,4 +454,109 @@ eng.invalidate(); assert ref(195.9, 0.1, {"END"}) is None
 mods.poner("ingecad", "bloques", True); B._activo_cache[0] = 0.0
 eng.invalidate(); assert ref(195.9, 0.1, {"END"}) == ("END", 196, 0)
 print("ok referencias sobre bloques")
+# ---- 3.10.0: segundo punto de inserción (P2) ------------------------------------------------
+import io
+def r6(p): return (round(p[0], 6), round(p[1], 6))
+# crear por la línea de comandos: base -> nombre -> 2 -> P2 -> Sí
+w = Window(); a = w.msp.add_line((10, 10), (14, 10)); b_ = w.msp.add_line((14, 10), (13, 11))
+t = bloque(w, [a, b_], "FLECHA", [(10, 10), "FLECHA", "2"]); assert t._paso == "p2"
+assert t.referencias_extra() >= {"END", "MID"} and t.resaltado((14, 10))["vista"] == [((10, 10), (14, 10))]
+t.on_point((10, 10)); assert t._paso == "p2" and any("coincidir" in m for m in w.msgs)
+t.on_point((14, 10)); assert t._paso == "confirmar" and any("P2 (14, 10)" in m for m in w.msgs)
+t.on_option("S")
+blk = w.document.doc.blocks.get("FLECHA"); assert B.p2_de(blk) == (4.0, 0.0)
+f = io.StringIO(); w.document.doc.write(f)                         # viaja con el dibujo
+otro = ezdxf.read(io.StringIO(f.getvalue())); assert B.p2_de(otro.blocks.get("FLECHA")) == (4.0, 0.0)
+# sin P2 (Enter en el paso P2) y SIN2
+w2 = Window(); a = w2.msp.add_line((0, 0), (2, 0))
+bloque(w2, [a], "SIMPLE", [(0, 0), "SIMPLE", "2", "", "S"])
+assert B.p2_de(w2.document.doc.blocks.get("SIMPLE")) is None
+# redefinir sin P2 lo quita; deshacer lo devuelve
+nuevo_c = w.msp.add_circle((0, 0), 1)
+t = bloque(w, [nuevo_c], "FLECHA", [(0, 0), "FLECHA", "S", "S"])
+assert B.p2_de(w.document.doc.blocks.get("FLECHA")) is None
+w.history.undo(); assert B.p2_de(w.document.doc.blocks.get("FLECHA")) == (4.0, 0.0)
+w.history.undo(); assert "FLECHA" not in w.document.doc.blocks       # deshacer la creación
+# con la ventana: «Segundo punto...» -> punto -> la ventana vuelve con P2 y el nombre
+llamadas = []
+respuestas = [{"accion": "p2", "nombre": "PUERTA", "modo": "R"},
+              {"nombre": "PUERTA", "modo": "R", "p2": True}]
+def ventana_p2(parent, segs, nombres, cantidad, modo, validar, nombre="", p2=None):
+    llamadas.append((nombre, p2, modo)); return respuestas.pop(0)
+ui.crear = ventana_p2
+w = Window(); a = w.msp.add_line((5, 5), (8, 5))
+t = B.BloqueTool(w.ctx()); t.start(); t.on_selection([a]); t.on_point((5, 5))
+assert t._paso == "p2"; t.on_point((8, 9))
+assert llamadas == [("", None, "C"), ("PUERTA", (3.0, 4.0), "R")]
+assert B.p2_de(w.document.doc.blocks.get("PUERTA")) == (3.0, 4.0) and lineas(w.msp) == [(5, 5, 8, 5)]
+respuestas[:] = [{"nombre": "SINP2", "modo": "R", "p2": False}]     # «Quitar P2»
+t = B.BloqueTool(w.ctx()); t.start(); t.on_selection([a]); t._p2 = (1, 1); t.on_point((5, 5))
+assert B.p2_de(w.document.doc.blocks.get("SINP2")) is None
+ui.crear = real_crear; B.BloqueTool.modo = "C"
+# PUNTOBASEBLOQUE corre P2 con la geometría (y deshacer)
+w = Window(); blk = w.document.doc.blocks.new("V"); blk.add_line((0, 0), (4, 0))
+B.poner_p2(w.document.doc, blk, (4, 0))
+w.history.execute(B.CambiarPuntoBase("V", (2, 0))); assert B.p2_de(blk) == (2.0, 0.0)
+w.history.undo(); assert B.p2_de(blk) == (4.0, 0.0)
+print("ok P2 al crear: línea de comandos, ventana, redefinir, punto base, DXF")
+
+# INSERT de un bloque con P2: P1 -> P2 (escala 2, giro 90°) -> reflejos -> inserta
+w = Window(); blk = w.document.doc.blocks.new("FLECHA")
+blk.add_line((0, 0), (4, 0)); blk.add_line((4, 0), (3, 1))      # la punta mira hacia +y
+B.poner_p2(w.document.doc, blk, (4, 0))
+ui.insertar = lambda *a, **k: {"nombre": "FLECHA", "escala": 1.0, "rotacion": 0.0}
+def insertar_flecha(pasos):
+    w.finished = False
+    for e in list(w.msp.query("INSERT")): w.msp.delete_entity(e)
+    t = B.InsertarTool(w.ctx()); t.start()
+    for p in pasos:
+        if p == "": t.on_enter()
+        elif isinstance(p, str): t.on_option(p)
+        else: t.on_point(p)
+    return t
+def puntos(ins):
+    return sorted({r6(q) for e in ins.virtual_entities() for q in ((e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y))})
+t = insertar_flecha([])
+assert t._paso == "p1" and t.referencias_extra() >= {"END", "INS"}
+assert len(t.resaltado((1, 1))["fantasma"]) == 2
+t.on_point((10, 10)); assert t._paso == "p2"
+fa = t.resaltado((10, 18))["fantasma"]; assert ((10, 18), (8, 16)) in [(r6(p), r6(q)) for p, q in fa]
+t.on_point((10, 10)); assert t._paso == "p2"                       # P2 = P1: no
+t.on_point((10, 18)); assert t._paso == "perpendicular" and t.referencias_extra() == frozenset()
+t.on_enter(); assert t._paso == "eje"; t.on_enter()
+(ins,) = w.msp.query("INSERT"); assert w.finished
+assert (r6(ins.dxf.insert), round(ins.dxf.xscale, 6), round(ins.dxf.yscale, 6), round(ins.dxf.rotation, 6)) == ((10, 10), 2, 2, 90)
+assert puntos(ins) == [(8, 16), (10, 10), (10, 18)]
+casos = {(True, False): [(8, 12), (10, 10), (10, 18)],     # perpendicular: P1 y P2 se cambian
+         (False, True): [(10, 10), (10, 18), (12, 16)],    # sobre P1-P2: la punta al otro lado
+         (True, True): [(10, 10), (10, 18), (12, 12)]}
+for (perp, eje), esperado in casos.items():
+    pasos = [(10, 10), (10, 18)] + ([(0, 0)] if perp else []) + [""] + (["R"] if eje else []) + [""]
+    t = insertar_flecha(pasos)
+    (ins,) = w.msp.query("INSERT"); assert puntos(ins) == esperado, (perp, eje, puntos(ins))
+    assert (ins.dxf.yscale < 0) == (perp != eje)
+t = insertar_flecha([(10, 10), (10, 18), (0, 0), (0, 0)]); assert t._perp is False   # clic alterna
+n = len(w.history._undo); t = insertar_flecha([(10, 10), (10, 18), "", ""])
+w.history.undo(); assert not w.msp.query("INSERT")                  # un solo deshacer
+# un bloque sin P2 no tiene P1/P2 ni reflejos
+blk2 = w.document.doc.blocks.new("MESA"); blk2.add_line((0, 0), (1, 0))
+ui.insertar = lambda *a, **k: {"nombre": "MESA", "escala": 1.0, "rotacion": 0.0}
+t = B.InsertarTool(w.ctx()); t.start(); assert t._dos is None and t._paso is None
+t.on_point((3, 3)); (ins,) = [e for e in w.msp.query("INSERT") if e.dxf.name == "MESA"]
+assert ins.dxf.yscale == 1 and w.finished
+# la ventana de INSERTAR sabe qué bloques tienen P2
+visto_ins = {}
+def ventana_ins2(parent, nombres, segs_de, escala, rotacion, actual=None, tiene_p2=None):
+    visto_ins.update({n: tiene_p2(n) for n in nombres}); return None
+ui.insertar = ventana_ins2; B.InsertarTool(w.ctx()).start()
+assert visto_ins == {"FLECHA": True, "MESA": False}
+# las cuentas: a_insercion devuelve lo mismo que la matriz
+m = B.reflejar(B.afin_dos_puntos((0, 0), (4, 0), (1, 2), (4, 6)), (1, 2), (4, 6), "eje")
+(x, y), xs, ys, rot = B.a_insercion(m, (0, 0))
+co, si = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+for q in ((1, 0), (0, 1), (3, -2)):
+    esperado = B.aplicar(m, q)
+    assert r6((x + co * xs * q[0] - si * ys * q[1], y + si * xs * q[0] + co * ys * q[1])) == r6(esperado)
+print("ok INSERT con P2: escala, giro, reflejos, deshacer")
+
 print("TODO OK BLOQUES")
