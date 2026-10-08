@@ -1,0 +1,25 @@
+GeoCAD - versión 3.11.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo Propiedades): el formato del texto en la
+paleta Properties (08/10/2026, pedido de Fernando).
+
+- El editor de texto en el lugar de IngeCAD (MTEXT, doble clic en un texto)
+  traía arriba del texto la barra de formato (Estilo, Fuente, Altura,
+  N K S O, Color, a/b, interlineado, Lista, Máscara, Columnas, Justificar,
+  OK) y la caja tomaba el ancho mayor entre el texto y esa barra: con un
+  texto corto, la caja era mucho más ancha que el texto.
+- Ahora, mientras se edita, esos MISMOS controles (no copias: hacen lo mismo
+  que antes) pasan a un recuadro «Formato del texto» arriba de la paleta
+  Properties, en columna, y la paleta se muestra en esa solapa. Sobre el
+  texto quedan sólo la regla y el texto: la caja mide lo que mide el texto.
+- Un clic en el recuadro (botones, listas, menús, Máscara, Columnas) NO
+  cierra el editor. Un clic en el dibujo, como siempre, guarda y cierra.
+  OK o Ctrl+Enter guardan; Esc cancela.
+- Al cerrar el editor el recuadro desaparece y la paleta vuelve a la solapa
+  en que estaba (Capas, Paleta...).
+- El TEXT de una línea no cambia (no tenía barra). Apagado el módulo
+  Propiedades (GeoCAD > Módulos...), el editor queda como viene en IngeCAD.
+- Pruebas: corrieron las 29 (todas OK; test_propiedades verifica que los
+  controles y métodos del editor de IngeCAD siguen existiendo). Verificado
+  con el IngeCAD real sin pantalla: recuadro en la paleta, caja del ancho
+  del texto, un clic en N no cierra, negrita aplicada, clic afuera guarda.

@@ -1,0 +1,19 @@
+GeoCAD - versión 3.11.1
+=======================
+CORRECCIÓN (IngeCAD, editor de texto): «Discard the changes to this text?»
+cerraba el programa (08/10/2026, encontrado por Fernando probando la 3.11.0).
+
+- Causa: error de IngeCAD 0.6.5, también sin GeoCAD. El editor de texto toma
+  cualquier clic fuera de él como «guardar y cerrar», y Qt no cuenta como
+  «adentro» a sus propias ventanas (la pregunta, Máscara, Columnas,
+  interlineado «Other...»). Con Esc y cambios: el clic en «Yes» guardaba y
+  cerraba el editor y después lo cancelaba (cerrado dos veces): el programa
+  se caía. El clic en «No» guardaba y cerraba en vez de seguir editando.
+- Ahora un clic en una ventana que depende del editor, o con cualquier
+  ventana modal abierta, no cierra el editor. «Yes» descarta los cambios y
+  cierra (una vez, sin guardar); «No» vuelve al texto.
+- Verificado con el IngeCAD real sin pantalla, con el módulo Propiedades
+  prendido y apagado (la corrección vale en los dos casos, como la de REC
+  con ORTO de la 3.9.4).
+- Pruebas: corrieron las 29 (todas OK; test_propiedades suma las ventanas
+  del editor).

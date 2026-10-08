@@ -69,7 +69,8 @@ CATALOGO = {
                "Con varios objetos seleccionados, la paleta Properties (Ctrl+1) deja "
                "cambiar en todos a la vez lo propio de su tipo (altura de texto, radio, "
                "escala de bloque...), los atributos de los bloques, y muestra largo y "
-               "área totales.", cambia_programa=True),
+               "área totales. Al editar un texto, su formato va a la paleta y sobre el "
+               "texto queda sólo la regla.", cambia_programa=True),
         Modulo("papel", "Espacio papel como AutoCAD (escala de la hoja)",
                "La presentación respeta la escala de su configuración de página: "
                "con 1 mm = 0,001 unidades (m) la hoja se dibuja en metros, la ventana "

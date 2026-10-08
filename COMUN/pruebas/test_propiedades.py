@@ -129,4 +129,31 @@ M.guardar("ingecad", {"propiedades": False})                              # mód
 hist.execute(SetPropertyCommand([parcela], "color", 1)); assert parcela.dxf.true_color == 0xA0522D
 hist.undo(); M.guardar("ingecad", {"propiedades": True})
 print("ok color")
+
+# ---- 3.11.0: el formato del texto en la paleta Properties ----------------------------------
+import importlib.util as _iu
+ET = import_module("ingecad_plugin_geocad.editor_texto")
+_src = Path(_iu.find_spec("views").submodule_search_locations[0], "mtext_editor.py").read_text()
+_nombres = ET.controles()
+assert len(_nombres) == len(set(_nombres)) == 15
+for _n in _nombres:                         # los controles existen en el editor de IngeCAD
+    assert f"self.{_n} = " in _src, _n
+for _m in ET.ENVOLTORIOS:                   # y los métodos que se envuelven
+    assert f"def {_m}(self" in _src, _m
+assert "self._bar = QWidget(self)" in _src and "self._bar.sizeHint()" in _src
+assert ET.en_recuadro(types.SimpleNamespace(_geocad_formato=None), object()) is False
+print("ok formato del texto en la paleta")
+
+# ---- 3.11.1: un clic en las ventanas del editor («Discard...?», Máscara...) no lo cierra ----
+_ed = types.SimpleNamespace(_geocad_formato=None)
+class _W:
+    def __init__(self, padre=None): self._p = padre
+    def parentWidget(self): return self._p
+_caja = _W(); _ed._geocad_formato = _caja
+_box = _W(_W(_ed))                          # botón del cuadro de pregunta, hijo del editor
+assert ET.depende_del_editor(_ed, _box) and ET.depende_del_editor(_ed, _W(_caja))
+assert not ET.depende_del_editor(_ed, _W(_W()))
+assert "clic_no_cierra(self, obj)" in Path(ET.__file__).read_text(encoding="utf-8")
+assert "QMessageBox.question(\n                self," in _src or "QMessageBox.question(" in _src
+print("ok ventanas del editor")
 print("TODO OK PROPIEDADES")
