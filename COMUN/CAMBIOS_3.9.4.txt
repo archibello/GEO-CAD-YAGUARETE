@@ -1,0 +1,18 @@
+GeoCAD - versión 3.9.4
+======================
+CORRECCIÓN (IngeCAD): RECTANG (REC) con ORTO prendido (08/10/2026).
+
+- Problema (de IngeCAD, no de GeoCAD): con ORTO prendido (F8), REC pedía
+  la primera esquina, mostraba el rectángulo y, al hacer clic en la otra
+  esquina, no quedaba nada. IngeCAD aplicaba ORTO a la esquina opuesta
+  (la llevaba a la horizontal o vertical de la primera), el rectángulo
+  quedaba sin alto o sin ancho y avisaba «Zero-size rectangle — nothing
+  created». Verificado con IngeCAD 0.6.5 real, con y sin GeoCAD: falla
+  igual en los dos; sin ORTO, o escribiendo @10,5, andaba.
+- Ahora, como en AutoCAD, ORTO no se aplica mientras REC pide la otra
+  esquina. ORTO queda prendido y vale para todo lo demás (LÍNEA, POL...,
+  y la primera esquina de REC). Las referencias a objetos siguen igual.
+- Se apaga con GeoCAD (el complemento): IngeCAD queda como venía.
+- Pruebas: corrieron las 29 (todas OK; test_dibujo suma REC con ORTO).
+  Verificado además dentro de IngeCAD sin pantalla: REC con ORTO crea el
+  rectángulo de 10 × 4, ORTO sigue prendido y LÍNEA sale horizontal.

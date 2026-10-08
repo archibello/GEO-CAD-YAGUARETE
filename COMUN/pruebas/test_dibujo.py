@@ -164,4 +164,33 @@ w = FakeWindow(); w.typed = "@10<90"; w.on_canvas_right_click(5)
 assert pressed == ["@10<90"] and w.calls == []       # lo escrito se acepta como con Enter
 print("ok botón derecho")
 
+# ------------------------------------------------------------- REC con ORTO (3.9.4)
+from tools.draw import RectangTool
+
+
+class Ctrl:
+    """Lo que el envoltorio usa del ToolController: ORTO lleva el punto a la
+    horizontal/vertical del último punto, como resolved_point de IngeCAD."""
+    def __init__(self, tool):
+        self.tool, self.ortho_on, self.shift_held, self.window = tool, True, False, None
+    def resolved_point(self, wx, wy):
+        ancla = getattr(self.tool, "last_point", None)
+        if ancla is not None and (self.ortho_on != self.shift_held):
+            return (wx, ancla[1]) if abs(wx - ancla[0]) >= abs(wy - ancla[1]) else (ancla[0], wy)
+        return (wx, wy)
+
+
+resolver = dib._envolver_resolved_point(Ctrl.resolved_point)
+rect = RectangTool.__new__(RectangTool); rect._first = None; rect._await = None; rect.last_point = None
+c = Ctrl(rect)
+assert not dib.orto_suelto(rect) and resolver(c, 3, 1) == (3, 1)      # primera esquina: como venía
+rect._first = rect.last_point = (0, 0)
+assert dib.orto_suelto(rect) and resolver(c, 10, 4) == (10, 4)        # otra esquina: sin ORTO
+assert c.ortho_on is True                                             # ORTO queda como estaba
+c.shift_held = True; assert resolver(c, 10, 4) == (10, 4); c.shift_held = False
+rect._await = "dim_len"; assert not dib.orto_suelto(rect)             # sub-pregunta numérica: como venía
+linea = types.SimpleNamespace(last_point=(0, 0)); c2 = Ctrl(linea)
+assert resolver(c2, 10, 4) == (10, 0)                                 # LÍNEA: ORTO sigue mandando
+print("ok REC con ORTO")
+
 print("TODO OK DIBUJO")

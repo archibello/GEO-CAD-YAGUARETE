@@ -392,6 +392,33 @@ def _envolver_snap_kinds(original):
     return snap_kinds
 
 
+def orto_suelto(tool) -> bool:
+    """RECTANG pidiendo la otra esquina: ORTO no se aplica, como en AutoCAD.
+    IngeCAD la llevaba a la horizontal o vertical de la primera esquina y el
+    rectángulo quedaba sin alto o sin ancho («Zero-size rectangle»)."""
+    return (type(tool).__name__ == "RectangTool"
+            and getattr(tool, "_first", None) is not None
+            and getattr(tool, "_await", None) is None)
+
+
+def _envolver_resolved_point(original):
+    def resolved_point(self, wx, wy, *args, **kwargs):
+        tool = getattr(self, "tool", None)
+        if (tool is None or not orto_suelto(tool)
+                or not _activo(getattr(self, "window", None))):
+            return original(self, wx, wy, *args, **kwargs)
+        orto = getattr(self, "ortho_on", False)
+        self.ortho_on = getattr(self, "shift_held", False)   # ORTO efectivo = apagado
+        try:
+            return original(self, wx, wy, *args, **kwargs)
+        finally:
+            self.ortho_on = orto
+
+    resolved_point._puente_original = original
+    resolved_point._puente_fabrica = _envolver_resolved_point
+    return resolved_point
+
+
 def _envolver_vista(original):
     def _draw_tool_preview(self, p):
         original(self, p)
@@ -424,6 +451,7 @@ def instalar() -> None:
     envolver(MainWindow, "maybe_save_changes", bloques._envolver_cerrar, reemplazar=True)
     envolver(ToolController, "start_tool", _envolver_start_tool, reemplazar=True)
     envolver(ToolController, "snap_kinds", _envolver_snap_kinds, reemplazar=True)
+    envolver(ToolController, "resolved_point", _envolver_resolved_point, reemplazar=True)
     try:
         from views.viewport import Viewport
     except Exception:
