@@ -74,7 +74,7 @@ def crear(parent, segs, nombres, cantidad, modo, validar):
     QtCore, QtGui, QtWidgets = qt
     Vista = _vista_clase(QtCore, QtGui, QtWidgets)
     dlg = QtWidgets.QDialog(parent)
-    dlg.setWindowTitle("GeoCAD - Crear bloque")
+    dlg.setWindowTitle("GEO-CAD-YAGUARETÉ - Crear bloque")
     dlg.setMinimumWidth(460)
     lay = QtWidgets.QVBoxLayout(dlg)
     vista = Vista(dlg)
@@ -139,7 +139,7 @@ def insertar(parent, nombres, segs_de, escala, rotacion, actual=None):
     QtCore, QtGui, QtWidgets = qt
     Vista = _vista_clase(QtCore, QtGui, QtWidgets)
     dlg = QtWidgets.QDialog(parent)
-    dlg.setWindowTitle("GeoCAD - Insertar bloque")
+    dlg.setWindowTitle("GEO-CAD-YAGUARETÉ - Insertar bloque")
     dlg.setMinimumWidth(560)
     lay = QtWidgets.QHBoxLayout(dlg)
     lista = QtWidgets.QListWidget(dlg)

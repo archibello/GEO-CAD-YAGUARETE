@@ -20,7 +20,7 @@ from pathlib import Path
 
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
-from . import actualizacion, buzon, config, dibujo, modulos
+from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
 from . import bloques, filtro, impresion, papel, propiedades, seleccion
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
@@ -30,7 +30,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.7.0"
+VERSION = "3.8.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -87,9 +87,15 @@ def cmd_modulos(ctx, *args) -> None:
 
 
 def cmd_acerca(ctx, *args) -> None:
-    """GEOCADABOUT: versión y módulos activos."""
-    ctx.echo(f"GeoCAD {VERSION} para IngeCAD. Módulos activos: {modulos.resumen(PROGRAMA)}.")
+    """GEOCADABOUT: «Acerca de...»: versión, módulos activos, autor, licencia y enlaces."""
+    resumen = modulos.resumen(PROGRAMA)
+    for linea in nombre.texto_acerca(PROGRAMA, VERSION, resumen).split("\n"):
+        ctx.echo(linea)
     ctx.echo("Configuración común: " + str(config.config_path()))
+    QtWidgets = ventanas._qtwidgets()
+    window = getattr(ctx, "host", None)
+    if QtWidgets is not None and window is not None:
+        nombre.mostrar_acerca(QtWidgets, window, PROGRAMA, VERSION, resumen)
 
 
 def construir_spec() -> PluginSpec:
@@ -227,13 +233,13 @@ def construir_spec() -> PluginSpec:
     menu += [
         MenuItem("Modules...", "GEOCADMODULES"),
         MenuItem("Shared settings...", "SHPCONFIG"),
-        MenuItem("Update GeoCAD (IngeCAD and QGIS)...", "QGISUPDATE"),
-        MenuItem("About GeoCAD", "GEOCADABOUT"),
+        MenuItem("Update GeoCAD Yaguareté (IngeCAD and QGIS)...", "QGISUPDATE"),
+        MenuItem("About GEO-CAD-YAGUARETÉ...", "GEOCADABOUT"),
     ]
     return PluginSpec(
         id=PLUGIN_ID,
-        name="GeoCAD",
-        version="3.7.0",
+        name="GeoCAD Yaguareté",
+        version="3.8.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

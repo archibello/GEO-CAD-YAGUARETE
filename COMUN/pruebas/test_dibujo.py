@@ -16,7 +16,7 @@ from tools.draw import LineTool, PlineTool
 lp = load_plugin(Path(__file__).resolve().parents[2] / "INGECAD" / "codigo" / "geocad", bundled=False)
 assert lp.available, lp.reason
 spec = lp.spec
-assert "ANGREL" in spec.commands and "RIGHTCLICK" in spec.commands and spec.name == "GeoCAD"
+assert "ANGREL" in spec.commands and "RIGHTCLICK" in spec.commands and spec.name == "GeoCAD Yaguareté"
 dib = import_module("ingecad_plugin_geocad.dibujo")
 
 def close(a, b, tol=1e-9):

@@ -54,24 +54,24 @@ titulos = lambda secs: [s[0] for s in secs]                                     
 activos = [l1]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General"]
 # varias líneas: aparece «Geometry» (lo del tipo) y los totales
 activos = [l1, l2]; secs = P.esquema(panel, activos, original, pp)
-assert titulos(secs) == ["General", "Geometry", "Totales (GeoCAD)"], titulos(secs)
+assert titulos(secs) == ["General", "Geometry", "Totales (GeoCAD Yaguareté)"], titulos(secs)
 tot = dict((r.label, r.get(None)) for r in secs[2][1])
 assert tot == {"Cantidad": 2, "Largo total (2)": "15,000"}, tot
 # polilíneas: «Área» del tipo sólo si todas están cerradas
 activos = [cuadro, abierta]; secs = P.esquema(panel, activos, original, pp)
 assert secs[1] == ("Geometry", []) and any(r.label.startswith("Área total (1") for r in secs[2][1])
 # tipos mezclados: sólo lo general y los totales (como AutoCAD)
-activos = [l1, circ]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General", "Totales (GeoCAD)"]
+activos = [l1, circ]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General", "Totales (GeoCAD Yaguareté)"]
 # bloques: «Atributos»; escribir un valor lo cambia en todos los que lo tienen
 activos = [p1, p2]; secs = P.esquema(panel, activos, original, pp)
-assert titulos(secs) == ["General", "Atributos", "Totales (GeoCAD)"], titulos(secs)
+assert titulos(secs) == ["General", "Atributos", "Totales (GeoCAD Yaguareté)"], titulos(secs)
 filas = {r.label: r for r in secs[1][1]}
 assert list(filas) == ["NUM", "TIPO"] and filas["NUM"].get(p1) == "P-9" and filas["TIPO"].get(p2) is None
 filas["NUM"].apply("P-10"); assert hechos and P.valor_atributo(p1, "NUM") == P.valor_atributo(p2, "NUM") == "P-10"
 activos = [p1]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General", "Atributos"]
 # un constructor que falla no rompe la paleta
 pp._TYPE_ROWS["CIRCLE"] = lambda panel, e: 1 / 0
-activos = [circ, circ]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General", "Totales (GeoCAD)"]
+activos = [circ, circ]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General", "Totales (GeoCAD Yaguareté)"]
 # módulo apagado: la paleta como venía
 M.guardar("ingecad", {"propiedades": False})
 activos = [l1, l2]; assert titulos(P.esquema(panel, activos, original, pp)) == ["General"]

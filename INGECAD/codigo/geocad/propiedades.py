@@ -165,7 +165,7 @@ def secciones_extra(panel, entidades, Row) -> list:
         if t["n_area"]:
             filas.append(Row(f"Área total ({t['n_area']} cerrados)", "ro",
                              lambda e, v=_num(t["area"]): v))
-        out.append(("Totales (GeoCAD)", filas))
+        out.append(("Totales (GeoCAD Yaguareté)", filas))
     return out
 
 

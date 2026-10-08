@@ -135,7 +135,7 @@ def piezas(entity, p, tol=1e-7):
         return ("Un círculo no se parte en un solo punto (como en AutoCAD): "
                 "use PARTE con dos puntos.")
     if tipo not in ("LINE", "ARC", "LWPOLYLINE"):
-        return f"GeoCAD: {tipo} no se puede partir en un punto."
+        return f"GeoCAD Yaguareté: {tipo} no se puede partir en un punto."
     extremo = "El punto cae en un extremo: no hay nada que partir."
     if tipo == "LINE":
         s, e = entity.dxf.start, entity.dxf.end
@@ -161,7 +161,7 @@ def piezas(entity, p, tol=1e-7):
     cerrada = bool(entity.closed)
     n = len(filas)
     if n < 2:
-        return "GeoCAD: la polilínea no tiene tramos."
+        return "GeoCAD Yaguareté: la polilínea no tiene tramos."
     d, i, f, q = posicion_polilinea(filas, cerrada, p)
     a, b = filas[i], filas[(i + 1) % n]
     largo_i = largo_tramo(a, b, a[4])
@@ -332,13 +332,13 @@ class PartirTool(Tool):
                 self.prompt("Nada designado. Designe objeto:")
                 return
             if e.dxftype() not in self.TIPOS:
-                self.ctx.echo(f"GeoCAD: {e.dxftype()} no se puede partir en un punto.")
+                self.ctx.echo(f"GeoCAD Yaguareté: {e.dxftype()} no se puede partir en un punto.")
                 return
             if e.dxftype() == "CIRCLE":
                 self.ctx.echo(piezas(e, point))
                 return
             if poligono_sig(e):
-                self.ctx.echo("GeoCAD: es un polígono de una capa de QGIS; partirlo en un "
+                self.ctx.echo("GeoCAD Yaguareté: es un polígono de una capa de QGIS; partirlo en un "
                               "punto lo dejaría abierto (y no sería un polígono).")
                 return
             self._ent, self._piezas = e, [e]
@@ -359,7 +359,7 @@ class PartirTool(Tool):
         else:
             cmd = actions.ReplaceEntitiesCommand("BREAKATPOINT", [e], [fabrica(e, pz) for pz in pzs])
         if cmd is None:
-            self.ctx.echo(f"GeoCAD: {e.dxftype()} no se puede partir.")
+            self.ctx.echo(f"GeoCAD Yaguareté: {e.dxftype()} no se puede partir.")
             self.ctx.finish()
             return
         self.ctx.execute(cmd)

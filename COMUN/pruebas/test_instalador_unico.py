@@ -30,7 +30,7 @@ home, ing, qg = casa()
 r = subprocess.run([sys.executable, inst], env={**os.environ, "HOME": str(home), "PYTHONPATH": ""},
                    capture_output=True, text=True, timeout=120)
 print(r.stdout); assert r.returncode == 0, r.stderr
-assert "IngeCAD: GeoCAD instalado y activado" in r.stdout and "QGIS: GeoCAD " + VERSION in r.stdout
+assert "IngeCAD: GEO-CAD-YAGUARETÉ instalado y activado" in r.stdout and "QGIS: GEO-CAD-YAGUARETÉ " + VERSION in r.stdout
 # IngeCAD: plugin nuevo, el Puente retirado con copia, activado en IngeCAD.conf (sin tocar el resto)
 assert (ing / "plugins/geocad/__init__.py").exists()
 assert not (ing / "plugins/puente_qgis").exists() and (ing / "plugins/.anterior-puente_qgis/__init__.py").exists()
@@ -80,6 +80,6 @@ count, err = scripting.run_python(inst, host); assert err is None, err
 print("\n".join(said))
 assert host.plugins.is_active("geocad")
 assert (qg3 / "python/plugins/geocad/plugin.py").exists() and "geocad=true" in (qg3 / "QGIS/QGIS4.ini").read_text()
-assert any(t.startswith("QGIS: GeoCAD " + VERSION) for t in said)
+assert any(t.startswith("QGIS: GEO-CAD-YAGUARETÉ " + VERSION) for t in said)
 print("ok con AP")
 print("TODO OK INSTALADOR UNICO")

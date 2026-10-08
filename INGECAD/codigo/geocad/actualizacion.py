@@ -26,7 +26,7 @@ def _pedir_carpeta(window, actual: str):
     except ImportError:
         return None
     carpeta = QFileDialog.getExistingDirectory(
-        window, "Carpeta de donde se actualiza GeoCAD (la del proyecto)", actual or str(Path.home()))
+        window, "Carpeta de donde se actualiza GeoCAD Yaguareté (la del proyecto)", actual or str(Path.home()))
     return carpeta or None
 
 
@@ -54,7 +54,7 @@ def _correr_instalador(window, ruta: Path, echo) -> None:
 
     _cuenta, error = scripting.run_python(ruta, window)
     if error:
-        echo(f"Actualizar GeoCAD: {error}")
+        echo(f"Actualizar GeoCAD Yaguareté: {error}")
 
 
 # -- el comando --------------------------------------------------------------------
@@ -65,7 +65,7 @@ def carpeta_de_actualizaciones(window, echo, cambiar: bool = False):
             echo(f"La carpeta de actualizaciones no está disponible: {carpeta}")
         elegida = _pedir_carpeta(window, carpeta)
         if not elegida:
-            echo("Actualizar GeoCAD: cancelado (falta la carpeta de actualizaciones).")
+            echo("Actualizar GeoCAD Yaguareté: cancelado (falta la carpeta de actualizaciones).")
             return None
         config.save({"carpeta_actualizaciones": elegida}, "IngeCAD")
         carpeta = elegida
@@ -84,21 +84,21 @@ def actualizar_ingecad(window, echo, carpeta: str, avisar_qgis: bool = True,
             pass
     if cand is None:
         if not silencioso:
-            echo(f"GeoCAD para IngeCAD ya está en la última versión ({actual}). "
+            echo(f"GeoCAD Yaguareté para IngeCAD ya está en la última versión ({actual}). "
                  f"Carpeta: {carpeta}")
         return False
-    texto = (f"Hay una versión nueva de GeoCAD para IngeCAD:\n\n"
+    texto = (f"Hay una versión nueva de GeoCAD Yaguareté para IngeCAD:\n\n"
              f"    instalada: {actual}\n    nueva:     {cand.version}\n"
              f"    archivo:   {cand.nombre}\n")
     detalle = actualizar.cambios(cand)
     if detalle:
         texto += "\n" + detalle + "\n"
     texto += "\n¿Instalarla ahora?"
-    if not _preguntar(window, "Actualizar GeoCAD", texto):
-        echo("Actualizar GeoCAD: no se instaló nada.")
+    if not _preguntar(window, "Actualizar GeoCAD Yaguareté", texto):
+        echo("Actualizar GeoCAD Yaguareté: no se instaló nada.")
         return False
     ruta = actualizar.extraer(cand)
-    echo(f"Instalando GeoCAD {cand.version} desde {cand.nombre}...")
+    echo(f"Instalando GeoCAD Yaguareté {cand.version} desde {cand.nombre}...")
     _diferir(lambda: _correr_instalador(window, ruta, echo))
     return True
 

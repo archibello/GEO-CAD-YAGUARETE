@@ -119,7 +119,7 @@ def main():
     tool.mkdir(parents=True, exist_ok=True)
     qgis_zip.write_bytes(zip_folder(QG, "geocad"))
     installer_py.write_text(instalador(ING, VERSION), encoding="utf-8")
-    script = (f"#!/bin/sh\n# GeoCAD {VERSION}: instala y activa GeoCAD en IngeCAD y en QGIS.\n"
+    script = (f"#!/bin/sh\n# GEO-CAD-YAGUARETÉ {VERSION}: instala y activa GEO-CAD-YAGUARETÉ en IngeCAD y en QGIS.\n"
               f'cd "$(dirname "$0")" && python3 instalar_geocad_{VERSION}.py\n'
               "printf '\\nPulse Enter para cerrar. '; read _\n")
     sh = tool / "INSTALAR_GeoCAD.sh"

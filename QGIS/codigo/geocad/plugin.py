@@ -32,12 +32,12 @@ try:                                    # Qt6 (QGIS 4)
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, buzon, config, modulos, submodulos
+from . import actualizar, bloqueo, buzon, config, modulos, nombre, submodulos
 
-MENU_TITLE = "GeoCAD"
+MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.7.0"
+VERSION = "3.8.0"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -181,8 +181,8 @@ class GeoCAD:
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
         add("config", "Configuración común...", self.open_config)
-        add("update", "Actualizar GeoCAD (QGIS e IngeCAD)...", self.update_bridge)
-        add("about", f"Acerca de GeoCAD (versión {VERSION})", self.about)
+        add("update", "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...", self.update_bridge)
+        add("about", f"Acerca de {nombre.NOMBRE} (versión {VERSION})...", self.about)
 
     # primera vez: retirar el Puente 1.x y elegir los módulos
     def _retirar_viejos(self) -> list:
@@ -226,7 +226,7 @@ class GeoCAD:
         retirados = self._retirar_viejos()
         if retirados:
             self._bar("Se retiró el Puente IngeCAD-QGIS 1.x (queda una copia como "
-                      ".anterior-ingecad_puente). Ahora todo está en el menú «GeoCAD».", "ok", 10)
+                      ".anterior-ingecad_puente). Ahora todo está en el menú «GeoCAD Yaguareté».", "ok", 10)
         if not modulos.elegido(PROGRAMA):
             self.choose_modules(primera_vez=True)
         elif modulos.nuevos(PROGRAMA):
@@ -248,7 +248,7 @@ class GeoCAD:
         if nuevo is None:
             return
         self.aplicar_modulos()
-        self._bar("Módulos de GeoCAD activos: " + modulos.resumen(PROGRAMA) + ".", "ok")
+        self._bar("Módulos de GeoCAD Yaguareté activos: " + modulos.resumen(PROGRAMA) + ".", "ok")
 
     def aplicar_modulos(self) -> None:
         if self.subs is not None:
@@ -299,7 +299,7 @@ class GeoCAD:
         """Botones sólo si la configuración común lo pide: el menú está siempre."""
         want = bool(config.get("mostrar_botones")) and self._puente() and "send" in self.actions
         if want and self.toolbar is None:
-            self.toolbar = self.iface.addToolBar("GeoCAD")
+            self.toolbar = self.iface.addToolBar("GeoCAD Yaguareté")
             self.toolbar.setObjectName("GeoCADToolbar")
             self.toolbar.addAction(self.actions["send"])
         elif not want and self.toolbar is not None:
@@ -571,7 +571,7 @@ class GeoCAD:
                      "la abre: flatpak override --user --filesystem=/media org.ingecad.IngeCAD).")
         other = buzon.version_of("ingecad") if buzon.is_alive("ingecad") else VERSION
         if other != VERSION:
-            text += (f" IngeCAD tiene GeoCAD {other or 'anterior a 3.1.1'} y QGIS {VERSION}: "
+            text += (f" IngeCAD tiene GeoCAD Yaguareté {other or 'anterior a 3.1.1'} y QGIS {VERSION}: "
                      "actualícelo (ACTUALIZARGEOCAD en IngeCAD) o pueden no llegar rótulos, "
                      "colores ni símbolos.")
         mismatch = other != VERSION
@@ -710,7 +710,7 @@ class GeoCAD:
         self._sync_toolbar()
 
     def show_status(self) -> None:
-        lines = [f"GeoCAD {VERSION} para QGIS. Módulos: {modulos.resumen(PROGRAMA)}",
+        lines = [f"GeoCAD Yaguareté {VERSION} para QGIS. Módulos: {modulos.resumen(PROGRAMA)}",
                  f"Carpeta común: {buzon.base_dir()}"]
         try:
             buzon.base_dir().mkdir(parents=True, exist_ok=True)
@@ -739,7 +739,7 @@ class GeoCAD:
         from qgis.PyQt.QtWidgets import QFileDialog
 
         carpeta = QFileDialog.getExistingDirectory(
-            self.iface.mainWindow(), "Carpeta de donde se actualiza GeoCAD (la del proyecto)",
+            self.iface.mainWindow(), "Carpeta de donde se actualiza GeoCAD Yaguareté (la del proyecto)",
             actual or str(Path.home()))
         return carpeta or None
 
@@ -748,7 +748,7 @@ class GeoCAD:
             import qgis.utils
             qgis.utils.reloadPlugin(Path(__file__).resolve().parent.name)
         except Exception as exc:
-            QMessageBox.information(self.iface.mainWindow(), "GeoCAD",
+            QMessageBox.information(self.iface.mainWindow(), "GeoCAD Yaguareté",
                                     f"La versión nueva quedó instalada, pero no se pudo recargar "
                                     f"({exc}). Reinicie QGIS.")
 
@@ -766,7 +766,7 @@ class GeoCAD:
                 return False
             elegida = self._pedir_carpeta(carpeta)
             if not elegida:
-                self._bar("Actualizar GeoCAD: cancelado (falta la carpeta).", "warn")
+                self._bar("Actualizar GeoCAD Yaguareté: cancelado (falta la carpeta).", "warn")
                 return False
             config.save({"carpeta_actualizaciones": elegida}, "QGIS")
             carpeta = elegida
@@ -780,32 +780,31 @@ class GeoCAD:
             if not silencioso:
                 aviso = (" IngeCAD revisa la misma carpeta al recibir el aviso."
                          if avisar_ingecad else "")
-                self._bar(f"GeoCAD para QGIS ya está en la última versión ({VERSION})."
+                self._bar(f"GeoCAD Yaguareté para QGIS ya está en la última versión ({VERSION})."
                           + aviso, "info")
             return False
-        texto = (f"Hay una versión nueva de GeoCAD para QGIS:\n\n"
+        texto = (f"Hay una versión nueva de GeoCAD Yaguareté para QGIS:\n\n"
                  f"    instalada: {VERSION}\n    nueva:     {cand.version}\n"
                  f"    archivo:   {cand.nombre}\n")
         detalle = actualizar.cambios(cand)
         if detalle:
             texto += "\n" + detalle + "\n"
         texto += "\n¿Instalarla ahora?"
-        if QMessageBox.question(mw, "Actualizar GeoCAD", texto,
+        if QMessageBox.question(mw, "Actualizar GeoCAD Yaguareté", texto,
                                 _YES | _NO) != _YES:
             return False
         aqui = Path(__file__).resolve().parent
         try:
             actualizar.instalar_zip(actualizar.extraer(cand), aqui.parent, aqui.name)
         except Exception as exc:
-            QMessageBox.information(mw, "GeoCAD", f"No se instaló: {exc}")
+            QMessageBox.information(mw, "GeoCAD Yaguareté", f"No se instaló: {exc}")
             return False
-        self._bar(f"GeoCAD {cand.version} instalado; recargando el complemento...", "ok")
+        self._bar(f"GeoCAD Yaguareté {cand.version} instalado; recargando el complemento...", "ok")
         QTimer.singleShot(0, self._reinstalar)
         return True
 
     def about(self) -> None:
-        QMessageBox.information(
-            self.iface.mainWindow(), "GeoCAD",
-            f"GeoCAD {VERSION}: GIS to CAD y CAD to GIS entre QGIS e IngeCAD.\n\n"
-            f"Módulos activos en QGIS: {modulos.resumen(PROGRAMA)}.\n\n"
-            "En IngeCAD: menú «GeoCAD» (misma versión).")
+        from qgis.PyQt import QtWidgets
+
+        nombre.mostrar_acerca(QtWidgets, self.iface.mainWindow(), PROGRAMA, VERSION,
+                              modulos.resumen(PROGRAMA))

@@ -7,12 +7,13 @@ atributos, con respaldo .zip, control de conflictos y validación antes de
 escribir; y herramientas de dibujo, capas, bloques y espacio papel al estilo
 AutoCAD, en los dos programas.
 
-> En el programa todavía se llama **GeoCAD** (menú y barra «GeoCAD»).
+> Antes se llamaba **GeoCAD**. Desde la 3.8.0, en el programa: menú y
+> barra «GeoCAD Yaguareté» y **Acerca de GEO-CAD-YAGUARETÉ...**
 
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera
-en **GeoCAD > Módulos...** Lo que no se elige no aparece en ningún menú ni
+en **GeoCAD Yaguareté > Módulos...** Lo que no se elige no aparece en ningún menú ni
 cambia nada del programa.
 
 - **IngeCAD:** Puente con QGIS · Datos · Botón derecho = Enter · Empalme y
@@ -36,7 +37,7 @@ cambia nada del programa.
 Para QGIS solo: *Complementos > Instalar a partir de ZIP* con
 `geocad_qgis_<versión>.zip`.
 
-Después, para actualizar: **GeoCAD > Actualizar GeoCAD...** en cualquiera de
+Después, para actualizar: **GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté...** en cualquiera de
 los dos programas.
 
 ## Estructura del código

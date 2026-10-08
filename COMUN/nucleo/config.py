@@ -116,7 +116,7 @@ SETTINGS = (
     Setting("recargar_qgis", "Recargar la capa en QGIS cuando IngeCAD guarda", "bool", True),
     Setting("mostrar_botones", "Mostrar también botones (además del menú)", "bool", False,
             "El menú está siempre; los botones son opcionales."),
-    Setting("carpeta_actualizaciones", "Carpeta de donde se actualiza GeoCAD", "text", "",
+    Setting("carpeta_actualizaciones", "Carpeta de donde se actualiza GeoCAD Yaguareté", "text", "",
             "La carpeta del proyecto (o donde se copian las entregas). "
             "Se busca ahí la versión más nueva."),
 )

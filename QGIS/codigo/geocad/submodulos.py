@@ -125,7 +125,7 @@ class Cargador:
             retirados = retirar_viejos(sub.clave, self.carpeta_plugins)
             if retirados:
                 self.avisos.append(f"Se retiró el complemento {', '.join(retirados)} "
-                                   f"(ahora es el módulo {sub.titulo} de GeoCAD; queda una "
+                                   f"(ahora es el módulo {sub.titulo} de GeoCAD Yaguareté; queda una "
                                    f"copia como .anterior-{retirados[0]}).")
             ifc = IfaceIntermedio(self.iface, self.al_cambiar)
             inst = None

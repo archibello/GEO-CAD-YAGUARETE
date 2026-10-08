@@ -1,0 +1,28 @@
+GEO-CAD-YAGUARETÉ (antes GeoCAD) - versión 3.8.0
+================================================
+NOMBRE NUEVO EN EL PROGRAMA y CRÉDITOS, en IngeCAD y en QGIS (07/10/2026).
+
+- GeoCAD pasa a llamarse GEO-CAD-YAGUARETÉ, el nombre con el que se va a
+  publicar. En el menú y en la barra dice «GeoCAD Yaguareté»; el nombre
+  completo va en los títulos de las ventanas, en el instalador, en el
+  administrador de complementos de QGIS y en «Acerca de...».
+- Cambia sólo lo que se ve. Por dentro sigue igual: la carpeta del plugin
+  (geocad), las órdenes (EMPALME, PARTEENPUNTO, ACTUALIZARGEOCAD...), la
+  configuración común y sus módulos elegidos, la posición guardada de la
+  barra en QGIS y los archivos que busca Actualizar (instalar_geocad_<v>.py,
+  geocad_qgis_<v>.zip, GeoCAD_<v>.zip). Se actualiza como siempre, desde
+  GeoCAD > Actualizar GeoCAD... de la versión instalada.
+- «Acerca de GEO-CAD-YAGUARETÉ...» (último ítem del menú, en los dos
+  programas): ventana con el nombre, la versión, los módulos activos, el
+  autor (Arq. Fernando Pablo Bellocchio, Posadas, Misiones, Argentina), la
+  licencia GPL-3.0-or-later y los enlaces al repositorio en GitHub y a
+  Issues (ideas y problemas), que se abren en el navegador. En IngeCAD
+  también queda escrito en la línea de comandos.
+- QGIS, metadata.txt (lo que muestra Complementos > Administrar e
+  instalar): nombre GEO-CAD-YAGUARETÉ, autor, página y repositorio en
+  GitHub, Issues como lugar para avisar problemas. El correo es el
+  «noreply» de GitHub: no se publica un correo personal.
+- El nombre y los créditos están en un solo lugar del núcleo (nombre.py),
+  compartido por los dos programas.
+
+Pruebas: test_nombre (nueva) y las existentes con los nombres nuevos.

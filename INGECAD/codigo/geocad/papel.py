@@ -368,7 +368,7 @@ def preparar_combo(window) -> None:
     combo._geocad_filtro = filtro
     combo._geocad_tooltip = combo.toolTip()
     combo.setToolTip("Escala de la ventana: elegir de la lista o escribir "
-                     "1/100, 1:100, 1/250, 2:1... y Enter (GeoCAD)")
+                     "1/100, 1:100, 1/250, 2:1... y Enter (GeoCAD Yaguareté)")
     _refrescar(window)
 
 

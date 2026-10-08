@@ -108,7 +108,7 @@ class EnvioDialog(getattr(QtWidgets, "QDialog", object)):
         form.addRow("Rótulos y símbolos:", row)
 
         self.no_preguntar = QtWidgets.QCheckBox(
-            "No volver a preguntar (se cambia en GeoCAD > Configuración común)")
+            "No volver a preguntar (se cambia en GeoCAD Yaguareté > Configuración común)")
         lay.addWidget(self.no_preguntar)
         buttons = QtWidgets.QDialogButtonBox(self)
         std = _enum(QtWidgets.QDialogButtonBox, "StandardButton", "Ok") | \

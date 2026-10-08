@@ -10,7 +10,7 @@ from core.plugins import load_plugin
 from tools.base import ToolContext
 lp = load_plugin(Path(__file__).resolve().parents[2] / "INGECAD" / "codigo" / "geocad", bundled=False); assert lp.available, lp.reason
 spec = lp.spec
-assert spec.name == "GeoCAD" and "QGISSAVE" in spec.tools
+assert spec.name == "GeoCAD Yaguareté" and "QGISSAVE" in spec.tools
 buzon = import_module("ingecad_plugin_geocad.buzon")
 puente = import_module("ingecad_plugin_geocad.puente")
 enlace = import_module("ingecad_plugin_geocad.enlace")

@@ -36,7 +36,7 @@ class ChaflanTool(EmpalmeTool):
     """CHAMFER de AutoCAD: el Empalme de GeoCAD con un bisel en la esquina."""
 
     NOMBRE = "CHAMFER"
-    NO_ENTRA = "GeoCAD: el chaflán no entra en esos tramos."
+    NO_ENTRA = "GeoCAD Yaguareté: el chaflán no entra en esos tramos."
     TIPOS = ("LINE", "LWPOLYLINE")
     OPTIONS = ("Designe primera línea o "
                "[desHacer/Polilínea/Distancia/Ángulo/Recortar/métOdo/Múltiple]:")
@@ -113,7 +113,7 @@ class ChaflanTool(EmpalmeTool):
         return lambda msp: inherit_style(msp.add_line(t1, t2), fuente)
 
     def _paralelas(self, segundo, pick2, radio) -> bool:
-        self.ctx.echo("GeoCAD: las líneas son paralelas.")
+        self.ctx.echo("GeoCAD Yaguareté: las líneas son paralelas.")
         return False
 
     def _otros(self, point):

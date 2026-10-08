@@ -1,4 +1,4 @@
-GeoCAD — GIS to CAD y CAD to GIS
+GEO-CAD-YAGUARETÉ (antes GeoCAD) — GIS to CAD y CAD to GIS
 ================================
 
 QGIS e IngeCAD trabajando como un mismo sistema: ida y vuelta sobre
@@ -9,7 +9,7 @@ IngeCAD al estilo de Dibujo CAD. Reemplaza al Puente IngeCAD-QGIS 1.x.
 MÓDULOS (nada invasivo)
 -----------------------
 Cada parte es un módulo que se elige al instalar y se cambia cuando se
-quiera en el menú GeoCAD > Módulos... Lo que no se elige no aparece en
+quiera en el menú GeoCAD Yaguareté > Módulos... Lo que no se elige no aparece en
 ningún menú ni cambia nada del programa.
    IngeCAD: Puente con QGIS · Datos (barra y submenú) ·
             Botón derecho = Enter · Empalme estilo AutoCAD ·
@@ -24,10 +24,10 @@ Con IngeCAD y QGIS cerrados, en la Consola:
       python3 instalar_geocad_<versión>.py
 (o doble clic en INSTALAR_GeoCAD.sh, que hace lo mismo).
 
-Instala y deja ACTIVADO GeoCAD en IngeCAD y en QGIS (todos los perfiles de
+Instala y deja ACTIVADO GEO-CAD-YAGUARETÉ en IngeCAD y en QGIS (todos los perfiles de
 QGIS 4 y 3, Flatpak o comunes), retira lo que reemplaza (Puente 1.x) guardando
 una copia (.anterior-...) y no toca ningún otro ajuste. La primera vez que se
-abre cada programa, GeoCAD pregunta qué módulos usar; en QGIS además retira
+abre cada programa, GEO-CAD-YAGUARETÉ pregunta qué módulos usar; en QGIS además retira
 los complementos sueltos Dibujo CAD y Layer Properties si se eligen esos
 módulos.
 
@@ -37,9 +37,9 @@ puede, QGIS); o en QGIS, Instalar a partir de ZIP con geocad_qgis_<v>.zip
 
 ACTUALIZAR (sin AP ni ZIP)
 --------------------------
-   IngeCAD: GeoCAD > Actualizar GeoCAD (IngeCAD y QGIS)...
+   IngeCAD: GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (IngeCAD y QGIS)...
             (o ACTUALIZARGEOCAD; ACTUALIZARGEOCAD C cambia la carpeta)
-   QGIS:    GeoCAD > Actualizar GeoCAD (QGIS e IngeCAD)...
+   QGIS:    GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...
    La primera vez pregunta la carpeta de actualizaciones: elegir
    /media/satelite/Extreme SSD/GeoCAD (o donde se copien las entregas).
    Busca la versión más nueva, muestra sus cambios, pide confirmación e
@@ -55,17 +55,17 @@ Para que QGIS pueda abrir IngeCAD solo (opcional), una vez:
 
 USO
 ---
-QGIS, menú «GeoCAD» (módulo Puente)
+QGIS, menú «GeoCAD Yaguareté» (módulo Puente)
   - Enviar a IngeCAD: usa el modo de la configuración común (por defecto, los
     objetos seleccionados). Si IngeCAD está cerrado, intenta abrirlo; el pedido
     lo espera. Mientras IngeCAD tiene una capa, QGIS la deja en solo lectura.
   - Enviar los objetos seleccionados / lo que está en pantalla / las capas
     visibles completas / la capa activa completa.
   - Recargar las capas que editó IngeCAD
-  - Módulos..., Configuración común..., Actualizar GeoCAD, Acerca de GeoCAD
+  - Módulos..., Configuración común..., Actualizar GeoCAD Yaguareté, Acerca de GEO-CAD-YAGUARETÉ
   - Estado del puente...
 
-IngeCAD, menú «GeoCAD» (módulos Puente y Datos)
+IngeCAD, menú «GeoCAD Yaguareté» (módulos Puente y Datos)
   - Devolver todo a QGIS (DEVOLVERQGIS): guarda todas las capas con una
     confirmación y QGIS las recarga solo.
   - Devolver la selección a QGIS (DEVOLVERSEL): sólo los cambios de los objetos
@@ -97,7 +97,7 @@ IngeCAD, módulos «Botón derecho = Enter» y «Ángulos relativos»
   - Botón derecho = Enter: termina la orden, acepta lo escrito y, sin orden
     activa, repite la última. Ctrl + botón derecho: menú contextual.
     Mayús + botón derecho: referencias a objetos. BOTONDERECHO (o
-    GeoCAD > Dibujo) lo prende y apaga.
+    GeoCAD Yaguareté > Dibujo) lo prende y apaga.
   - LÍNEA y POLILÍNEA, @distancia<ángulo: el ángulo es el INTERIOR en el
     vértice, medido en sentido ANTIHORARIO desde el tramo anterior
     (180 = sigue derecho, 90 = gira a la derecha, 270 = a la izquierda).
@@ -112,8 +112,8 @@ IngeCAD, módulos «Botón derecho = Enter» y «Ángulos relativos»
 QGIS, módulos Dibujo CAD, Bloques, Papel y Capas
   Funcionan igual que los complementos Dibujo CAD 16.3 y Layer Properties
   6.7: mismas barras, misma línea de comandos, mismos comandos. Lo que antes
-  estaba en el menú Complementos ahora está en GeoCAD > Dibujo CAD y
-  GeoCAD > Capas CAD. Apagar Bloques o Papel quita su barra y sus comandos
+  estaba en el menú Complementos ahora está en GeoCAD Yaguareté > Dibujo CAD y
+  GeoCAD Yaguareté > Capas CAD. Apagar Bloques o Papel quita su barra y sus comandos
   (BLOQUE, INSERT... / PRESENTACION, TRAZAR...).
 
 IngeCAD, módulo «Empalme estilo AutoCAD» (desde 2.3.0)
@@ -139,7 +139,7 @@ IngeCAD, módulo «Bloques» (desde 2.6.0)
   Doble clic sobre un bloque (o EDITARENSITIO): edición EN EL LUGAR. Lo que
   se dibuja se suma (AGREGARABLOQUE / QUITARDEBLOQUE para elegir);
   GUARDARBLOQUE actualiza todas las referencias en un paso; DESCARTARBLOQUE.
-  PUNTOBASEBLOQUE (desde 2.7.0, botón en la barra GeoCAD): volver a elegir
+  PUNTOBASEBLOQUE (desde 2.7.0, botón en la barra GeoCAD Yaguareté): volver a elegir
   el punto base de un bloque ya creado, con referencias. Mantener (por
   defecto): el dibujo no cambia; Desplazar: las referencias quedan y el
   bloque se corre. Dentro de la edición en el lugar, botón «Punto base»:
@@ -152,7 +152,7 @@ IngeCAD, módulo «Selección» (desde 2.8.0)
   En cualquier «Designar objetos» (E, DESPLAZA, COPIA...) se escriben las
   opciones de AutoCAD: W/V ventana, C captura, WP/PV y CP/PC polígonos,
   F/B borde, ALL/TODO, L/UL último, P previa, R/E quitar, A agregar,
-  U/H deshacer, ? ayuda. SEL / SELECCIONA (botón en la barra GeoCAD): deja
+  U/H deshacer, ? ayuda. SEL / SELECCIONA (botón en la barra GeoCAD Yaguareté): deja
   los objetos seleccionados para la orden siguiente. La línea de comandos
   no autocompleta.
 
@@ -163,7 +163,7 @@ IngeCAD, módulo «Partir en punto» (desde 2.4.0)
   Opciones: Múltiple, Deshacer, Objeto. Polilíneas cerradas se abren en el
   punto; tramos en arco quedan en arco; las capas de QGIS conservan el
   vínculo (el pedazo nuevo, con los mismos atributos).
-  Barra GeoCAD: Empalme, Chaflán, Partir en punto, Crear bloque, Editar bloque.
+  Barra GeoCAD Yaguareté: Empalme, Chaflán, Partir en punto, Crear bloque, Editar bloque.
 
 SEGURIDAD DE LOS DATOS
 ----------------------

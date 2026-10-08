@@ -70,7 +70,7 @@ todo = items(spec.menu)
 for c in ("QGISSAVE", "SHPTABLE", "SHPCONNECT", "ANGREL", "RIGHTCLICK", "GEOCADMODULES", "SHPCONFIG",
           "QGISUPDATE", "GEOCADABOUT"):
     assert c in todo, c
-assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD"
+assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD Yaguareté"
 # apagar Datos: sin barra, sin submenú, sin comandos de Datos; el Puente sigue
 Mi.guardar("ingecad", {"datos": False}); host.calls.clear(); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec; todo = items(spec.menu)
@@ -84,7 +84,10 @@ assert {"GEOCADMODULES", "QGISUPDATE", "GEOCADABOUT", "ANGREL"} <= set(spec.comm
 # GEOCADMODULES sin ventana: informa; ACERCAGEOCAD dice la versión y los módulos
 log = []; ctx = types.SimpleNamespace(host=None, echo=log.append)
 spec.commands["GEOCADMODULES"](ctx); spec.commands["GEOCADABOUT"](ctx)
-assert "Módulos de GeoCAD activos" in log[0] and ("GeoCAD " + P.VERSION) in log[1] and "Botón derecho" in log[1]
+assert "Módulos de GeoCAD Yaguareté activos" in log[0] and ("GEO-CAD-YAGUARETÉ " + P.VERSION) in log[1]
+acerca = "\n".join(log[1:])
+assert "Botón derecho" in acerca and "Fernando Pablo Bellocchio" in acerca and "Posadas" in acerca
+assert "GPL-3.0-or-later" in acerca and "github.com/archibello/GEO-CAD-YAGUARETE/issues" in acerca
 Mi.guardar("ingecad", {"puente": True, "datos": True}); P.aplicar_modulos(host)
 assert "SHPTABLE" in mgr.loaded["geocad"].spec.tools
 print("ok IngeCAD")
@@ -138,7 +141,7 @@ real = _real0
 mui.elegir = lambda QtW, parent, programa, primera: Mq.guardar(programa, {"puente": False})
 G.choose_modules()
 assert "Enviar a IngeCAD los objetos seleccionados" not in textos() and "Módulos..." in textos()
-assert "Actualizar GeoCAD (QGIS e IngeCAD)..." in textos() and not G.readonly_by_us
+assert "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)..." in textos() and not G.readonly_by_us
 # sin Puente, el temporizador no manda latidos ni toca capas
 G._tick()
 mui.elegir = lambda QtW, parent, programa, primera: Mq.guardar(programa, {"puente": True})

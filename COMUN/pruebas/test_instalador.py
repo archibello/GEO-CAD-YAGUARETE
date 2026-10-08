@@ -25,7 +25,7 @@ assert (root / ".anterior-puente_qgis" / "viejo.py").exists() and (root / ".ante
 assert host.plugins.is_active("geocad"), host.plugins.loaded.get("geocad")
 assert "register_tools" in host.calls and "menus_changed" in host.calls
 spec = host.plugins.loaded["geocad"].spec
-assert spec.name == "GeoCAD" and "SHPCONNECT" in spec.tools and "SHPTABLE" in spec.tools
+assert spec.name == "GeoCAD Yaguareté" and "SHPCONNECT" in spec.tools and "SHPTABLE" in spec.tools
 mods = sys.modules["ingecad_plugin_geocad.modulos"]; cfg = sys.modules["ingecad_plugin_geocad.config"]
 assert mods.elegido("ingecad")                          # la primera elección quedó guardada
 assert cfg.get("formato_trabajo") == "shp"              # configuración del Puente 1.x migrada

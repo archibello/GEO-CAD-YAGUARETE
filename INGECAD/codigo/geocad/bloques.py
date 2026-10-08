@@ -1098,7 +1098,7 @@ def _envolver_doble_clic(original):
                             _echo(self, r)
                         return None
         except Exception as exc:  # noqa: BLE001
-            _echo(self, f"GeoCAD: no se pudo abrir el bloque ({exc}).")
+            _echo(self, f"GeoCAD Yaguareté: no se pudo abrir el bloque ({exc}).")
         return original(self, wx, wy)
 
     on_canvas_double_click._puente_original = original

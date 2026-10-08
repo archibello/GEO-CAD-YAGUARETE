@@ -130,7 +130,7 @@ qp.modulos.guardar("qgis", {"puente": True})
 P = ingecad_puente.classFactory(iface); P.initGui()
 for f in QTimer.shots: f()
 QTimer.shots.clear()
-assert any(getattr(i, "text", "") == "Actualizar GeoCAD (QGIS e IngeCAD)..." for i in P.menu.items)
+assert any(getattr(i, "text", "") == "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)..." for i in P.menu.items)
 qgb.receive("ingecad")
 QMessageBox.answer = QMessageBox.StandardButton.Yes; QMessageBox.shown.clear()
 assert P.update_bridge(False) is True                      # la carpeta ya está en la configuración común

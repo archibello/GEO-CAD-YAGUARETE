@@ -27,7 +27,7 @@ def elegir_modulos(window, echo, primera_vez: bool = False) -> None:
     if QtWidgets is None or window is None:
         if primera_vez and not modulos.elegido(PROGRAMA):
             modulos.guardar(PROGRAMA, modulos.estado(PROGRAMA))
-        echo("Módulos de GeoCAD activos: " + modulos.resumen(PROGRAMA) + ".")
+        echo("Módulos de GeoCAD Yaguareté activos: " + modulos.resumen(PROGRAMA) + ".")
         return
     from . import modulos_ui
 
@@ -35,7 +35,7 @@ def elegir_modulos(window, echo, primera_vez: bool = False) -> None:
     if nuevo is None:
         return
     _aplicar(window)
-    echo("Módulos de GeoCAD activos: " + modulos.resumen(PROGRAMA) + ".")
+    echo("Módulos de GeoCAD Yaguareté activos: " + modulos.resumen(PROGRAMA) + ".")
 
 
 def primera_eleccion(window, echo) -> None:

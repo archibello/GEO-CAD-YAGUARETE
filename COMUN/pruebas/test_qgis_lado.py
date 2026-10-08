@@ -54,10 +54,10 @@ qbuzon.receive("ingecad")                       # descartar ese envío de prueba
 P.send_default(); assert "No hay objetos seleccionados" in bar.msgs[-1] and not qbuzon.receive("ingecad")
 lay.selected = [2, 4]; P.send_default(); print(bar.msgs[-1])
 pedido = qbuzon.receive("ingecad"); assert pedido[0]["capas"][0]["fids"] == [2, 4] and "2 objeto(s)" in bar.msgs[-1]
-assert "IngeCAD tiene GeoCAD" not in bar.msgs[-1]
+assert "IngeCAD tiene GeoCAD Yaguareté" not in bar.msgs[-1]
 # 3.1.1 IngeCAD con otra versión (o una vieja que no la anuncia): avisa al enviar
 qbuzon.heartbeat("ingecad", {"version": "2.8.1"}); P.send_default(); qbuzon.receive("ingecad")
-assert f"IngeCAD tiene GeoCAD 2.8.1 y QGIS {QV}" in bar.msgs[-1] and "ACTUALIZARGEOCAD" in bar.msgs[-1], bar.msgs[-1]
+assert f"IngeCAD tiene GeoCAD Yaguareté 2.8.1 y QGIS {QV}" in bar.msgs[-1] and "ACTUALIZARGEOCAD" in bar.msgs[-1], bar.msgs[-1]
 qbuzon.heartbeat("ingecad"); P.send_default(); qbuzon.receive("ingecad")
 assert "anterior a 3.1.1" in bar.msgs[-1], bar.msgs[-1]
 qbuzon.heartbeat("ingecad", {"version": QV})

@@ -733,7 +733,7 @@ class ConfigTool(Tool):
         """Sin ventana: lista los ajustes y permite cambiar uno."""
         echo = self.ctx.echo
         values = config.load()
-        echo(f"Configuración común de GeoCAD ({config.config_path()}):")
+        echo(f"Configuración común de GeoCAD Yaguareté ({config.config_path()}):")
         for s in config.SETTINGS:
             echo(f"  {s.label}: {config.display(s.key, values[s.key])}")
         labels = [s.label for s in config.SETTINGS]

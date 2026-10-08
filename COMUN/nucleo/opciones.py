@@ -93,7 +93,7 @@ class SharedOptionsPage(QWidget):
 
 def open_dialog(parent, program: str = "IngeCAD") -> None:
     dialog = QDialog(parent)
-    dialog.setWindowTitle("Configuración común GeoCAD")
+    dialog.setWindowTitle("Configuración común GEO-CAD-YAGUARETÉ")
     box = QVBoxLayout(dialog)
     page = SharedOptionsPage(dialog)
     page.PROGRAM = program

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# GeoCAD @VERSION@ -- INSTALADOR ÚNICO: instala y activa GeoCAD en IngeCAD Y en QGIS.
+# GEO-CAD-YAGUARETÉ @VERSION@ -- INSTALADOR ÚNICO: instala y activa GEO-CAD-YAGUARETÉ en IngeCAD Y en QGIS.
 #
 # Dos formas de usarlo (cualquiera de las dos instala los dos programas):
 #   1) Desde la Consola, con los dos programas cerrados (la más completa):
@@ -12,7 +12,7 @@
 # Instala limpio: retira el Puente IngeCAD-QGIS 1.x y guarda una copia de lo
 # reemplazado (.anterior-...). Los dos complementos viajan adentro de este
 # archivo con su huella SHA-256: si algo llegó dañado, no instala nada.
-# La primera vez que se abre cada programa, GeoCAD pregunta qué módulos usar.
+# La primera vez que se abre cada programa, GEO-CAD-YAGUARETÉ pregunta qué módulos usar.
 import base64, hashlib, io, os, shutil, sys, zipfile
 from pathlib import Path
 
@@ -139,7 +139,7 @@ def _ingecad_desde_adentro(host):
         if any(name.startswith("ingecad_plugin_" + pid) for pid in (PLUGIN_ID,) + OLD_IDS):
             del sys.modules[name]
     if mgr is None:
-        _say("GeoCAD copiado en " + str(target) + ". Reinicie IngeCAD.")
+        _say("GEO-CAD-YAGUARETÉ copiado en " + str(target) + ". Reinicie IngeCAD.")
         return
     mgr.loaded.pop(PLUGIN_ID, None)
     mgr.scan_dir(root, False)
@@ -149,7 +149,7 @@ def _ingecad_desde_adentro(host):
         raise RuntimeError("se copió pero no se puede activar: " + reason)
     mgr.set_enabled(PLUGIN_ID, True)
     mgr.set_toolbar_enabled(PLUGIN_ID, True)          # la barra de Datos (si se elige)
-    _say("IngeCAD: GeoCAD " + VERSION + " instalado y activo (menú «GeoCAD»).")
+    _say("IngeCAD: GEO-CAD-YAGUARETÉ " + VERSION + " instalado y activo (menú «GeoCAD Yaguareté»).")
     pkg = "ingecad_plugin_" + PLUGIN_ID
     try:
         import importlib
@@ -230,7 +230,7 @@ def _informar_qgis():
     except Exception as exc:
         hechos, fallas = [], [str(exc)]
     if hechos:
-        _say("QGIS: GeoCAD " + VERSION + " instalado y activado (perfil " + ", ".join(hechos)
+        _say("QGIS: GEO-CAD-YAGUARETÉ " + VERSION + " instalado y activado (perfil " + ", ".join(hechos)
              + "). Si QGIS estaba abierto, reinícielo.")
     for f in fallas:
         _say("QGIS: no se pudo instalar en " + f)
@@ -247,18 +247,18 @@ def _main():
         _ingecad_desde_adentro(host)
         _informar_qgis()
         return
-    _say("GeoCAD " + VERSION + " — instalador único (IngeCAD y QGIS)")
+    _say("GEO-CAD-YAGUARETÉ " + VERSION + " — instalador único (IngeCAD y QGIS)")
     hechos = _ingecad_desde_afuera()
     if hechos:
-        _say("IngeCAD: GeoCAD instalado y activado en " + ", ".join(str(h) for h in hechos)
+        _say("IngeCAD: GEO-CAD-YAGUARETÉ instalado y activado en " + ", ".join(str(h) for h in hechos)
              + ". Si IngeCAD estaba abierto, reinícielo.")
     else:
         _say("IngeCAD: no se encontró IngeCAD en esta computadora.")
     _informar_qgis()
-    _say("Listo. La primera vez que abra cada programa, GeoCAD pregunta qué módulos usar.")
+    _say("Listo. La primera vez que abra cada programa, GEO-CAD-YAGUARETÉ pregunta qué módulos usar.")
 
 
 try:
     _main()
 except Exception as exc:
-    _say("No se instaló GeoCAD: " + str(exc))
+    _say("No se instaló GEO-CAD-YAGUARETÉ: " + str(exc))

@@ -78,7 +78,7 @@ def _Dialogo(QtCore, QtWidgets, parent, conds, entidades, document, con_objeto):
     class Dialogo(W.QDialog):
         def __init__(self):
             super().__init__(parent)
-            self.setWindowTitle("Filtros de selección de objetos — GeoCAD")
+            self.setWindowTitle("Filtros de selección de objetos — GEO-CAD-YAGUARETÉ")
             self.conds = conds
             self.accion = "aplicar"
             self._armar()

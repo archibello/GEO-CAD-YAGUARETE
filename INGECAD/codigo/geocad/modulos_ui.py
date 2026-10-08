@@ -21,18 +21,18 @@ def elegir(QtWidgets, parent, programa: str, primera_vez: bool = False):
     defecto, para que no vuelva a preguntar en cada inicio)."""
     nombre_prog = "IngeCAD" if programa == "ingecad" else "QGIS"
     dlg = QtWidgets.QDialog(parent)
-    dlg.setWindowTitle(f"Módulos de GeoCAD en {nombre_prog}")
+    dlg.setWindowTitle(f"Módulos de GEO-CAD-YAGUARETÉ en {nombre_prog}")
     dlg.setMinimumWidth(560)
     lay = QtWidgets.QVBoxLayout(dlg)
-    intro = ("Elegí qué partes de GeoCAD querés usar en " + nombre_prog + ". "
+    intro = ("Elegí qué partes de GeoCAD Yaguareté querés usar en " + nombre_prog + ". "
              "Lo que quede sin tildar no aparece en ningún menú ni cambia nada "
-             "del programa. Se puede cambiar cuando quieras en GeoCAD > Módulos...")
+             "del programa. Se puede cambiar cuando quieras en GeoCAD Yaguareté > Módulos...")
     if primera_vez:
-        intro = "GeoCAD quedó instalado. " + intro
+        intro = "GEO-CAD-YAGUARETÉ quedó instalado. " + intro
     nuevos = modulos.nuevos(programa)
     if nuevos and not primera_vez:
         nombres = [m.nombre for m in modulos.catalogo(programa) if m.clave in nuevos]
-        intro = ("Esta versión de GeoCAD trae módulos nuevos: " + ", ".join(nombres)
+        intro = ("Esta versión de GeoCAD Yaguareté trae módulos nuevos: " + ", ".join(nombres)
                  + ". " + intro)
     label = QtWidgets.QLabel(intro, dlg)
     label.setWordWrap(True)

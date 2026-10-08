@@ -117,7 +117,7 @@ PROPIEDADES = (
     _P("campo_qgis", "Campo de la tabla de QGIS", "campo"),
     _P("rotulo_qgis", "Rótulo de QGIS", "tipo", "TEXT", "MTEXT"),
     _P("fondo_rotulo", "Fondo de rótulo de QGIS", "tipo"),
-    _P("simbolo", "Símbolo de punto de GeoCAD", "tipo", "INSERT"),
+    _P("simbolo", "Símbolo de punto de GeoCAD Yaguareté", "tipo", "INSERT"),
     # grupos
     _P("**Y(", "** Comenzar Y", "grupo"), _P("**Y)", "** Terminar Y", "grupo"),
     _P("**O(", "** Comenzar O", "grupo"), _P("**O)", "** Terminar O", "grupo"),

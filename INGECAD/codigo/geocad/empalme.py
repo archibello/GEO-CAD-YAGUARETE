@@ -217,7 +217,7 @@ class EmpalmeTool(FilletTool):
         tipo = entity.dxftype() if entity is not None else None
         if tipo not in self.TIPOS:
             self.ctx.echo(self.MSG_TIPO or (tr("FILLET joins lines, arcs and circles.") + " "
-                                            + "(GeoCAD: también polilíneas)"))
+                                            + "(GeoCAD Yaguareté: también polilíneas)"))
             return
         if self._first is None:
             if tipo == "LWPOLYLINE" and not self._tramo_recto(entity, point):
@@ -239,7 +239,7 @@ class EmpalmeTool(FilletTool):
                 return
             hecho = self._rectos(entity, point, radio)
         elif "LWPOLYLINE" in tipos:
-            self.ctx.echo("GeoCAD: una polilínea se empalma con líneas u otras polilíneas, "
+            self.ctx.echo("GeoCAD Yaguareté: una polilínea se empalma con líneas u otras polilíneas, "
                           "no con arcos ni círculos.")
             hecho = False
         else:
@@ -258,7 +258,7 @@ class EmpalmeTool(FilletTool):
         filas = pl.get_points("xyseb")
         i = tramo_cercano([(f[0], f[1]) for f in filas], pl.closed, pick)
         if i is None or abs(filas[i][4]) > EPS:
-            self.ctx.echo("GeoCAD: ese tramo de la polilínea es un arco; elija un tramo recto.")
+            self.ctx.echo("GeoCAD Yaguareté: ese tramo de la polilínea es un arco; elija un tramo recto.")
             return False
         return True
 
@@ -309,10 +309,10 @@ class EmpalmeTool(FilletTool):
         elif (pl.closed and (j + 1) % n == i) or (not pl.closed and j + 1 == i):
             v = (j + 1) % n
         else:
-            return "GeoCAD: elija dos tramos contiguos de la polilínea."
+            return "GeoCAD Yaguareté: elija dos tramos contiguos de la polilínea."
         ant, sig = (v - 1) % n, (v + 1) % n
         if abs(filas[ant][4]) > EPS or abs(filas[v][4]) > EPS:
-            return "GeoCAD: uno de los tramos es un arco; elija tramos rectos."
+            return "GeoCAD Yaguareté: uno de los tramos es un arco; elija tramos rectos."
         p = pts[v]
         u_ant = _unit(pts[ant][0] - p[0], pts[ant][1] - p[1])
         u_sig = _unit(pts[sig][0] - p[0], pts[sig][1] - p[1])
@@ -321,14 +321,14 @@ class EmpalmeTool(FilletTool):
         r = self._esquina(p, u_ant, u_sig, radio) if primero_ant else \
             self._esquina(p, u_sig, u_ant, radio)
         if r is None:
-            return "GeoCAD: los tramos están alineados."
+            return "GeoCAD Yaguareté: los tramos están alineados."
         if primero_ant:
             t1, t2, centro, bulge, d_ant, d_sig = r
         else:
             t2, t1, centro, bulge, d_sig, d_ant = r
             bulge = -bulge                    # la polilínea va de ant a sig
         if math.dist(t1, t2) <= EPS:
-            return "GeoCAD: con radio (o distancias) 0 ese vértice ya es una esquina."
+            return "GeoCAD Yaguareté: con radio (o distancias) 0 ese vértice ya es una esquina."
         if d_ant > math.dist(p, pts[ant]) + 1e-9 or d_sig > math.dist(p, pts[sig]) + 1e-9:
             return tr(self.NO_ENTRA)
         return dict(filas=filas, v=v, p=p, t1=t1, t2=t2, centro=centro, bulge=bulge, radio=radio)
@@ -370,7 +370,7 @@ class EmpalmeTool(FilletTool):
         if p is None:
             if info1 is None and info2 is None:
                 return "paralelas"
-            return "GeoCAD: los tramos son paralelos."
+            return "GeoCAD Yaguareté: los tramos son paralelos."
 
         def rama(a, b, info, pick, ent):
             """Dirección desde el cruce hacia lo que se conserva y el extremo lejano."""
@@ -404,7 +404,7 @@ class EmpalmeTool(FilletTool):
             tocado = lado(p, a, b, pick)
             if tocado[0] * u[0] + tocado[1] * u[1] < 0:
                 # se tocó el lado de afuera: conservarlo cortaría el resto de la polilínea
-                return ("GeoCAD: de una polilínea se conserva el lado que sigue hacia el resto "
+                return ("GeoCAD Yaguareté: de una polilínea se conserva el lado que sigue hacia el resto "
                         "de la polilínea; toque ese lado (o use PARTEENPUNTO antes).")
             largo = (interior[0] - p[0]) * u[0] + (interior[1] - p[1]) * u[1]
             return u, interior, largo, extremo
@@ -415,13 +415,13 @@ class EmpalmeTool(FilletTool):
             if isinstance(r, str):
                 return r
         if r1 is None or r2 is None:
-            return ("GeoCAD: de una polilínea abierta se empalma un tramo EXTREMO "
+            return ("GeoCAD Yaguareté: de una polilínea abierta se empalma un tramo EXTREMO "
                     "(el primero o el último); las cerradas, por sus vértices.")
         u1, fin1, largo1, ext1 = r1
         u2, fin2, largo2, ext2 = r2
         res = self._esquina(p, u1, u2, radio)
         if res is None:
-            return "GeoCAD: los tramos están alineados."
+            return "GeoCAD Yaguareté: los tramos están alineados."
         t1, t2, centro, bulge, d1, d2 = res
         if largo1 < d1 - 1e-9 or largo2 < d2 - 1e-9:
             return tr(self.NO_ENTRA)
@@ -490,7 +490,7 @@ class EmpalmeTool(FilletTool):
 
         self.ctx.execute(actions.ReplaceEntitiesCommand(self.NOMBRE, [primero, segundo], [fabrica]))
         if info1 is not None and info2 is not None:
-            self.ctx.echo("GeoCAD: las dos polilíneas quedaron unidas en una.")
+            self.ctx.echo("GeoCAD Yaguareté: las dos polilíneas quedaron unidas en una.")
         return True
 
     @staticmethod

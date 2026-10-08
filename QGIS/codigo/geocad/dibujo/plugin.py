@@ -195,7 +195,7 @@ class DibujoCADPlugin:
         self.key_guard = KeyGuard(self.iface.mapCanvas(), self.mgr)
         self.key_guard.tools = [self.mgr.tool, self.text_select_tool]
 
-        self.cmdline.echo('GeoCAD %s · Dibujo CAD listo. Escriba AYUDA para ver los comandos disponibles.'
+        self.cmdline.echo('GeoCAD Yaguareté %s · Dibujo CAD listo. Escriba AYUDA para ver los comandos disponibles.'
                           % _version())
         QTimer.singleShot(0, self._discover)
         from qgis.core import QgsProject
