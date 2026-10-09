@@ -45,6 +45,11 @@ que estar los dos programas.
 
 ## Instalación
 
+**¿Primera vez?** Seguir la [guía de instalación paso a paso](INSTALAR.md):
+desde IngeCAD, desde QGIS o desde una terminal.
+
+En resumen:
+
 1. Descargar la última versión desde
    [Releases](../../releases/latest).
 2. Con IngeCAD y QGIS cerrados, en una terminal:

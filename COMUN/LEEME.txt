@@ -36,6 +36,8 @@ estar los dos programas.
 
 INSTALACIÓN (una vez por computadora) — UN SOLO INSTALADOR
 -----------------------------------------------------------
+Guía paso a paso (desde IngeCAD, desde QGIS o desde la Consola):
+   https://github.com/archibello/GEO-CAD-YAGUARETE/blob/main/INSTALAR.md
 Con IngeCAD y QGIS cerrados, en la Consola:
       python3 instalar_geocad_<versión>.py
 (o doble clic en INSTALAR_GeoCAD.sh, que hace lo mismo).
