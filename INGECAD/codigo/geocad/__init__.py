@@ -31,7 +31,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.12.0"
+VERSION = "3.13.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -134,12 +134,8 @@ def construir_spec() -> PluginSpec:
         tools["GEOFILTER"] = filtro.FiltroTool  # en español FILTRO
         aliases.update({"FI": "GEOFILTER", "FILTER": "GEOFILTER"})
     # la barra GeoCAD: el orden por temas lo pone barra.ordenar()
-    if est["empalme"]:
-        toolbar.append(ToolbarItem("AutoCAD-style fillet (FILLET)", "FILLET"))
-    if est["chaflan"]:
-        toolbar.append(ToolbarItem("AutoCAD-style chamfer (CHAMFER)", "CHAMFER"))
-    if est["partir"]:
-        toolbar.append(ToolbarItem("Break at point (BREAKATPOINT)", "BREAKATPOINT", _icon("partir")))
+    # Empalme, Chaflán, Partir en punto (y Estirar, Rectángulo) van en la
+    # barra «Yaguareté Tools» (yaguarete.py), no en ésta
     if est["bloques"]:
         toolbar.append(ToolbarItem("Create block (BLOCK)", "BLOCK"))
         toolbar.append(ToolbarItem("Insert block (INSERT)", "INSERT"))
@@ -265,7 +261,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.12.0",
+        version="3.13.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

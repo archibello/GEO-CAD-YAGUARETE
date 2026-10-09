@@ -1,0 +1,34 @@
+GeoCAD - versión 3.13.0
+=======================
+FUNCIÓN NUEVA (IngeCAD): barra «Yaguareté Tools» y carteles de los
+botones como en AutoCAD (09/10/2026, pedido de Fernando).
+
+Barra «Yaguareté Tools»
+- Las herramientas de IngeCAD que GeoCAD mejoró tienen ahora su propia
+  barra, y salen de la barra de IngeCAD donde estaban:
+    Rectángulo (REC con ORTO, 3.9.4)      sale de la barra Dibujo
+    Estirar (3.12.0)                      sale de la barra Modificar
+    Partir en punto (2.4.0)               (orden nueva de GeoCAD)
+    Chaflán (2.5.0)                       sale de la barra Modificar
+    Empalme (2.3.0)                       sale de la barra Modificar
+- Empalme, Chaflán y Partir en punto dejan la barra GeoCAD (ahí no se
+  repiten). La barra GeoCAD sigue con Selección, Datos, Bloques, Cotas,
+  Impresión y Puente.
+- Los menús de IngeCAD (Modificar > Empalme...) no cambian: ya llamaban
+  a la versión de GeoCAD.
+- Cada botón depende de su módulo: apagado (GeoCAD > Módulos...), el
+  botón vuelve a su barra de IngeCAD. Sin GeoCAD, las barras de IngeCAD
+  quedan como venían.
+
+Carteles al pasar el cursor
+- Al dejar el cursor quieto sobre un botón de cualquier barra (Dibujo,
+  Modificar, Estándar, GeoCAD, Yaguareté Tools...), al segundo aparece un
+  cartel como el de AutoCAD: el nombre en negrita, qué hace en una línea
+  y la orden («Orden: EMPALME»). Antes IngeCAD mostraba sólo el nombre y
+  la orden en inglés, a los 0,7 s.
+- Al salir del botón o al hacer clic, el cartel se va.
+
+- Pruebas: corrieron las 31 (todas OK; nueva test_yaguarete). Verificado
+  además dentro de IngeCAD sin pantalla: la barra con los 5 botones, que
+  ya no están en Dibujo y Modificar; el cartel no sale a los 0,5 s y sí al
+  segundo; apagando Empalme vuelve a Modificar; sin GeoCAD todo como venía.

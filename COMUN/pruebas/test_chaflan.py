@@ -22,8 +22,10 @@ enl = import_module("ingecad_plugin_geocad.enlace")
 mods = import_module("ingecad_plugin_geocad.modulos")
 T = cha.ChaflanTool
 assert lp.spec.tools.get("GEOCHAMFER") is T
-_b = [i.command for i in lp.spec.toolbar]; _k = _b.index("FILLET")
-assert _b[_k:_k + 3] == ["FILLET", "CHAMFER", "BREAKATPOINT"]
+_y = import_module("ingecad_plugin_geocad.yaguarete")   # 3.13.0: van en la barra Yaguareté Tools
+_b = [o for o, _m in _y.elegidas(mods.estado("ingecad"))]
+assert _b == ["RECTANG", "STRETCH", "BREAKATPOINT", "CHAMFER", "FILLET"]
+assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in lp.spec.toolbar}
 
 
 class Services:

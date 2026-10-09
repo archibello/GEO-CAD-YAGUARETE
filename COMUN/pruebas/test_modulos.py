@@ -76,7 +76,7 @@ assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD Yaguar
 # apagar Datos: sin barra, sin submenú, sin comandos de Datos; el Puente sigue
 Mi.guardar("ingecad", {"datos": False}); host.calls.clear(); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec; todo = items(spec.menu)
-assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["SELECT", "GEOFILTER", "FILLET", "CHAMFER", "BREAKATPOINT", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW", "GEOPLOTSTYLES"]
+assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["SELECT", "GEOFILTER", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW", "GEOPLOTSTYLES"]
 assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed" in host.calls
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)

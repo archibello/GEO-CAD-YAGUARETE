@@ -80,10 +80,23 @@ def separar(bar, spec) -> None:
         bar.insertWidget(acciones[i], _divisor(bar))
 
 
+def _iconos_propios() -> dict:
+    """Los íconos de GeoCAD para las órdenes nuevas de la barra Yaguareté."""
+    from pathlib import Path
+    ruta = Path(__file__).parent / "iconos" / "partir.png"
+    return {"BREAKATPOINT": ruta} if ruta.exists() else {}
+
+
 def _envolver_add_toolbar(original):
     def add_toolbar(self, spec, *args, **kwargs):
         original(self, spec, *args, **kwargs)
+        from . import yaguarete
         if getattr(spec, "id", None) != "geocad":
+            try:                    # la barra de otro plugin: también con carteles
+                if getattr(self, "_geocad_carteles", None) is not None:
+                    yaguarete.instalar_carteles(self)
+            except Exception:  # noqa: BLE001
+                pass
             return
         try:
             bar = getattr(self, "_plugin_toolbars", {}).get(spec.id)
@@ -91,9 +104,28 @@ def _envolver_add_toolbar(original):
                 separar(bar, spec)
         except Exception:  # noqa: BLE001 - la barra queda como la armó IngeCAD
             pass
+        try:
+            yaguarete.armar(self, _iconos_propios())
+        except Exception:  # noqa: BLE001 - sin barra Yaguareté, IngeCAD como venía
+            pass
     add_toolbar._puente_original = original
     add_toolbar._puente_fabrica = _envolver_add_toolbar
     return add_toolbar
+
+
+def _envolver_remove_toolbar(original):
+    def remove_toolbar(self, plugin_id, *args, **kwargs):
+        if plugin_id == "geocad":
+            from . import yaguarete
+            try:
+                yaguarete.quitar(self)
+                yaguarete.quitar_carteles(self)
+            except Exception:  # noqa: BLE001
+                pass
+        return original(self, plugin_id, *args, **kwargs)
+    remove_toolbar._puente_original = original
+    remove_toolbar._puente_fabrica = _envolver_remove_toolbar
+    return remove_toolbar
 
 
 def instalar() -> None:
@@ -104,3 +136,5 @@ def instalar() -> None:
     from .dibujo import envolver
     if getattr(MainWindow.add_toolbar, "_puente_fabrica", None) is not _envolver_add_toolbar:
         envolver(MainWindow, "add_toolbar", _envolver_add_toolbar, reemplazar=True)
+    if getattr(MainWindow.remove_toolbar, "_puente_fabrica", None) is not _envolver_remove_toolbar:
+        envolver(MainWindow, "remove_toolbar", _envolver_remove_toolbar, reemplazar=True)
