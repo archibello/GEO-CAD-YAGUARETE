@@ -40,8 +40,8 @@ ACTUALIZAR (sin AP ni ZIP)
    IngeCAD: GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (IngeCAD y QGIS)...
             (o ACTUALIZARGEOCAD; ACTUALIZARGEOCAD C cambia la carpeta)
    QGIS:    GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...
-   La primera vez pregunta la carpeta de actualizaciones: elegir
-   /media/satelite/Extreme SSD/GeoCAD (o donde se copien las entregas).
+   La primera vez pregunta la carpeta de actualizaciones: elegir la
+   carpeta donde se copian las entregas (la que tiene «GeoCAD <versión>»).
    Busca la versión más nueva, muestra sus cambios, pide confirmación e
    instala; después avisa al otro programa, que ofrece actualizarse también.
    Las actualizaciones no vuelven a preguntar los módulos.
