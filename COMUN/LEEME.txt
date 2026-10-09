@@ -18,6 +18,22 @@ ningún menú ni cambia nada del programa.
    QGIS:    Puente con IngeCAD · Dibujo CAD · Bloques CAD · Espacio papel ·
             Capas CAD (Layer Properties)
 
+ANTES DE INSTALAR
+-----------------
+GEO-CAD-YAGUARETÉ se instala DENTRO de IngeCAD y de QGIS: primero tienen que
+estar los dos programas.
+1. Linux (por ahora funciona sólo en Linux).
+2. Instalar IngeCAD y QGIS. Versiones probadas: IngeCAD 0.6.5 (Flatpak,
+   desde ingecad.org); QGIS 4.2.2 (Flatpak de Flathub), 3.40.5 (Debian)
+   o 3.28.9 LTS.
+3. Abrir cada programa UNA VEZ y cerrarlo: así crean su carpeta de
+   configuración. El instalador sólo instala donde la encuentra; si un
+   programa nunca se abrió, queda sin GEO-CAD-YAGUARETÉ.
+4. Python 3 (viene con casi todas las distribuciones de Linux).
+5. Capas en un disco externo (IngeCAD en Flatpak): darle permiso una vez,
+   en la Consola:
+      flatpak override --user --filesystem=/media org.ingecad.IngeCAD
+
 INSTALACIÓN (una vez por computadora) — UN SOLO INSTALADOR
 -----------------------------------------------------------
 Con IngeCAD y QGIS cerrados, en la Consola:
