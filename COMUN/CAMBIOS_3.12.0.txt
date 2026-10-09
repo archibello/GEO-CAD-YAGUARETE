@@ -1,0 +1,28 @@
+GeoCAD - versión 3.12.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo nuevo «Estirar»): ESTIRA (STRETCH / S) al
+instante y con vista previa (09/10/2026, pedido de Fernando).
+
+- Problema (de IngeCAD, no de GeoCAD): al terminar ESTIRA el dibujo viejo
+  seguía en pantalla junto al nuevo hasta que IngeCAD regeneraba todo el
+  modelo («Regenerando...»). Su orden de estirar no está entre las que la
+  vista sabe actualizar al momento (como DESPLAZA o BORRA): no escondía la
+  copia vieja y además tiraba los índices de selección y referencias, que
+  se rehacían enteros en el movimiento siguiente (lento en planos grandes).
+  Verificado con IngeCAD 0.6.5 real: con su ESTIRA lo viejo queda visible.
+- Ahora el resultado queda en el momento del clic, sin regenerar: lo viejo
+  se esconde y lo nuevo se muestra, como con DESPLAZA. DESHACER también.
+- Vista previa mientras se elige el segundo punto, como en AutoCAD:
+    lo que la ventana atrapa entero (p. ej. un texto) sigue al cursor, con
+    el mismo fantasma que usa DESPLAZA;
+    lo que se estira (un lado de un rectángulo, el extremo de una línea o
+    de un arco) se dibuja ya estirado, resaltado en naranja.
+  Con más de 400 objetos estirados a la vez se deja el resaltado (para no
+  frenar el cursor); el fantasma y el resultado al momento siguen.
+- Mismas preguntas y opciones que el ESTIRA de IngeCAD (punto base o
+  Desplazamiento, Enter en el segundo punto).
+- Módulo nuevo «Estirar» (GeoCAD > Módulos...): al actualizar se ofrece.
+  Apagado, ESTIRA queda como viene en IngeCAD.
+- Pruebas: corrieron las 30 (todas OK; nueva test_estirar). Verificado
+  además dentro de IngeCAD sin pantalla: con la orden de IngeCAD lo viejo
+  no se esconde; con la de GeoCAD se esconde y lo nuevo se ve, sin regen.

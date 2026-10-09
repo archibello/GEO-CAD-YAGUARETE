@@ -24,13 +24,14 @@ from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
 from . import barra, bloques, cotas, editor_texto, filtro, impresion, papel, propiedades, seleccion, tipografias
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
+from .estirar import EstirarTool
 from .partir import PartirTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.11.2"
+VERSION = "3.12.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -119,6 +120,8 @@ def construir_spec() -> PluginSpec:
         tools["GEOCHAMFER"] = ChaflanTool
     if est["partir"]:
         tools["BREAKATPOINT"] = PartirTool
+    if est["estirar"]:
+        tools["GEOSTRETCH"] = EstirarTool
     if est["bloques"]:
         tools.update({"GEOBLOCK": bloques.BloqueTool, "GEOINSERT": bloques.InsertarTool,
                       "GEOREFEDIT": bloques.EditarEnSitioTool, "GEOBLOCKBASE": bloques.PuntoBaseTool,
@@ -262,7 +265,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.11.2",
+        version="3.12.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

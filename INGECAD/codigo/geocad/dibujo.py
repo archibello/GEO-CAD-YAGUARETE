@@ -219,7 +219,8 @@ def _envolver_clic_derecho(original):
 
 #: comandos de IngeCAD que GeoCAD reemplaza mientras su módulo está activo
 REEMPLAZOS = {"FILLET": ("empalme", "GEOFILLET"), "CHAMFER": ("chaflan", "GEOCHAMFER"),
-              "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT")}
+              "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT"),
+              "STRETCH": ("estirar", "GEOSTRETCH")}
 
 
 def herramienta_para(nombre: str, window=None, registradas=None) -> str:
@@ -298,6 +299,7 @@ ESTILO_RESALTADO = {
     "pieza_a": ((60, 170, 255, 255), 4, False),   # partir: un pedazo en azul...
     "pieza_b": ((90, 220, 120, 255), 4, False),   # ...y el otro en verde
     "fantasma": ((143, 184, 216, 220), 1, False),  # el bloque que sigue al cursor
+    "estirado": ((255, 170, 40, 255), 2, False),   # ESTIRA: cómo queda lo que se estira
     "sel_ventana": ((60, 120, 255, 255), 1, False),  # W / WP: azul, continuo
     "sel_captura": ((60, 200, 90, 255), 1, True),    # C / CP: verde, punteado
     "sel_borde": ((255, 170, 40, 255), 2, True),     # F: naranja, punteado

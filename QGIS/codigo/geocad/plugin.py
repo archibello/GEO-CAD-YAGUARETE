@@ -37,7 +37,7 @@ from . import actualizar, bloqueo, buzon, config, modulos, nombre, submodulos
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.11.2"
+VERSION = "3.12.0"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}

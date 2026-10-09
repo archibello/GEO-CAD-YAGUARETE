@@ -55,6 +55,10 @@ CATALOGO = {
                "confirmación. INSERT con vista previa y el bloque siguiendo al cursor. "
                "Doble clic sobre un bloque para editarlo en el lugar.",
                cambia_programa=True),
+        Modulo("estirar", "Estirar al instante y con vista previa (ESTIRA / S)",
+               "Mientras se elige el segundo punto se ven los objetos estirados y lo "
+               "atrapado entero sigue al cursor; al hacer clic el resultado queda en el "
+               "momento, sin «Regenerando...».", cambia_programa=True),
         Modulo("partir", "Partir en punto (PARTEENPUNTO)",
                "Corta un objeto en un punto elegido con referencias (intersección, "
                "punto final, medio...). Muestra los dos pedazos antes del clic."),
