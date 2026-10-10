@@ -1,0 +1,25 @@
+GeoCAD - versión 3.15.4
+=======================
+CORRECCIÓN (IngeCAD, módulo «Texto como AutoCAD (TEXTO / DT)»), pedida por
+Fernando el 10/10/2026. Incluye 3.15.3 (caja de edición que crece con lo
+escrito), 3.15.2, 3.15.1 y 3.15.0.
+
+Recuadro del TEXT elegido después de editarlo
+- Al editar un TEXT en el lugar (doble clic) y borrar o agregar letras, el
+  recuadro girado que lo resalta y el clic que lo elige acompañan al texto
+  nuevo.
+- Antes: quedaba el recuadro del texto viejo (en la prueba de Fernando, se
+  borró la mitad y el recuadro siguió del largo entero). Causa: el recuadro
+  se guardaba por «versión del plano», y editar en el lugar no la cambia.
+  Ahora se guarda por lo que hace al recuadro: texto, altura, giro, ancho,
+  estilo, alineación y posición.
+
+Al concluir la edición
+- El recuadro se rehace al concluir la edición: con Enter (guarda) queda
+  el del texto nuevo; con Esc (descarta) queda el de siempre. Enter y Esc
+  hacen lo mismo que en IngeCAD.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_texto
+  también contra 0.6.5. test_texto suma: un texto al que se le borra la
+  mitad sin tocar el índice; el recuadro se achica y el clic donde estaba
+  el final ya no lo elige.

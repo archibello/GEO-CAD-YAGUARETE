@@ -27,6 +27,7 @@ ESPERA_MS = 1000                      # el cartel sale al segundo, como AutoCAD
 #: de donde sale o None si es una orden nueva de GeoCAD), en el orden de la barra
 HERRAMIENTAS = (
     ("RECTANG", "", "draw_toolbar"),
+    ("TEXT", "texto", "draw_toolbar"),
     ("STRETCH", "estirar", "modify_toolbar"),
     ("BREAKATPOINT", "partir", None),
     ("CHAMFER", "chaflan", "modify_toolbar"),
@@ -53,7 +54,7 @@ DESCRIPCIONES = {
     "RECTANG": "Dibuja un rectángulo con dos esquinas opuestas (con ORTO, como AutoCAD).",
     "POLYGON": "Dibuja un polígono regular inscrito o circunscrito.",
     "POINT": "Ubica un punto.",
-    "TEXT": "Escribe un texto de una línea.",
+    "TEXT": "Texto de una línea: 1er punto ubica, 2º da la altura, 3º la dirección.",
     "MTEXT": "Escribe un texto de varias líneas con formato.",
     "HATCH": "Rellena un área cerrada con un sombreado o un color.",
     # Modificar
@@ -70,7 +71,7 @@ DESCRIPCIONES = {
     "EXTEND": "Alarga objetos hasta los bordes elegidos.",
     "BREAK": "Quita el pedazo de un objeto entre dos puntos.",
     "JOIN": "Une objetos en uno solo.",
-    "CHAMFER": "Bisela la esquina entre dos objetos; también polilíneas, del lado elegido.",
+    "CHAMFER": "Bisela la esquina entre dos objetos; por defecto, ochava de largo dado.",
     "FILLET": "Redondea la esquina entre dos objetos; también polilíneas, del lado elegido.",
     "EXPLODE": "Descompone un objeto compuesto en sus partes.",
     # GeoCAD

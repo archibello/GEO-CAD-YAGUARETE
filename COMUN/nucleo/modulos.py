@@ -47,7 +47,8 @@ CATALOGO = {
                "polilínea, línea + polilínea, dos polilíneas) y respeta el lado elegido.",
                cambia_programa=True),
         Modulo("chaflan", "Chaflán estilo AutoCAD (CHAFLAN / CHA)",
-               "Como el CHAMFER de AutoCAD: polilíneas, lado elegido, Distancia o Ángulo, "
+               "Como el CHAMFER de AutoCAD, con Ochava (largo del bisel, ángulos iguales) por "
+               "defecto: polilíneas, lado elegido, Distancia o Ángulo, "
                "Polilínea entera, Múltiple; conserva capa y vínculo con QGIS.",
                cambia_programa=True),
         Modulo("bloques", "Bloques: BLOQUE mejorado y edición en el lugar",
@@ -55,6 +56,10 @@ CATALOGO = {
                "confirmación. INSERT con vista previa y el bloque siguiendo al cursor. "
                "Doble clic sobre un bloque para editarlo en el lugar.",
                cambia_programa=True),
+        Modulo("texto", "Texto como AutoCAD (TEXTO / DT)",
+               "El 1er punto ubica el texto, el 2º da la altura y el 3º la dirección, con "
+               "línea elástica y el valor junto al cursor. Al terminar, los textos quedan "
+               "elegidos para retocarlos en la paleta Properties.", cambia_programa=True),
         Modulo("estirar", "Estirar al instante y con vista previa (ESTIRA / S)",
                "Mientras se elige el segundo punto se ven los objetos estirados y lo "
                "atrapado entero sigue al cursor; al hacer clic el resultado queda en el "

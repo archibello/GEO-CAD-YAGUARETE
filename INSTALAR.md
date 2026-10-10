@@ -8,7 +8,7 @@ GEO-CAD-YAGUARETÉ funcionando en los dos programas.
 
 - **Linux.** Por ahora funciona sólo en Linux.
 - **IngeCAD y QGIS instalados.** Versiones probadas:
-  - IngeCAD 0.6.5 (Flatpak, desde [ingecad.org](https://ingecad.org)).
+  - IngeCAD 0.6.5 (Flatpak) y 0.6.6 (portable), desde [ingecad.org](https://ingecad.org).
   - QGIS 4.2.2 (Flatpak de [Flathub](https://flathub.org/apps/org.qgis.qgis)),
     3.40.5 (Debian) o 3.28.9 LTS.
 - **Abrir cada programa una vez y cerrarlo.** Al abrirse por primera vez

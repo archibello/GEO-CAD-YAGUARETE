@@ -1,0 +1,18 @@
+GeoCAD - versión 3.15.3
+=======================
+CORRECCIÓN (IngeCAD, módulo «Texto como AutoCAD (TEXTO / DT)»), pedida por
+Fernando el 10/10/2026. Incluye 3.15.2 (DIMANGULAR), 3.15.1 (TEXT: clic
+sólo dentro de su recuadro) y 3.15.0 (Chaflán con Ochava).
+
+Caja de edición de un TEXT (doble clic sobre el texto)
+- La caja mide lo escrito y crece letra a letra mientras se escribe, como
+  en AutoCAD. Vacía, ocupa el lugar de una letra.
+- Antes: IngeCAD le daba el ancho de su barra de formato (que en un TEXT
+  está oculta) y al menos 8 letras: con una «C» quedaba una franja de punta
+  a punta de la pantalla (medido: 939 px; ahora 50 px con «C» y 286 px con
+  «Casa chica»).
+- MTEXT, sin cambios. Con el módulo «texto» apagado, como venía.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_texto
+  también contra 0.6.5. Verificado además con el editor real de IngeCAD
+  0.6.5 (Flatpak, sin pantalla): el ancho crece con cada letra.

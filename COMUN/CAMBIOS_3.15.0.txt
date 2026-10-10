@@ -1,0 +1,32 @@
+GeoCAD - versión 3.15.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo «Chaflán»): opción Ochava (O), la principal
+y por defecto de CHAFLÁN (10/10/2026, pedido de Fernando).
+Incluye las correcciones de 3.14.1 (TEXTO: sin rastro de muestras y
+recuadro girado).
+
+Ochava (O)
+- Se da el Largo (L) de la ochava y el bisel queda con los dos ángulos
+  iguales (A = B). En una esquina a 90° los ángulos son de 135° y cada
+  línea se corta a L/√2 de la esquina (L = 5 m: 3,5355 m). En cualquier
+  otra esquina, igual de los dos lados: L / (2·sen(θ/2)).
+- Es la opción por defecto: al abrir CHAFLÁN por primera vez pide
+  «Precise largo de ochava (L) <0>:». Después dice «Ochava actual:
+  Largo = 5» y va directo a elegir las líneas.
+- El largo queda guardado hasta que se cambie, también al cerrar y abrir
+  IngeCAD (~/.config/geocad/chaflan.json). Se cambia con O (u L) en la
+  primera pregunta; Enter deja el que estaba.
+- La «O» era métOdo: ahora el método es mEtodo (E), como en el AutoCAD en
+  inglés, y ofrece [Ochava/Distancia/Ángulo].
+- El resto, igual: Distancia, Ángulo, Polilínea entera (también con
+  ochava en cada vértice), Recortar, Múltiple, desHacer, Mayús = esquina,
+  lado elegido, capa y vínculo con QGIS.
+
+Opciones de CHAFLÁN:
+  [Ochava/desHacer/Polilínea/Distancia/Ángulo/Recortar/mEtodo/Múltiple]
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.5 y 0.6.6 (todas OK;
+  test_chaflan con la sección Ochava: 90° y 60°, guardado, Enter, L, coma
+  decimal, mEtodo). Verificado además dentro de IngeCAD 0.6.5 y 0.6.6 sin
+  pantalla: CHAFLAN pide el largo, 5 + Enter y dos clics dejan el bisel de
+  5,0 cortando a 3,5355 de la esquina.

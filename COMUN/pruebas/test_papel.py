@@ -24,7 +24,7 @@ print("ok módulo")
 def dibujo(insunits=6):
     d = ezdxf.new("R2018")
     d.header["$INSUNITS"] = insunits
-    return types.SimpleNamespace(doc=d, dirty=False)
+    return types.SimpleNamespace(doc=d, dirty=False, uninitialized_layouts=set())   # IngeCAD 0.6.6
 
 
 def a3_horizontal(doc, layout, escala):

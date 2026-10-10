@@ -20,6 +20,11 @@ cota caiga sola en su capa.
    según el lado del cursor (IngeCAD sólo medía hasta 180°). Acepta tramos
    rectos de polilíneas (los lotes de QGIS) y suma referencias (FIN, INT,
    CEN, MED) al pedir el vértice y los puntos.
+   Con dos líneas que se cruzan (3.15.2), cada lado es la mitad de la línea
+   del lado donde se hizo clic, como en EMPALME y CHAFLÁN (antes tomaba la
+   punta más lejana del cruce: en una X, cualquiera). Y las extensiones no
+   salen de la punta de la línea: van sólo del arco hasta DIMEXE más allá
+   (si la línea no llega al arco, desde su punta, como AutoCAD).
 6. Precisión de los ángulos en g/m/s como AutoCAD (3.9.3): la lista 0°,
    0°00', 0°00'00", 0°00'00.0"... en CREAR COTA y en la ventana de estilos
    de IngeCAD (allí era un número suelto), y el texto con esa precisión
@@ -155,6 +160,9 @@ def atributos(document, escala: float, altura_mm: float, decimales: int,
         "dimazin": 2,                 # sin ceros de relleno en los segundos
         "dimdsep": ord(","),
         "dimsah": 1,
+        # la extensión más allá del arco o de la línea de cota, nunca más
+        # larga que la altura del texto
+        "dimexe": min(float(attribs.get("dimexe", 1.25 * upm)), float(altura_mm) * upm),
         "dimblk": bloque, "dimblk1": bloque, "dimblk2": bloque,
         "dimtxsty": nombre_texto(fuente),
     })
@@ -275,8 +283,30 @@ def comando_angular(tool, point):
         return actions.dim_angular(vertice, p1, p2, point, **texto)
     if getattr(tool, "_vertex", None) is None or tool._p1 is None or tool._p2 is None:
         return None
-    return actions.dim_angular(tool._vertex, tool._p1, tool._p2, point,
+    p1, p2 = puntos_cota(tool, point)
+    return actions.dim_angular(tool._vertex, p1, p2, point,
                                region=region if tool._region_free else None, **texto)
+
+
+def al_arco(v, p, radio):
+    """El punto del lado v -> p a la distancia del arco (o p, si la línea no
+    llega): ahí arranca la extensión, que así no recorre la línea entera."""
+    largo = math.dist(v, p)
+    if largo <= radio or largo == 0.0:
+        return tuple(p)
+    f = radio / largo
+    return (v[0] + (p[0] - v[0]) * f, v[1] + (p[1] - v[1]) * f)
+
+
+def puntos_cota(tool, location):
+    """(p1, p2) de la cota: con dos líneas elegidas, recortados al arco que
+    pasa por ``location``; en el modo vértice, los puntos dados, tal cual."""
+    p1, p2 = tool._p1, tool._p2
+    if activo() and getattr(tool, "_geo_lineas", None) and location is not None:
+        radio = math.dist(tool._vertex, location)
+        if radio > 0.0:
+            p1, p2 = al_arco(tool._vertex, p1, radio), al_arco(tool._vertex, p2, radio)
+    return p1, p2
 
 
 def _vista_angular(self, cursor):
@@ -328,18 +358,29 @@ def tramo(entity, pick):
     return None
 
 
-def lados(l1, l2):
-    """(vértice, p1, p2) de dos líneas: el cruce y, en cada una, su punta más
-    lejana del cruce (el lado del ángulo). None si son paralelas."""
+def lados(l1, l2, clic1=None, clic2=None):
+    """(vértice, p1, p2) de dos líneas: el cruce y, en cada una, la punta del
+    lado del clic (como EMPALME y CHAFLÁN: en una X, el cuadrante elegido).
+    Sin clic, o con el clic justo en el cruce, la punta más lejana del cruce.
+    None si son paralelas."""
     from core import actions
 
     v = actions.line_intersection(l1, l2)
     if v is None:
         return None
 
-    def lejos(linea):
-        return max(linea, key=lambda q: (q[0] - v[0]) ** 2 + (q[1] - v[1]) ** 2)
-    return (v[0], v[1]), tuple(lejos(l1)), tuple(lejos(l2))
+    def d2(q):
+        return (q[0] - v[0]) ** 2 + (q[1] - v[1]) ** 2
+
+    def punta(linea, clic):
+        lejos = max(linea, key=d2)
+        if clic is None:
+            return lejos
+        cx, cy = clic[0] - v[0], clic[1] - v[1]
+        lado = [q for q in linea if d2(q) > 1e-18
+                and (q[0] - v[0]) * cx + (q[1] - v[1]) * cy > 0.0]
+        return max(lado, key=d2) if lado else lejos
+    return (v[0], v[1]), tuple(punta(l1, clic1)), tuple(punta(l2, clic2))
 
 
 def formato_angulo(document, grados: float) -> str:
@@ -457,7 +498,8 @@ def _lista_precision(dlg) -> None:
 def _a_vertice(tool) -> None:
     """Dos líneas elegidas -> vértice y dos puntos: así el lado del cursor
     elige interior o exterior, como en el modo vértice de IngeCAD."""
-    r = lados(tool._line1, tool._line2)
+    r = lados(tool._line1, tool._line2,
+              getattr(tool, "_geo_clic1", None), getattr(tool, "_geo_clic2", None))
     if r is None:
         return
     tool._geo_lineas = (tool._line1, tool._line2)
@@ -469,11 +511,24 @@ def _a_vertice(tool) -> None:
 def _envolver_on_point(original):
     def on_point(self, point):
         modo = getattr(self, "_mode", None)
+        if (activo() and modo == "locate" and getattr(self, "_pending", None) is None
+                and getattr(self, "_geo_lineas", None)):
+            # la cota que queda: las extensiones desde el arco, no desde la punta
+            p1, p2 = self._p1, self._p2
+            self._p1, self._p2 = puntos_cota(self, point)
+            try:
+                return original(self, point)
+            finally:
+                if getattr(self, "_mode", None) == "locate":
+                    self._p1, self._p2 = p1, p2
         if (not activo() or getattr(self, "_pending", None) is not None
                 or modo not in ("select", "line2")):
             return original(self, point)
         if modo == "select":
             self._geo_lineas = None
+            self._geo_clic1 = tuple(point)
+        else:
+            self._geo_clic2 = tuple(point)
         s = getattr(self.ctx, "services", None)
         e = s.pick_entity(point) if s is not None else None
         if e is not None and e.dxftype() in ("LWPOLYLINE", "POLYLINE"):
@@ -537,7 +592,7 @@ def resaltado_angular(self, cursor) -> dict:
         t = bajo_cursor()
         if t is not None:
             out["cursor"] = [t]
-            r = lados(self._line1, t)
+            r = lados(self._line1, t, getattr(self, "_geo_clic1", None), cursor)
             if r is not None:
                 out["puntos"] = [r[0]]             # el centro, antes del clic
     elif modo in ("vp1", "vp2", "circle2") and v is not None:

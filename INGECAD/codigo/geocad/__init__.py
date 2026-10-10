@@ -21,17 +21,18 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, cotas, editor_texto, filtro, impresion, papel, propiedades, seleccion, tipografias
+from . import barra, bloques, cotas, editor_texto, filtro, impresion, papel, propiedades, seleccion, texto, tipografias
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
+from .texto import TextoTool
 from .partir import PartirTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.13.0"
+VERSION = "3.15.6"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -66,6 +67,7 @@ def _document_open(ctx, document):
     papel.instalar()
     impresion.instalar()
     cotas.instalar()
+    texto.instalar()
     bloques.instalar_referencias()
     barra.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
@@ -122,6 +124,8 @@ def construir_spec() -> PluginSpec:
         tools["BREAKATPOINT"] = PartirTool
     if est["estirar"]:
         tools["GEOSTRETCH"] = EstirarTool
+    if est["texto"]:
+        tools["GEOTEXT"] = TextoTool
     if est["bloques"]:
         tools.update({"GEOBLOCK": bloques.BloqueTool, "GEOINSERT": bloques.InsertarTool,
                       "GEOREFEDIT": bloques.EditarEnSitioTool, "GEOBLOCKBASE": bloques.PuntoBaseTool,
@@ -261,7 +265,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.13.0",
+        version="3.15.6",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -309,6 +313,7 @@ tipografias.instalar()
 papel.instalar()
 impresion.instalar()
 cotas.instalar()
+texto.instalar()
 bloques.instalar_referencias()
 barra.instalar()
 PLUGIN = construir_spec()

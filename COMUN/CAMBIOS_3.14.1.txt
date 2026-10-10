@@ -1,0 +1,38 @@
+GeoCAD - versión 3.14.1
+=======================
+CORRIGE 3.14.0 (IngeCAD, módulo «Texto»), según lo que encontró Fernando
+(10/10/2026): la muestra dejaba rastro y el recuadro no acompañaba al texto.
+
+La muestra ya no deja rastro
+- En 3.14.0 cada «Ɪ» de muestra quedaba como un texto de verdad en el
+  plano (una por cada movimiento del ratón), y la última seguía dibujada
+  después de escribir. Causa: la vista previa de IngeCAD está hecha para
+  cotas y, con un texto, fallaba justo antes de borrar la muestra.
+  Ahora GeoCAD crea, dibuja y borra la muestra por su cuenta (se borra
+  aunque algo falle) y la saca de la pantalla al empezar a escribir y al
+  terminar. Sin GeoCAD, IngeCAD no la dibuja: nunca puede quedar.
+- Dibujos hechos con 3.14.0: pueden tener muestras sueltas (textos «Ɪ»).
+  Se eligen con FI (filtro) > Valor de texto = Ɪ, y se borran.
+
+La letra de muestra
+- La fuente de siempre (DejaVu Sans) no tiene la «Ɪ»: se veía un
+  rectángulo vacío. Ahora la muestra es «Ɪ» si la fuente del estilo la
+  tiene y, si no, una «I» mayúscula, que marca la misma altura.
+
+Recuadro del texto, como AutoCAD
+- Un TEXT elegido (por ejemplo, el recién escrito) se resalta con su
+  recuadro girado con el texto y del largo del texto. IngeCAD dibujaba la
+  caja derecha que lo envuelve: en un texto inclinado quedaba mucho más
+  grande y no lo acompañaba. Elegir con un clic dentro del texto sigue
+  igual. Apagado el módulo «Texto», el resaltado vuelve a ser el de
+  IngeCAD.
+- Mientras se escribe, el recuadro sombreado de IngeCAD ya gira con el
+  texto y crece con cada letra (no cambia).
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.5 y 0.6.6 (todas OK;
+  test_texto ampliada: la muestra se borra aunque falle el dibujo, la
+  letra según la fuente, el recuadro girado y el resaltado). Verificado
+  además dentro de IngeCAD 0.6.5 y 0.6.6 sin pantalla: después de mover
+  el ratón y escribir, en el plano y en el DXF guardado queda sólo el
+  texto escrito, la vista previa se apaga y el resaltado son 4 lados
+  girados.

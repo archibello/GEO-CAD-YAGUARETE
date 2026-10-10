@@ -1,0 +1,22 @@
+GeoCAD - versión 3.15.1
+=======================
+CORRECCIÓN (IngeCAD, módulo «Texto como AutoCAD (TEXTO / DT)»), pedida por
+Fernando el 10/10/2026. Incluye todo lo de 3.15.0 (Chaflán con Ochava).
+
+Elegir un TEXT con un clic
+- Un TEXT se elige sólo con el cursor DENTRO de su recuadro (el mismo
+  recuadro girado que lo resalta). Nunca desde afuera.
+- Antes: IngeCAD lo elegía desde cualquier punto de su caja derecha (sin
+  girar) más la tolerancia. En un texto inclinado (a 45°, por ejemplo)
+  esa caja es un cuadrado mucho más grande que el texto, y el texto quedaba
+  elegido con el cursor lejos de él.
+- Si en ese punto hay otra cosa (una línea, un arco...), se elige esa.
+- Vale para el clic, el resaltado bajo el cursor y la elección cíclica.
+  Elegir con ventana o captura sigue como en IngeCAD.
+- Textos Alineados / Ajustados y MTEXT: sin cambios.
+- Con el módulo «texto» apagado, IngeCAD queda como venía.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_texto
+  también contra 0.6.5. test_texto suma: texto a 45°, un clic en la esquina
+  de su caja derecha no lo elige; un clic sobre el texto sí; una línea en
+  ese punto gana; un texto sin girar se elige como antes.

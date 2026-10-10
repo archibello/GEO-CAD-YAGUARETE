@@ -366,7 +366,7 @@ antes = huella(w.msp)
 t = B.PuntoBaseTool(w.ctx()); t.start(); t.on_point(en_dibujo(ref, 5002, 7001.5))
 t.on_point(en_dibujo(ref, 5004, 7003)); t.on_option("M")
 assert huella(w.msp) == antes and tuple(blk.block.dxf.base_point) == (5000, 7000, 0)
-(l,) = blk.query("LINE"); assert tuple(l.dxf.end)[:2] == (5000, 7000)    # el extremo cae en la base
+(l,) = blk.query("LINE"); assert l.dxf.end.isclose((5000, 7000, 0), abs_tol=1e-9)    # el extremo cae en la base
 print("ok punto base: bloque nativo")
 
 # Desplazar: las referencias quedan; el bloque (y sus atributos) se corre

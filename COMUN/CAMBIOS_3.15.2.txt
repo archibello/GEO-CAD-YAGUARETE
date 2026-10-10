@@ -1,0 +1,33 @@
+GeoCAD - versión 3.15.2
+=======================
+CORRECCIÓN (IngeCAD, módulo «Cotas»: DIMANGULAR, medir ángulos), pedida
+por Fernando el 10/10/2026. Incluye 3.15.1 (TEXT: clic sólo dentro de su
+recuadro) y 3.15.0 (Chaflán con Ochava).
+
+1. Cuadrantes en líneas que se cruzan
+- Con dos líneas elegidas, cada lado del ángulo es la mitad de la línea
+  del lado donde se hizo clic, como en EMPALME y CHAFLÁN. En una X, los
+  dos clics eligen el cuadrante (A, B, C o D). El cursor elige, como
+  antes, el Interior (ese cuadrante) o el Exterior (los otros tres).
+- Antes tomaba la punta de cada línea más lejana del cruce. En una X las
+  dos puntas quedan a la misma distancia, así que siempre medía el mismo
+  cuadrante, se hiciera clic donde se hiciera.
+- Líneas que se tocan en una punta (una L, un lote): igual que antes.
+
+2. Líneas de extensión
+- Ya no salen de la punta de la línea. Van del arco de la cota hasta
+  DIMEXE más allá (si la línea llega al arco, queda sólo ese pedacito).
+  Si la línea no llega al arco, la extensión sale de su punta, como en
+  AutoCAD.
+- Antes recorrían toda la línea, desde su punta hasta el arco (en la
+  prueba: 11,39 de largo; ahora 0,25, con texto de 2,5).
+- CREAR COTA: la extensión más allá de la cota (DIMEXE) nunca supera la
+  altura del texto (vale para los estilos que se creen o actualicen).
+- El modo vértice (Enter, tres puntos) no cambia: las extensiones salen
+  de los puntos dados.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_cotas
+  también contra 0.6.5. test_cotas suma: una X con los 4 cuadrantes
+  (Interior 90° / Exterior 270° en cada uno), extensiones desde el arco
+  (en la vista previa y en la cota que queda), línea que no llega al arco y
+  DIMEXE <= altura del texto.

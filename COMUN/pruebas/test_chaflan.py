@@ -24,7 +24,7 @@ T = cha.ChaflanTool
 assert lp.spec.tools.get("GEOCHAMFER") is T
 _y = import_module("ingecad_plugin_geocad.yaguarete")   # 3.13.0: van en la barra Yaguareté Tools
 _b = [o for o, _m in _y.elegidas(mods.estado("ingecad"))]
-assert _b == ["RECTANG", "STRETCH", "BREAKATPOINT", "CHAMFER", "FILLET"]
+assert _b == ["RECTANG", "TEXT", "STRETCH", "BREAKATPOINT", "CHAMFER", "FILLET"]
 assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in lp.spec.toolbar}
 
 
@@ -146,13 +146,59 @@ for x in ("D", "2", ""):                             # Enter en la segunda: igua
     t.on_option(x)
 assert (T.dist1, T.dist2, T.metodo) == (2, 2, "D")
 t.on_option("A"); t.on_option("3"); t.on_option("60"); assert (T.largo, T.angulo, T.metodo) == (3, 60, "A")
-t.on_option("O"); t.on_option("D"); assert T.metodo == "D"
+t.on_option("E"); t.on_option("D"); assert T.metodo == "D"     # mEtodo: la O es Ochava
 t.on_option("R"); t.on_option("N"); assert not trimmode.trimmode()
 t.on_option("R"); t.on_option("R"); assert trimmode.trimmode()
 t.on_option("M"); t.on_point((5, 0)); t.on_point((12, 6)); assert not h.finished and len(lineas(h)) == 3
 t.on_option("H"); assert lineas(h) == [(0, 0, 10, 0), (12, 2, 12, 10)]
 t.on_enter(); assert h.finished
 print("ok opciones")
+
+# ---- 6b. Ochava (O): Largo (L) del bisel, ángulos iguales (A = B); la opción por defecto ----
+import json
+assert T.OPTIONS.startswith("Designe primera línea o [Ochava/") and "mEtodo" in T.OPTIONS
+assert cha.leer_ochava() == 0.0                      # nada guardado todavía
+T.metodo, T.ochava = "O", None                       # como al abrir IngeCAD
+h = Harness(); L(h.msp); t = T(h.ctx); t.start()
+assert T.ochava == 0.0 and t._await == "ochava" and "largo de ochava (L) <0.0000>" in h.msgs[-1]
+t.on_option("5"); assert (T.ochava, T.metodo, t._await) == (5.0, "O", None)
+assert json.loads(cha._archivo().read_text())["ochava"] == 5.0            # queda guardado
+t.on_point((5, 0)); t.on_point((12, 6))
+d = 5 / math.sqrt(2)                                 # esquina a 90°: L/√2 en cada línea
+assert lineas(h) == [(0, 0, R(12 - d), 0), (R(12 - d), 0, 12, R(d)), (12, R(d), 12, 10)], lineas(h)
+(b,) = [e for e in h.msp.query("LINE") if e.dxf.start.y == 0 and e.dxf.end.x == 12]
+assert abs(math.dist(b.dxf.start, b.dxf.end) - 5) < 1e-9 and b.dxf.layer == "MUROS"
+# A = B: los dos ángulos iguales (135° en la esquina a 90°)
+u = (b.dxf.end.x - b.dxf.start.x, b.dxf.end.y - b.dxf.start.y)
+ang_a = math.degrees(math.atan2(u[1], u[0])); assert abs(ang_a - 45) < 1e-9
+
+T.ochava = None                                      # al volver a abrir IngeCAD: el guardado
+h = Harness(); L(h.msp); t = T(h.ctx); t.start()
+assert T.ochava == 5.0 and t._await is None and "Ochava actual: Largo = 5" in " ".join(h.msgs)
+t.on_option("O"); assert t._await == "ochava" and "<5.0000>" in h.msgs[-1]
+t.on_enter(); assert (T.ochava, t._await) == (5.0, None)                  # Enter: el que estaba
+t.on_option("L"); t.on_option("4,5"); assert T.ochava == 4.5               # L también, con coma
+t.on_option("O"); t.on_option("-1"); assert T.ochava == 4.5 and t._await == "ochava"
+t.on_point((5, 0)); assert t._await is None                                # clic: sigue con 4,5
+
+# esquina de 60°: misma distancia en las dos, L / (2·sen 30°) = L
+T.ochava, T.metodo = 3.0, "O"
+h = Harness()
+h.msp.add_line((0, 0), (10, 0)); h.msp.add_line((10, 0), (10 - 10 * math.cos(math.radians(60)), 10 * math.sin(math.radians(60))))
+t = T(h.ctx); t.start(); t.on_point((5, 0)); t.on_point((7.5, 4.33))
+bis = [e for e in h.msp.query("LINE") if abs(math.dist(e.dxf.start, e.dxf.end) - 3) < 1e-6]
+assert len(bis) == 1, lineas(h)
+assert abs(math.dist(bis[0].dxf.start, (10, 0, 0)) - 3) < 1e-6 and abs(math.dist(bis[0].dxf.end, (10, 0, 0)) - 3) < 1e-6
+
+# mEtodo: Ochava/Distancia/Ángulo; Distancia y Ángulo siguen como estaban
+h = Harness(); L(h.msp); t = T(h.ctx); t.start()
+t.on_option("E"); assert "[Ochava/Distancia/Ángulo] <Ochava>" in h.msgs[-1]
+t.on_option("D"); assert T.metodo == "D"
+t.on_option("E"); t.on_option("O"); assert T.metodo == "O"
+distancias(2, 3); h = chaflan(L, (5, 0), (12, 6))
+assert lineas(h) == [(0, 0, 10, 0), (10, 0, 12, 3), (12, 3, 12, 10)]
+T.metodo = "O"
+print("ok ochava")
 
 # ---- 7. Recortar apagado: quedan los originales y se agrega el bisel ------------------------
 distancias(2); trimmode.set_trimmode(False)

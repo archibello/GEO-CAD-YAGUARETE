@@ -220,7 +220,7 @@ def _envolver_clic_derecho(original):
 #: comandos de IngeCAD que GeoCAD reemplaza mientras su módulo está activo
 REEMPLAZOS = {"FILLET": ("empalme", "GEOFILLET"), "CHAMFER": ("chaflan", "GEOCHAMFER"),
               "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT"),
-              "STRETCH": ("estirar", "GEOSTRETCH")}
+              "STRETCH": ("estirar", "GEOSTRETCH"), "TEXT": ("texto", "GEOTEXT")}
 
 
 def herramienta_para(nombre: str, window=None, registradas=None) -> str:

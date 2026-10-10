@@ -1,0 +1,35 @@
+GeoCAD - versión 3.14.0
+=======================
+FUNCIÓN NUEVA (IngeCAD): módulo «Texto como AutoCAD (TEXTO / DT)»
+(10/10/2026, pedido de Fernando).
+
+TEXTO con tres clics, como AutoCAD
+- 1er clic: el punto de inserción.
+- 2º clic: la altura (la distancia desde el primero). Mientras se elige,
+  una «Ɪ» de muestra en el punto de inserción crece con el cursor: se ve
+  el tamaño que va a tener el texto.
+- 3er clic: la dirección (el ángulo desde el primero). Mientras se elige,
+  la «Ɪ», ya con la altura elegida, gira con el cursor.
+- La «Ɪ» la dibuja IngeCAD como texto de verdad (estilo, fuente,
+  justificación y capa actuales) y no queda en el plano ni en el
+  historial. Además: línea elástica desde el primer punto y, junto al
+  cursor, la altura o el ángulo. Con ORTO y referencias, como cualquier
+  punto. La altura y el ángulo también se pueden escribir.
+- Al terminar (Esc), los textos escritos quedan elegidos: la paleta
+  Properties los muestra para retocarlos.
+
+Barra «Yaguareté Tools»
+- TEXTO pasa a la barra Yaguareté Tools y sale de la barra Dibujo de
+  IngeCAD. Apagado el módulo «texto» (GeoCAD > Módulos...), el botón
+  vuelve a Dibujo y TEXT queda como venía.
+
+IngeCAD 0.6.6
+- Probado con IngeCAD 0.6.6 (portable) además de 0.6.5 (Flatpak). En
+  0.6.6 el TEXT de IngeCAD ya acepta clics para la altura y el giro, pero
+  sin la muestra: con el módulo encendido manda el de GeoCAD, igual en
+  las dos versiones.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.5 y 0.6.6 (todas OK;
+  nueva test_texto). test_papel: el documento de prueba suma lo que
+  IngeCAD 0.6.6 agregó a las presentaciones; test_bloques: compara la
+  base con tolerancia (daba 5000.000000000001).

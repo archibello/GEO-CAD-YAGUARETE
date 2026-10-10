@@ -1,0 +1,21 @@
+GeoCAD - versión 3.15.6
+=======================
+CORRECCIÓN (IngeCAD, módulo «Texto como AutoCAD (TEXTO / DT)»). La 3.15.5
+no pasó la prueba de Fernando (10/10/2026). Incluye 3.15.5 y anteriores.
+
+«no se pudo abrir el bloque ('tuple' object has no attribute 'get')»
+- Al actualizar a 3.15.5 sin reiniciar IngeCAD, el índice de elegir traía
+  guardados los recuadros con la forma de 3.15.1-3.15.4 (una tupla); 3.15.5
+  esperaba otra (un diccionario) y el clic sobre un texto se rompía. El
+  doble clic lo informaba como «no se pudo abrir el bloque» y no editaba,
+  y el texto elegido quedaba sin recuadro.
+- Ahora lo guardado con otra forma se descarta y se arma de nuevo.
+- Además, cualquier error al elegir un texto deja el clic como en IngeCAD:
+  nunca más lo rompe.
+- Lo de 3.15.5 (sin rectángulo «fantasma» al editar) sigue igual.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_texto
+  también contra 0.6.5. test_texto suma: índice con lo guardado por
+  3.15.1-3.15.4 y con basura; un índice que falla no rompe el clic.
+  Verificado además con el resaltado real de IngeCAD 0.6.5 (Flatpak, sin
+  pantalla) partiendo de un índice con la tupla vieja.

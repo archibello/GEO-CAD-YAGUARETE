@@ -1,0 +1,23 @@
+GeoCAD - versión 3.15.5
+=======================
+CORRECCIÓN (IngeCAD, módulo «Texto como AutoCAD (TEXTO / DT)»), pedida por
+Fernando el 10/10/2026. Incluye 3.15.4 y anteriores.
+
+Sin rectángulo «fantasma» al editar un TEXT
+- Después de editar un TEXT en el lugar (Enter), quedaba dibujado atrás un
+  rectángulo derecho del tamaño del texto ANTERIOR, además de nuestro
+  recuadro girado.
+- Causa: ese rectángulo es la caja derecha de IngeCAD, y su índice no se
+  pone al día al editar un texto en el lugar. Nuestro resaltado la sacaba
+  sólo si coincidía con el texto actual; con la caja vieja no coincidía.
+- Ahora, al notar que un TEXT cambió, se pone al día ese texto en el índice
+  de IngeCAD (sacar y volver a poner sólo ese objeto, como hace IngeCAD en
+  sus otras ediciones). Desaparece la caja vieja, y el clic usa la nueva:
+  también cuando el texto crece.
+- Esc sigue descartando y Enter guardando, como en IngeCAD.
+
+- Pruebas: corrieron las 32 contra IngeCAD 0.6.6 (todas OK) y test_texto
+  también contra 0.6.5. Verificado además con el resaltado real de IngeCAD
+  0.6.5 (Flatpak, sin pantalla): al acortar un texto no queda caja de
+  IngeCAD, el recuadro girado se acorta y un clic en el final viejo no
+  elige nada.

@@ -16,10 +16,11 @@ B = import_module("ingecad_plugin_geocad.barra")
 # ---- 1. qué va en la barra ----------------------------------------------------------
 assert Y.NOMBRE_BARRA == "Yaguareté Tools"
 todo = {m.clave: True for m in mods.CATALOGO["ingecad"]}
-assert Y.elegidas(todo) == [("RECTANG", "draw_toolbar"), ("STRETCH", "modify_toolbar"),
+assert Y.elegidas(todo) == [("RECTANG", "draw_toolbar"), ("TEXT", "draw_toolbar"),
+                            ("STRETCH", "modify_toolbar"),
                             ("BREAKATPOINT", None), ("CHAMFER", "modify_toolbar"),
                             ("FILLET", "modify_toolbar")]
-apagados = dict(todo, empalme=False, estirar=False)
+apagados = dict(todo, empalme=False, estirar=False, texto=False)
 assert [o for o, _ in Y.elegidas(apagados)] == ["RECTANG", "BREAKATPOINT", "CHAMFER"]  # vuelven a IngeCAD
 assert [o for o, _ in Y.elegidas({})] == ["RECTANG"]           # REC: siempre con GeoCAD
 spec = import_module("ingecad_plugin_geocad").construir_spec()

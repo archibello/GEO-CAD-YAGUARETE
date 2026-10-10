@@ -13,19 +13,50 @@ Este chaflán es el Empalme de GeoCAD con otra pieza en la esquina: la misma
 geometría (lado elegido, polilíneas, uniones, vista previa, resaltado) con
 un bisel recto en lugar del arco. Opciones como en AutoCAD:
 
+  Ochava (la principal y por defecto, de GeoCAD): se da el Largo (L) del
+  bisel y los dos ángulos quedan iguales (A = B): en una esquina a 90° son
+  135° y cada línea se corta a L/√2 de la esquina; en cualquier esquina,
+  a L / (2·sen(θ/2)). El largo queda guardado hasta que se cambie (también
+  al cerrar y abrir IngeCAD) /
   desHacer / Polilínea (todos los vértices) / Distancia (dist1 sobre el
   primer objeto, dist2 sobre el segundo) / Ángulo (longitud sobre el primero
-  y ángulo) / Recortar / métOdo (Distancia o Ángulo) / Múltiple,
+  y ángulo) / Recortar / mEtodo (Ochava, Distancia o Ángulo) / Múltiple,
   y Mayús en el segundo objeto = esquina.
 """
 from __future__ import annotations
 
+import json
 import math
+from pathlib import Path
 
 from core import actions
 from core.i18n import tr
 
 from .empalme import EPS, EmpalmeTool, _unit
+
+
+def _archivo() -> Path:
+    return Path.home() / ".config" / "geocad" / "chaflan.json"
+
+
+def leer_ochava() -> float:
+    """El largo de ochava guardado (0 si no hay)."""
+    try:
+        v = float(json.loads(_archivo().read_text(encoding="utf-8")).get("ochava", 0.0))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return 0.0
+    return v if v >= 0 and math.isfinite(v) else 0.0
+
+
+def guardar_ochava(valor: float) -> None:
+    path = _archivo()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"ochava": valor}), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        pass                    # sin disco: vale para esta sesión
 
 
 def _cortas(n: int) -> str:
@@ -39,7 +70,7 @@ class ChaflanTool(EmpalmeTool):
     NO_ENTRA = "GeoCAD Yaguareté: el chaflán no entra en esos tramos."
     TIPOS = ("LINE", "LWPOLYLINE")
     OPTIONS = ("Designe primera línea o "
-               "[desHacer/Polilínea/Distancia/Ángulo/Recortar/métOdo/Múltiple]:")
+               "[Ochava/desHacer/Polilínea/Distancia/Ángulo/Recortar/mEtodo/Múltiple]:")
     PROMPT_SEGUNDO = "Designe segunda línea o Mayús+clic para hacer esquina:"
     MSG_TIPO = "CHAFLÁN trabaja con líneas y polilíneas (no con arcos ni círculos)."
 
@@ -48,7 +79,8 @@ class ChaflanTool(EmpalmeTool):
     dist2 = 0.0
     largo = 0.0          # método Ángulo: longitud sobre la primera línea
     angulo = 0.0         # método Ángulo: grados desde la primera línea
-    metodo = "D"         # "D" distancia, "A" ángulo
+    metodo = "O"         # "O" ochava (por defecto), "D" distancia, "A" ángulo
+    ochava = None        # método Ochava: largo del bisel (None = leer el guardado)
 
     def start(self) -> None:
         self.name = "CHAMFER"
@@ -57,14 +89,30 @@ class ChaflanTool(EmpalmeTool):
         self._await = None
         self._multiple = False
         self._done = 0
+        cls = type(self)
+        if cls.ochava is None:
+            cls.ochava = leer_ochava()
         self._announce()
+        if cls.metodo == "O" and cls.ochava <= 0:        # sin largo todavía: se pide
+            self._pedir_ochava()
+
+    def on_point(self, point) -> None:
+        if self._await == "ochava":             # un clic en vez del largo: sigue con el que había
+            self._await = None
+        return super().on_point(point)
+
+    def _pedir_ochava(self) -> None:
+        self._await = "ochava"
+        self.prompt(f"Precise largo de ochava (L) <{self._fmt(type(self).ochava or 0.0)}>:")
 
     def _announce(self) -> None:
         from core import trimmode
 
         cls = type(self)
         modo = "RECORTAR" if trimmode.trimmode() else "NO RECORTAR"
-        if cls.metodo == "A":
+        if cls.metodo == "O":
+            self.ctx.echo(f"(Modo {modo}) Ochava actual: Largo = {self._fmt(cls.ochava or 0.0)}")
+        elif cls.metodo == "A":
             self.ctx.echo(f"(Modo {modo}) Longitud actual de chaflán = {self._fmt(cls.largo)}, "
                           f"Ángulo = {cls.angulo:g}")
         else:
@@ -81,6 +129,12 @@ class ChaflanTool(EmpalmeTool):
     def distancias(self, theta: float):
         """(d1, d2) según el método; theta = ángulo entre las dos ramas."""
         cls = type(self)
+        if cls.metodo == "O":                       # A = B: la misma distancia en las dos
+            largo = cls.ochava or 0.0
+            if largo <= 0:
+                return 0.0, 0.0
+            d = largo / (2.0 * math.sin(theta / 2.0))
+            return d, d
         if cls.metodo != "A":
             return cls.dist1, cls.dist2
         alfa = math.radians(cls.angulo)
@@ -134,10 +188,11 @@ class ChaflanTool(EmpalmeTool):
         t = text.strip().upper().lstrip("_")
         cls = type(self)
         a = self._await
-        if a in ("d1", "d2", "largo", "angulo"):
+        if a in ("d1", "d2", "largo", "angulo", "ochava"):
             if not t:                                  # Enter: el valor que estaba
                 v = {"d1": cls.dist1, "d2": cls.dist1 if a == "d2" else 0,
-                     "largo": cls.largo, "angulo": cls.angulo}[a]
+                     "largo": cls.largo, "angulo": cls.angulo,
+                     "ochava": cls.ochava or 0.0}[a]
             else:
                 v = self._numero(text)
                 if v is None:
@@ -148,7 +203,10 @@ class ChaflanTool(EmpalmeTool):
                 self._await = "d2"
                 self.prompt(f"Precise segunda distancia de chaflán <{self._fmt(v)}>:")
                 return True
-            if a == "d2":
+            if a == "ochava":
+                cls.ochava, cls.metodo = v, "O"
+                guardar_ochava(v)
+            elif a == "d2":
                 cls.dist2, cls.metodo = v, "D"
             elif a == "largo":
                 cls.largo = v
@@ -175,18 +233,23 @@ class ChaflanTool(EmpalmeTool):
             self._first_prompt()
             return True
         if a == "metodo":
-            if t[:1] == "A":
+            if t[:1] == "O":
+                cls.metodo = "O"
+            elif t[:1] == "A":
                 cls.metodo = "A"
             elif t[:1] == "D":
                 cls.metodo = "D"
             elif t:
-                self.ctx.echo("Requiere Distancia o Ángulo.")
+                self.ctx.echo("Requiere Ochava, Distancia o Ángulo.")
                 return True
             self._await = None
             self._first_prompt()
             return True
         if self._first is not None:
             return False
+        if t in ("O", "OCHAVA", "L", "LARGO"):
+            self._pedir_ochava()
+            return True
         if t in ("D", "DISTANCIA", "DISTANCE"):
             self._await = "d1"
             self.prompt(f"Precise primera distancia de chaflán <{self._fmt(cls.dist1)}>:")
@@ -200,10 +263,10 @@ class ChaflanTool(EmpalmeTool):
             actual = "Recortar" if trimmode.trimmode() else "No recortar"
             self.prompt(f"Indique opción de modo Recortar [Recortar/No recortar] <{actual}>:")
             return True
-        if t in ("O", "E", "METODO", "MÉTODO", "METHOD"):
+        if t in ("E", "METODO", "MÉTODO", "METHOD"):
             self._await = "metodo"
-            actual = "Ángulo" if cls.metodo == "A" else "Distancia"
-            self.prompt(f"Indique método [Distancia/Ángulo] <{actual}>:")
+            actual = {"A": "Ángulo", "D": "Distancia"}.get(cls.metodo, "Ochava")
+            self.prompt(f"Indique método [Ochava/Distancia/Ángulo] <{actual}>:")
             return True
         if t in ("M", "MULTIPLE", "MÚLTIPLE"):
             self._multiple = True
@@ -224,7 +287,7 @@ class ChaflanTool(EmpalmeTool):
         return False
 
     def on_enter(self) -> None:
-        if self._await in ("d1", "d2", "largo", "angulo", "trim", "metodo"):
+        if self._await in ("d1", "d2", "largo", "angulo", "ochava", "trim", "metodo"):
             self.on_option("")
             return
         self.ctx.finish()

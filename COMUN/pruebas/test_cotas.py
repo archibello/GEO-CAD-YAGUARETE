@@ -2,7 +2,7 @@
 altura en mm de hoja (dibujo en metros), lo deja activo y se deshace con U;
 toda cota con un estilo nuestro cae en su capa «COTAS Acot-100-6mm» sin
 cambiar la capa actual. (La ventana usa Qt: se prueba aparte, en IngeCAD.)"""
-import os, sys, tempfile, types
+import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 os.environ["XDG_CONFIG_HOME"] = os.path.join(os.environ["HOME"], ".config")
 from pathlib import Path
@@ -241,6 +241,38 @@ assert texto(t, (28, 1)) == "Interior 45°"
 assert texto(t, (15, -5)) == "Exterior 315°"
 cmd = t.preview_command((15, -5)); h.execute(cmd)
 assert texto_cota(cmd.dim) == "315°", texto_cota(cmd.dim)
+# dos líneas en X (3.15.2): cada lado, la mitad del lado del clic (como EMPALME
+# y CHAFLÁN). Antes tomaba la punta más lejana: en una X, siempre el mismo cuadrante
+azul = msp.add_line((90, 10), (110, -10)); verde = msp.add_line((90, -10), (110, 10))   # cruce en (100, 0)
+for c_azul, c_verde, adentro, afuera in (((95, 5), (105, 5), (100, 3), (100, -3)),     # A, arriba
+                                         ((105, -5), (105, 5), (103, 0), (97, 0)),     # B, derecha
+                                         ((105, -5), (95, -5), (100, -3), (100, 3)),   # C, abajo
+                                         ((95, 5), (95, -5), (97, 0), (103, 0))):      # D, izquierda
+    t = herramienta(); t.ctx.objetos = {c_azul: azul, c_verde: verde}
+    t.on_point(c_azul); t.on_point(c_verde)
+    assert t._vertex == (100.0, 0.0)
+    assert texto(t, adentro) == "Interior 90°", (c_azul, c_verde, texto(t, adentro))
+    assert texto(t, afuera) == "Exterior 270°", (c_azul, c_verde, texto(t, afuera))
+# el centro antes del segundo clic, igual
+t = herramienta(); t.ctx.objetos = {(95, 5): azul, (105, 5): verde}
+t.on_point((95, 5)); assert t.resaltado((105, 5))["puntos"] == [(100.0, 0.0)]
+# extensiones: desde el arco, no desde la punta de la línea
+t.on_point((105, 5))
+cmd = t.preview_command((100, 3)); h.execute(cmd)
+for nombre in ("defpoint2", "defpoint3"):
+    q = cmd.dim.dxf.get(nombre)
+    assert abs(math.dist((q.x, q.y), (100, 0)) - 3) < 1e-9, (nombre, q)    # en el arco (radio 3)
+h.undo()
+t.on_point((100, 3)); assert t.ctx.terminado
+q = t.ctx.cmd.dim.dxf.defpoint2; assert abs(math.dist((q.x, q.y), (100, 0)) - 3) < 1e-9
+h.undo()
+# la línea no llega al arco: la extensión sale de su punta, como AutoCAD
+t = herramienta(); t.ctx.objetos = {(95, 5): azul, (105, 5): verde}
+t.on_point((95, 5)); t.on_point((105, 5))
+cmd = t.preview_command((100, 30)); h.execute(cmd)
+q = cmd.dim.dxf.defpoint2; assert abs(math.dist((q.x, q.y), (100, 0)) - math.dist((90, 10), (100, 0))) < 1e-9
+h.undo()
+assert C.lados(((0, 0), (10, 0)), ((0, 0), (0, 10))) == ((0.0, 0.0), (10, 0), (0, 10))   # sin clic: la lejana
 # tramo curvo: avisa y no lo toma
 t = herramienta(); t.ctx.objetos = {(45, 1): curva}
 t.on_point((45, 1)); assert t._mode == "select" and t.ctx.ecos[-1].startswith("Elija un tramo recto")
@@ -254,6 +286,10 @@ t.on_point((0, 10)); assert texto(t, (-2, -2)) == "Exterior 270°"
 M.guardar("ingecad", {"cotas": False})
 assert not any(t.resaltado((-2, -2)).values()) and t.referencias_extra() == frozenset()
 M.guardar("ingecad", {"cotas": True})
+# la extensión nunca más larga que la altura del texto
+for alto in (1.0, 2.5, 6.0):
+    at = C.atributos(doc, 100, alto, 2, C.CABECERAS[0][0], "Arial")
+    assert at["dimexe"] <= at["dimtxt"] + 1e-12, (alto, at["dimexe"], at["dimtxt"])
 print("ok angular interior / exterior")
 
 # ------------------------------------------------------------- 10. precisión de g/m/s como AutoCAD
