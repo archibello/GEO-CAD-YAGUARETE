@@ -15,7 +15,7 @@ lp = load_plugin(ROOT / "INGECAD" / "codigo" / "geocad", bundled=False); assert 
 M = import_module("ingecad_plugin_geocad.modulos")
 cfg = import_module("ingecad_plugin_geocad.config")
 assert not M.elegido("ingecad") and not M.elegido("qgis")
-assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "seleccion": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "angulos_relativos": True}
+assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "seleccion": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "angulos_relativos": True}
 assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True}
 M.guardar("qgis", {"dibujo": False, "capas": False, "inventado": True})          # (Dibujo y Capas: test_submodulos)
 assert M.estado("qgis")["bloques"] is False                                      # Bloques necesita Dibujo
@@ -31,6 +31,7 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Texto como AutoCAD (TEXTO / DT), "
                                 "Estirar al instante y con vista previa (ESTIRA / S), "
                                 "Partir en punto (PARTEENPUNTO), "
+                                "Orden de dibujo (ALFRENTE, ALFONDO), "
                                 "Selección estilo AutoCAD (SEL, FILTRO; W, C, WP, CP, F...), "
                                 "Propiedades en masa (paleta Properties), "
                                 "Espacio papel como AutoCAD (escala de la hoja), "
@@ -77,7 +78,7 @@ assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD Yaguar
 # apagar Datos: sin barra, sin submenú, sin comandos de Datos; el Puente sigue
 Mi.guardar("ingecad", {"datos": False}); host.calls.clear(); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec; todo = items(spec.menu)
-assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["SELECT", "GEOFILTER", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW", "GEOPLOTSTYLES"]
+assert "SHPTABLE" not in todo and "SHPTABLE" not in spec.tools and [i.command for i in spec.toolbar] == ["SELECT", "GEOFILTER", "GEODRAWFRONT", "GEODRAWBACK", "BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE", "GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEOPREVIEW", "GEOPLOTSTYLES"]
 assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed" in host.calls
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
@@ -162,7 +163,7 @@ data["qgis"] = {"puente": True, "dibujo": False, "capas": False}       # lo que 
 Mq.archivo().write_text(json.dumps(data))
 assert Mq.nuevos("qgis") == ["dibujo", "bloques", "papel", "capas"]
 assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True}
-assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "seleccion", "propiedades", "papel", "impresion", "cotas"]  # Empalme (2.3), Partir (2.4), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12)
+assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "orden", "seleccion", "propiedades", "papel", "impresion", "cotas"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12)
 QDialog.abiertos.clear(); QDialog.respuesta = 0                          # Cancelar: quedan sus valores por defecto
 G._primer_inicio()
 assert QDialog.abiertos and Mq.nuevos("qgis") == [] and Mq.activo("qgis", "capas")

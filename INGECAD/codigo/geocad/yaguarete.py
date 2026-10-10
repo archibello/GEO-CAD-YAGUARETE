@@ -78,6 +78,8 @@ DESCRIPCIONES = {
     "BREAKATPOINT": "Corta un objeto en un punto elegido con referencias; muestra los dos pedazos.",
     "SELECT": "Elige objetos con las opciones de AutoCAD (W, C, WP, CP, F...).",
     "GEOFILTER": "Elige objetos por tipo, capa, color, medidas, textos y datos de QGIS.",
+    "GEODRAWFRONT": "Lo elegido se dibuja encima de todo: líneas, sombreados, textos, bloques.",
+    "GEODRAWBACK": "Lo elegido se dibuja debajo de todo: líneas, sombreados, textos, bloques.",
     "BLOCK": "Crea un bloque con los objetos elegidos y su punto base.",
     "INSERT": "Inserta un bloque, con vista previa.",
     "GEOREFEDIT": "Edita un bloque en el lugar (también con doble clic).",

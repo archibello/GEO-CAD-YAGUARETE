@@ -67,6 +67,13 @@ CATALOGO = {
         Modulo("partir", "Partir en punto (PARTEENPUNTO)",
                "Corta un objeto en un punto elegido con referencias (intersección, "
                "punto final, medio...). Muestra los dos pedazos antes del clic."),
+        Modulo("orden", "Orden de dibujo (ALFRENTE, ALFONDO)",
+               "Dos botones en la barra GeoCAD, como el DRAWORDER de AutoCAD: lo "
+               "elegido se dibuja encima o debajo de todo (líneas, sombreados, "
+               "textos, bloques). En pantalla, lo enviado al fondo queda debajo de "
+               "todo y lo traído al frente encima de todo, también entre líneas, "
+               "sombreados y textos. AutoCAD respeta el orden al abrir el DXF.",
+               cambia_programa=True),
         Modulo("seleccion", "Selección estilo AutoCAD (SEL, FILTRO; W, C, WP, CP, F...)",
                "En cualquier «Designar objetos» (BORRA, DESPLAZA...) se escriben las "
                "opciones de AutoCAD: W, C, WP, CP, F, ALL, L, P, R, A, U (o V, PV, PC, B, "

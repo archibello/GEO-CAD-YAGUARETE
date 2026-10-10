@@ -21,7 +21,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, cotas, editor_texto, filtro, impresion, papel, propiedades, seleccion, texto, tipografias
+from . import barra, bloques, cotas, editor_texto, filtro, impresion, orden, papel, propiedades, seleccion, texto, tipografias
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -32,7 +32,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.15.6"
+VERSION = "3.16.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -69,6 +69,7 @@ def _document_open(ctx, document):
     cotas.instalar()
     texto.instalar()
     bloques.instalar_referencias()
+    orden.instalar()
     barra.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
@@ -149,6 +150,10 @@ def construir_spec() -> PluginSpec:
         toolbar.append(ToolbarItem("Select objects (SEL)", "SELECT", _icon("seleccionar")))
     if est["seleccion"] and "GEOFILTER" in tools:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
+    if est["orden"]:
+        commands.update(orden.COMMANDS)
+        toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
+        toolbar.append(ToolbarItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
     if est["impresion"]:
         commands.update({"GEOPREVIEW": impresion.cmd_vistaprevia,
                          "GEOPLOTSTYLES": impresion.cmd_plumas})
@@ -216,6 +221,9 @@ def construir_spec() -> PluginSpec:
           + ((MenuItem("AutoCAD-style chamfer (CHAMFER)", "CHAMFER"),) if est["chaflan"] else ())
           + ((MenuItem("Break at point (BREAKATPOINT)", "BREAKATPOINT", _icon("partir")),)
              if est["partir"] else ())
+          + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
+              MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
+             if est["orden"] else ())
           + ((MenuItem("Select objects (SEL)", "SELECT", _icon("seleccionar")),)
              if est["seleccion"] and "SELECT" in tools else ())
           + ((MenuItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")),)
@@ -265,7 +273,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.15.6",
+        version="3.16.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -315,5 +323,6 @@ impresion.instalar()
 cotas.instalar()
 texto.instalar()
 bloques.instalar_referencias()
+orden.instalar()
 barra.instalar()
 PLUGIN = construir_spec()

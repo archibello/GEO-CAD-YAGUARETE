@@ -11,11 +11,12 @@ plugins quedan como vienen.
 from __future__ import annotations
 
 #: Los temas en el orden de la barra (pedido de Fernando, 08/10/2026).
-ORDEN = ("seleccion", "datos", "edicion", "bloques", "cotas", "impresion", "puente")
+ORDEN = ("seleccion", "datos", "edicion", "orden", "bloques", "cotas", "impresion", "puente")
 
 #: El tema de cada botón; dentro de un tema, el orden es el de la lista.
 TEMAS = {
     "FILLET": "edicion", "CHAMFER": "edicion", "BREAKATPOINT": "edicion",
+    "GEODRAWFRONT": "orden", "GEODRAWBACK": "orden",
     "BLOCK": "bloques", "INSERT": "bloques", "GEOREFEDIT": "bloques", "GEOBLOCKBASE": "bloques",
     "SELECT": "seleccion", "GEOFILTER": "seleccion",
     "GEOPREVIEW": "impresion", "GEOPLOTSTYLES": "impresion",

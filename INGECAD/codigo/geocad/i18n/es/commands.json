@@ -113,5 +113,11 @@
   },
   "GEODIMSETUP": {
     "name": "CREARCOTA"
+  },
+  "GEODRAWFRONT": {
+    "name": "ALFRENTE"
+  },
+  "GEODRAWBACK": {
+    "name": "ALFONDO"
   }
 }

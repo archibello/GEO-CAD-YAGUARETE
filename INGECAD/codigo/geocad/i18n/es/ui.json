@@ -47,5 +47,7 @@
   "Linear dimension (DIMLINEAR)": "Medir: cota lineal (ACOLINEAL)",
   "Aligned dimension (DIMALIGNED)": "Medir: cota alineada (ACOALINEADA)",
   "Angular dimension (DIMANGULAR)": "Medir: cota angular (ACOANGULAR)",
-  "Dimensions": "Cotas"
+  "Dimensions": "Cotas",
+  "Bring to front (DRAWORDER)": "Traer al frente (ALFRENTE)",
+  "Send to back (DRAWORDER)": "Enviar al fondo (ALFONDO)"
 }

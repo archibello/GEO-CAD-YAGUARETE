@@ -1,0 +1,26 @@
+GeoCAD - versión 3.16.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo nuevo «Orden de dibujo»): Traer al frente
+y Enviar al fondo en la barra GeoCAD, el DRAWORDER de AutoCAD a un clic
+(10/10/2026, pedido de Fernando).
+
+- Dos botones en la barra GeoCAD, en un tema propio entre Selección y
+  Bloques, y en GeoCAD > Dibujo: Traer al frente (ALFRENTE) y Enviar al
+  fondo (ALFONDO).
+- Valen para todo lo que se dibuja: líneas, polilíneas, arcos, círculos,
+  sombreados, textos, textos de varias líneas, cotas y bloques. Lo enviado
+  al fondo queda debajo de todo; lo traído al frente, encima de todo.
+- Con objetos ya elegidos actúa al momento; si no, pide elegirlos.
+- Usa la orden Draw Order de IngeCAD (0.6.5 y 0.6.6): un solo deshacer,
+  y el orden se guarda en el DXF como lo escribe AutoCAD, así que AutoCAD,
+  BricsCAD y los demás lo respetan al abrir el archivo.
+- No se ofrece «encima de / debajo de un objeto»: la pantalla de IngeCAD
+  sólo distingue debajo de todo, normal y encima de todo.
+- Módulo «Orden de dibujo»: al actualizar se ofrece como nuevo; apagado
+  no deja botones ni menú (el Draw Order del botón derecho de IngeCAD
+  sigue como siempre).
+- Pruebas: test_orden nueva (botones, menú, cartel, módulo apagado; frente
+  y fondo sobre línea, polilínea, sombreado, texto, texto de varias líneas
+  y bloque, con deshacer; cada tipo cae en su grupo en pantalla; el DXF
+  guardado lleva la tabla de orden). test_modulos al día. Corridas contra
+  IngeCAD 0.6.5 y 0.6.6.
