@@ -220,7 +220,8 @@ def _envolver_clic_derecho(original):
 #: comandos de IngeCAD que GeoCAD reemplaza mientras su módulo está activo
 REEMPLAZOS = {"FILLET": ("empalme", "GEOFILLET"), "CHAMFER": ("chaflan", "GEOCHAMFER"),
               "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT"),
-              "STRETCH": ("estirar", "GEOSTRETCH"), "TEXT": ("texto", "GEOTEXT")}
+              "STRETCH": ("estirar", "GEOSTRETCH"), "TEXT": ("texto", "GEOTEXT"),
+              "MATCHPROP": ("igualar", "GEOMATCHPROP")}
 
 
 def herramienta_para(nombre: str, window=None, registradas=None) -> str:
@@ -305,6 +306,18 @@ ESTILO_RESALTADO = {
     "sel_borde": ((255, 170, 40, 255), 2, True),     # F: naranja, punteado
 }
 MARCA = (255, 220, 0, 255)                        # el punto de corte (amarillo de referencias)
+#: «propio»: [(rgb o None, tramos)], cada objeto con SU color y más grueso
+#: (IGUALARPROP: el origen). None = color 7: negro sobre fondo claro, blanco
+#: sobre oscuro. Se dibuja debajo de las otras capas.
+ANCHO_PROPIO = 5
+
+
+def _fondo_claro(viewport) -> bool:
+    fn = getattr(viewport, "_light_background", None)
+    try:
+        return bool(fn()) if fn is not None else False
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _cursor_resuelto(delegate):
@@ -344,6 +357,17 @@ def dibujar_resaltado(viewport, painter, qt=None) -> int:
     hechos = 0
     painter.save()
     try:
+        for rgb, segs in datos.get("propio") or ():
+            if not segs:
+                continue
+            if rgb is None:
+                rgb = (0, 0, 0) if _fondo_claro(viewport) else (255, 255, 255)
+            painter.setPen(QPen(QColor(*rgb[:3], 255), ANCHO_PROPIO, Qt.SolidLine))
+            for (ax, ay), (bx, by) in segs:
+                x1, y1 = viewport._space_to_screen(ax, ay)
+                x2, y2 = viewport._space_to_screen(bx, by)
+                painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+                hechos += 1
         for capa, (rgba, ancho, punteado) in ESTILO_RESALTADO.items():
             segs = datos.get(capa) or ()
             if not segs:

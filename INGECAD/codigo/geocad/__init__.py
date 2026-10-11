@@ -9,6 +9,7 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Datos      tabla de atributos, consultas, temático, rótulos, formulario
     Botón derecho = Enter / Ángulos relativos   (dibujo.py)
     Empalme (empalme.py) / Chaflán (chaflan.py) / Partir en punto (partir.py)
+    Igualar propiedades (igualar.py): MATCHPROP con el origen resaltado
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -21,7 +22,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, cotas, editor_texto, filtro, impresion, orden, papel, propiedades, seleccion, texto, tipografias
+from . import barra, bloques, cotas, editor_texto, filtro, igualar, impresion, orden, papel, propiedades, seleccion, texto, tipografias
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -32,7 +33,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.16.2"
+VERSION = "3.17.1"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -125,6 +126,8 @@ def construir_spec() -> PluginSpec:
         tools["BREAKATPOINT"] = PartirTool
     if est["estirar"]:
         tools["GEOSTRETCH"] = EstirarTool
+    if est["igualar"]:
+        tools["GEOMATCHPROP"] = igualar.IgualarTool
     if est["texto"]:
         tools["GEOTEXT"] = TextoTool
     if est["bloques"]:
@@ -221,6 +224,7 @@ def construir_spec() -> PluginSpec:
           + ((MenuItem("AutoCAD-style chamfer (CHAMFER)", "CHAMFER"),) if est["chaflan"] else ())
           + ((MenuItem("Break at point (BREAKATPOINT)", "BREAKATPOINT", _icon("partir")),)
              if est["partir"] else ())
+          + ((MenuItem("Match properties (MATCHPROP)", "MATCHPROP"),) if est["igualar"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
              if est["orden"] else ())
@@ -273,7 +277,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.16.2",
+        version="3.17.1",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

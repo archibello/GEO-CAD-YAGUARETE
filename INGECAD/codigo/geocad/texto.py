@@ -437,6 +437,9 @@ def _firmas(index, seleccion):
 
 def _envolver_resaltado(original):
     def highlight_geometry(self):
+        from . import igualar
+        if igualar.sin_resaltado(self):        # IGUALARPROP: lo igualado se ve tal cual
+            return igualar.vacio()
         segs, circles, boxes = original(self)
         if not activo() or not self.selection or self.index is None:
             return segs, circles, boxes

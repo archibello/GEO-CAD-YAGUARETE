@@ -1,0 +1,23 @@
+GeoCAD - versión 3.17.1
+=======================
+CORRECCIÓN (IngeCAD, módulo «Igualar propiedades»), pedida por Fernando el
+11/10/2026: «quedó bien», pero que siga el procedimiento de AutoCAD.
+Incluye todo lo de 3.17.0.
+
+- MA (MATCHPROP) ahora va en tres pasos, como se trabaja en AutoCAD:
+    1. Clic en el objeto de origen: queda resaltado con su color y más
+       grueso. Enter lo confirma. Antes del Enter, un clic en otro objeto
+       cambia el origen.
+    2. Los objetos de destino, todas las veces que haga falta (clic,
+       ventana, W C WP CP F ALL L P R U FI): cada uno cambia en el momento.
+    3. Enter termina.
+- Antes (3.17.0) el clic en el origen pasaba directo a los destinos.
+- Enter sin haber elegido el origen termina la orden. Con UN objeto ya
+  elegido antes de MA, ése es el origen y pide directamente los destinos
+  (no hace falta el primer Enter).
+- Pruebas: test_igualar suma el Enter que confirma, el cambio de origen
+  antes del Enter (sin tocar nada) y Enter sin origen. Corrieron 24 de las
+  34 contra IngeCAD 0.6.6 (todas OK); las otras 10 necesitan pyshp y GDAL,
+  que no están en este equipo. Verificado además dentro de IngeCAD 0.6.5
+  sin pantalla: hasta el Enter no pide destinos ni cambia nada; después,
+  todo como en 3.17.0.

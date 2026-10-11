@@ -81,6 +81,12 @@ CATALOGO = {
                "selección por tipo, capa, color, medidas, textos y datos de QGIS. "
                "La línea de comandos deja de autocompletar.",
                cambia_programa=True),
+        Modulo("igualar", "Igualar propiedades (IGUALARPROP / MA)",
+               "Como el MATCHPROP de AutoCAD: el objeto de origen queda resaltado con su "
+               "color y más grueso; los destinos se eligen con clic, ventana o W, C, WP, "
+               "CP, F, ALL, L, P, R, U, FI, y cada uno se ve al momento con sus "
+               "propiedades nuevas. R y U los devuelven a como estaban.",
+               requiere="seleccion", cambia_programa=True),
         Modulo("propiedades", "Propiedades en masa (paleta Properties)",
                "Con varios objetos seleccionados, la paleta Properties (Ctrl+1) deja "
                "cambiar en todos a la vez lo propio de su tipo (altura de texto, radio, "

@@ -32,6 +32,7 @@ HERRAMIENTAS = (
     ("BREAKATPOINT", "partir", None),
     ("CHAMFER", "chaflan", "modify_toolbar"),
     ("FILLET", "empalme", "modify_toolbar"),
+    ("MATCHPROP", "igualar", "standard_toolbar"),
 )
 
 #: el nombre del botón cuando no sale de una barra de IngeCAD
@@ -72,6 +73,7 @@ DESCRIPCIONES = {
     "BREAK": "Quita el pedazo de un objeto entre dos puntos.",
     "JOIN": "Une objetos en uno solo.",
     "CHAMFER": "Bisela la esquina entre dos objetos; por defecto, ochava de largo dado.",
+    "MATCHPROP": "Copia las propiedades del objeto resaltado a los que se eligen (W C WP CP F ALL...).",
     "FILLET": "Redondea la esquina entre dos objetos; también polilíneas, del lado elegido.",
     "EXPLODE": "Descompone un objeto compuesto en sus partes.",
     # GeoCAD

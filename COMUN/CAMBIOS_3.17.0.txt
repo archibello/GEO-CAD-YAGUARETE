@@ -1,0 +1,40 @@
+GeoCAD - versión 3.17.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo nuevo «Igualar propiedades»): Match
+Properties (MATCHPROP / MA, en español IGUALARPROP) como en AutoCAD
+(11/10/2026, pedido de Fernando).
+
+- El objeto de origen queda RESALTADO con su propio color y más grueso
+  desde que se lo elige hasta que termina la orden (Enter o Esc). Antes,
+  después del primer clic no se veía de cuál se copiaba. Si es color 7
+  (blanco/negro) o PorBloque, se resalta en negro sobre fondo claro y en
+  blanco sobre fondo oscuro. Antes de elegirlo, el objeto bajo el cursor
+  se ilumina.
+- Los destinos se eligen con todas las opciones de «Designar objetos» del
+  módulo Selección: clic, ventana con el ratón, W, C, WP, CP, F, ALL, L,
+  P, R, A, U y FI (y en español V, PV, PC, B, TODO, UL, E, H, FILTRO).
+  Antes, sólo de a uno con clic.
+- Cada paso se aplica en el momento: lo elegido se ve ya con sus
+  propiedades nuevas (no queda tapado por el resaltado de selección).
+- R (quitar) y U (deshacer el último paso) devuelven a esos objetos las
+  propiedades que tenían antes de la orden; A vuelve a agregar. El origen
+  nunca se toca, aunque quede dentro de la ventana.
+- Con UN objeto elegido antes de la orden, ése es el origen y pide
+  directamente los destinos.
+- Copia lo mismo que el MATCHPROP de IngeCAD (capa, color, tipo, escala y
+  grosor de línea, espesor, transparencia, estilo de texto y de cota).
+  Cada paso queda por separado en DESHACER (U / Ctrl+Z).
+- El botón Match Properties pasa de la barra Standard de IngeCAD a la
+  barra «Yaguareté Tools», con su cartel; también en GeoCAD > Dibujo.
+- Módulo «Igualar propiedades» (necesita Selección): al actualizar se
+  ofrece como nuevo; apagado, el MATCHPROP de IngeCAD queda como venía y
+  el botón vuelve a la barra Standard.
+- Pruebas: test_igualar nueva (color del origen por capa, ACI, RGB y 7;
+  W, U, ALL, R + L, CP, F, clic nativo y Mayús+clic, Enter; deshacer y
+  rehacer paso por paso; preselección; sin resaltado de selección; dibujo
+  del resaltado). test_modulos, test_yaguarete, test_chaflan y
+  test_partir al día. Corrieron 24 de las 34 contra IngeCAD 0.6.6 (todas
+  OK); las otras 10 necesitan pyshp y GDAL, que no están en este equipo.
+  Verificado además dentro de IngeCAD 0.6.5 (Flatpak) sin pantalla con la
+  clase real: origen resaltado en su color, W, U, F, clic, R + clic y
+  Enter aplicados al momento, Ctrl+Z deshace el último paso.

@@ -20,7 +20,9 @@
    (3.2.0): abre la ventana de filtros y suma a la selección los objetos de
    todo el dibujo que lo cumplen (con R, los quita). «FI <nombre>» usa un
    filtro guardado sin abrir la ventana. La orden FILTRO está en filtro.py.
-4. La línea de comandos no autocompleta: se ejecuta lo escrito, tal cual
+4. Una orden puede seguir cada cambio de lo elegido (``seleccion_cambiada``,
+   ver ``avisar``): IGUALARPROP (igualar.py) aplica cada paso al momento.
+5. La línea de comandos no autocompleta: se ejecuta lo escrito, tal cual
    (el autocompletado se metía en el medio de las órdenes).
 
 Apagado el módulo, IngeCAD queda como venía. La lógica trabaja sobre el
@@ -259,7 +261,8 @@ def _pedir(ctrl, st) -> None:
                  else "Siguiente punto del borde (U deshace, Enter termina):")
     else:
         texto = ("Quitar objetos (A agrega, Enter termina):" if st.quitar
-                 else "Designar objetos (W C WP CP F ALL L P R U FI, ? ayuda; Enter termina):")
+                 else getattr(st.para, "PEDIDO_SELECCION", None)
+                 or "Designar objetos (W C WP CP F ALL L P R U FI, ? ayuda; Enter termina):")
     try:
         ctrl.current_prompt = texto
     except Exception:  # noqa: BLE001
@@ -267,7 +270,21 @@ def _pedir(ctrl, st) -> None:
     _echo(ctrl, texto)
 
 
+def avisar(ctrl) -> None:
+    """La orden que pide objetos puede querer saber cada cambio de lo elegido
+    (``seleccion_cambiada(handles)``): IGUALARPROP aplica cada paso en el
+    momento, en vez de esperar al Enter."""
+    fn = getattr(getattr(ctrl, "_selecting_for", None), "seleccion_cambiada", None)
+    if fn is None:
+        return
+    try:
+        fn(set(getattr(ctrl, "selection", None) or ()))
+    except Exception as exc:  # noqa: BLE001 -- un aviso nunca corta la selección
+        _echo(ctrl, f"No se pudo aplicar: {exc}")
+
+
 def _cambio(ctrl) -> None:
+    avisar(ctrl)
     for nombre in ("_highlight_cache", "_grips_cache", "_sel_entities_cache"):
         if hasattr(ctrl, nombre):
             setattr(ctrl, nombre, None)
@@ -616,11 +633,14 @@ def _envolver_selection_click(original):
     def _selection_click(self, wx, wy, shift, *args, **kwargs):
         st = estado(self) if activo(getattr(self, "window", None)) else None
         if st is None:
-            return original(self, wx, wy, shift, *args, **kwargs)
+            resultado = original(self, wx, wy, shift, *args, **kwargs)
+            avisar(self)
+            return resultado
         antes = set(self.selection)
         resultado = original(self, wx, wy, shift or st.quitar, *args, **kwargs)
         if set(self.selection) != antes:
             st.pasos.append(antes)       # para U
+            avisar(self)
         return resultado
 
     _selection_click._puente_original = original
