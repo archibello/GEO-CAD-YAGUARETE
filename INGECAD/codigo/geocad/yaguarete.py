@@ -38,6 +38,24 @@ HERRAMIENTAS = (
     ("EXPORTARGEO", "georref", None),
 )
 
+#: el tema de cada botón: entre un tema y el siguiente va un divisor, como en
+#: la barra GeoCAD (3.20.0: las de imágenes quedaban pegadas a las de edición)
+TEMAS = {
+    "RECTANG": "dibujo", "TEXT": "dibujo",
+    "STRETCH": "edicion", "BREAKATPOINT": "edicion", "CHAMFER": "edicion",
+    "FILLET": "edicion", "MATCHPROP": "edicion",
+    "INSERTARGEO": "imagenes", "GEORREF": "imagenes", "EXPORTARGEO": "imagenes",
+}
+
+
+def cortes(ordenes) -> list:
+    """Las posiciones de los botones que empiezan un tema nuevo (antes de
+    cada una va un divisor). Nunca antes del primero."""
+    ordenes = list(ordenes)
+    return [i for i in range(1, len(ordenes))
+            if TEMAS.get(ordenes[i]) != TEMAS.get(ordenes[i - 1])]
+
+
 #: el nombre del botón cuando no sale de una barra de IngeCAD
 ETIQUETAS = {
     "FILLET": "AutoCAD-style fillet (FILLET)",
@@ -109,6 +127,7 @@ DESCRIPCIONES = {
     "SHPNEW": "Dibuja un objeto nuevo y carga sus datos en un formulario.",
     "QGISSAVESEL": "Devuelve a QGIS sólo lo elegido.",
     "QGISSAVE": "Devuelve a QGIS todas las capas con los cambios.",
+    "QGISEXPORT": "Manda lo elegido a QGIS como capas temporales nuevas: puntos, líneas, polígonos y textos.",
 }
 
 _ORDEN_AL_FINAL = re.compile(r"\s*\(([^()]+)\)\s*$")
@@ -187,7 +206,13 @@ def armar(window, iconos=None) -> None:
     bar = QToolBar(NOMBRE_BARRA, window)
     bar.setObjectName(OBJETO_BARRA)
     bar.setMovable(True)
-    for orden, origen in elegidas(modulos.estado("ingecad")):
+    from .barra import _divisor
+
+    lista = elegidas(modulos.estado("ingecad"))
+    divisores = set(cortes(o for o, _ in lista))
+    for i, (orden, origen) in enumerate(lista):
+        if i in divisores:
+            bar.addWidget(_divisor(bar))
         nativa = None
         for a in (barras[origen].actions() if origen in barras else ()):
             if _orden_de(a) == orden:

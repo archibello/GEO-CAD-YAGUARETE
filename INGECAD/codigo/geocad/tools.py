@@ -714,6 +714,44 @@ class QgisSaveSelectionTool(QgisSaveTool):
         self.ctx.finish()
 
 
+class QgisExportTool(Tool):
+    """ENVIARQGIS (3.20.0): manda a QGIS lo elegido, venga o no de QGIS, como
+    capas temporales nuevas (puntos, líneas, polígonos y textos). QGIS
+    pregunta si van al proyecto abierto o a uno nuevo."""
+
+    wants_selection = True
+
+    def start(self) -> None:
+        self.name = "QGISEXPORT"
+        puente.ensure_started(_window(self.ctx))
+
+    def selection_prompt(self) -> str:
+        return "Seleccione los objetos que quiere mandar a QGIS como capas nuevas:"
+
+    def on_selection(self, entities: list) -> None:
+        from . import aqgis
+
+        echo = self.ctx.echo
+        if not entities:
+            echo("No se seleccionó nada.")
+            self.ctx.finish()
+            return
+        document = _document(self.ctx)
+        capas, salteados = aqgis.armar(entities, document.doc)
+        if capas:
+            try:
+                aqgis.enviar(capas, aqgis.crs_del_dibujo(document), _drawing_name(document))
+            except OSError as exc:
+                echo(f"No se pudo mandar a QGIS: {exc}")
+                self.ctx.finish()
+                return
+        echo(aqgis.resumen(capas, salteados))
+        if capas and not aqgis.buzon.is_alive("qgis"):
+            echo("QGIS no está abierto (o no tiene GeoCAD Yaguareté): las capas aparecen "
+                 "al abrirlo, dentro de las próximas 24 horas.")
+        self.ctx.finish()
+
+
 class ConfigTool(Tool):
     """SHPCONFIG: la configuración común de GeoCAD."""
 
@@ -764,6 +802,7 @@ class ConfigTool(Tool):
 TOOL_CLASSES = {
     "QGISSAVE": QgisSaveTool,
     "QGISSAVESEL": QgisSaveSelectionTool,
+    "QGISEXPORT": QgisExportTool,
     "SHPCONFIG": ConfigTool,
     "SHPCONNECT": ConnectTool,
     "SHPSTATUS": StatusTool,

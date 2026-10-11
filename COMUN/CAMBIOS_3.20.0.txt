@@ -1,0 +1,40 @@
+GeoCAD - versión 3.20.0
+=======================
+FUNCIÓN NUEVA (IngeCAD -> QGIS, módulo Puente): ENVIARQGIS, mandar a QGIS
+cualquier objeto elegido como capas temporales nuevas (11/10/2026, pedido de
+Fernando: «que IngeCAD mande a QGIS cualquier tipo de entidad seleccionada»).
+Hasta ahora sólo volvía a QGIS lo que había venido de QGIS.
+
+ENVIARQGIS (Enviar la selección a QGIS como capas nuevas)
+- Botón en la barra GeoCAD (tema QGIS) y en el menú GeoCAD. Se eligen los
+  objetos (con todas las opciones de selección) y viajan por tipo:
+  · Puntos: puntos y bloques (nombre del bloque, giro y escala).
+  · Líneas: líneas, arcos, polilíneas abiertas, splines.
+  · Polígonos: polilíneas cerradas, círculos, elipses enteras y sombreados
+    (con sus huecos).
+  · Textos: cada TEXT es una línea corta del ancho del texto, por el medio
+    de la letra y en su dirección, con el texto en el campo «etiqueta»
+    (idea de Fernando). Un MTEXT da una línea por renglón.
+  Los arcos y curvas pasan como tramos rectos (a menos de 1 cm de la curva).
+  Cada objeto lleva su capa CAD y su color (el propio o el de la capa). Lo
+  demás (cotas, imágenes...) se saltea y la línea de comandos dice cuánto.
+- QGIS pregunta cada vez: «Al proyecto abierto» o «A un proyecto nuevo»
+  (o Cancelar). Arma una capa temporal por tipo en el grupo «Desde IngeCAD -
+  <dibujo> (hora)», con el sistema de coordenadas del dibujo, y acerca la
+  vista. Cada objeto se ve con su color de CAD.
+- Textos: la capa se configura sola: rotula «etiqueta» sobre cada línea,
+  centrado y paralelo, con la altura del texto en unidades del mapa: el
+  rótulo queda en su lugar, con su dirección y su escala. Girados más de 90°
+  se ven al revés, como en CAD. La línea no se dibuja.
+- Son capas temporales: para conservarlas, botón derecho > Hacer permanente.
+- Si QGIS está cerrado, las capas llegan al abrirlo (dentro de 24 horas).
+
+Además
+- Barra «Yaguareté Tools»: divisores entre temas, como en la barra GeoCAD:
+  dibujo | edición | imágenes (los de imágenes quedaban pegados).
+- Plan: TPS, polinómicas y proyectiva de GEORREF pasan a 3.21.0; lo de QGIS
+  por el Puente, a 3.22.0.
+- Pruebas: test_aqgis nueva (cada tipo de objeto, textos como líneas,
+  alineaciones, MTEXT por renglón, la orden y el lado de QGIS sin QGIS);
+  test_yaguarete con los divisores. El armado de las capas, los colores y
+  los rótulos se probó además en QGIS 4.2.2 y 3.28 LTS reales.

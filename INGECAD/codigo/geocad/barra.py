@@ -23,7 +23,7 @@ TEMAS = {
     "GEODIMSETUP": "cotas", "DIMLINEAR": "cotas", "DIMALIGNED": "cotas", "DIMANGULAR": "cotas",
     "SHPTABLE": "datos", "SHPQUERY": "datos", "SHPSPATIAL": "datos", "SHPTHEME": "datos",
     "SHPLABEL": "datos", "SHPNEW": "datos",
-    "QGISSAVESEL": "puente", "QGISSAVE": "puente",
+    "QGISSAVESEL": "puente", "QGISSAVE": "puente", "QGISEXPORT": "puente",
 }
 
 

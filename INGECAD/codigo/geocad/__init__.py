@@ -35,7 +35,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.19.0"
+VERSION = "3.20.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -183,6 +183,7 @@ def construir_spec() -> PluginSpec:
         menu += [
             MenuItem("Send everything back to QGIS", "QGISSAVE", _qgis_icon()),
             MenuItem("Send selection back to QGIS", "QGISSAVESEL", _icon("devolver_seleccion")),
+            MenuItem("Send selection to QGIS as new layers", "QGISEXPORT", _icon("enviar_qgis")),
             SEPARATOR,
         ]
     if est["datos"]:
@@ -212,6 +213,7 @@ def construir_spec() -> PluginSpec:
             ToolbarItem("New feature with form...", "SHPNEW", _icon("nuevo")),
             ToolbarItem("Send selection back to QGIS", "QGISSAVESEL", _icon("devolver_seleccion")),
             ToolbarItem("Send everything back to QGIS", "QGISSAVE", _qgis_icon()),
+            ToolbarItem("Send selection to QGIS as new layers", "QGISEXPORT", _icon("enviar_qgis")),
         ]
     if est["puente"]:
         menu += [
@@ -288,7 +290,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.19.0",
+        version="3.20.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

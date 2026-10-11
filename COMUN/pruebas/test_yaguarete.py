@@ -27,6 +27,10 @@ assert [o for o, _ in Y.elegidas({})] == ["RECTANG"]           # REC: siempre co
 spec = import_module("ingecad_plugin_geocad").construir_spec()
 assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in spec.toolbar}  # no repetidas
 assert {o for o, _m, _b in Y.HERRAMIENTAS if _b is None} <= set(Y.ETIQUETAS)
+# 3.20.0 divisores entre temas: dibujo | edición | imágenes
+assert Y.cortes(o for o, _ in Y.elegidas(todo)) == [2, 7]
+assert Y.cortes(o for o, _ in Y.elegidas(apagados)) == [1, 4]
+assert Y.cortes(["RECTANG"]) == [] and set(Y.TEMAS) == {o for o, _m, _b in Y.HERRAMIENTAS}
 print("ok barra")
 
 # ---- 2. el cartel ---------------------------------------------------------------------

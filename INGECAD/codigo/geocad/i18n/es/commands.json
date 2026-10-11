@@ -51,6 +51,9 @@
   "QGISSAVESEL": {
     "name": "DEVOLVERSEL"
   },
+  "QGISEXPORT": {
+    "name": "ENVIARQGIS"
+  },
   "ANGREL": {
     "name": "ANGREL"
   },

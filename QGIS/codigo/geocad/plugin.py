@@ -32,12 +32,12 @@ try:                                    # Qt6 (QGIS 4)
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, buzon, config, modulos, nombre, submodulos
+from . import actualizar, bloqueo, buzon, config, desde_ingecad, modulos, nombre, submodulos
 
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.19.0"
+VERSION = "3.20.0"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -395,12 +395,57 @@ class GeoCAD:
                 self.readonly_by_us.discard(lid)
                 self.warned_editing.discard(lid)
 
+    def ask_destination(self, msg: dict):
+        """«abierto», «nuevo» o None (cancelado): dónde van las capas que
+        manda IngeCAD (se pregunta cada vez, pedido de Fernando)."""
+        box = QMessageBox(self.iface.mainWindow())
+        box.setWindowTitle("Desde IngeCAD")
+        box.setText(f"IngeCAD manda {desde_ingecad.resumen(msg)} como capas temporales.\n\n"
+                    "¿Dónde las agrego?")
+        abierto = box.addButton("Al proyecto abierto", QMessageBox.ButtonRole.AcceptRole)
+        nuevo = box.addButton("A un proyecto nuevo", QMessageBox.ButtonRole.ActionRole)
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(abierto)
+        box.exec()
+        elegido = box.clickedButton()
+        if elegido is abierto:
+            return desde_ingecad.DESTINO_ABIERTO
+        if elegido is nuevo:
+            return desde_ingecad.DESTINO_NUEVO
+        return None
+
+    def receive_new_layers(self, msg: dict) -> None:
+        """ENVIARQGIS de IngeCAD: capas temporales nuevas (3.20.0)."""
+        if not desde_ingecad.capas_del_mensaje(msg):
+            return
+        destino = self.ask_destination(msg)
+        if destino is None:
+            self._bar("No se agregaron las capas que mandó IngeCAD.", "info")
+            return
+        try:
+            hecho = desde_ingecad.cargar(self.iface, msg, destino)
+        except Exception as exc:
+            self._bar(f"No se pudieron armar las capas de IngeCAD: {exc}", "error", 15)
+            return
+        if hecho is None:
+            self._bar("Proyecto nuevo cancelado: no se agregaron las capas de IngeCAD.", "info")
+            return
+        grupo, capas, malos = hecho
+        texto = (f"Desde IngeCAD: {desde_ingecad.resumen(msg)} en «{grupo}». "
+                 "Son capas temporales: para conservarlas, botón derecho > Hacer permanente.")
+        if malos:
+            texto += f" {malos} objeto(s) no se pudieron leer."
+        self._bar(texto, "ok", 12)
+
     def _handle(self, msg: dict) -> None:
         if msg.get("tipo") == "actualizar":
             # IngeCAD se actualizó: si en su carpeta hay algo nuevo para QGIS, se ofrece
             carpeta = msg.get("carpeta") or config.get("carpeta_actualizaciones")
             QTimer.singleShot(0, lambda: self.update_bridge(carpeta, avisar_ingecad=False,
                                                             silencioso=True))
+            return
+        if msg.get("tipo") == desde_ingecad.TIPO_MENSAJE:
+            QTimer.singleShot(0, lambda m=msg: self.receive_new_layers(m))
             return
         if msg.get("tipo") != "guardado":
             return

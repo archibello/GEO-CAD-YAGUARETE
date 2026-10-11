@@ -16,6 +16,7 @@
   "Remove labels": "Quitar rótulos",
   "New feature with form...": "Objeto nuevo con formulario...",
   "Send selection back to QGIS": "Devolver la selección a QGIS",
+  "Send selection to QGIS as new layers": "Enviar la selección a QGIS como capas nuevas",
   "Drawing": "Dibujo",
   "Relative angles on/off (ANGREL)": "Ángulos relativos sí/no (ANGREL)",
   "GeoCAD Yaguareté": "GeoCAD Yaguareté",
