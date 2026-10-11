@@ -84,8 +84,10 @@ def separar(bar, spec) -> None:
 def _iconos_propios() -> dict:
     """Los íconos de GeoCAD para las órdenes nuevas de la barra Yaguareté."""
     from pathlib import Path
-    ruta = Path(__file__).parent / "iconos" / "partir.png"
-    return {"BREAKATPOINT": ruta} if ruta.exists() else {}
+    carpeta = Path(__file__).parent / "iconos"
+    propios = {"BREAKATPOINT": carpeta / "partir.png", "GEORREF": carpeta / "georref.png",
+               "INSERTARGEO": carpeta / "insertar_geo.png", "EXPORTARGEO": carpeta / "exportar_geo.png"}
+    return {orden: ruta for orden, ruta in propios.items() if ruta.exists()}
 
 
 def _envolver_add_toolbar(original):

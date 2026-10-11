@@ -1,0 +1,33 @@
+GeoCAD - versión 3.18.1
+=======================
+GEORREF: qué se guarda al transformar (11/10/2026, pedido de Fernando
+después de probar la 3.18.0: «quedó perfecta», ¿cómo se guarda la imagen?
+y guardar una copia para no tocar la original).
+
+- En la tabla de puntos, «Al transformar, guardar:»
+    * Una copia ajustada (de entrada): «plano_georref.png» junto a la
+      original, con su archivo de mundo («plano_georref.pgw»). El dibujo
+      pasa a usar la copia; la original no se toca y a su lado no aparece
+      nada nuevo. La copia nunca pisa otra: _georref2, _georref3...
+    * Un archivo de mundo junto a la imagen original (si ya había uno,
+      queda «.pgw.bak»).
+    * Sólo el dibujo (como en 3.18.0).
+  Se recuerda la última elección mientras IngeCAD esté abierto. En la línea
+  de comandos: COPIA, MUNDO o DIBUJO.
+- Archivo de mundo según la imagen: .pgw (PNG), .jgw (JPG), .tfw (TIF),
+  .bpw (BMP), .gfw (GIF). Lineal, Helmert y Polinómica 1 entran exactos
+  (giro y sesgo incluidos): la imagen no se rehace.
+- Si hay sistema de coordenadas del proyecto (GeoCAD > Opciones), queda
+  además «<imagen>.aux.xml» con él: QGIS abre la imagen en su lugar y en
+  su sistema. Un .aux.xml que ya existía no se toca.
+- Con la copia, los puntos (.points) quedan junto a la copia.
+- Un solo U después de Transformar devuelve la imagen a su lugar y el
+  dibujo a la original (la copia queda en el disco).
+- Si no se encuentra el archivo de la imagen, se ajusta sólo en el dibujo
+  y se avisa.
+- Pruebas: test_georref suma la sección 7 (copia, nombres que no pisan,
+  archivo de mundo contra los centros de píxel, .aux.xml, rutas relativas,
+  deshacer y rehacer, .bak, sin archivo). Corrieron las 35 contra IngeCAD
+  0.6.6: todas OK. Verificado además con el gdalinfo y el gdaltransform
+  del QGIS de este equipo (Flatpak): las esquinas caen exactas y toma
+  POSGAR 2007 / Argentina 7 (EPSG:5349).

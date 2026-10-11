@@ -67,6 +67,12 @@ CATALOGO = {
         Modulo("partir", "Partir en punto (PARTEENPUNTO)",
                "Corta un objeto en un punto elegido con referencias (intersección, "
                "punto final, medio...). Muestra los dos pedazos antes del clic."),
+        Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO)",
+               "GEORREF ajusta una imagen con puntos de control, como el "
+               "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1; .points de "
+               "QGIS). INSERTARGEO inserta una imagen con archivo de mundo o GeoTIFF en "
+               "su lugar. EXPORTARGEO guarda una copia con su archivo de mundo donde se "
+               "elija, que QGIS abre en su lugar."),
         Modulo("orden", "Orden de dibujo (ALFRENTE, ALFONDO)",
                "Dos botones en la barra GeoCAD, como el DRAWORDER de AutoCAD: lo "
                "elegido se dibuja encima o debajo de todo (líneas, sombreados, "

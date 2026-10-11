@@ -1,0 +1,48 @@
+GeoCAD - versión 3.19.0
+=======================
+FUNCIONES NUEVAS (IngeCAD, módulo «Imágenes georreferenciadas»): insertar y
+exportar imágenes georreferenciadas (11/10/2026, pedido de Fernando: «es muy
+importante insertar imagen tanto como exportar copia de imagen, se necesitan
+las dos»). Tres botones de imágenes juntos en «Yaguareté Tools»: Insertar
+imagen geo, GEORREF y Exportar copia geo. Incluye 3.18.1 y 3.18.2.
+
+INSERTARGEO (Insertar imagen georreferenciada)
+- Se elige la imagen y entra al dibujo EN SU LUGAR, con su tamaño, giro y
+  sesgo, en la capa actual; la vista va hasta ella. U la quita.
+  IMAGEATTACH de IngeCAD no lee los archivos de mundo: la imagen caía donde
+  se hacía clic.
+- Lee el archivo de mundo (.pgw, .jgw, .tfw, .bpw, .gfw, también .pngw,
+  .wld, y en mayúsculas) o la georreferencia de adentro de un GeoTIFF
+  (ModelTransformation, o escala + punto de enlace, con PixelIsArea y
+  PixelIsPoint). Como GDAL, la de adentro del GeoTIFF va primero.
+- El sistema de coordenadas de la imagen (GeoTIFF, .aux.xml o .prj): si no
+  es el del proyecto (GeoCAD > Opciones), avisa que no se reproyecta.
+- Sin georreferencia, avisa y no inserta (para esas: IMAGEATTACH + GEORREF).
+
+EXPORTARGEO (Exportar copia georreferenciada)
+- Clic en una imagen del dibujo (o elegida antes) y «Guardar como»: una copia
+  con su archivo de mundo y el .aux.xml con el sistema del proyecto, en la
+  carpeta y con el nombre que se elijan, tal como está HOY en el dibujo
+  (insertada, ajustada con GEORREF, movida o girada a mano). QGIS la abre en
+  su lugar. El dibujo no cambia; la original nunca es el destino.
+- Ida y vuelta exacta: EXPORTARGEO y después INSERTARGEO de la copia la deja
+  encima de la original.
+
+Además
+- Todas las ventanas de archivos de GEORREF, INSERTARGEO y EXPORTARGEO son
+  las de IngeCAD: en el Flatpak guardan la ruta verdadera (no la del
+  «portal», que al otro día no existe). Si IngeCAD no tiene acceso a la
+  carpeta elegida, EXPORTARGEO lo avisa.
+- El módulo «Ajustar imagen con puntos» se llama ahora «Imágenes
+  georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO)».
+- Plan: Thin Plate Spline, Polinómica 2-3 y Proyectiva pasan a 3.20.0; lo de
+  QGIS por el Puente, a 3.21.0.
+- Pruebas: test_imagengeo nueva (los tres botones; archivo de mundo y sus
+  nombres; GeoTIFF con escala, PixelIsPoint y ModelTransformation; sistema
+  de coordenadas; insertar en la capa actual con zoom, deshacer, sin
+  georreferencia, archivo dañado, Cancelar; exportar a otra carpeta, ida y
+  vuelta exacta, la original rechazada, sin archivo). test_modulos,
+  test_yaguarete, test_chaflan y test_partir al día. Corrieron las 36
+  contra IngeCAD 0.6.6: todas OK. Comparado además con el gdaltransform del
+  QGIS de este equipo: las esquinas de los tres GeoTIFF de prueba coinciden
+  exactas.

@@ -33,6 +33,9 @@ HERRAMIENTAS = (
     ("CHAMFER", "chaflan", "modify_toolbar"),
     ("FILLET", "empalme", "modify_toolbar"),
     ("MATCHPROP", "igualar", "standard_toolbar"),
+    ("INSERTARGEO", "georref", None),
+    ("GEORREF", "georref", None),
+    ("EXPORTARGEO", "georref", None),
 )
 
 #: el nombre del botón cuando no sale de una barra de IngeCAD
@@ -40,6 +43,9 @@ ETIQUETAS = {
     "FILLET": "AutoCAD-style fillet (FILLET)",
     "CHAMFER": "AutoCAD-style chamfer (CHAMFER)",
     "BREAKATPOINT": "Break at point (BREAKATPOINT)",
+    "GEORREF": "Adjust image with control points (GEORREF)",
+    "INSERTARGEO": "Insert georeferenced image (INSERTARGEO)",
+    "EXPORTARGEO": "Export georeferenced copy (EXPORTARGEO)",
 }
 
 #: qué hace cada orden, en una línea (la segunda del cartel)
@@ -78,6 +84,9 @@ DESCRIPCIONES = {
     "EXPLODE": "Descompone un objeto compuesto en sus partes.",
     # GeoCAD
     "BREAKATPOINT": "Corta un objeto en un punto elegido con referencias; muestra los dos pedazos.",
+    "GEORREF": "Lleva una imagen a su lugar con pares de puntos de control, como el Georreferenciador de QGIS.",
+    "INSERTARGEO": "Inserta una imagen con archivo de mundo (.pgw, .jgw, .tfw) o GeoTIFF en su lugar.",
+    "EXPORTARGEO": "Guarda una copia de la imagen con su archivo de mundo, donde se elija; QGIS la abre en su lugar.",
     "SELECT": "Elige objetos con las opciones de AutoCAD (W, C, WP, CP, F...).",
     "GEOFILTER": "Elige objetos por tipo, capa, color, medidas, textos y datos de QGIS.",
     "GEODRAWFRONT": "Lo elegido se dibuja encima de todo: líneas, sombreados, textos, bloques.",

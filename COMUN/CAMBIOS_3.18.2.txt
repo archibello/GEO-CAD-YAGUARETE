@@ -1,0 +1,24 @@
+GeoCAD - versión 3.18.2
+=======================
+GEORREF: «Guardar copia geo como...» (11/10/2026, pedido de Fernando: «es muy
+importante para mí»). Incluye todo lo de 3.18.1 (copia ajustada, archivo de
+mundo, .aux.xml), que no llegó a instalarse.
+
+- En la tabla de puntos, junto a «Al transformar, guardar:», el botón
+  «Guardar copia geo como...» abre la ventana de guardar: se elige la
+  carpeta y el nombre de la copia ajustada. Debajo se ve «Copia geo en:
+  ...» y la salida pasa a «Una copia ajustada».
+- Al Transformar, en esa carpeta quedan la copia, su archivo de mundo
+  (.pgw / .jgw / .tfw...), el .aux.xml con el sistema del proyecto (si lo
+  hay) y el .points. El dibujo pasa a usar la copia: con la ruta completa
+  si está en otra carpeta; relativa, como la original, si está en la misma.
+- Sin extensión (o con otra), la copia lleva la de la original. La
+  original nunca puede ser el destino (se avisa y no se toca). Si el
+  archivo ya existe, la ventana de guardar pregunta antes de reemplazarlo.
+- Sin «Guardar como», la copia va junto a la original con el nombre de
+  siempre (plano_georref.png, _georref2...).
+- En la línea de comandos: COMO pide la ruta de la copia.
+- Pruebas: test_georref suma «Guardar copia geo como» (otra carpeta, sin
+  extensión, la original rechazada, carpeta inexistente, Esc). Corrieron
+  las 35 contra IngeCAD 0.6.6: todas OK. El botón se probó además en la
+  ventana real con el PySide6 de IngeCAD sin pantalla.

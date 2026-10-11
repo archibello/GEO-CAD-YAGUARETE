@@ -10,6 +10,8 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Botón derecho = Enter / Ángulos relativos   (dibujo.py)
     Empalme (empalme.py) / Chaflán (chaflan.py) / Partir en punto (partir.py)
     Igualar propiedades (igualar.py): MATCHPROP con el origen resaltado
+    Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
+    Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -22,7 +24,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, cotas, editor_texto, filtro, igualar, impresion, orden, papel, propiedades, seleccion, texto, tipografias
+from . import barra, bloques, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -33,7 +35,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.17.1"
+VERSION = "3.19.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -130,6 +132,11 @@ def construir_spec() -> PluginSpec:
         tools["GEOMATCHPROP"] = igualar.IgualarTool
     if est["texto"]:
         tools["GEOTEXT"] = TextoTool
+    if est["georref"]:
+        tools["GEORREF"] = georref.GeorrefTool
+        tools["INSERTARGEO"] = imagengeo.InsertarGeoTool
+        tools["EXPORTARGEO"] = imagengeo.ExportarGeoTool
+        aliases.update({"RUBBERSHEET": "GEORREF", "AJUSTEIMAGEN": "GEORREF"})
     if est["bloques"]:
         tools.update({"GEOBLOCK": bloques.BloqueTool, "GEOINSERT": bloques.InsertarTool,
                       "GEOREFEDIT": bloques.EditarEnSitioTool, "GEOBLOCKBASE": bloques.PuntoBaseTool,
@@ -225,6 +232,10 @@ def construir_spec() -> PluginSpec:
           + ((MenuItem("Break at point (BREAKATPOINT)", "BREAKATPOINT", _icon("partir")),)
              if est["partir"] else ())
           + ((MenuItem("Match properties (MATCHPROP)", "MATCHPROP"),) if est["igualar"] else ())
+          + ((MenuItem("Adjust image with control points (GEORREF)", "GEORREF", _icon("georref")),
+              MenuItem("Insert georeferenced image (INSERTARGEO)", "INSERTARGEO", _icon("insertar_geo")),
+              MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")))
+             if est["georref"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
              if est["orden"] else ())
@@ -277,7 +288,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.17.1",
+        version="3.19.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

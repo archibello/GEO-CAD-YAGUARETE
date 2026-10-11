@@ -1,0 +1,52 @@
+GeoCAD - versión 3.18.0
+=======================
+FUNCIÓN NUEVA (IngeCAD, módulo nuevo «Ajustar imagen con puntos»): GEORREF
+(alias RUBBERSHEET y AJUSTEIMAGEN), llevar una imagen a su lugar con puntos
+de control, como el Georreferenciador de QGIS (11/10/2026, pedido de
+Fernando; ver propuesta_rubbersheet). Nombre elegido por Fernando: GEORREF.
+IngeCAD ya tiene GEOREF (GEORREFERENCIAR, del complemento Terreno), que
+declara la zona UTM del dibujo: es otra orden.
+
+- Se designa UNA imagen (clic dentro o en su borde). Imágenes y vectores no
+  se mezclan: si había una imagen y vectores elegidos de antes, se sigue con
+  la imagen y se avisa cuántos objetos quedan afuera. Con varias imágenes
+  elegidas, se ajustan de a una.
+- Pares de puntos con referencias (además de las activas: Final, Medio,
+  Intersección, Nodo y Centro) o con coordenadas escritas: «Punto en la
+  imagen n» y «Punto de destino n». Cada par se ve como una flecha roja
+  numerada; mientras se elige el destino, la flecha sigue al cursor. U
+  quita el punto sin destino o el último par.
+- Con los puntos suficientes para el método se ve, punteado, dónde va a
+  quedar la imagen.
+- Enter abre la TABLA DE PUNTOS, como la «Tabla de PCT» de QGIS:
+  habilitado, ID, X/Y de origen (en píxeles de la imagen, como QGIS), X/Y
+  de destino, dX, dY y residuo (unidades del dibujo), error medio, escala
+  y giro. Apagar un punto recalcula al momento (su flecha queda gris).
+  Métodos con los nombres de QGIS: Lineal, Helmert y Polinómica 1 (las
+  cuentas de QGIS, por mínimos cuadrados); Polinómica 2-3, Thin Plate
+  Spline y Proyectiva aparecen apagados (llegan en 3.19.0). Botones:
+  Cargar .points, Guardar .points, Marcar más pares, Transformar, Cancelar.
+- Transformar: la imagen NO se rehace; cambian su punto de inserción y sus
+  vectores (escala, giro y, con Polinómica 1, sesgo). Al instante, sin
+  regenerar. Un solo U la vuelve a como estaba. El archivo de la imagen
+  nunca se toca.
+- Los puntos quedan en «<imagen>.points» junto a la imagen: el mismo
+  archivo del Georreferenciador de QGIS (con #CRS si hay sistema del
+  proyecto en GeoCAD > Opciones). Si había otro distinto, queda una copia
+  «.points.bak». La próxima vez, GEORREF avisa que hay puntos guardados y
+  C los carga. También lee los .points viejos (separados por espacios).
+- Sin ventana, la tabla sale en la línea de comandos: Lineal / Helmert /
+  Polinómica1, A n (apaga o prende el punto n), Guardar, Marcar más,
+  Transformar (Enter).
+- Botón nuevo en la barra «Yaguareté Tools», con su cartel; también en
+  GeoCAD > Dibujo. Módulo «Ajustar imagen con puntos»: al actualizar se
+  ofrece como nuevo; apagado, no queda la orden ni el botón.
+- Pruebas: test_georref nueva (los tres métodos contra coeficientes
+  conocidos, mínimos y puntos alineados o repetidos; píxeles de QGIS;
+  transformar y deshacer exacto, también con sesgo; .points de ida y
+  vuelta, copia .bak y formato viejo; la orden entera: elegir, pares, U,
+  tabla, apagar, método, Transformar, deshacer, cargar puntos,
+  preselección mezclada, Esc). test_modulos, test_yaguarete, test_chaflan
+  y test_partir al día. Corrieron las 35 contra IngeCAD 0.6.6: todas OK.
+  La ventana de la tabla se probó además con el PySide6 de IngeCAD sin
+  pantalla (apagar puntos, cambiar método, Transformar).

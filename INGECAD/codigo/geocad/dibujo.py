@@ -304,6 +304,8 @@ ESTILO_RESALTADO = {
     "sel_ventana": ((60, 120, 255, 255), 1, False),  # W / WP: azul, continuo
     "sel_captura": ((60, 200, 90, 255), 1, True),    # C / CP: verde, punteado
     "sel_borde": ((255, 170, 40, 255), 2, True),     # F: naranja, punteado
+    "flecha": ((255, 80, 60, 255), 2, False),        # GEORREF: cada par, de la imagen al destino
+    "flecha_off": ((160, 160, 160, 255), 1, True),   # GEORREF: un par apagado en la tabla
 }
 MARCA = (255, 220, 0, 255)                        # el punto de corte (amarillo de referencias)
 #: «propio»: [(rgb o None, tramos)], cada objeto con SU color y más grueso
