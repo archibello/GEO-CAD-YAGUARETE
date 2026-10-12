@@ -80,6 +80,11 @@ CATALOGO = {
                "todo y lo traído al frente encima de todo, también entre líneas, "
                "sombreados y textos. AutoCAD respeta el orden al abrir el DXF.",
                cambia_programa=True),
+        Modulo("uniones", "Uniones de los grosores en pantalla",
+               "Con LWT, las esquinas de las polilíneas y las líneas que se tocan "
+               "quedan unidas en inglete, sin la muesca de cada vértice, en el "
+               "modelo y en el papel. Se ve al regenerar.",
+               cambia_programa=True),
         Modulo("seleccion", "Selección estilo AutoCAD (SEL, FILTRO; W, C, WP, CP, F...)",
                "En cualquier «Designar objetos» (BORRA, DESPLAZA...) se escriben las "
                "opciones de AutoCAD: W, C, WP, CP, F, ALL, L, P, R, A, U (o V, PV, PC, B, "

@@ -15,7 +15,7 @@ lp = load_plugin(ROOT / "INGECAD" / "codigo" / "geocad", bundled=False); assert 
 M = import_module("ingecad_plugin_geocad.modulos")
 cfg = import_module("ingecad_plugin_geocad.config")
 assert not M.elegido("ingecad") and not M.elegido("qgis")
-assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "angulos_relativos": True}
+assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "angulos_relativos": True}
 assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True}
 M.guardar("qgis", {"dibujo": False, "capas": False, "inventado": True})          # (Dibujo y Capas: test_submodulos)
 assert M.estado("qgis")["bloques"] is False                                      # Bloques necesita Dibujo
@@ -33,6 +33,7 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Partir en punto (PARTEENPUNTO), "
                                 "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO), "
                                 "Orden de dibujo (ALFRENTE, ALFONDO), "
+                                "Uniones de los grosores en pantalla, "
                                 "Selección estilo AutoCAD (SEL, FILTRO; W, C, WP, CP, F...), "
                                 "Igualar propiedades (IGUALARPROP / MA), "
                                 "Propiedades en masa (paleta Properties), "
@@ -165,7 +166,7 @@ data["qgis"] = {"puente": True, "dibujo": False, "capas": False}       # lo que 
 Mq.archivo().write_text(json.dumps(data))
 assert Mq.nuevos("qgis") == ["dibujo", "bloques", "papel", "capas"]
 assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True}
-assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18)
+assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18)
 QDialog.abiertos.clear(); QDialog.respuesta = 0                          # Cancelar: quedan sus valores por defecto
 G._primer_inicio()
 assert QDialog.abiertos and Mq.nuevos("qgis") == [] and Mq.activo("qgis", "capas")

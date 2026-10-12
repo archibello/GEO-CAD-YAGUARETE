@@ -1,0 +1,34 @@
+GeoCAD - versión 3.20.2
+=======================
+CORRECCIÓN (IngeCAD, pantalla): uniones de los grosores (12/10/2026, pedido
+de Fernando: «no existe una continuidad» en los vértices de las polilíneas,
+en el espacio modelo y en el papel).
+
+La causa
+- Con LWT, IngeCAD dibuja cada tramo con grosor como un rectángulo suelto
+  que termina justo en el vértice. En cada esquina los dos rectángulos se
+  tocan sólo por adentro y del lado de afuera queda una muesca.
+
+Lo que cambia
+- Módulo nuevo «Uniones de los grosores en pantalla» (prendido; se apaga
+  en GeoCAD > Módulos, y se ve al regenerar).
+- Donde se juntan dos tramos del mismo color y grosor, la esquina queda
+  unida en inglete a cualquier zoom: polilíneas abiertas y cerradas (también
+  la esquina del cierre) y dos LÍNEAs que se tocan, en cualquier sentido.
+- En ángulos muy agudos el inglete se acorta (no sale una punta larga).
+- Quedan como venían: las puntas sueltas, los cruces de tres o más tramos
+  y las uniones entre tramos de distinto color o grosor.
+- No se toca el pintado de IngeCAD: sólo se corren las puntas al armar la
+  escena. Pesa lo mismo y el orden de dibujo sigue igual. En un plano de
+  200.000 tramos con grosor suma unos 0,2 s al regenerar.
+- Funciona con IngeCAD 0.6.5, 0.6.6 y 0.6.7.
+
+Pruebas
+- test_uniones nueva: apagado queda la muesca; prendido, la esquina de
+  afuera llena en inglete con tres zooms distintos y nada más allá; ángulo
+  abierto y agudo (inglete acortado); polilínea cerrada (las cuatro
+  esquinas); dos LÍNEAs en los tres sentidos; sin unir: otro color, otro
+  grosor, una T; misma cantidad de vértices, mismas tandas y posiciones; una
+  forma desconocida no se toca.
+- test_modulos con el módulo nuevo. Las 38 pruebas pasan con IngeCAD 0.6.7
+  y con 0.6.6.
