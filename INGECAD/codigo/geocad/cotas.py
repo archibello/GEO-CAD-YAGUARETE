@@ -309,16 +309,26 @@ def puntos_cota(tool, location):
     return p1, p2
 
 
-def _vista_angular(self, cursor):
+def _envolver_vista(original):
     """preview_command de DIMANGULAR: IngeCAD dibuja la cota que va a quedar.
-    Con el módulo apagado no hay vista previa, como venía."""
-    if not activo():
-        return None
-    try:
-        return comando_angular(self, cursor)
-    except Exception:  # noqa: BLE001
-        return None
-_vista_angular._puente_fabrica = "cotas"
+    IngeCAD 0.6.7 trae la suya, pero con dos líneas arranca las extensiones
+    en la punta y el clic (el nuestro) en el arco: con el módulo prendido la
+    vista previa es la nuestra, igual al clic. Apagado, la de IngeCAD (o
+    ninguna, antes de 0.6.7), como venía."""
+    def preview_command(self, cursor):
+        if activo():
+            try:
+                return comando_angular(self, cursor)
+            except Exception:  # noqa: BLE001
+                pass
+        return original(self, cursor) if original is not None else None
+    preview_command._puente_original = original
+    preview_command._puente_fabrica = "cotas"
+    return preview_command
+
+
+#: la vista previa sobre un IngeCAD sin la suya (anterior a 0.6.7)
+_vista_angular = _envolver_vista(None)
 
 
 def _envolver_segmentos(original):
@@ -638,8 +648,9 @@ def instalar() -> None:
     except Exception:  # noqa: BLE001
         return
     actual = getattr(DimAngularTool, "preview_command", None)
-    if actual is None or getattr(actual, "_puente_fabrica", None) == "cotas":
-        DimAngularTool.preview_command = _vista_angular
+    if getattr(actual, "_puente_fabrica", None) == "cotas":      # ya puesta (o de antes)
+        actual = getattr(actual, "_puente_original", None)
+    DimAngularTool.preview_command = _vista_angular if actual is None else _envolver_vista(actual)
     if getattr(DimAngularTool.preview_segments, "_puente_fabrica", None) is not _envolver_segmentos:
         envolver(DimAngularTool, "preview_segments", _envolver_segmentos, reemplazar=True)
     if getattr(DimAngularTool.on_point, "_puente_fabrica", None) is not _envolver_on_point:

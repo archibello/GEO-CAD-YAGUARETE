@@ -8,6 +8,7 @@ from importlib import import_module
 import ezdxf
 from core.commands import History
 from core.document import Document
+from fixtures import ingecad_antes
 from core.plugins import load_plugin
 from core.select import GeometryIndex
 from core import trimmode
@@ -84,7 +85,8 @@ h = chaflan(L, (5, 0), (12, 6))
 assert lineas(h) == [(0, 0, 10, 0), (10, 0, 12, 3), (12, 3, 12, 10)]
 assert all(e.dxf.layer == "MUROS" and e.dxf.color == 2 for e in h.msp.query("LINE"))
 hn = chaflan(L, (5, 0), (12, 6), cls=ChamferTool)
-assert any(e.dxf.layer != "MUROS" for e in hn.msp.query("LINE"))          # nativo: pierden la capa
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert any(e.dxf.layer != "MUROS" for e in hn.msp.query("LINE"))          # nativo: pierden la capa
 h.history.undo(); assert lineas(h) == [(0, 0, 10, 0), (12, 2, 12, 10)]
 print("ok dos líneas")
 
@@ -94,7 +96,8 @@ distancias(1)
 h = chaflan(cruz, (9, 5), (5, 9))
 assert lineas(h) == [(5, 6, 5, 10), (6, 5, 5, 6), (10, 5, 6, 5)]
 hn = chaflan(cruz, (9, 5), (5, 9), cls=ChamferTool)
-assert lineas(hn) != lineas(h)
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert lineas(hn) != lineas(h)
 print("ok lado elegido")
 
 # ---- 3. distancias 0 = esquina (el nativo dejaba una línea de largo cero); Mayús ----------
@@ -102,8 +105,9 @@ distancias(0)
 h = chaflan(L, (5, 0), (12, 6))
 assert lineas(h) == [(0, 0, 12, 0), (12, 0, 12, 10)]
 hn = chaflan(L, (5, 0), (12, 6), cls=ChamferTool)
-assert any(R(e.dxf.start.x) == R(e.dxf.end.x) and R(e.dxf.start.y) == R(e.dxf.end.y)
-           for e in hn.msp.query("LINE"))                                     # nativo: largo cero
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert any(R(e.dxf.start.x) == R(e.dxf.end.x) and R(e.dxf.start.y) == R(e.dxf.end.y)
+               for e in hn.msp.query("LINE"))                                     # nativo: largo cero
 distancias(2)
 h = chaflan(L, (5, 0), (12, 6), shift=True)
 assert lineas(h) == [(0, 0, 12, 0), (12, 0, 12, 10)]
@@ -115,7 +119,8 @@ V = lambda m: m.add_lwpolyline([(0, 0), (10, 0), (10, 10)])
 h = chaflan(V, (5, 0), (10, 5))
 assert pl(h) == ([(0, 0, 0), (8, 0, 0), (10, 2, 0), (10, 10, 0)], False)
 hn = chaflan(V, (5, 0), (10, 5), cls=ChamferTool)
-assert pl(hn)[0] == [(0, 0, 0), (10, 0, 0), (10, 10, 0)] and any("lines" in m.lower() or "línea" in m.lower() for m in hn.msgs)
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert pl(hn)[0] == [(0, 0, 0), (10, 0, 0), (10, 10, 0)] and any("lines" in m.lower() or "línea" in m.lower() for m in hn.msgs)
 distancias(1, 3)                                     # primero el tramo vertical: d1 va ahí
 h = chaflan(V, (10, 5), (5, 0))
 assert pl(h)[0] == [(0, 0, 0), (7, 0, 0), (10, 1, 0), (10, 10, 0)]

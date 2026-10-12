@@ -118,95 +118,129 @@ assert grupos[linea.dxf.handle] == {0} and grupos[bloque.dxf.handle] == {0}, gru
 # -- 3.16.2: la pantalla pinta por grupos (fondo, normal, frente); antes las
 # líneas quedaban siempre encima de rellenos y textos
 from render import backend as RB, batches as RBA
-orden.instalar(); orden.instalar()                       # una sola vez
-assert RB.pack._puente_fabrica is orden._envolver_pack and RBA.pack._puente_fabrica is orden._envolver_pack
-assert RBA.Batch.visible_runs._puente_original.__name__ == "visible_runs"
-assert not hasattr(RBA.Batch.visible_runs._puente_original, "_puente_original")
-
-d2 = Document.new(); m2 = d2.doc.modelspace()
-roja = m2.add_line((0, 0), (10, 10), dxfattribs={"color": 1})
-azul = m2.add_lwpolyline([(0, 10), (10, 0)], dxfattribs={"color": 5})
-gruesa = m2.add_line((0, 5), (10, 5), dxfattribs={"color": 4, "lineweight": 100})
-s2 = m2.add_hatch(color=2); s2.paths.add_polyline_path([(2, 2), (8, 2), (8, 8), (2, 8)], is_closed=True)
-t2 = m2.add_text("ABC", height=2, dxfattribs={"insert": (3, 4), "color": 6})
-nombre = {roja.dxf.handle: "roja", azul.dxf.handle: "azul", gruesa.dxf.handle: "gruesa",
-          s2.dxf.handle: "sombreado", t2.dxf.handle: "texto"}
-
-
-def escena():
+# 3.20.1: IngeCAD 0.6.7 lo hace él mismo (lo tomó de GeoCAD) y llama
+# _draw_images(..., group=g): el envoltorio viejo no aceptaba group= y cada
+# cuadro fallaba, la vista quedaba sin pintar. Con IngeCAD que ya pinta por
+# grupos no se envuelve nada, y lo que hubiera quedado envuelto se saca.
+if orden.nativo(RBA):
+    try:
+        orden._envolver_imagenes(lambda *a: None)(None, None, None, group=0)
+        raise AssertionError("el envoltorio viejo debía fallar con group=")
+    except TypeError:
+        pass
+    sin_tocar = (RB.pack, RBA.pack, RBA.Batch.visible_runs)
+    orden.instalar(); orden.instalar()
+    assert (RB.pack, RBA.pack, RBA.Batch.visible_runs) == sin_tocar
+    assert not hasattr(RBA.pack, "_puente_fabrica") and not hasattr(RBA.Batch.visible_runs, "_puente_original")
+    # una versión anterior del plugin (actualizar sin reiniciar): se saca
+    from ingecad_plugin_geocad.dibujo import envolver
+    envolver(RBA.Batch, "visible_runs", orden._envolver_runs)
+    RBA.pack = orden._envolver_pack(RBA.pack); RB.pack = orden._envolver_pack(RB.pack)
+    orden.instalar()
+    assert (RB.pack, RBA.pack, RBA.Batch.visible_runs) == sin_tocar
+    # la escena de IngeCAD trae los grupos: fondo, normal y frente
+    d2 = Document.new(); m2 = d2.doc.modelspace()
+    roja = m2.add_line((0, 0), (10, 10), dxfattribs={"color": 1})
+    s2 = m2.add_hatch(color=2); s2.paths.add_polyline_path([(2, 2), (8, 2), (8, 8), (2, 8)], is_closed=True)
+    t2 = m2.add_text("ABC", height=2, dxfattribs={"insert": (3, 4), "color": 6})
+    DrawOrderCommand([roja], "back").do(d2); DrawOrderCommand([t2], "front").do(d2)
     be = VertexBackend(0.01, order_groups(m2))
-    fr = TolerantFrontend(TolerantRenderContext(d2.doc), be, frontend_config(0.01, d2) if
-                          len(inspect.signature(frontend_config).parameters) > 1 else frontend_config(0.01))
+    fr = TolerantFrontend(TolerantRenderContext(d2.doc), be, frontend_config(0.01, d2))
     fr._host_document = d2
     fr.draw_entities(m2)
-    return RB.pack(be.buckets, None)
+    sc = RB.pack(be.buckets, None)
+    assert -1 in sc.lines.group_set() and 1 in sc.triangles.group_set(), (sc.lines.group_set(), sc.triangles.group_set())
+    assert not hasattr(sc, "_geocad_cortes") or sc._geocad_cortes is None
+else:
+    orden.instalar(); orden.instalar()                       # una sola vez
+    assert RB.pack._puente_fabrica is orden._envolver_pack and RBA.pack._puente_fabrica is orden._envolver_pack
+    assert RBA.Batch.visible_runs._puente_original.__name__ == "visible_runs"
+    assert not hasattr(RBA.Batch.visible_runs._puente_original, "_puente_original")
+
+    d2 = Document.new(); m2 = d2.doc.modelspace()
+    roja = m2.add_line((0, 0), (10, 10), dxfattribs={"color": 1})
+    azul = m2.add_lwpolyline([(0, 10), (10, 0)], dxfattribs={"color": 5})
+    gruesa = m2.add_line((0, 5), (10, 5), dxfattribs={"color": 4, "lineweight": 100})
+    s2 = m2.add_hatch(color=2); s2.paths.add_polyline_path([(2, 2), (8, 2), (8, 8), (2, 8)], is_closed=True)
+    t2 = m2.add_text("ABC", height=2, dxfattribs={"insert": (3, 4), "color": 6})
+    nombre = {roja.dxf.handle: "roja", azul.dxf.handle: "azul", gruesa.dxf.handle: "gruesa",
+              s2.dxf.handle: "sombreado", t2.dxf.handle: "texto"}
 
 
-class Nada:
-    def bind(self): pass
-    def release(self): pass
-    def setUniformValue(self, *a): pass
+    def escena():
+        be = VertexBackend(0.01, order_groups(m2))
+        fr = TolerantFrontend(TolerantRenderContext(d2.doc), be, frontend_config(0.01, d2) if
+                              len(inspect.signature(frontend_config).parameters) > 1 else frontend_config(0.01))
+        fr._host_document = d2
+        fr.draw_entities(m2)
+        return RB.pack(be.buckets, None)
 
 
-def pintado(sc):
-    """El orden en que la pantalla pinta cada objeto (su primer trazo)."""
-    llamadas = []
-    tanda_de = {4: "triangles", 1: "lines", 0: "points"}
-    gl = types.SimpleNamespace(glDrawArrays=lambda modo, a, n: llamadas.append((tanda_de[modo], a, n)))
-    vp = types.SimpleNamespace(_scene=sc, _view_world_rect=lambda: (-1e9, -1e9, 1e9, 1e9),
-                               view=types.SimpleNamespace(scale=50.0), _program=Nada(), _loc_mvp=0,
-                               _scene_bufs={t: (Nada(), None, 0) for t in ("triangles", "lines", "points", "thick")})
-    def thick(_vp, _gl, _mvp, _rect, _buf, parte):
-        llamadas.extend(("thick", r.first, r.count) for r in parte.ranges)
-    orden.pintar(vp, gl, None, sc._geocad_cortes, RBA.Batch.visible_runs._puente_original, thick)
-    vistos = []
-    for tanda, a, n in llamadas:
-        for h, rangos in sc.handle_ranges.items():
-            if h in nombre and nombre[h] not in vistos and any(
-                    t == tanda and f < a + n and a < f + c for t, f, c in rangos):
-                vistos.append(nombre[h])
-    return vistos
+    class Nada:
+        def bind(self): pass
+        def release(self): pass
+        def setUniformValue(self, *a): pass
 
 
-def ordenar(ents, modo):
-    DrawOrderCommand(ents, modo).do(d2)
+    def pintado(sc):
+        """El orden en que la pantalla pinta cada objeto (su primer trazo)."""
+        llamadas = []
+        tanda_de = {4: "triangles", 1: "lines", 0: "points"}
+        gl = types.SimpleNamespace(glDrawArrays=lambda modo, a, n: llamadas.append((tanda_de[modo], a, n)))
+        vp = types.SimpleNamespace(_scene=sc, _view_world_rect=lambda: (-1e9, -1e9, 1e9, 1e9),
+                                   view=types.SimpleNamespace(scale=50.0), _program=Nada(), _loc_mvp=0,
+                                   _scene_bufs={t: (Nada(), None, 0) for t in ("triangles", "lines", "points", "thick")})
+        def thick(_vp, _gl, _mvp, _rect, _buf, parte):
+            llamadas.extend(("thick", r.first, r.count) for r in parte.ranges)
+        orden.pintar(vp, gl, None, sc._geocad_cortes, RBA.Batch.visible_runs._puente_original, thick)
+        vistos = []
+        for tanda, a, n in llamadas:
+            for h, rangos in sc.handle_ranges.items():
+                if h in nombre and nombre[h] not in vistos and any(
+                        t == tanda and f < a + n and a < f + c for t, f, c in rangos):
+                    vistos.append(nombre[h])
+        return vistos
 
 
-sc = escena(); assert sc._geocad_cortes is None, "sin orden: IngeCAD pinta como siempre"
-ordenar([roja, azul], "back")
-sc = escena(); p = pintado(sc); print("roja y azul al fondo:", p)
-assert set(p[:2]) == {"roja", "azul"} and p.index("sombreado") > 1 and p.index("texto") > 1, p
-ordenar([t2], "front")
-p = pintado(escena()); print("texto al frente:", p); assert p[-1] == "texto", p
-ordenar([s2], "front")
-p = pintado(escena()); print("sombreado al frente:", p)
-assert p.index("gruesa") < p.index("sombreado") and p.index("gruesa") < p.index("texto"), p
-ordenar([gruesa], "front")
-p = pintado(escena()); print("gruesa al frente:", p)
-assert p.index("sombreado") < p.index("gruesa") and p.index("texto") < p.index("gruesa"), p
-# todo lo dibujado se pinta una sola vez: ni falta ni sobra
-sc = escena(); total = {"triangles": 0, "lines": 0, "points": 0, "thick": 0}
-gl_cuenta = []
-vp_cuenta = types.SimpleNamespace(_scene=sc, _view_world_rect=lambda: (-1e9, -1e9, 1e9, 1e9),
-    view=types.SimpleNamespace(scale=50.0), _program=Nada(), _loc_mvp=0,
-    _scene_bufs={t: (Nada(), None, 0) for t in total})
-orden.pintar(vp_cuenta, types.SimpleNamespace(glDrawArrays=lambda m, a, n: gl_cuenta.append((m, n))), None,
-             sc._geocad_cortes, RBA.Batch.visible_runs._puente_original,
-             lambda _v, _g, _m, _r, _b, parte: gl_cuenta.extend(("k", r.count) for r in parte.ranges))
-for modo, tanda in ((4, "triangles"), (1, "lines"), (0, "points")):
-    assert sum(n for m, n in gl_cuenta if m == modo) == sum(n for _a, n in RBA.Batch.visible_runs._puente_original(
-        getattr(sc, tanda), (-1e9, -1e9, 1e9, 1e9), 50.0, 2.0)), tanda
-assert sum(n for m, n in gl_cuenta if m == "k") == sum(r.count for r in sc.thick.ranges)
-# ya pintadas por grupos, IngeCAD no las vuelve a pintar (y el cuadro siguiente sí)
-orden._pintadas.update({id(sc.lines)})
-assert sc.lines.visible_runs((-1e9, -1e9, 1e9, 1e9), 50.0, 2.0) == []
-orden._pintadas.clear(); assert sc.lines.visible_runs((-1e9, -1e9, 1e9, 1e9), 50.0, 2.0)
-# con el módulo apagado, la escena sale sin cortes
-modulos.estado = lambda prog: {**est, "orden": False}
-try:
-    assert escena()._geocad_cortes is None
-finally:
-    modulos.estado = real
+    def ordenar(ents, modo):
+        DrawOrderCommand(ents, modo).do(d2)
+
+
+    sc = escena(); assert sc._geocad_cortes is None, "sin orden: IngeCAD pinta como siempre"
+    ordenar([roja, azul], "back")
+    sc = escena(); p = pintado(sc); print("roja y azul al fondo:", p)
+    assert set(p[:2]) == {"roja", "azul"} and p.index("sombreado") > 1 and p.index("texto") > 1, p
+    ordenar([t2], "front")
+    p = pintado(escena()); print("texto al frente:", p); assert p[-1] == "texto", p
+    ordenar([s2], "front")
+    p = pintado(escena()); print("sombreado al frente:", p)
+    assert p.index("gruesa") < p.index("sombreado") and p.index("gruesa") < p.index("texto"), p
+    ordenar([gruesa], "front")
+    p = pintado(escena()); print("gruesa al frente:", p)
+    assert p.index("sombreado") < p.index("gruesa") and p.index("texto") < p.index("gruesa"), p
+    # todo lo dibujado se pinta una sola vez: ni falta ni sobra
+    sc = escena(); total = {"triangles": 0, "lines": 0, "points": 0, "thick": 0}
+    gl_cuenta = []
+    vp_cuenta = types.SimpleNamespace(_scene=sc, _view_world_rect=lambda: (-1e9, -1e9, 1e9, 1e9),
+        view=types.SimpleNamespace(scale=50.0), _program=Nada(), _loc_mvp=0,
+        _scene_bufs={t: (Nada(), None, 0) for t in total})
+    orden.pintar(vp_cuenta, types.SimpleNamespace(glDrawArrays=lambda m, a, n: gl_cuenta.append((m, n))), None,
+                 sc._geocad_cortes, RBA.Batch.visible_runs._puente_original,
+                 lambda _v, _g, _m, _r, _b, parte: gl_cuenta.extend(("k", r.count) for r in parte.ranges))
+    for modo, tanda in ((4, "triangles"), (1, "lines"), (0, "points")):
+        assert sum(n for m, n in gl_cuenta if m == modo) == sum(n for _a, n in RBA.Batch.visible_runs._puente_original(
+            getattr(sc, tanda), (-1e9, -1e9, 1e9, 1e9), 50.0, 2.0)), tanda
+    assert sum(n for m, n in gl_cuenta if m == "k") == sum(r.count for r in sc.thick.ranges)
+    # ya pintadas por grupos, IngeCAD no las vuelve a pintar (y el cuadro siguiente sí)
+    orden._pintadas.update({id(sc.lines)})
+    assert sc.lines.visible_runs((-1e9, -1e9, 1e9, 1e9), 50.0, 2.0) == []
+    orden._pintadas.clear(); assert sc.lines.visible_runs((-1e9, -1e9, 1e9, 1e9), 50.0, 2.0)
+    # con el módulo apagado, la escena sale sin cortes
+    modulos.estado = lambda prog: {**est, "orden": False}
+    try:
+        assert escena()._geocad_cortes is None
+    finally:
+        modulos.estado = real
 
 # -- el DXF lleva la tabla de orden para AutoCAD
 salida = Path(tempfile.mkdtemp()) / "orden.dxf"

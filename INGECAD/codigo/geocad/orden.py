@@ -245,14 +245,42 @@ def _envolver_paint(original):
     return paintGL
 
 
+def nativo(batches) -> bool:
+    """IngeCAD 0.6.7 en adelante pinta por grupos él mismo (lo tomó de la
+    3.16.2): sus tandas saben qué grupo tiene cada trazo."""
+    return hasattr(getattr(batches, "Batch", None), "group_set")
+
+
+def _quitar(batches, backend) -> None:
+    """Deja la pantalla como la pinta IngeCAD. En 0.6.7 el envoltorio de
+    ``_draw_images`` no aceptaba ``group=`` y cada cuadro fallaba: la vista
+    quedaba sin pintar (3.20.1)."""
+    from .dibujo import desenvolver
+    for modulo in (batches, backend):
+        actual = getattr(modulo, "pack", None)
+        if getattr(actual, "_puente_fabrica", None) is _envolver_pack:
+            setattr(modulo, "pack", actual._puente_original)
+    desenvolver(batches.Batch, "visible_runs")
+    try:
+        from views.viewport import Viewport
+    except Exception:  # noqa: BLE001
+        return
+    for nombre in ("_draw_images", "_draw_thick", "paintGL"):
+        desenvolver(Viewport, nombre)
+
+
 def instalar() -> None:
     """Se llama al cargar el plugin. El envoltorio de la escena mira
     ``activo()`` al armarla: prender o apagar el módulo no necesita
-    reinstalarlos."""
+    reinstalarlos. Con un IngeCAD que ya pinta por grupos no se envuelve
+    nada: los botones quedan y la pantalla es la de IngeCAD."""
     from .dibujo import envolver
     try:
         from render import backend, batches
     except Exception:  # noqa: BLE001
+        return
+    if nativo(batches):
+        _quitar(batches, backend)
         return
     for modulo in (batches, backend):
         actual = getattr(modulo, "pack", None)

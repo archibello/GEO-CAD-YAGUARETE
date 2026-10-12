@@ -9,6 +9,7 @@ from importlib import import_module
 import ezdxf
 from core.commands import History
 from core.document import Document
+from fixtures import ingecad_antes
 from core.plugins import load_plugin
 from core.select import GeometryIndex
 from core import modify
@@ -92,7 +93,8 @@ h, t = partir(L, (5, 0), (10, 0))                             # en el vértice
 assert plines(h) == [([(0, 0, 1, 3, 0), (10, 0, 0, 0, 0)], False),
                      ([(10, 0, 0, 0, 0), (10, 10, 0, 0, 0)], False)]
 h0 = Harness(); p0 = L(h0.msp)
-assert len(modify.break_pieces(p0, (10, 0), (10, 0))[1][1]) == 3                 # nativo: vértice repetido
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert len(modify.break_pieces(p0, (10, 0), (10, 0))[1][1]) == 3                 # nativo: vértice repetido
 print("ok polilínea abierta")
 
 # ---- 3. polilínea cerrada: se ABRE en el punto (el nativo perdía el tramo de cierre) -------
@@ -102,8 +104,9 @@ h, t = partir(C, (5, 0), (5, 0))
 assert not cerrada and [r[:2] for r in filas] == [(5, 0), (10, 0), (10, 10), (0, 10), (0, 0), (5, 0)]
 assert abs(par.largo_filas(filas) - 40) < 1e-9                 # el perímetro entero
 h0 = Harness(); p0 = C(h0.msp)
-nat = modify.break_pieces(p0, (5, 0), (5, 0))
-assert sum(par.largo_filas(pz[1]) for pz in nat) < 40 - 1     # nativo: se pierde un lado
+if ingecad_antes("0.6.7"):          # 0.6.7 no la parte en un punto (ClosedAtOnePoint)
+    nat = modify.break_pieces(p0, (5, 0), (5, 0))
+    assert sum(par.largo_filas(pz[1]) for pz in nat) < 40 - 1     # nativo: se pierde un lado
 h, t = partir(C, (0, 5), (10, 10))                            # cerrada, en un vértice
 ((filas, cerrada),) = plines(h)
 assert [r[:2] for r in filas] == [(10, 10), (0, 10), (0, 0), (10, 0), (10, 10)] and not cerrada

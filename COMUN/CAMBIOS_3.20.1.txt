@@ -1,0 +1,43 @@
+GeoCAD - versión 3.20.1
+=======================
+CORRECCIÓN: GeoCAD al día con IngeCAD 0.6.7 (12/10/2026). Fernando instaló
+IngeCAD 0.6.7 y el espacio modelo o el papel dejaban de mostrar su
+contenido y de responder, sobre todo al pasar de uno a otro.
+
+La causa
+- IngeCAD 0.6.7 incorporó cinco cosas que GeoCAD le agregaba (lo dice su
+  propio registro de cambios: «GeoCad Yaguarete had to patch it»): el orden
+  de dibujo en pantalla (3.16.2), la vista previa en vivo de DIMANGULAR, las
+  referencias a objetos dentro de los bloques (2.8.1), el color elegido que
+  reemplaza al RGB que vino de QGIS y los arreglos de CHAFLÁN, EMPALME y
+  PARTIR en sus herramientas.
+- Al hacerlo cambió cómo pinta la pantalla: pide las imágenes «por grupo».
+  El parche de pantalla del orden de dibujo no lo aceptaba, cada cuadro
+  fallaba y la vista quedaba sin pintar.
+
+Lo que cambia
+- Orden de dibujo: con IngeCAD 0.6.7 la pantalla la pinta IngeCAD (ya
+  respeta fondo / normal / frente entre rellenos, líneas y grosores). Los
+  botones Traer al frente y Enviar al fondo siguen igual. Con un IngeCAD
+  anterior, GeoCAD pinta como en la 3.16.2.
+- Referencias en bloques: con IngeCAD 0.6.7 las hace IngeCAD (el de GeoCAD
+  sólo repetía el trabajo). Lo que cambia un bloque desde GeoCAD (crear o
+  redefinir, editar en el lugar, punto base, símbolos de estilo) le avisa
+  a IngeCAD, para que las referencias queden al día al instante.
+- DIMANGULAR: con el módulo Cotas prendido la vista previa sigue siendo la
+  de GeoCAD, igual a lo que deja el clic (con dos líneas, las extensiones
+  arrancan en el arco). Apagado, la de IngeCAD 0.6.7.
+- Todo sigue funcionando también con IngeCAD 0.6.6 y anteriores.
+
+Pruebas
+- Las 37 pruebas pasan con IngeCAD 0.6.7 y con 0.6.6.
+- test_orden: con IngeCAD que pinta por grupos no queda ningún parche de
+  pantalla (y se saca si venía de antes); la escena trae sus grupos.
+- test_bloques: sin referencias propias en 0.6.7; editar un bloque con
+  GeoCAD avisa a IngeCAD y la referencia se mueve con el bloque.
+- test_cotas: la vista previa de DIMANGULAR sobre la de IngeCAD 0.6.7.
+- test_chaflan, test_empalme, test_partir, test_propiedades: lo que
+  comprobaba que la herramienta de IngeCAD fallaba vale sólo antes de 0.6.7.
+- test_aqgis: el ancho de un texto se mide con la letra de su estilo (en
+  0.6.7 un dibujo nuevo usa arial.ttf).
+- fixtures.ingecad_antes("0.6.7") para esas diferencias.

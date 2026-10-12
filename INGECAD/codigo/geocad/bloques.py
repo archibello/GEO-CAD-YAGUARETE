@@ -79,6 +79,8 @@ class CrearBloque(Command):
     """Crea (o redefine) el bloque con las entidades, relativo a ``base``.
     modo: "C" convertir, "R" retener, "B" borrar los objetos originales."""
 
+    #: IngeCAD 0.6.7 vuelve a leer el bloque para las referencias (3.20.1)
+    touches_blocks = True
     needs_regen = True
 
     def __init__(self, nombre, base, fuentes, modo="C", capa=None, p2=None):
@@ -855,6 +857,8 @@ class InsertarTool(Tool):
 class CambiarDefinicion(Command):
     """Reemplaza el contenido del bloque (un paso, se puede deshacer)."""
 
+    #: IngeCAD 0.6.7 vuelve a leer el bloque para las referencias (3.20.1)
+    touches_blocks = True
     needs_regen = True
 
     def __init__(self, nombre, nuevas):
@@ -910,6 +914,9 @@ class CambiarPuntoBase(Command):
     cambie (los atributos ya están en coordenadas del dibujo: no se tocan).
     mantener=False: las referencias quedan donde están y el bloque se ve
     desplazado; sus atributos acompañan."""
+
+    #: IngeCAD 0.6.7 vuelve a leer el bloque para las referencias (3.20.1)
+    touches_blocks = True
 
     needs_regen = True
 
@@ -1609,6 +1616,16 @@ def _envolver_extract(original):
     return _extract
 
 
+def referencias_nativas() -> bool:
+    """IngeCAD (0.6.7 en adelante) ya engancha la geometría de adentro de un
+    bloque."""
+    try:
+        from core.snap import SnapEngine
+    except Exception:  # noqa: BLE001
+        return False
+    return hasattr(SnapEngine, "_insert_children")
+
+
 def instalar_referencias() -> None:
     """Se llama al cargar el plugin. Sin IngeCAD (pruebas sin interfaz) se
     instala igual sobre core.snap, que no usa Qt."""
@@ -1618,6 +1635,14 @@ def instalar_referencias() -> None:
         return
     actual = SnapEngine.__dict__.get("_extract")
     funcion = getattr(actual, "__func__", actual)
+    if referencias_nativas():
+        # IngeCAD 0.6.7 engancha él mismo dentro de los bloques (lo tomó de
+        # la 2.8.1): el nuestro sólo repetiría el trabajo (3.20.1)
+        if getattr(funcion, "_puente_fabrica", None) is _envolver_extract:
+            SnapEngine._extract = staticmethod(funcion._puente_original)
+        from .dibujo import desenvolver
+        desenvolver(SnapEngine, "_build")
+        return
     if getattr(funcion, "_puente_fabrica", None) is _envolver_extract:
         return
     funcion = getattr(funcion, "_puente_original", funcion)

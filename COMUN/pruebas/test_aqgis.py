@@ -84,7 +84,7 @@ def extremos(wkt):
 _t, [d] = A.elementos(txt, doc.doc)
 assert d["etiqueta"] == "Lote 3" and d["altura"] == 2.5 and d["giro"] == 15 and "texto" not in d
 (x1, y1), (x2, y2) = extremos(d["wkt"])
-ancho = A.ancho_texto("Lote 3", 2.5)
+ancho = A.ancho_texto("Lote 3", 2.5, A._fuente(doc.doc, txt))      # la letra de su estilo (0.6.7: arial.ttf)
 assert ancho > 5 and abs(math.hypot(x2 - x1, y2 - y1) - ancho) < 1e-4
 assert abs(math.degrees(math.atan2(y2 - y1, x2 - x1)) - 15) < 1e-4       # su dirección
 medio = A._girar((7, 8), 15, 0, 1.25)                                     # mitad de la letra

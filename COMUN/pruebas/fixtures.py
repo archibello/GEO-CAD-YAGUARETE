@@ -42,3 +42,11 @@ def make_puntos(folder, name="pozos"):
         w.point(100.0 + i, 200.0 + i * 2); w.record(i + 1, f"P{i+1}")
     w.close()
     return path + ".shp"
+
+
+def ingecad_antes(version: str) -> bool:
+    """El IngeCAD de la prueba es anterior a ``version`` (p. ej. "0.6.7"):
+    para lo que IngeCAD corrigió por su cuenta y antes había que comprobar."""
+    from core.version import __version__
+    numeros = lambda v: tuple(int(x) for x in v.split(".")[:3])
+    return numeros(__version__) < numeros(version)

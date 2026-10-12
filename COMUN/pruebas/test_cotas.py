@@ -165,7 +165,9 @@ print("ok grados minutos segundos")
 
 # ------------------------------------------------------------- 8. DIMANGULAR en vivo
 from tools.dimension import DimAngularTool
-assert DimAngularTool.preview_command is C._vista_angular
+nativa = getattr(DimAngularTool.preview_command, "_puente_original", None)   # 0.6.7: la de IngeCAD
+assert nativa is not None or DimAngularTool.preview_command is C._vista_angular
+C.instalar(); assert getattr(DimAngularTool.preview_command, "_puente_original", None) is nativa   # una sola vez
 herr = DimAngularTool.__new__(DimAngularTool)
 herr.__dict__.update(_mode="vp2", _pending=None, _quadrant=None, _line1=None, _line2=None,
                      _vertex=(0, 0), _p1=(10, 0), _p2=(0, 10), _region_free=True,
@@ -185,7 +187,7 @@ herr.__dict__.update(_line2=((0, 5), (10, 5)))              # paralelas
 assert herr.preview_command((6, 2)) is None
 M.guardar("ingecad", {"cotas": False})
 herr.__dict__.update(_line2=((0, 0), (10, 10)))
-assert herr.preview_command((6, 2)) is None                 # apagado: como venía
+assert (herr.preview_command((6, 2)) is None) == (nativa is None)   # apagado: como venía (0.6.7: la de IngeCAD)
 herr._vertex = (0, 0)
 assert herr.preview_segments((6, 2)) == [((0, 0), (6, 2))]  # la línea suelta de IngeCAD
 M.guardar("ingecad", {"cotas": True})

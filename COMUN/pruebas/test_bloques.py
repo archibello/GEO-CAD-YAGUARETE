@@ -439,20 +439,35 @@ assert ref(300.1, 0.1, {"INS"}) == ("INS", 300, 0)                              
 assert ref(397.1, 0.1, {"END"}) == ("END", 397, 0), ref(397.1, 0.1, {"END"})              # nativo girado 180
 assert ref(504, 0.1, {"END"}) == ("END", 504, 0) and ref(502, 2.9, {"QUA"}) == ("QUA", 502, 3)   # escala 1 x 3
 # editar el contenido del bloque (mismo número de objetos): al rearmar, la referencia nueva
-d10.doc.blocks.get("NATIVO").query("LINE")[0].dxf.end = (55, 50)
+if B.referencias_nativas():
+    # 0.6.7: IngeCAD guarda cada bloque y lo relee cuando un comando avisa
+    # que lo cambió (touches_blocks): el nuestro avisa (3.20.1)
+    import ezdxf.entities
+    linea = ezdxf.entities.Line.new(dxfattribs={"start": (50, 50), "end": (55, 50)})
+    History(d10).execute(B.CambiarDefinicion("NATIVO", [linea]))
+    assert d10.blocks_revision > 0
+else:
+    d10.doc.blocks.get("NATIVO").query("LINE")[0].dxf.end = (55, 50)
 eng.invalidate(); assert ref(395.1, 0.1, {"END"}) == ("END", 395, 0)
-# todo queda a nombre del bloque: borrarlo se lleva sus referencias
-h = [e for e in m10 if e.dxftype() == "INSERT"][0].dxf.handle
-eng.remove_handles([h]); assert ref(100.1, 108.1, {"END"}) is None
-# un bloque enorme: sólo el punto de inserción, como venía
-B.MAX_OBJETOS_REFERENCIAS, viejo = 1, B.MAX_OBJETOS_REFERENCIAS
-eng.invalidate(); assert ref(195.9, 0.1, {"END"}) is None and ref(200, 0.1, {"INS"}) == ("INS", 200, 0)
-B.MAX_OBJETOS_REFERENCIAS = viejo
-# módulo Bloques apagado: IngeCAD como venía
-mods.poner("ingecad", "bloques", False); B._activo_cache[0] = 0.0
-eng.invalidate(); assert ref(195.9, 0.1, {"END"}) is None
-mods.poner("ingecad", "bloques", True); B._activo_cache[0] = 0.0
-eng.invalidate(); assert ref(195.9, 0.1, {"END"}) == ("END", 196, 0)
+if B.referencias_nativas():
+    # 3.20.1: IngeCAD 0.6.7 lo hace él mismo; el nuestro no se instala (ni queda
+    # instalado) y lo de arriba lo resolvió IngeCAD
+    B.instalar_referencias()
+    assert not hasattr(SnapEngine.__dict__["_extract"].__func__, "_puente_fabrica")
+    assert not hasattr(SnapEngine._build, "_puente_original")
+else:
+    # todo queda a nombre del bloque: borrarlo se lleva sus referencias
+    h = [e for e in m10 if e.dxftype() == "INSERT"][0].dxf.handle
+    eng.remove_handles([h]); assert ref(100.1, 108.1, {"END"}) is None
+    # un bloque enorme: sólo el punto de inserción, como venía
+    B.MAX_OBJETOS_REFERENCIAS, viejo = 1, B.MAX_OBJETOS_REFERENCIAS
+    eng.invalidate(); assert ref(195.9, 0.1, {"END"}) is None and ref(200, 0.1, {"INS"}) == ("INS", 200, 0)
+    B.MAX_OBJETOS_REFERENCIAS = viejo
+    # módulo Bloques apagado: IngeCAD como venía
+    mods.poner("ingecad", "bloques", False); B._activo_cache[0] = 0.0
+    eng.invalidate(); assert ref(195.9, 0.1, {"END"}) is None
+    mods.poner("ingecad", "bloques", True); B._activo_cache[0] = 0.0
+    eng.invalidate(); assert ref(195.9, 0.1, {"END"}) == ("END", 196, 0)
 print("ok referencias sobre bloques")
 # ---- 3.10.0: segundo punto de inserción (P2) ------------------------------------------------
 import io

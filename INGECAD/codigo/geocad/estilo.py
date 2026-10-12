@@ -154,6 +154,7 @@ class SymbolBlockCommand(Command):
     """Define el bloque de una forma si el dibujo no lo tiene; deshacer lo quita."""
 
     name = "GeoCAD symbol"
+    touches_blocks = True        # IngeCAD 0.6.7: referencias de bloques al día
 
     def __init__(self, shape: str) -> None:
         self.shape = shape

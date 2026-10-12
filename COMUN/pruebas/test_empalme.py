@@ -8,6 +8,7 @@ from importlib import import_module
 import ezdxf
 from core.commands import History
 from core.document import Document
+from fixtures import ingecad_antes
 from core.plugins import load_plugin
 from core.select import GeometryIndex
 from tools.base import ToolContext
@@ -68,7 +69,8 @@ B90 = round(math.tan(math.pi / 8), 6)          # bulge de un cuarto de círculo
 
 # ---- 1. el nativo falla con polilíneas; el nuestro no -------------------------------------
 h = empalmar(lambda m: m.add_lwpolyline([(0, 0), (10, 0), (10, 10)]), 2, (5, 0), (10, 5), cls=FilletTool)
-assert pl(h)[0] == [(0, 0, 0), (10, 0, 0), (10, 10, 0)]           # nativo: no hizo nada
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert pl(h)[0] == [(0, 0, 0), (10, 0, 0), (10, 10, 0)]           # nativo: no hizo nada
 h = empalmar(lambda m: m.add_lwpolyline([(0, 0), (10, 0), (10, 10)]), 2, (5, 0), (10, 5))
 assert pl(h) == ([(0, 0, 0), (8, 0, B90), (10, 2, 0), (10, 10, 0)], False)
 h.history.undo(); assert pl(h)[0] == [(0, 0, 0), (10, 0, 0), (10, 10, 0)]   # se deshace
@@ -100,7 +102,8 @@ h = empalmar(cruz, 1, (9, 5), (5, 9))
 assert lineas(h) == [(5, 6, 5, 10), (10, 5, 6, 5)]
 (a,) = list(h.msp.query("ARC")); assert cerca((a.dxf.center.x, a.dxf.center.y), (6, 6))
 h = empalmar(cruz, 1, (9, 5), (5, 9), cls=FilletTool)              # el nativo se equivocaba de lado
-assert lineas(h) != [(5, 6, 5, 10), (10, 5, 6, 5)]
+if ingecad_antes("0.6.7"):          # 0.6.7 lo corrigió en el nativo
+    assert lineas(h) != [(5, 6, 5, 10), (10, 5, 6, 5)]
 print("ok lado elegido")
 
 # ---- 5. lo que el nativo ya hacía bien sigue igual ----------------------------------------

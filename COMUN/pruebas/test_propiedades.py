@@ -109,6 +109,7 @@ assert P.aplicar_expresion(pan, diam, P.expresion("+2")) == 2 and (c1.dxf.radius
 from core.actions import SetPropertyCommand
 from core.commands import History
 from core.document import Document
+from fixtures import ingecad_antes
 estilo = import_module("ingecad_plugin_geocad.estilo")
 assert hasattr(SetPropertyCommand.do, "_puente_original")
 doc = Document(ezdxf.new("R2018")); hist = History(doc); m2 = doc.doc.modelspace()
@@ -126,7 +127,9 @@ assert not parcela.dxf.hasattr("true_color"); hist.undo()
 hist.execute(SetPropertyCommand([parcela], "layer", "0"))               # otra propiedad: el RGB queda
 assert parcela.dxf.true_color == 0xA0522D; hist.undo()
 M.guardar("ingecad", {"propiedades": False})                              # módulo apagado: como IngeCAD
-hist.execute(SetPropertyCommand([parcela], "color", 1)); assert parcela.dxf.true_color == 0xA0522D
+hist.execute(SetPropertyCommand([parcela], "color", 1))
+if ingecad_antes("0.6.7"):          # 0.6.7 también quita el RGB al elegir color
+    assert parcela.dxf.true_color == 0xA0522D
 hist.undo(); M.guardar("ingecad", {"propiedades": True})
 print("ok color")
 
