@@ -60,6 +60,7 @@ _ultimo_remuestreo = ["vecino"]
 FONDOS = {
     "transparente": "Transparente (PNG; TIFF si la original lo es)",
     "blanco": "Blanco (el mismo formato de la original)",
+    "negro": "Negro (el mismo formato de la original)",
     "ambos": "Los dos: transparente y blanco (el dibujo usa la transparente)",
 }
 _ultimo_fondo = ["transparente"]
@@ -919,7 +920,7 @@ class GeorrefTool(Tool):
                      "clic en la imagen o en su borde):")
     PEDIDO_TABLA = ("Tabla de puntos [Lineal/Helmert/Polinómica1/P2/P3/TPS/PRoyectiva/Apagar n/"
                     "Guardar/Marcar más/COPIA/COMO/MUNDO/DIBUJO/VECINO/BILINEAL/CÚBICA/"
-                    "TRANSPARENTE/BLANCO/AMBOS/Transformar] <Transformar>:")
+                    "TRANSPARENTE/BLANCO/NEGRO/AMBOS/Transformar] <Transformar>:")
 
     def start(self) -> None:
         self.name = "GEORREF"

@@ -484,4 +484,33 @@ with GP.Progreso(None, "GEORREF") as pg:                                   # sin
     pg.regeneracion(types.SimpleNamespace())                               # sin Qt: nada
 print("ok cuenta regresiva")
 
+# ------------------------------------------------------------- 11. recorte al contenido y fondo negro (3.21.3)
+otra3 = Path(tempfile.mkdtemp())
+marco_tr = Image.new("RGBA", (1000, 800), (0, 0, 0, 0))                 # como una ya rehecha: esquinas
+marco_tr.paste((200, 60, 60, 255), (200, 100, 800, 700))                 # transparentes (negro debajo)
+fuente_tr = otra3 / "rehecha.png"; marco_tr.save(fuente_tr)
+pr2 = G.ajustar("proyectiva", cuad, trap)
+for fondo, esquina in (("transparente", (255, 255, 255, 0)), ("blanco", (255, 255, 255)), ("negro", (0, 0, 0))):
+    salida = GI.rutas(fuente_tr, fondo)
+    coef_r, (wr, hr) = GI.rehacer(fuente_tr, salida, pr2, "vecino")
+    with Image.open(salida[0][0]) as im:
+        assert im.size == (wr, hr)
+        if fondo == "transparente":
+            assert im.getchannel("A").getbbox() == (0, 0, wr, hr)          # sin margen sobrante
+        else:
+            assert im.mode == "RGB" and im.getpixel((0, 0)) == esquina, (fondo, im.getpixel((0, 0)))
+            assert im.getpixel((wr // 2, hr // 2)) == (200, 60, 60)        # el contenido, no negro
+    # el recorte: el marco nuevo envuelve justo la parte opaca deformada
+    opaco = [G.aplicar(pr2, (x, -y)) for x, y in ((200, 100), (800, 100), (800, 700), (200, 700))]
+    x0r, y0r = coef_r[0], coef_r[3]
+    assert abs(x0r - min(p[0] for p in opaco)) < 2 * coef_r[1] and abs(y0r - max(p[1] for p in opaco)) < 2 * coef_r[1]
+    assert abs(x0r + wr * coef_r[1] - max(p[0] for p in opaco)) < 2 * coef_r[1]
+assert G._metodo_de_texto("NEGRO") is None and "negro" in G.FONDOS
+t = herramienta(); t.on_point((60, 60)); t._pares = [{"sx": a[0], "sy": a[1], "X": b[0], "Y": b[1], "on": True}
+                                                    for a, b in zip(cuad, trap)]
+t.on_enter(); t.on_option("PROYECTIVA"); t.on_option("NEGRO")
+assert t._fondo == "negro" and G._ultimo_fondo[0] == "negro" and any("fondo negro" in m for m in msgs)
+t.on_option("TRANSPARENTE"); t.on_cancel()
+print("ok recorte y negro")
+
 print("TODO OK GEORREF")

@@ -14,7 +14,9 @@ vuelta del ajuste (dibujo -> píxel):
                       como el transformador aproximado de GDAL.
 
 Fuera de la imagen deformada, el fondo: transparente (PNG, o TIFF si la
-original lo es) o blanco (el mismo formato de la original).
+original lo es), blanco o negro (el mismo formato de la original). La
+imagen nueva se recorta justo a su contenido (3.21.3), y lo que ya era
+transparente en la original sigue transparente.
 """
 from __future__ import annotations
 
@@ -44,7 +46,7 @@ def _pil():
 
 def extension(original, fondo: str) -> str:
     """La extensión de la imagen rehecha: transparente -> .png (o .tif si la
-    original es TIFF); blanco -> la de la original."""
+    original es TIFF); blanco o negro -> la de la original."""
     suf = Path(original).suffix.lower()
     if fondo == "transparente":
         return Path(original).suffix if suf in (".tif", ".tiff", ".png") else ".png"
@@ -147,19 +149,40 @@ def _datos_malla(modelo, marco):
     return malla
 
 
-def _preparar(im, fondo):
-    """La imagen en el modo que hace falta y el color del fondo."""
+#: color de las esquinas sobrantes según el fondo (el transparente: blanco con
+#: alfa 0, así algo que ignore la transparencia lo muestra blanco y no negro)
+COLOR_FONDO = {"transparente": (255, 255, 255), "blanco": (255, 255, 255), "negro": (0, 0, 0)}
+
+
+def recortar(nueva, marco):
+    """La imagen deformada recortada justo a lo que tiene contenido (lo
+    opaco), y su marco corrido en la misma medida (3.21.3): sin el margen
+    sobrante, ni lo que ya era transparente en la imagen de partida."""
+    caja = nueva.getchannel("A").getbbox()
+    if caja is None:
+        raise RehacerError("la imagen quedaría vacía (es toda transparente)")
+    x0, y0, pix, _w, _h = marco
+    izq, arriba, der, abajo = caja
+    return nueva.crop(caja), (x0 + pix * izq, y0 - pix * arriba, pix, der - izq, abajo - arriba)
+
+
+def con_fondo(nueva, fondo, gris: bool):
+    """La imagen recortada (RGBA) lista para guardar con su fondo:
+    transparente queda RGBA; blanco o negro, pintado detrás (RGB, o gris si
+    la original lo era)."""
     if fondo == "transparente":
-        # blanco con alfa 0: si algo ignora la transparencia, se ve blanco y no negro
-        return im.convert("RGBA"), (255, 255, 255, 0)
-    if im.mode in ("1", "L"):
-        return im.convert("L"), 255
-    return im.convert("RGB"), (255, 255, 255)
+        return nueva
+    Image = _pil()
+    lienzo = Image.new("RGB", nueva.size, COLOR_FONDO[fondo])
+    lienzo.paste(nueva, mask=nueva.getchannel("A"))
+    return lienzo.convert("L") if gris else lienzo
 
 
 def rehacer(original, salidas, modelo, remuestreo: str = "vecino"):
     """Hace cada imagen de ``salidas`` ([(ruta, fondo), ...], de :func:`rutas`)
-    y devuelve (coef de la nueva, (ancho, alto))."""
+    y devuelve (coef de la nueva, (ancho, alto)). La deformación se hace una
+    sola vez (con alfa: lo transparente de la original sigue transparente) y
+    se recorta al contenido; cada fondo sale de ahí."""
     Image = _pil()
     filtro = {"vecino": Image.Resampling.NEAREST, "lineal": Image.Resampling.BILINEAR,
               "cubica": Image.Resampling.BICUBIC}[remuestreo]
@@ -169,22 +192,26 @@ def rehacer(original, salidas, modelo, remuestreo: str = "vecino"):
         with Image.open(original) as im:
             im.load()
             ancho, alto = im.size
+            gris = im.mode in ("1", "L", "LA")
             marco = marco_nuevo(modelo, ancho, alto)
             w, h = marco[3], marco[4]
             if isinstance(modelo, G.Proyectiva):
                 metodo, datos = Image.Transform.PERSPECTIVE, _datos_perspectiva(modelo, marco)
             else:
                 metodo, datos = Image.Transform.MESH, _datos_malla(modelo, marco)
-            for ruta, fondo in salidas:
-                fuente, relleno = _preparar(im, fondo)
-                nueva = fuente.transform((w, h), metodo, datos, resample=filtro, fillcolor=relleno)
-                opciones = {}
-                suf = Path(ruta).suffix.lower()
-                if suf in (".jpg", ".jpeg"):
-                    opciones = {"quality": 95}
-                elif suf in (".tif", ".tiff"):
-                    opciones = {"compression": "tiff_lzw"}
-                nueva.save(ruta, **opciones)
+            fuente = im.convert("RGBA")         # respeta la transparencia que ya traiga
+        nueva = fuente.transform((w, h), metodo, datos, resample=filtro,
+                                 fillcolor=(255, 255, 255, 0))
+        del fuente
+        nueva, marco = recortar(nueva, marco)
+        for ruta, fondo in salidas:
+            opciones = {}
+            suf = Path(ruta).suffix.lower()
+            if suf in (".jpg", ".jpeg"):
+                opciones = {"quality": 95}
+            elif suf in (".tif", ".tiff"):
+                opciones = {"compression": "tiff_lzw"}
+            con_fondo(nueva, fondo, gris).save(ruta, **opciones)
     finally:
         Image.MAX_IMAGE_PIXELS = limite
-    return coef_nuevo(marco), (w, h)
+    return coef_nuevo(marco), (marco[3], marco[4])

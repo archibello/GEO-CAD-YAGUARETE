@@ -1,0 +1,33 @@
+GeoCAD - versión 3.21.3
+=======================
+CORRECCIÓN (IngeCAD): GEORREF guarda sólo lo útil de la imagen rehecha
+(12/10/2026, pedido de Fernando con una captura: el resultado tenía un gran
+margen sobrante, blanco y con triángulos negros, alrededor del plano).
+
+Lo que pasaba
+- La imagen nueva se armaba con el contorno de TODA la imagen de partida.
+  Si ésta ya había sido rehecha (con sus esquinas transparentes), esas
+  esquinas también contaban: quedaba un margen sobrante grande.
+- Con fondo blanco la transparencia de la imagen de partida se perdía: sus
+  esquinas transparentes salían NEGRAS (el color que tenían debajo).
+
+Lo que cambia
+- La imagen rehecha se RECORTA justo a su contenido (el rectángulo que
+  envuelve lo que tiene imagen): menos píxeles, menos información
+  sobrante, archivos más chicos. Su archivo de mundo y su lugar en el
+  dibujo se corren en la misma medida.
+- Se respeta la transparencia que ya traiga la imagen de partida (por
+  ejemplo, una rehecha antes): sigue transparente, o toma el fondo elegido;
+  ya no aparecen triángulos negros.
+- Fondo nuevo «Negro (el mismo formato de la original)», pedido de
+  Fernando: las esquinas sobrantes en negro. Por línea de comandos, NEGRO.
+- La deformación se hace una sola vez y cada fondo sale de ahí: «Los dos»
+  tarda lo mismo que uno (un plano de 6500 x 4000: 5,5 s en vez de 8).
+
+Pruebas
+- test_georref: una imagen con esquinas transparentes (como una ya rehecha)
+  rehecha con fondo transparente, blanco y negro: sin margen sobrante (la
+  primera y la última fila y columna tienen contenido), las esquinas del
+  color elegido, el contenido intacto (no negro) y el marco nuevo justo
+  sobre la parte con imagen. NEGRO desde la línea de comandos. Las 38
+  pruebas pasan con IngeCAD 0.6.7.
