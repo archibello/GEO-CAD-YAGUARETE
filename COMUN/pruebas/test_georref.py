@@ -1,7 +1,9 @@
 """GEORREF (RUBBERSHEET, AJUSTEIMAGEN) para IngeCAD (módulo «georref», 3.18.0):
 una imagen, pares de puntos (en la imagen -> destino) con flechas numeradas,
 tabla de puntos con residuos y error medio, Lineal / Helmert / Polinómica 1
-sin rehacer la imagen (un solo U la vuelve atrás) y el .points de QGIS."""
+sin rehacer la imagen (un solo U la vuelve atrás) y el .points de QGIS.
+3.21.0: Proyectiva, Polinómica 2-3 y Thin Plate Spline, que rehacen la imagen
+(remuestreo y fondo transparente, blanco o los dos)."""
 import math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path
@@ -67,7 +69,8 @@ assert G.error_medio(G.residuos(r, org, con(afi)), [1] * 5) > 1
 # dos puntos alcanzan para Helmert y Lineal, no para Polinómica 1
 assert cerca(G.ajustar("helmert", org[:2], con(hel)[:2]), hel, 1e-9)
 for metodo, pts, txt in (("polinomica1", 2, "al menos 3"), ("helmert", 1, "al menos 2"),
-                         ("polinomica2", 6, "3.19.0")):
+                         ("polinomica2", 5, "al menos 6"), ("proyectiva", 3, "al menos 4"),
+                         ("polinomica3", 5, "al menos 10"), ("tps", 2, "al menos 3")):
     try:
         G.ajustar(metodo, org[:pts], con(afi)[:pts]); raise AssertionError(metodo)
     except G.AjusteError as exc:
@@ -316,5 +319,169 @@ t = herramienta(); t.on_point((60, 60)); t._pares = [dict(p) for p in G.leer_poi
 t.on_enter(); t.on_option("DIBUJO"); t.on_option("COMO"); assert t._salida == "dibujo" and t._copia_en is None
 t.on_cancel()
 print("ok copia y mundo")
+
+# ------------------------------------------------------------- 8. los que deforman (3.21.0): las cuentas
+cuad = [(0, 0), (1000, 0), (1000, -800), (0, -800)]
+trap = [(5000, 7000), (5100, 7010), (5095, 6920), (5010, 6925)]          # un trapecio cualquiera
+pr = G.ajustar("proyectiva", cuad, trap)
+assert isinstance(pr, G.Modelo) and "rehace" in G.describir(pr)
+assert all(cerca(G.aplicar(pr, a), b, 1e-6) for a, b in zip(cuad, trap))  # 4 puntos: exacta
+assert all(cerca(pr.inverso(b), a, 1e-6) for a, b in zip(cuad, trap))
+assert cerca(G.aplicar(G.inversa(pr), trap[2]), cuad[2], 1e-6)
+# las rectas siguen rectas: el medio de un lado cae sobre el lado deformado
+q = G.aplicar(pr, (500, 0)); a, b = trap[0], trap[1]
+assert abs((b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0])) < 1e-6
+# con más puntos: mínimos cuadrados (residuos cero si los datos son proyectivos)
+mas = cuad + [(500, -400), (200, -700), (900, -100), (300, -100), (700, -600), (100, -400)]
+for metodo in ("proyectiva", "polinomica2", "polinomica3", "tps"):
+    m = G.ajustar(metodo, mas, [G.aplicar(pr, x) for x in mas])
+    rms = G.error_medio(G.residuos(m, mas, [G.aplicar(pr, x) for x in mas]), [1] * len(mas))
+    assert rms < (1.0 if metodo == "polinomica2" else 1e-5), (metodo, rms)
+    vuelta = m.inverso(G.aplicar(m, (400, -300)))
+    assert cerca(vuelta, (400, -300), 1e-3 if metodo == "proyectiva" else 3.0), (metodo, vuelta)  # la vuelta: otro ajuste, como GDAL
+# polinómica 2 exacta con datos de segundo grado; TPS pasa por cada punto
+cuadr = lambda p: (3 + 0.1 * p[0] + 1e-5 * p[0] * p[1], 7 + 0.1 * p[1] + 2e-5 * p[0] ** 2)
+m = G.ajustar("polinomica2", mas, [cuadr(x) for x in mas])
+assert cerca(G.aplicar(m, (333, -222)), cuadr((333, -222)), 1e-6)
+ruido = [(x + (i % 3) * 0.7, y - (i % 2) * 0.4) for i, (x, y) in enumerate(G.aplicar(pr, p) for p in mas)]
+m = G.ajustar("tps", mas, ruido)
+assert G.error_medio(G.residuos(m, mas, ruido), [1] * len(mas)) < 1e-6
+assert len(G.esquinas(img, m)) == 64 and len(G.esquinas(img, pr)) == 4   # TPS curva los bordes
+for metodo, o in (("proyectiva", [(0, 0), (1, 0), (2, 0), (0, -1)]),     # 3 alineados
+                  ("tps", [(0, 0), (1, 1), (2, 2)]),                      # alineados
+                  ("tps", [(0, 0), (0, 0), (5, 1)])):                     # repetidos
+    try:
+        G.ajustar(metodo, o, trap[:len(o)]); raise AssertionError(metodo)
+    except G.AjusteError:
+        pass
+for t_, m_ in (("P2", "polinomica2"), ("p3", "polinomica3"), ("TPS", "tps"), ("Proyectiva", "proyectiva")):
+    assert G._metodo_de_texto(t_) == m_
+ruta = G.escribir_points(carpeta / "pr.points", [{"sx": a[0], "sy": a[1], "X": b[0], "Y": b[1], "on": True}
+                                                 for a, b in zip(cuad, trap)], "", "proyectiva")
+assert all(abs(float(l.split(",")[7])) < 1e-6 for l in ruta.read_text().splitlines()[1:])
+print("ok métodos que deforman")
+
+# ------------------------------------------------------------- 9. rehacer la imagen (PIL)
+from PIL import Image
+GI = import_module("ingecad_plugin_geocad.georref_imagen")
+colores = {}
+foto = Image.new("RGB", (1000, 800))
+for i in range(4):                                       # una grilla de 4 x 4 colores
+    for j in range(4):
+        c = (40 + 60 * i, 30 + 70 * j, 200 - 40 * i)
+        foto.paste(c, (250 * i, 200 * j, 250 * (i + 1), 200 * (j + 1)))
+        colores[(250 * i + 125, -(200 * j + 100))] = c
+foto.save(plano)
+
+
+def ajustar_rehaciendo(metodo, *opciones, destinos=trap):
+    t = herramienta()
+    t.on_point((60, 60))
+    for px, X in zip(cuad, destinos):
+        t.on_point(G.pixel_a_mundo(img, px)); t.on_point(X)
+    t.on_enter()
+    t.on_option(metodo)
+    for o in opciones:
+        t.on_option(o)
+    t.on_option("T")
+    assert fin, msgs
+    return t
+
+
+def color_en(ruta, X, Y):
+    """El color de la imagen rehecha en el punto (X, Y) del dibujo, leído
+    con su archivo de mundo."""
+    A, D, B, E, C, F = (float(v) for v in G.ruta_mundo(ruta).read_text().split())
+    col, fila = (X - C) / A + 0.5, (Y - F) / E + 0.5
+    with Image.open(ruta) as im:
+        return im.getpixel((int(col), int(fila)))
+
+
+ancho_antes = G.tamano(img)
+ajustar_rehaciendo("PROYECTIVA")
+nueva = carpeta / "plano_georref4.png"                    # 1-3 ya los usó la copia (7.)
+assert img.image_def.dxf.filename == str(nueva), img.image_def.dxf.filename
+assert any("Imagen rehecha con Proyectiva: 4 puntos" in m for m in msgs)
+assert any("la usa el dibujo" in m for m in msgs) and plano.exists()
+with Image.open(nueva) as im:
+    assert im.mode == "RGBA" and im.size == tuple(int(v) for v in G.tamano(img))
+    assert im.getpixel((0, im.size[1] - 1)) == (255, 255, 255, 0)         # afuera: transparente (blanco)
+assert img.dxf.flags & img.USE_TRANSPARENCY                                # si no, el fondo se ve negro
+for (sx, sy), c in colores.items():                                        # cada color en su lugar
+    X, Y = G.aplicar(pr, (sx, sy))
+    assert color_en(nueva, X, Y)[:3] == c, (sx, sy)
+# en el dibujo: la imagen nueva cubre el trapecio entero, derecha
+x0, y0 = G.pixel_a_mundo(img, (0, 0)); w, h = G.tamano(img)
+x1, y1 = G.pixel_a_mundo(img, (w, -h))
+assert x0 <= min(p[0] for p in trap) + 1e-6 and x1 >= max(p[0] for p in trap) - 0.2
+assert y0 >= max(p[1] for p in trap) - 1e-6 and y1 <= min(p[1] for p in trap) + 0.2
+mundo_ok_n = G.ruta_mundo(nueva).exists() and (carpeta / "plano_georref4.png.aux.xml").exists()
+assert mundo_ok_n and (carpeta / "plano_georref4.png.points").exists()
+hist.undo()                                                                # un U: como estaba
+assert img.image_def.dxf.filename == str(plano) and G.tamano(img) == ancho_antes
+assert not img.dxf.flags & img.USE_TRANSPARENCY
+assert cerca(G.pixel_a_mundo(img, (0, -800)), (10, 20), 1e-9)
+hist.redo(); assert img.image_def.dxf.filename == str(nueva); hist.undo()
+# fondo blanco y los dos; remuestreo cúbico; TPS con malla
+jpg = carpeta / "foto.jpg"; foto.save(jpg, quality=98)
+img.image_def.dxf.filename = str(jpg)
+ajustar_rehaciendo("TPS", "AMBOS", "CÚBICA")
+assert G._ultimo_remuestreo[0] == "cubica" and G._ultimo_fondo[0] == "ambos"
+t_png, b_jpg = carpeta / "foto_georref.png", carpeta / "foto_georref.jpg"
+assert img.image_def.dxf.filename == str(t_png) and b_jpg.exists() and G.ruta_mundo(b_jpg).exists()
+with Image.open(b_jpg) as im:
+    assert im.mode == "RGB" and min(im.getpixel((0, im.size[1] - 1))) > 240  # afuera: blanco
+for (sx, sy), c in colores.items():
+    X, Y = G.aplicar(G.ajustar("tps", cuad, trap), (sx, sy))
+    assert all(abs(u - v) < 12 for u, v in zip(color_en(b_jpg, X, Y)[:3], c)), (sx, sy)
+    assert all(abs(u - v) < 12 for u, v in zip(color_en(t_png, X, Y)[:3], c)), (sx, sy)
+hist.undo(); assert img.image_def.dxf.filename == str(jpg)
+ajustar_rehaciendo("PROYECTIVA", "BLANCO", "VECINO")
+assert img.image_def.dxf.filename == str(carpeta / "foto_georref2.jpg")
+assert not img.dxf.flags & img.USE_TRANSPARENCY                            # blanco: sin transparencia
+hist.undo()
+# una proyectiva que da vuelta la imagen: no se hace nada
+cruzado = [trap[0], trap[2], trap[1], trap[3]]
+t = herramienta(); t.on_point((60, 60))
+for px, X in zip(cuad, cruzado):
+    t.on_point(G.pixel_a_mundo(img, px)); t.on_point(X)
+t.on_enter(); t.on_option("PROYECTIVA"); t.on_option("T")
+assert not fin and any("no se pudo rehacer" in m for m in msgs), msgs
+assert img.image_def.dxf.filename == str(jpg); t.on_cancel()
+# sin el archivo: no se puede rehacer, se vuelve a la tabla
+img.image_def.dxf.filename = str(carpeta / "no_esta.png")
+t = herramienta(); t.on_point((60, 60))
+for px, X in zip(cuad, trap):
+    t.on_point(G.pixel_a_mundo(img, px)); t.on_point(X)
+t.on_enter(); t.on_option("P3"); t.on_option("T")                         # P3: 10 puntos
+assert not fin and any("al menos 10" in m for m in msgs)
+t.on_option("TPS"); t.on_option("T")
+assert not fin and any("no se encuentra el archivo" in m for m in msgs); t.on_cancel()
+img.image_def.dxf.filename = str(plano)
+# nombres: Guardar copia geo como... con fondo transparente lleva .png
+otra2 = Path(tempfile.mkdtemp())
+r = GI.rutas(jpg, "ambos", otra2 / "x.jpg")
+assert [p.name for p, _f in r] == ["x.png", "x.jpg"]
+r = GI.rutas(plano, "ambos", otra2 / "y.png")
+assert [p.name for p, _f in r] == ["y.png", "y_blanco.png"]
+assert GI.extension("a.TIF", "transparente") == ".TIF"
+print("ok rehacer la imagen")
+
+# ------------------------------------------------------------- 10. la cuenta regresiva (3.21.2)
+GP = import_module("ingecad_plugin_geocad.georref_progreso")
+assert GP.texto_falta(10, 6.2) == "faltan unos 4 s" and GP.texto_falta(3, 2.5) == "falta 1 s"
+assert GP.texto_falta(3, 4) == "ya casi..."
+GP._ritmo[0] = 0.2
+assert GP.estimar(26, 1) == 0.2 * 26 and GP.estimar(26, 2) == 0.2 * 52 and GP.estimar(0.1, 1) == 1.0
+GP.medir(26, 2, 10.4); assert abs(GP._ritmo[0] - 0.2) < 1e-12
+GP.medir(0.1, 1, 9); assert abs(GP._ritmo[0] - 0.2) < 1e-12              # una imagen chica no enseña
+with GP.Progreso(None, "GEORREF") as pg:                                   # sin Qt: directo, sin ventana
+    assert pg.trabajo("x", lambda: 42, 3) == 42 and pg.dlg is None
+    try:
+        pg.trabajo("x", lambda: 1 / 0, 3); raise AssertionError("sin error")
+    except ZeroDivisionError:
+        pass
+    pg.regeneracion(types.SimpleNamespace())                               # sin Qt: nada
+print("ok cuenta regresiva")
 
 print("TODO OK GEORREF")

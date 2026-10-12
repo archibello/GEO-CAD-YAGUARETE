@@ -1,0 +1,30 @@
+GeoCAD - versión 3.21.2
+=======================
+MEJORA (IngeCAD): cuenta regresiva en GEORREF (12/10/2026, pedido de
+Fernando: «una pequeña cuenta regresiva en la pantalla mientras el
+programa realiza esta operación, para disminuir la ansiedad de los
+operarios»; y que la pantalla se regenere sola al terminar).
+
+Lo que cambia
+- Al Transformar con Proyectiva, Polinómica 2-3 o Thin Plate Spline aparece
+  una ventanita con barra y cuenta regresiva, en dos etapas:
+  · «1/2 Rehaciendo la imagen con ... faltan unos 4 s»: la imagen se rehace
+    en un hilo aparte, así IngeCAD no queda congelado mientras tanto. La
+    cuenta usa lo que tardó la vez anterior en esta computadora (la primera
+    vez, un cálculo por el tamaño de la imagen).
+  · «2/2 Actualizando la pantalla... faltan unos 2 s»: la regeneración de
+    IngeCAD, con lo que tardó su última regeneración. Si IngeCAD no arrancó
+    a regenerar, GeoCAD se lo pide (ocultando la imagen vieja) y espera a
+    que termine: la imagen deformada aparece sola, sin regenerar a mano.
+  · Si tarda más de lo calculado dice «ya casi...».
+- La ventanita se cierra sola al terminar. Si algo falla, se cierra y se
+  vuelve a la tabla de puntos con el aviso.
+
+Archivos
+- georref_progreso.py nuevo (la ventanita y la espera), georref.py.
+
+Pruebas
+- test_georref: el texto de la cuenta, el cálculo y lo aprendido, el trabajo
+  sin Qt (directo, también con error). Ensayada además con el Qt de IngeCAD
+  0.6.7 (sin pantalla): cuenta 3, 2, 1, «ya casi...», pide la regeneración,
+  oculta la imagen vieja y espera el final. Las 38 pruebas pasan.

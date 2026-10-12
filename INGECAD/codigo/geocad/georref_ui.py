@@ -2,15 +2,15 @@
 """Ventana «Tabla de puntos» de GEORREF (3.18.0), como la «Tabla de PCT» del
 Georreferenciador de QGIS.
 
-Arriba el método (los mismos nombres de QGIS; los que rehacen la imagen
-llegan en 3.19.0) y el remuestreo; en el medio la tabla: habilitado, ID,
+Arriba el método (los mismos nombres de QGIS) y el remuestreo (sólo para
+los que rehacen la imagen: Proyectiva, Polinómica 2-3 y TPS, 3.21.0); en el medio la tabla: habilitado, ID,
 X/Y de origen (píxeles de la imagen), X/Y de destino, dX, dY y residuo
 (unidades del dibujo). Apagar un punto recalcula al momento. Abajo el
 error medio, Cargar / Guardar .points, Marcar más pares, Transformar y
 Cancelar.
 
 tabla(...) devuelve {"accion": "transformar" | "marcar", "metodo",
-"habilitados", "pares" (si se cargaron otros)} o None (Cancelar). Sin Qt
+"salida", "remuestreo", "fondo", "copia_en", "habilitados", "pares" (si se cargaron otros)} o None (Cancelar). Sin Qt
 devuelve SIN_QT y la orden sigue por la línea de comandos.
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ def tabla(parent, tool):
     if dlg.exec() != QtWidgets.QDialog.DialogCode.Accepted:
         return None
     return {"accion": dlg.accion, "metodo": dlg.metodo, "salida": dlg.salida,
-            "copia_en": dlg.copia_en,
+            "remuestreo": dlg.remuestreo, "fondo": dlg.fondo, "copia_en": dlg.copia_en,
             "habilitados": [p["on"] for p in dlg.pares],
             "pares": dlg.pares if dlg.cargados else None}
 
@@ -60,6 +60,8 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
             self.pares = [dict(p) for p in tool._pares]
             self.metodo = tool._metodo
             self.salida = getattr(tool, "_salida", G._ultima_salida[0])
+            self.remuestreo = getattr(tool, "_remuestreo", G._ultimo_remuestreo[0])
+            self.fondo = getattr(tool, "_fondo", G._ultimo_fondo[0])
             self.copia_en = getattr(tool, "_copia_en", None)
             self.accion = "transformar"
             self.cargados = False
@@ -75,7 +77,7 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
             self.combo = W.QComboBox()
             modelo = self.combo.model()
             for i, (clave, (nombre, minimo, disponible)) in enumerate(G.METODOS.items()):
-                self.combo.addItem(nombre if disponible else f"{nombre} (llega en 3.19.0)", clave)
+                self.combo.addItem(nombre if disponible else f"{nombre} (llega más adelante)", clave)
                 if not disponible:
                     modelo.item(i).setEnabled(False)
             self.combo.setCurrentIndex(list(G.METODOS).index(self.metodo))
@@ -83,11 +85,11 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
             arriba.addWidget(self.combo)
             arriba.addSpacing(20)
             arriba.addWidget(W.QLabel("Remuestreo:"))
-            rem = W.QComboBox()
-            rem.addItems(["Vecino más próximo", "Lineal", "Cúbica"])
-            rem.setEnabled(False)
-            rem.setToolTip("Lineal, Helmert y Polinómica 1 no rehacen la imagen: "
-                           "sólo cambian su lugar, tamaño y giro (sin pérdida).")
+            self.combo_rem = rem = W.QComboBox()
+            for clave, texto in G.REMUESTREOS.items():
+                rem.addItem(texto, clave)
+            rem.setCurrentIndex(list(G.REMUESTREOS).index(self.remuestreo))
+            rem.currentIndexChanged.connect(self._cambio_remuestreo)
             arriba.addWidget(rem)
             arriba.addStretch(1)
 
@@ -124,6 +126,19 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
             como.clicked.connect(self._copia_como)
             fila.addWidget(como)
             fila.addStretch(1)
+            fila_fondo = W.QHBoxLayout()
+            raiz.addLayout(fila_fondo)
+            self.etiqueta_fondo = W.QLabel("Fondo de la imagen rehecha:")
+            fila_fondo.addWidget(self.etiqueta_fondo)
+            self.combo_fondo = W.QComboBox()
+            for clave, texto in G.FONDOS.items():
+                self.combo_fondo.addItem(texto, clave)
+            self.combo_fondo.setCurrentIndex(list(G.FONDOS).index(self.fondo))
+            self.combo_fondo.setToolTip("Lo que queda alrededor de la imagen deformada. "
+                                        "Transparente: no tapa el dibujo. Blanco: como un papel.")
+            self.combo_fondo.currentIndexChanged.connect(self._cambio_fondo)
+            fila_fondo.addWidget(self.combo_fondo)
+            fila_fondo.addStretch(1)
             self.donde = W.QLabel()
             self.donde.setWordWrap(True)
             raiz.addWidget(self.donde)
@@ -175,6 +190,30 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
                 self.estado.setText(f"Error medio: {G._fmt(t['rms'])} (unidades del dibujo) · "
                                     f"{G.describir(t['coef'])}")
             self.boton.setEnabled(t["coef"] is not None)
+            self._segun_metodo()
+
+        def _segun_metodo(self):
+            """Los que rehacen la imagen: siempre una copia, con remuestreo y fondo."""
+            rehace = self.metodo in G.REHACEN
+            self.combo_rem.setEnabled(rehace)
+            self.combo_rem.setToolTip(
+                "Cómo se calcula cada píxel de la imagen rehecha." if rehace else
+                "Lineal, Helmert y Polinómica 1 no rehacen la imagen: sólo cambian su "
+                "lugar, tamaño y giro (sin pérdida).")
+            self.combo_fondo.setEnabled(rehace)
+            self.etiqueta_fondo.setEnabled(rehace)
+            self.combo_salida.setEnabled(not rehace)
+            if rehace:
+                self.combo_salida.setToolTip("Este método deforma la imagen: siempre se "
+                                             "guarda una copia rehecha, con su archivo de mundo.")
+            self._mostrar_donde()
+
+        def _cambio_remuestreo(self, i):
+            self.remuestreo = self.combo_rem.itemData(i)
+
+        def _cambio_fondo(self, i):
+            self.fondo = self.combo_fondo.itemData(i)
+            self._mostrar_donde()
 
         def _cambio_salida(self, i):
             self.salida = self.combo_salida.itemData(i)
@@ -221,13 +260,26 @@ def _Dialogo(QtCore, QtWidgets, parent, tool):  # noqa: N802
                 return None
 
         def _mostrar_donde(self):
+            if not hasattr(self, "combo_fondo"):
+                return
+            orig = self._original()
+            if self.metodo in G.REHACEN:
+                if orig is None:
+                    self.donde.setText("Imagen rehecha: (junto a la original)")
+                    return
+                from . import georref_imagen as GI
+                try:
+                    rs = GI.rutas(orig, self.fondo, self.copia_en)
+                    self.donde.setText("Imagen rehecha en: " + " · ".join(str(r) for r, _f in rs))
+                except (OSError, ValueError) as exc:
+                    self.donde.setText(f"Imagen rehecha: {exc}")
+                return
             if self.salida != "copia":
                 self.donde.setText("")
                 return
             if self.copia_en:
                 self.donde.setText(f"Copia geo en: {self.copia_en}")
                 return
-            orig = self._original()
             try:
                 txt = str(G.nombre_copia(orig)) if orig else "(junto a la original)"
             except OSError:

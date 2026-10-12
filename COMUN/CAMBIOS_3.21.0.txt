@@ -1,0 +1,53 @@
+GeoCAD - versión 3.21.0
+=======================
+FUNCIÓN NUEVA (IngeCAD): GEORREF deforma la imagen (12/10/2026, pedido de
+Fernando: que un plano escaneado vaya libre a los 4 puntos elegidos; «muy
+importante»).
+
+Por qué
+- Lineal, Helmert y Polinómica 1 llevan un rectángulo a un rectángulo o a un
+  paralelogramo: con 4 destinos que forman un trapecio nunca entran (en la
+  prueba de Fernando, error medio 580 con Helmert).
+
+Lo que cambia
+- En la Tabla de puntos están todos los métodos del Georreferenciador de
+  QGIS, con sus nombres:
+  · Proyectiva (4 puntos o más): 4 puntos van exactos a cualquier
+    cuadrilátero y las rectas siguen rectas (un plano fotografiado en
+    ángulo). Con más puntos, mínimos cuadrados.
+  · Polinómica 2 (6 puntos o más) y Polinómica 3 (10 o más): curvan la
+    imagen suave para seguir los puntos.
+  · Thin Plate Spline (3 puntos o más): cada punto queda exacto en su
+    destino y la imagen se estira entre ellos como una goma.
+- Estos cuatro deforman la imagen: GeoCAD la REHACE (con PIL, que viene con
+  IngeCAD) como lo hace QGIS con GDAL: una imagen nueva, derecha, con el
+  mismo tamaño de píxel en promedio, y su archivo de mundo (y .aux.xml con el
+  sistema de GeoCAD > Opciones). El dibujo pasa a usarla, en su lugar y con
+  su tamaño nuevo; la original no se toca. Un solo U vuelve todo atrás.
+- Remuestreo (se prende con estos métodos): Vecino más próximo, Lineal o
+  Cúbica.
+- Fondo de la imagen rehecha (alrededor de la imagen deformada):
+  transparente (PNG; TIFF si la original lo es), blanco (el mismo formato
+  de la original) o los dos (el dibujo usa la transparente).
+- Nombres que no pisan nada (plano_georref.png, plano_georref2.png...);
+  «Guardar copia geo como...» también sirve para la imagen rehecha.
+- Mientras se marcan los pares, el punteado muestra dónde quedaría la imagen
+  (con bordes curvos en Polinómica 2-3 y TPS).
+- Avisos: pocos puntos (cuántos hacen falta), puntos repetidos o alineados,
+  una Proyectiva que daría vuelta la imagen, una imagen que quedaría
+  demasiado grande, sin el archivo de la imagen. En todos, nada cambia.
+- Línea de comandos (sin ventana): P2, P3, TPS, PROYECTIVA; VECINO,
+  BILINEAL, CÚBICA; TRANSPARENTE, BLANCO, AMBOS.
+- Un plano de 6500 x 4000 píxeles se rehace en unos 5 s (8 s con los dos
+  fondos), con el reloj de arena.
+
+Archivos
+- georref.py (las cuentas, en Python puro), georref_imagen.py nuevo (rehacer
+  con PIL), georref_ui.py (la tabla), módulo «georref» (descripción).
+
+Pruebas
+- test_georref: cada método nuevo (exacto con 4 puntos, mínimos cuadrados
+  con más, ida y vuelta, alineados y repetidos), la imagen rehecha con una
+  grilla de colores (cada color en su lugar leído con el archivo de mundo),
+  transparente/blanco/los dos, JPG y PNG, U y rehacer, Proyectiva que se da
+  vuelta, sin archivo, nombres. Las 38 pruebas pasan con IngeCAD 0.6.7.

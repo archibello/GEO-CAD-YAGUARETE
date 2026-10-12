@@ -16,12 +16,15 @@ puntos de control (AutoCAD Map lo hace con RUBBERSHEET). Acá:
      destino, dX, dY y residuo, y el error medio; el método con los mismos
      nombres de QGIS;
   4) «Transformar»: Lineal, Helmert y Polinómica 1 no rehacen la imagen:
-     cambian su punto de inserción y sus vectores. Un solo U la vuelve a
-     como estaba. Los puntos quedan en «<imagen>.points», el mismo archivo
-     del Georreferenciador de QGIS (y se pueden cargar de ahí).
+     cambian su punto de inserción y sus vectores. Proyectiva, Polinómica
+     2-3 y Thin Plate Spline (3.21.0) la deforman: GeoCAD la rehace con PIL
+     (remuestreo Vecino / Lineal / Cúbica; fondo transparente, blanco o los
+     dos) en una copia con su archivo de mundo, y el dibujo pasa a usarla.
+     Un solo U la vuelve a como estaba. Los puntos quedan en
+     «<imagen>.points», el mismo archivo del Georreferenciador de QGIS (y se
+     pueden cargar de ahí).
 
-Thin Plate Spline, Polinómica 2-3 y Proyectiva (rehacer la imagen) llegan en
-3.19.0; «Transformar en QGIS» con GDAL, en 3.20.0. Las cuentas no usan Qt.
+«Transformar en QGIS» con GDAL llega más adelante. Las cuentas no usan Qt.
 """
 from __future__ import annotations
 
@@ -42,12 +45,24 @@ METODOS = {
     "lineal": ("Lineal", 2, True),
     "helmert": ("Helmert", 2, True),
     "polinomica1": ("Polinómica 1", 3, True),
-    "polinomica2": ("Polinómica 2", 6, False),
-    "polinomica3": ("Polinómica 3", 10, False),
-    "tps": ("Thin Plate Spline", 10, False),
-    "proyectiva": ("Proyectiva", 4, False),
+    "polinomica2": ("Polinómica 2", 6, True),
+    "polinomica3": ("Polinómica 3", 10, True),
+    "tps": ("Thin Plate Spline", 3, True),
+    "proyectiva": ("Proyectiva", 4, True),
 }
 DISPONIBLES = tuple(k for k, (_n, _m, d) in METODOS.items() if d)
+#: los que deforman la imagen: hay que rehacerla (3.21.0)
+REHACEN = frozenset({"polinomica2", "polinomica3", "tps", "proyectiva"})
+#: remuestreo al rehacer (los nombres de QGIS)
+REMUESTREOS = {"vecino": "Vecino más próximo", "lineal": "Lineal", "cubica": "Cúbica"}
+_ultimo_remuestreo = ["vecino"]
+#: fondo de la imagen rehecha, fuera de la imagen deformada
+FONDOS = {
+    "transparente": "Transparente (PNG; TIFF si la original lo es)",
+    "blanco": "Blanco (el mismo formato de la original)",
+    "ambos": "Los dos: transparente y blanco (el dibujo usa la transparente)",
+}
+_ultimo_fondo = ["transparente"]
 #: el método con que arranca la tabla (Helmert: no deforma un plano escaneado)
 METODO_INICIAL = "helmert"
 _ultimo_metodo = [METODO_INICIAL]          # el último usado, mientras IngeCAD esté abierto
@@ -73,18 +88,280 @@ class AjusteError(ValueError):
     """No se puede calcular (pocos puntos, puntos repetidos o alineados)."""
 
 
-def ajustar(metodo: str, origen, destino) -> tuple:
+# -- los que deforman (3.21.0): cuentas en Python puro, sin numpy
+def _resolver(A, b):
+    """A·x = b por Gauss con pivoteo parcial; None si es singular."""
+    n = len(A)
+    M = [list(map(float, fila)) + [float(v)] for fila, v in zip(A, b)]
+    escala = max((abs(v) for fila in M for v in fila[:n]), default=0.0) or 1.0
+    for k in range(n):
+        piv = max(range(k, n), key=lambda i: abs(M[i][k]))
+        if abs(M[piv][k]) <= 1e-12 * escala:
+            return None
+        M[k], M[piv] = M[piv], M[k]
+        for i in range(k + 1, n):
+            m = M[i][k] / M[k][k]
+            if m:
+                for j in range(k, n + 1):
+                    M[i][j] -= m * M[k][j]
+    x = [0.0] * n
+    for k in range(n - 1, -1, -1):
+        x[k] = (M[k][n] - sum(M[k][j] * x[j] for j in range(k + 1, n))) / M[k][k]
+    return x
+
+
+def _minimos_cuadrados(filas, valores):
+    """El x que minimiza |F·x − v| (ecuaciones normales); None si no hay
+    solución única."""
+    m = len(filas[0])
+    A = [[sum(f[i] * f[j] for f in filas) for j in range(m)] for i in range(m)]
+    b = [sum(f[i] * v for f, v in zip(filas, valores)) for i in range(m)]
+    return _resolver(A, b)
+
+
+def _normalizador(puntos):
+    """Centro y escala (distancia media al centro = √2), como Hartley: las
+    cuentas quedan bien condicionadas con coordenadas de millones."""
+    n = len(puntos)
+    cx = sum(p[0] for p in puntos) / n
+    cy = sum(p[1] for p in puntos) / n
+    d = sum(math.hypot(p[0] - cx, p[1] - cy) for p in puntos) / n
+    return cx, cy, (math.sqrt(2) / d if d > EPS else 1.0)
+
+
+def _terminos(orden, x, y):
+    return [x ** (i - j) * y ** j for i in range(orden + 1) for j in range(i + 1)]
+
+
+class Modelo:
+    """Un ajuste que deforma la imagen: ``directo`` lleva píxel de QGIS ->
+    dibujo; ``inverso``, dibujo -> píxel (lo usa el remuestreo). Se aplica
+    con :func:`aplicar` igual que los 6 coeficientes de los afines."""
+
+    metodo = ""
+
+    def directo(self, p):
+        raise NotImplementedError
+
+    def inverso(self, p):
+        raise NotImplementedError
+
+    def invertido(self) -> "Modelo":
+        return _Invertido(self)
+
+
+class _Invertido(Modelo):
+    def __init__(self, m):
+        self.m, self.metodo = m, m.metodo
+
+    def directo(self, p):
+        return self.m.inverso(p)
+
+    def inverso(self, p):
+        return self.m.directo(p)
+
+    def invertido(self):
+        return self.m
+
+
+def _h_aplicar(H, p):
+    x, y = p
+    w = H[2][0] * x + H[2][1] * y + H[2][2]
+    if abs(w) <= EPS:
+        raise ZeroDivisionError("punto en el infinito")
+    return ((H[0][0] * x + H[0][1] * y + H[0][2]) / w,
+            (H[1][0] * x + H[1][1] * y + H[1][2]) / w)
+
+
+def _h_mult(A, B):
+    return [[sum(A[i][k] * B[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+
+
+def _h_inversa(H):
+    (a, b, c), (d, e, f), (g, h, i) = H
+    A, B, C = e * i - f * h, -(d * i - f * g), d * h - e * g
+    det = a * A + b * B + c * C
+    if abs(det) <= EPS:
+        raise AjusteError("Proyectiva: con estos puntos la imagen quedaría aplastada.")
+    return [[A / det, -(b * i - c * h) / det, (b * f - c * e) / det],
+            [B / det, (a * i - c * g) / det, -(a * f - c * d) / det],
+            [C / det, -(a * h - b * g) / det, (a * e - b * d) / det]]
+
+
+class Proyectiva(Modelo):
+    """X = (a·x + b·y + c) / (g·x + h·y + 1), Y = (d·x + e·y + f) / (...):
+    lleva 4 puntos a cualquier cuadrilátero (exacto) y con más ajusta por
+    mínimos cuadrados (DLT normalizada). Las rectas siguen rectas."""
+
+    metodo = "proyectiva"
+
+    def __init__(self, origen, destino):
+        sx, sy, ss = _normalizador(origen)
+        dx, dy, ds = _normalizador(destino)
+        filas, valores = [], []
+        for (x, y), (X, Y) in zip(origen, destino):
+            x, y = (x - sx) * ss, (y - sy) * ss
+            X, Y = (X - dx) * ds, (Y - dy) * ds
+            filas.append([x, y, 1, 0, 0, 0, -x * X, -y * X])
+            valores.append(X)
+            filas.append([0, 0, 0, x, y, 1, -x * Y, -y * Y])
+            valores.append(Y)
+        h = _minimos_cuadrados(filas, valores)
+        if h is None:
+            raise AjusteError("Proyectiva necesita 4 puntos sin 3 alineados.")
+        Hn = [h[0:3], h[3:6], [h[6], h[7], 1.0]]
+        Ts = [[ss, 0, -ss * sx], [0, ss, -ss * sy], [0, 0, 1]]
+        Td_inv = [[1 / ds, 0, dx], [0, 1 / ds, dy], [0, 0, 1]]
+        H = _h_mult(Td_inv, _h_mult(Hn, Ts))
+        k = H[2][2]
+        if abs(k) <= EPS:
+            raise AjusteError("Proyectiva: con estos puntos la imagen se iría al infinito.")
+        self.H = [[v / k for v in fila] for fila in H]
+        self.Hi = _h_inversa(self.H)
+
+    def directo(self, p):
+        return _h_aplicar(self.H, p)
+
+    def inverso(self, p):
+        return _h_aplicar(self.Hi, p)
+
+    def denominador(self, p):
+        return self.H[2][0] * p[0] + self.H[2][1] * p[1] + self.H[2][2]
+
+
+class _Polinomio:
+    """Un sentido de la polinómica de orden 2 o 3, en coordenadas
+    normalizadas."""
+
+    def __init__(self, orden, origen, destino, nombre):
+        self.orden = orden
+        self.no = _normalizador(origen)
+        cx, cy, s = self.no
+        filas = [_terminos(orden, (x - cx) * s, (y - cy) * s) for x, y in origen]
+        self.cx = _minimos_cuadrados(filas, [p[0] for p in destino])
+        self.cy = _minimos_cuadrados(filas, [p[1] for p in destino])
+        if self.cx is None or self.cy is None:
+            raise AjusteError(f"{nombre}: los puntos no alcanzan para calcularla (hay "
+                              "puntos repetidos, alineados o sobre una misma curva).")
+
+    def __call__(self, p):
+        cx, cy, s = self.no
+        t = _terminos(self.orden, (p[0] - cx) * s, (p[1] - cy) * s)
+        return (sum(a * b for a, b in zip(self.cx, t)), sum(a * b for a, b in zip(self.cy, t)))
+
+
+class Polinomica(Modelo):
+    """Polinómica 2 (6 términos) o 3 (10), por mínimos cuadrados. Como GDAL,
+    la vuelta (dibujo -> píxel) es otra polinómica ajustada con los mismos
+    puntos al revés: no hay fórmula exacta para invertirla."""
+
+    def __init__(self, orden, origen, destino):
+        self.metodo = f"polinomica{orden}"
+        self.nombre = METODOS[self.metodo][0]
+        self.orden, self._origen, self._destino = orden, list(origen), list(destino)
+        self._ida = _Polinomio(orden, origen, destino, self.nombre)
+        self._vuelta = None
+
+    def directo(self, p):
+        return self._ida(p)
+
+    def inverso(self, p):
+        if self._vuelta is None:
+            self._vuelta = _Polinomio(self.orden, self._destino, self._origen, self.nombre)
+        return self._vuelta(p)
+
+
+def _u(r2):
+    return r2 * math.log(r2) if r2 > 0 else 0.0
+
+
+class _Spline:
+    """Un sentido de la Thin Plate Spline: pasa exacta por cada punto y se
+    dobla lo mínimo entre ellos (U(r) = r²·ln r²), más una parte afín."""
+
+    def __init__(self, origen, destino):
+        self.no = _normalizador(origen)
+        cx, cy, s = self.no
+        self.p = [((x - cx) * s, (y - cy) * s) for x, y in origen]
+        n = len(self.p)
+        A = []
+        for i, (xi, yi) in enumerate(self.p):
+            fila = [_u((xi - xj) ** 2 + (yi - yj) ** 2) for xj, yj in self.p]
+            A.append(fila + [1.0, xi, yi])
+        A.append([1.0] * n + [0.0] * 3)
+        A.append([x for x, _y in self.p] + [0.0] * 3)
+        A.append([y for _x, y in self.p] + [0.0] * 3)
+        self.wx = _resolver(A, [q[0] for q in destino] + [0.0] * 3)
+        self.wy = _resolver(A, [q[1] for q in destino] + [0.0] * 3)
+        if self.wx is None or self.wy is None:
+            raise AjusteError("Thin Plate Spline necesita 3 puntos que no estén alineados "
+                              "y sin puntos repetidos.")
+
+    def __call__(self, p):
+        cx, cy, s = self.no
+        x, y = (p[0] - cx) * s, (p[1] - cy) * s
+        n = len(self.p)
+        X = self.wx[n] + self.wx[n + 1] * x + self.wx[n + 2] * y
+        Y = self.wy[n] + self.wy[n + 1] * x + self.wy[n + 2] * y
+        for k, (xi, yi) in enumerate(self.p):
+            u = _u((x - xi) ** 2 + (y - yi) ** 2)
+            X += self.wx[k] * u
+            Y += self.wy[k] * u
+        return X, Y
+
+
+class ThinPlateSpline(Modelo):
+    """La «goma»: cada punto va exacto a su destino (residuos cero) y la
+    imagen se estira suave entre ellos. La vuelta es otra spline con los
+    puntos al revés, como en GDAL."""
+
+    metodo = "tps"
+
+    def __init__(self, origen, destino):
+        self._origen, self._destino = list(origen), list(destino)
+        self._ida = _Spline(origen, destino)
+        self._vuelta = None
+
+    def directo(self, p):
+        return self._ida(p)
+
+    def inverso(self, p):
+        if self._vuelta is None:
+            self._vuelta = _Spline(self._destino, self._origen)
+        return self._vuelta(p)
+
+
+def _ajustar_deformante(metodo, origen, destino):
+    if len(set(origen)) != len(origen) or len(set(destino)) != len(destino):
+        raise AjusteError("Hay puntos repetidos: apagá uno de cada par repetido.")
+    if metodo == "proyectiva":
+        from itertools import combinations
+
+        for pts in (origen, destino):
+            if len(pts) == 4 and any(abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+                                     <= 1e-9 * max(1.0, math.dist(a, b) * math.dist(a, c))
+                                     for a, b, c in combinations(pts, 3)):
+                raise AjusteError("Proyectiva necesita 4 puntos sin 3 alineados.")
+        return Proyectiva(origen, destino)
+    if metodo == "tps":
+        return ThinPlateSpline(origen, destino)
+    return Polinomica(int(metodo[-1]), origen, destino)
+
+
+def ajustar(metodo: str, origen, destino):
     """Los 6 coeficientes (a, b, c, d, e, f) de X = a + b·x + c·y,
     Y = d + e·x + f·y que llevan ``origen`` (x, y) a ``destino`` (X, Y), por
     mínimos cuadrados, como QGIS:
       Lineal        escala en X y en Y por separado y desplazamiento, sin giro;
       Helmert       escala única, giro y desplazamiento (no deforma);
-      Polinómica 1  afín: escalas, giro y sesgo."""
+      Polinómica 1  afín: escalas, giro y sesgo.
+    Proyectiva, Polinómica 2-3 y Thin Plate Spline no entran en 6
+    coeficientes: devuelven un :class:`Modelo`."""
     if metodo not in METODOS:
         raise AjusteError(f"Método desconocido: {metodo}.")
     nombre, minimo, disponible = METODOS[metodo]
     if not disponible:
-        raise AjusteError(f"{nombre} llega en GeoCAD 3.19.0.")
+        raise AjusteError(f"{nombre} llega más adelante.")
     origen = [(float(x), float(y)) for x, y in origen]
     destino = [(float(x), float(y)) for x, y in destino]
     n = len(origen)
@@ -92,6 +369,8 @@ def ajustar(metodo: str, origen, destino) -> tuple:
         raise AjusteError("Hay distinta cantidad de puntos de origen y de destino.")
     if n < minimo:
         raise AjusteError(f"{nombre} necesita al menos {minimo} puntos habilitados (hay {n}).")
+    if metodo in REHACEN:
+        return _ajustar_deformante(metodo, origen, destino)
     mx = sum(p[0] for p in origen) / n
     my = sum(p[1] for p in origen) / n
     mX = sum(p[0] for p in destino) / n
@@ -136,12 +415,16 @@ def ajustar(metodo: str, origen, destino) -> tuple:
 
 
 def aplicar(coef, p) -> tuple:
+    if isinstance(coef, Modelo):
+        return coef.directo(p)
     a, b, c, d, e, f = coef
     x, y = p
     return (a + b * x + c * y, d + e * x + f * y)
 
 
 def inversa(coef):
+    if isinstance(coef, Modelo):
+        return coef.invertido()
     a, b, c, d, e, f = coef
     det = b * f - c * e
     ib, ic, ie, if_ = f / det, -c / det, -e / det, b / det
@@ -167,6 +450,8 @@ def error_medio(res, habilitados) -> float:
 
 def describir(coef) -> str:
     """Escala y giro que resultan, para el informe."""
+    if isinstance(coef, Modelo):
+        return "deforma la imagen: al transformar se rehace"
     _a, b, c, _d, e, f = coef
     sx, sy = math.hypot(b, e), math.hypot(c, f)
     giro = math.degrees(math.atan2(e, b))
@@ -203,12 +488,26 @@ def pixel_a_mundo(img, s) -> tuple:
     return aplicar(coef_imagen(img), s)
 
 
-def esquinas(img, coef=None) -> list:
+def esquinas(img, coef=None, tramos: int = 16) -> list:
     """Las 4 esquinas de la imagen en el dibujo (con ``coef``: donde
-    quedarían después de transformar)."""
+    quedarían después de transformar). Polinómica 2-3 y TPS curvan los
+    bordes: van ``tramos`` puntos por lado."""
     w, h = tamano(img)
     c = coef if coef is not None else coef_imagen(img)
-    return [aplicar(c, s) for s in ((0, 0), (w, 0), (w, -h), (0, -h))]
+    return [aplicar(c, s) for s in borde_pixeles(w, h, c, tramos)]
+
+
+def borde_pixeles(w, h, coef=None, tramos: int = 16) -> list:
+    """El contorno de la imagen en píxeles de QGIS: las 4 esquinas o, si
+    ``coef`` curva los bordes, ``tramos`` puntos por lado."""
+    vertices = ((0, 0), (w, 0), (w, -h), (0, -h))
+    if not isinstance(coef, Modelo) or isinstance(coef, Proyectiva):
+        return list(vertices)
+    out = []
+    for i in range(4):
+        (x0, y0), (x1, y1) = vertices[i], vertices[(i + 1) % 4]
+        out += [(x0 + (x1 - x0) * k / tramos, y0 + (y1 - y0) * k / tramos) for k in range(tramos)]
+    return out
 
 
 def marco(puntos) -> list:
@@ -224,13 +523,14 @@ def dentro(img, p) -> bool:
     return -EPS <= x <= w + EPS and -h - EPS <= y <= EPS
 
 
-def matriz(img, coef):
+def matriz(img, coef, alto=None):
     """La Matrix44 (dibujo -> dibujo) que lleva la imagen de donde está a
     donde la deja ``coef`` (píxel de QGIS -> dibujo). Va por TransformCommand
-    de IngeCAD: deshacer exacto y la imagen se redibuja sin regenerar."""
+    de IngeCAD: deshacer exacto y la imagen se redibuja sin regenerar.
+    ``alto``: el de la imagen rehecha (si no, el de la imagen)."""
     from ezdxf.math import Matrix44
 
-    _w, h = tamano(img)
+    h = float(alto) if alto is not None else tamano(img)[1]
     (ix, iy), (ux, uy), (vx, vy) = _base(img)
     a, b, c, d, e, f = coef
     nu, nv = (b, e), (c, f)                   # vectores nuevos por píxel
@@ -401,12 +701,14 @@ def escribir_mundo(ruta_imagen, coef, crs: str = "") -> list:
     return hechos
 
 
-def nombre_copia(ruta) -> Path:
+def nombre_copia(ruta, ext=None) -> Path:
     """«plano_georref.png» (o _georref2, 3...): nunca pisa nada, ni la
-    imagen ni su archivo de mundo, puntos o .aux.xml."""
+    imagen ni su archivo de mundo, puntos o .aux.xml. ``ext``: otra
+    extensión (la imagen rehecha con fondo transparente es PNG)."""
     ruta = Path(ruta)
+    ext = ext or ruta.suffix
     for i in range(1, 1000):
-        nueva = ruta.with_name(f"{ruta.stem}{SUFIJO_COPIA}{i if i > 1 else ''}{ruta.suffix}")
+        nueva = ruta.with_name(f"{ruta.stem}{SUFIJO_COPIA}{i if i > 1 else ''}{ext}")
         vecinos = (nueva, ruta_mundo(nueva), nueva.with_name(nueva.name + ".points"),
                    nueva.with_name(nueva.name + ".aux.xml"))
         if not any(v.exists() for v in vecinos):
@@ -437,17 +739,78 @@ def nombre_en_dibujo(copia, guardado, original) -> str:
     return str(copia)
 
 
+def _recargar_pixeles(handle) -> None:
+    """IngeCAD guarda la textura de cada IMAGE y, cuando la IMAGE cambia,
+    sólo corre las 4 esquinas de esa textura (nunca vuelve a leer el
+    archivo): con la imagen rehecha se veía la ORIGINAL, sin deformar, con
+    el tamaño de píxel nuevo. Después del comando (y de cada U o rehacer):
+    se oculta la textura vieja y se regenera, que lee el archivo nuevo. Sin
+    ventana (pruebas), nada."""
+    try:
+        from PySide6 import QtCore, QtWidgets
+    except Exception:  # noqa: BLE001
+        return
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        return
+
+    def hacer():
+        for w in app.topLevelWidgets():
+            vp = getattr(w, "viewport", None)
+            if vp is None or not hasattr(w, "regen_in_memory"):
+                continue
+            try:
+                vp.hide_handles([handle])
+            except Exception:  # noqa: BLE001
+                pass
+            (getattr(w, "regen_in_background", None) or w.regen_in_memory)()
+
+    # después de que IngeCAD termine con el comando: él vuelve a mostrar la
+    # textura vieja al correr sus esquinas
+    QtCore.QTimer.singleShot(0, hacer)
+
+
 class GeorrefCommand(actions.TransformCommand):
     """La imagen a su lugar y, con copia, apuntando al archivo nuevo. Es un
     TransformCommand: IngeCAD la redibuja al instante y un solo U deshace
-    las dos cosas (el archivo copiado queda en el disco)."""
+    las dos cosas (el archivo copiado queda en el disco). Con ``tamano``
+    (imagen rehecha, 3.21.0) cambia además su tamaño en píxeles y su recorte
+    vuelve al rectángulo entero; U devuelve los dos."""
 
-    def __init__(self, img, matrix, copia=None) -> None:
+    def __init__(self, img, matrix, copia=None, tamano=None, transparente=False) -> None:
         super().__init__("GEORREF", [img], matrix)
         self.img = img
         self.copia = copia                   # nombre a guardar en el IMAGEDEF nuevo
+        self.tamano = tamano
+        self.transparente = transparente     # imagen rehecha con fondo transparente
         self._def_antes = img.image_def
         self._def_nuevo = None
+        self._tam_antes = None
+
+    def _cambiar_tamano(self) -> None:
+        img = self.img
+        d = img.dxf
+        self._tam_antes = (tuple(d.image_size), list(img.boundary_path), d.get("flags", 0),
+                           d.get("clipping", 0), d.get("clipping_boundary_type", 1),
+                           d.get("count_boundary_points", 2))
+        d.image_size = (float(self.tamano[0]), float(self.tamano[1]))
+        img.reset_boundary_path()
+        if self.transparente:
+            # sin la marca «usar transparencia» el alfa no cuenta y el fondo se ve negro
+            img.set_flag_state(img.USE_TRANSPARENCY, state=True)
+
+    def _devolver_tamano(self) -> None:
+        if self._tam_antes is None:
+            return
+        img = self.img
+        size, borde, flags, clip, tipo, cuenta = self._tam_antes
+        img.dxf.image_size = size
+        img._boundary_path = list(borde)
+        img.dxf.flags = flags
+        img.dxf.clipping = clip
+        img.dxf.clipping_boundary_type = tipo
+        img.dxf.count_boundary_points = cuenta
+        self._tam_antes = None
 
     def _apuntar(self, imagedef) -> None:
         img = self.img
@@ -460,17 +823,24 @@ class GeorrefCommand(actions.TransformCommand):
 
     def do(self, document) -> None:
         super().do(document)
+        if self.tamano is not None and self.entities:
+            self._cambiar_tamano()
         if self.copia is not None and self.entities:
             if self._def_nuevo is None:
                 w, h = tamano(self.img)
                 self._def_nuevo = document.doc.add_image_def(
                     filename=str(self.copia), size_in_pixel=(int(w), int(h)))
             self._apuntar(self._def_nuevo)
+        if self.tamano is not None and self.entities:
+            _recargar_pixeles(self.img.dxf.handle)
 
     def undo(self, document) -> None:
         if self.copia is not None and self._def_antes is not None:
             self._apuntar(self._def_antes)
+        self._devolver_tamano()
         super().undo(document)
+        if self.tamano is not None and self.entities:
+            _recargar_pixeles(self.img.dxf.handle)
 
 
 # ------------------------------------------------------------- la tabla
@@ -521,7 +891,20 @@ def _metodo_de_texto(t: str):
         return "helmert"
     if t in ("P", "P1", "POL1", "POLINOMICA", "POLINOMICA1", "POLYNOMIAL1"):
         return "polinomica1"
+    if t in ("P2", "POL2", "POLINOMICA2", "POLYNOMIAL2"):
+        return "polinomica2"
+    if t in ("P3", "POL3", "POLINOMICA3", "POLYNOMIAL3"):
+        return "polinomica3"
+    if t in ("TPS", "THINPLATESPLINE", "SPLINE"):
+        return "tps"
+    if t in ("PR", "PROYECTIVA", "PROJECTIVE"):
+        return "proyectiva"
     return None
+
+
+def _remuestreo_de_texto(t: str):
+    t = t.upper().replace("Ú", "U")
+    return {"VECINO": "vecino", "BILINEAL": "lineal", "CUBICA": "cubica"}.get(t)
 
 
 # ------------------------------------------------------------- la orden
@@ -534,8 +917,9 @@ class GeorrefTool(Tool):
     REFERENCIAS = frozenset({"END", "MID", "INT", "NOD", "CEN"})
     PEDIDO_IMAGEN = ("Designe UNA imagen a ajustar (imágenes y vectores no se mezclan; "
                      "clic en la imagen o en su borde):")
-    PEDIDO_TABLA = ("Tabla de puntos [Lineal/Helmert/Polinómica1/Apagar n/Guardar/"
-                    "Marcar más/COPIA/COMO/MUNDO/DIBUJO/Transformar] <Transformar>:")
+    PEDIDO_TABLA = ("Tabla de puntos [Lineal/Helmert/Polinómica1/P2/P3/TPS/PRoyectiva/Apagar n/"
+                    "Guardar/Marcar más/COPIA/COMO/MUNDO/DIBUJO/VECINO/BILINEAL/CÚBICA/"
+                    "TRANSPARENTE/BLANCO/AMBOS/Transformar] <Transformar>:")
 
     def start(self) -> None:
         self.name = "GEORREF"
@@ -545,6 +929,8 @@ class GeorrefTool(Tool):
         self._tabla = False               # en la tabla (línea de comandos)
         self._metodo = _ultimo_metodo[0]
         self._salida = _ultima_salida[0]
+        self._remuestreo = _ultimo_remuestreo[0]
+        self._fondo = _ultimo_fondo[0]
         self._copia_en = None             # «Guardar copia geo como...»: dónde
         self.entity_picker = True
         s = self.ctx.services
@@ -736,6 +1122,8 @@ class GeorrefTool(Tool):
         self._metodo = r.get("metodo", self._metodo)
         _ultimo_metodo[0] = self._metodo
         self._salida = _ultima_salida[0] = r.get("salida", self._salida)
+        self._remuestreo = _ultimo_remuestreo[0] = r.get("remuestreo", self._remuestreo)
+        self._fondo = _ultimo_fondo[0] = r.get("fondo", self._fondo)
         if r.get("copia_en"):
             self._copia_en = Path(r["copia_en"])
         for p, on in zip(self._pares, r.get("habilitados", ())):
@@ -752,6 +1140,10 @@ class GeorrefTool(Tool):
         m = _metodo_de_texto(t)
         if m is not None:
             self._metodo = _ultimo_metodo[0] = m
+        elif (rm := _remuestreo_de_texto(t)) is not None:
+            self._remuestreo = _ultimo_remuestreo[0] = rm
+        elif t.lower() in FONDOS:
+            self._fondo = _ultimo_fondo[0] = t.lower()
         elif (num := re.fullmatch(r"(?:A|APAGAR|E|ENCENDER)\s*(\d+)", t)) is not None:
             i = int(num.group(1)) - 1               # A3 / APAGAR 3 / E3: apaga o prende el 3
             if not 0 <= i < len(self._pares):
@@ -784,8 +1176,13 @@ class GeorrefTool(Tool):
     def _mostrar_tabla(self) -> None:
         for linea in texto_tabla(self._pares, self._metodo):
             self.ctx.echo(linea)
-        self.ctx.echo(f"  Al transformar se guarda: {SALIDAS[self._salida]}.")
-        if self._salida == "copia" and self._copia_en is not None:
+        if self._metodo in REHACEN:
+            self.ctx.echo(f"  {METODOS[self._metodo][0]} deforma la imagen: se rehace en una copia "
+                          f"(remuestreo {REMUESTREOS[self._remuestreo]}; fondo "
+                          f"{FONDOS[self._fondo][0].lower() + FONDOS[self._fondo][1:]}).")
+        else:
+            self.ctx.echo(f"  Al transformar se guarda: {SALIDAS[self._salida]}.")
+        if (self._salida == "copia" or self._metodo in REHACEN) and self._copia_en is not None:
             self.ctx.echo(f"  Copia geo en: {self._copia_en}")
         self.prompt(self.PEDIDO_TABLA)
 
@@ -818,6 +1215,9 @@ class GeorrefTool(Tool):
             return
         coef = t["coef"]
         original = archivo_imagen(img, self._documento())
+        if self._metodo in REHACEN:
+            self._rehacer(img, coef, original, t["rms"])
+            return
         salida = self._salida
         if salida != "dibujo" and (original is None or not original.exists()):
             self.ctx.echo("GeoCAD Yaguareté: no se encuentra el archivo de la imagen; "
@@ -865,6 +1265,74 @@ class GeorrefTool(Tool):
                                   "QGIS la abre en su lugar.")
         self._guardar()
         self.ctx.finish()
+
+    def _rehacer(self, img, modelo, original, rms) -> None:
+        """Proyectiva, Polinómica 2-3, TPS: la imagen nueva (una o dos, según
+        el fondo), su archivo de mundo, y el dibujo pasa a usarla."""
+        import time
+
+        from . import georref_imagen as GI
+        from . import georref_progreso as GP
+
+        nombre = METODOS[self._metodo][0]
+        ventana = getattr(self.ctx.services, "window", None)
+        if original is None or not original.exists():
+            self.ctx.echo(f"GeoCAD Yaguareté: no se encuentra el archivo de la imagen; {nombre} "
+                          "necesita rehacerla. Elegí Lineal, Helmert o Polinómica 1.")
+            self._volver_a_tabla()
+            return
+        w, h = tamano(img)
+        mp = w * h / 1e6
+        with GP.Progreso(ventana, "GEORREF") as prog:
+            try:
+                salidas = GI.rutas(original, self._fondo, self._copia_en)
+                self.ctx.echo(f"Rehaciendo la imagen con {nombre}...")
+                t0 = time.monotonic()
+                coef, tam = prog.trabajo(
+                    f"1/2  Rehaciendo la imagen con {nombre}",
+                    lambda: GI.rehacer(original, salidas, modelo, self._remuestreo),
+                    GP.estimar(mp, len(salidas)))
+                GP.medir(tam[0] * tam[1] / 1e6, len(salidas), time.monotonic() - t0)
+            except (OSError, AjusteError, ValueError) as exc:
+                self.ctx.echo(f"GeoCAD Yaguareté: no se pudo rehacer la imagen ({exc}).")
+                prog.cerrar()
+                self._volver_a_tabla()
+                return
+            self._colocar(img, coef, tam, salidas, original, nombre, rms, prog, ventana)
+
+    def _colocar(self, img, coef, tam, salidas, original, nombre, rms, prog, ventana) -> None:
+        """La imagen rehecha en el dibujo (un solo U) y la pantalla al día."""
+        usada = salidas[0][0]
+        cmd = GeorrefCommand(img, matriz(img, coef, tam[1]),
+                             nombre_en_dibujo(usada, img.image_def.dxf.filename, original), tam,
+                             transparente=salidas[0][1] == "transparente")
+        if not cmd.entities:
+            self.ctx.echo("GeoCAD Yaguareté: IngeCAD no puede mover esta imagen.")
+            self.ctx.finish()
+            return
+        self.ctx.execute(cmd)
+        prog.regeneracion(ventana, img.dxf.handle)
+        n = sum(1 for p in self._pares if p["on"])
+        self.ctx.echo(f"Imagen rehecha con {nombre}: {n} puntos, error medio {_fmt(rms)}, "
+                      f"{tam[0]} x {tam[1]} píxeles. U la vuelve a como estaba.")
+        crs = crs_dibujo()
+        for ruta, fondo in salidas:
+            try:
+                hechos = escribir_mundo(ruta, coef, crs)
+            except OSError as exc:
+                self.ctx.echo(f"No se pudo escribir el archivo de mundo de {ruta.name}: {exc}")
+                continue
+            uso = "la usa el dibujo" if ruta == usada else "otra copia"
+            self.ctx.echo(f"  {ruta} (fondo {fondo}; {uso}) y {' y '.join(h.name for h in hechos)}.")
+        self.ctx.echo(f"{original.name} queda como estaba. QGIS abre la copia en su lugar.")
+        self._guardar()
+        self.ctx.finish()
+
+    def _volver_a_tabla(self) -> None:
+        if self._tabla:
+            self.prompt(self.PEDIDO_TABLA)
+        else:
+            self._abrir_tabla()
 
     # -- resaltado (lo dibuja dibujo.py) ---------------------------------------
     def _flecha(self, a, b, punta) -> list:

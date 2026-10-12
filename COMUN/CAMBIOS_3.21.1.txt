@@ -1,0 +1,27 @@
+GeoCAD - versión 3.21.1
+=======================
+CORRECCIÓN (IngeCAD): la imagen rehecha por GEORREF (12/10/2026, prueba de
+Fernando con Thin Plate Spline y 4 puntos: «pasa la prueba después de
+regenerar la pantalla»).
+
+Lo que pasaba
+1. Al transformar se veía la imagen ORIGINAL, sin deformar, corrida y con
+   otro tamaño; recién al regenerar aparecía la deformada. IngeCAD guarda la
+   textura de cada imagen y, cuando una imagen cambia, sólo corre sus 4
+   esquinas: nunca volvía a leer el archivo nuevo.
+2. Con fondo transparente, alrededor de la imagen deformada se veía NEGRO:
+   la imagen tenía apagada la marca «usar transparencia» del DXF, y sin ella
+   no cuenta la transparencia del PNG.
+
+Lo que cambia
+- Después de Transformar (y de cada U o rehacer) GeoCAD oculta la textura
+  vieja y regenera solo («Regenerando...»): la imagen aparece deformada sin
+  hacer nada.
+- Con fondo transparente, la imagen queda con «usar transparencia»
+  prendida (U la deja como estaba). El fondo transparente es ahora blanco
+  con transparencia: un programa que no la use lo muestra blanco, no negro.
+
+Pruebas
+- test_georref: la marca de transparencia (prendida con fondo
+  transparente, apagada con blanco y después de U) y el color del fondo.
+  Las 38 pruebas pasan con IngeCAD 0.6.7.
