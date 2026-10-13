@@ -74,9 +74,14 @@ P = sys.modules["ingecad_plugin_geocad"]
 Mi = sys.modules["ingecad_plugin_geocad.modulos"]
 spec = mgr.loaded["geocad"].spec
 todo = items(spec.menu)
-for c in ("QGISSAVE", "SHPTABLE", "SHPCONNECT", "ANGREL", "RIGHTCLICK", "GEOCADMODULES", "SHPCONFIG",
+for c in ("QGISEXPORT", "SHPTABLE", "SHPCONNECT", "ANGREL", "RIGHTCLICK", "GEOCADMODULES", "SHPCONFIG",
           "QGISUPDATE", "GEOCADABOUT"):
     assert c in todo, c
+# 3.21.4: «Devolver todo» y «Devolver la selección» salen del menú y de la barra
+# (siguen como órdenes); «capas nuevas» se queda con el ícono de QGIS
+assert "QGISSAVE" not in todo and "QGISSAVESEL" not in todo
+assert not {"QGISSAVE", "QGISSAVESEL"} & {t.command for t in spec.toolbar}
+assert {"QGISSAVE", "QGISSAVESEL"} <= set(spec.tools)
 assert spec.toolbar and "SHPTABLE" in spec.tools and spec.name == "GeoCAD Yaguareté"
 # apagar Datos: sin barra, sin submenú, sin comandos de Datos; el Puente sigue
 Mi.guardar("ingecad", {"datos": False}); host.calls.clear(); P.aplicar_modulos(host)
@@ -86,7 +91,7 @@ assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec
-assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO"} and "QGISSAVE" not in items(spec.menu)
+assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO"} and "QGISEXPORT" not in items(spec.menu)
 assert {"GEOCADMODULES", "QGISUPDATE", "GEOCADABOUT", "ANGREL"} <= set(spec.commands)
 # GEOCADMODULES sin ventana: informa; ACERCAGEOCAD dice la versión y los módulos
 log = []; ctx = types.SimpleNamespace(host=None, echo=log.append)

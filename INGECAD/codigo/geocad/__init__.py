@@ -35,7 +35,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.21.3"
+VERSION = "3.21.4"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -182,9 +182,7 @@ def construir_spec() -> PluginSpec:
         tools.update({k: v for k, v in TOOL_CLASSES.items()
                       if k != "SHPCONFIG" and k not in DATA_TOOLS})
         menu += [
-            MenuItem("Send everything back to QGIS", "QGISSAVE", _qgis_icon()),
-            MenuItem("Send selection back to QGIS", "QGISSAVESEL", _icon("devolver_seleccion")),
-            MenuItem("Send selection to QGIS as new layers", "QGISEXPORT", _icon("enviar_qgis")),
+            MenuItem("Send selection to QGIS as new layers", "QGISEXPORT", _qgis_icon()),
             SEPARATOR,
         ]
     if est["datos"]:
@@ -212,9 +210,7 @@ def construir_spec() -> PluginSpec:
             ToolbarItem("Thematic map...", "SHPTHEME", _icon("tematico")),
             ToolbarItem("Labels from a field...", "SHPLABEL", _icon("rotulos")),
             ToolbarItem("New feature with form...", "SHPNEW", _icon("nuevo")),
-            ToolbarItem("Send selection back to QGIS", "QGISSAVESEL", _icon("devolver_seleccion")),
-            ToolbarItem("Send everything back to QGIS", "QGISSAVE", _qgis_icon()),
-            ToolbarItem("Send selection to QGIS as new layers", "QGISEXPORT", _icon("enviar_qgis")),
+            ToolbarItem("Send selection to QGIS as new layers", "QGISEXPORT", _qgis_icon()),
         ]
     if est["puente"]:
         menu += [
@@ -291,7 +287,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.21.3",
+        version="3.21.4",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

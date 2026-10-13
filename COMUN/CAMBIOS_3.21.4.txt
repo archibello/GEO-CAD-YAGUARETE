@@ -1,0 +1,18 @@
+GeoCAD - versión 3.21.4
+=======================
+CORRECCIÓN (IngeCAD): menú y barra GeoCAD Yaguareté con un solo envío a QGIS
+(13/10/2026, pedido de Fernando con una captura del menú).
+
+Lo que cambia
+- El menú GeoCAD Yaguareté y la barra GeoCAD dejan sólo «Enviar la selección
+  a QGIS como capas nuevas» (ENVIARQGIS), ahora con el ícono de QGIS.
+- «Devolver todo a QGIS» y «Devolver la selección a QGIS» salen del menú y
+  de la barra. No se borran: siguen disponibles escribiendo DEVOLVERQGIS y
+  DEVOLVERSEL, y el submenú Puente sigue igual.
+
+Pruebas
+- test_modulos: ni el menú ni la barra tienen QGISSAVE / QGISSAVESEL, que
+  siguen como órdenes; ENVIARQGIS está en el menú.
+- test_aqgis: el botón de ENVIARQGIS usa el ícono de QGIS.
+- Pasan todas menos test_georref, que falla dentro de IngeCAD (deshacer una
+  transformación con el ezdxf de desarrollo); no tiene relación con este cambio.

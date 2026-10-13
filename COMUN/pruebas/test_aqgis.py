@@ -26,6 +26,7 @@ assert "QGISEXPORT" in spec.tools
 botones = [t.command for t in spec.toolbar]
 assert "QGISEXPORT" in botones and barra.TEMAS["QGISEXPORT"] == "puente"
 assert all(Path(t.icon).exists() for t in spec.toolbar if t.command == "QGISEXPORT")
+assert all(Path(t.icon).name == Path(import_module("ingecad_plugin_geocad")._qgis_icon()).name for t in spec.toolbar if t.command == "QGISEXPORT")
 assert "QGISEXPORT" in yag.DESCRIPCIONES
 import json
 gd = RAIZ / "INGECAD" / "codigo" / "geocad" / "i18n" / "es"
