@@ -54,6 +54,5 @@
   "Dimensions": "Cotas",
   "Bring to front (DRAWORDER)": "Traer al frente (ALFRENTE)",
   "Send to back (DRAWORDER)": "Enviar al fondo (ALFONDO)",
-  "Paste table (PASTETABLE)": "Pegar tabla (PEGARTABLA)",
-  "Paste table from QGIS (PASTEQGIS)": "Pegar desde QGIS (PEGARDESDEQGIS)"
+  "Paste table (PASTETABLE)": "Pegar tabla (PEGARTABLA)"
 }

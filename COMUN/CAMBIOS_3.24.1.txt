@@ -1,0 +1,23 @@
+GeoCAD - versión 3.24.1
+=======================
+UN SOLO BOTÓN PARA PEGAR TABLAS (14/10/2026, sugerencia de Fernando: «si las
+dos herramientas están habilitadas a pegar desde ambas plataformas, estamos
+duplicando... dejemos una sola que cumple ambas funciones»).
+
+IngeCAD
+- Se saca «Pegar desde QGIS» (PEGARDESDEQGIS) de la barra y del menú
+  GeoCAD: hacía lo mismo que Pegar tabla.
+- «Pegar tabla» (PEGARTABLA) pega todo: GenOffice, Calc, Excel, filas de
+  la tabla de atributos de QGIS y tablas copiadas de una composición
+  («Copiar tabla» en QGIS). Ahora lleva el ícono de la tablita que viene
+  de QGIS (con el ícono de QGIS que publica su complemento al abrirse).
+- Quien escriba PASTEQGIS llega a Pegar tabla.
+
+QGIS: sin cambios en el uso (el aviso de «Copiar tabla» ahora dice «En
+IngeCAD: Pegar tabla»).
+
+Pruebas
+- test_tablas: un solo botón (sin GEOPASTEQGIS), con el ícono de la
+  tablita; PASTEQGIS lleva a Pegar tabla.
+- test_modulos: la lista de la barra sin el segundo botón.
+- Pasan TODAS (41) con IngeCAD 0.6.7 y con 0.6.6.

@@ -20,7 +20,7 @@ TEMAS = {
     "BLOCK": "bloques", "INSERT": "bloques", "GEOREFEDIT": "bloques", "GEOBLOCKBASE": "bloques",
     "SELECT": "seleccion", "GEOFILTER": "seleccion",
     "GEOPREVIEW": "impresion", "GEOPLOTSTYLES": "impresion",
-    "GEOPASTETABLE": "tablas", "GEOPASTEQGIS": "tablas",
+    "GEOPASTETABLE": "tablas",
     "GEODIMSETUP": "cotas", "DIMLINEAR": "cotas", "DIMALIGNED": "cotas", "DIMANGULAR": "cotas",
     "SHPTABLE": "datos", "SHPQUERY": "datos", "SHPSPATIAL": "datos", "SHPTHEME": "datos",
     "SHPLABEL": "datos", "SHPNEW": "datos",

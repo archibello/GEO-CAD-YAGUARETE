@@ -30,13 +30,13 @@ from .empalme import EmpalmeTool
 from .estirar import EstirarTool
 from .texto import TextoTool
 from .partir import PartirTool
-from .pegartabla import PegarDesdeQgisTool, PegarTablaTool
+from .pegartabla import PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.24.0"
+VERSION = "3.24.1"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -52,8 +52,9 @@ def _qgis_icon():
 
 
 def _qgis_table_icon():
-    """«Pegar desde QGIS»: una tablita que viene de QGIS. Lleva el ícono de
-    QGIS que publica su complemento al abrirse; sin él, el dibujo de reserva."""
+    """El ícono de Pegar tabla (3.24.1): una tablita que viene de QGIS. Lleva
+    el ícono de QGIS que publica su complemento al abrirse; sin él, el dibujo
+    de reserva."""
     base = _icon("pegar_qgis")
     logo = buzon.icon_path("qgis")
     if base is None or not logo.exists():
@@ -159,9 +160,8 @@ def construir_spec() -> PluginSpec:
         tools["GEOTEXT"] = TextoTool
     if est["tablas"]:
         tools["GEOPASTETABLE"] = PegarTablaTool
-        tools["GEOPASTEQGIS"] = PegarDesdeQgisTool
         aliases.update({"PASTETABLE": "GEOPASTETABLE", "PT": "GEOPASTETABLE",
-                        "PASTEQGIS": "GEOPASTEQGIS"})
+                        "PASTEQGIS": "GEOPASTETABLE"})
     if est["georref"]:
         tools["GEORREF"] = georref.GeorrefTool
         tools["INSERTARGEO"] = imagengeo.InsertarGeoTool
@@ -191,9 +191,7 @@ def construir_spec() -> PluginSpec:
     if est["seleccion"] and "GEOFILTER" in tools:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
     if est["tablas"]:
-        toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")))
-        toolbar.append(ToolbarItem("Paste table from QGIS (PASTEQGIS)", "GEOPASTEQGIS",
-                                   _qgis_table_icon()))
+        toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()))
     if est["orden"]:
         commands.update(orden.COMMANDS)
         toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
@@ -268,8 +266,7 @@ def construir_spec() -> PluginSpec:
               MenuItem("Insert georeferenced image (INSERTARGEO)", "INSERTARGEO", _icon("insertar_geo")),
               MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")))
              if est["georref"] else ())
-          + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")),
-              MenuItem("Paste table from QGIS (PASTEQGIS)", "GEOPASTEQGIS", _qgis_table_icon()))
+          + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()),)
              if est["tablas"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
@@ -323,7 +320,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.24.0",
+        version="3.24.1",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

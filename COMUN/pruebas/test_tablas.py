@@ -207,19 +207,13 @@ finally:
 assert "GEOPASTETABLE" not in apagado.tools and "GEOPASTETABLE" not in [x.command for x in apagado.toolbar]
 assert "GEOPASTETABLE" not in set(comandos_menu(apagado.menu))
 
-# ================================================================ Pegar desde QGIS (3.24.0)
-assert spec.tools["GEOPASTEQGIS"] is PT.PegarDesdeQgisTool
-assert issubclass(PT.PegarDesdeQgisTool, PT.PegarTablaTool)
-assert spec.aliases["PASTEQGIS"] == "GEOPASTEQGIS" and barra.TEMAS["GEOPASTEQGIS"] == "tablas"
-assert botones.index("GEOPASTEQGIS") == botones.index("GEOPASTETABLE") + 1   # al lado
-item = next(x for x in spec.toolbar if x.command == "GEOPASTEQGIS")
-assert item.icon and Path(item.icon).exists() and "GEOPASTEQGIS" in yag.DESCRIPCIONES
-assert Path(item.icon).name == "pegar_qgis.png"
-assert "GEOPASTEQGIS" in set(comandos_menu(spec.menu))
-assert json.loads((es / "ui.json").read_text())["Paste table from QGIS (PASTEQGIS)"] == \
-    "Pegar desde QGIS (PEGARDESDEQGIS)"
-assert json.loads((es / "commands.json").read_text())["GEOPASTEQGIS"]["name"] == "PEGARDESDEQGIS"
-assert "GEOPASTEQGIS" not in apagado.tools and "GEOPASTEQGIS" not in [x.command for x in apagado.toolbar]
+# ================================================================ un solo botón (3.24.1)
+assert spec.aliases["PASTEQGIS"] == "GEOPASTETABLE"
+assert "GEOPASTEQGIS" not in spec.tools and "GEOPASTEQGIS" not in botones
+assert "GEOPASTEQGIS" not in set(comandos_menu(spec.menu))
+assert not hasattr(PT, "PegarDesdeQgisTool")
+item = next(x for x in spec.toolbar if x.command == "GEOPASTETABLE")
+assert Path(item.icon).name == "pegar_qgis.png"          # la tablita que viene de QGIS
 # con el ícono de QGIS publicado por su complemento: la tablita lleva ese ícono
 ini = import_module("ingecad_plugin_geocad")
 buz = import_module("ingecad_plugin_geocad.buzon")
@@ -236,14 +230,6 @@ assert Path(ini._qgis_table_icon()).name == "pegar_qgis.png"           # el de r
 fuente = Path(PT.__file__).read_text(encoding="utf-8")
 assert "    modo_tabla.setChecked(True)" in fuente
 assert "(modo_dibujo if col_geo >= 0 else modo_tabla).setChecked(True)" not in fuente
-# avisa si lo copiado no viene de QGIS, y pega igual
-_log = []
-_ctx = types.SimpleNamespace(echo=_log.append)
-_h = PT.PegarDesdeQgisTool.__new__(PT.PegarDesdeQgisTool); _h.ctx = _ctx
-_h.avisar_origen(T.tabla_de_filas([["a"]], "excel"))
-_h.avisar_origen(T.tabla_de_filas([["a"]], "qgis"))
-_h.avisar_origen(T.tabla_de_filas([["a"]], "qgis_composicion"))
-assert len(_log) == 1 and "no viene de QGIS" in _log[0] and "Excel" in _log[0], _log
 
 # ================================================================ MTEXT con formato
 tx = T.Texto(0, 0, "centro", "medio", 2.5, "a{b}\\c\nsegunda", "Arial", True, False, True)

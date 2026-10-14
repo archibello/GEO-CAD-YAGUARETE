@@ -28,9 +28,9 @@ Un solo botón que mira el portapapeles y reconoce de dónde viene lo copiado
 
 La ventana arranca siempre COMO TABLA, también con lo de QGIS (3.24.0: lo
 de QGIS se pega como lo de una planilla; el dibujo, si se elige).
-PEGARDESDEQGIS (GEOPASTEQGIS, 3.24.0) es el mismo PEGARTABLA con su propio
-botón (una tablita que viene de QGIS): filas de la tabla de atributos o una
-tabla de una composición («Copiar tabla» en QGIS, con su formato).
+Un solo botón para todo (3.24.1), con el ícono de una tablita que viene de
+QGIS: planillas, filas de la tabla de atributos o una tabla de una
+composición («Copiar tabla» en QGIS, con su formato).
 
 Sin Qt sólo quedan las cuentas (comando_tabla, comando_dibujo): las pruebas
 las usan sin abrir ventanas.
@@ -467,7 +467,8 @@ class PegarTablaTool(Tool):
 
     NOMBRE = "GEOPASTETABLE"
     SIN_TABLA = ("GeoCAD Yaguareté: el portapapeles no tiene una tabla. Copie celdas en "
-                 "GenOffice, Calc o Excel, o filas de la tabla de atributos de QGIS (Ctrl+C).")
+                 "GenOffice, Calc o Excel, filas de la tabla de atributos de QGIS (Ctrl+C) "
+                 "o una tabla de una composición («Copiar tabla» en QGIS).")
 
     def start(self) -> None:
         self.name = self.NOMBRE
@@ -477,16 +478,12 @@ class PegarTablaTool(Tool):
             self.ctx.echo(self.SIN_TABLA)
             self.ctx.finish()
             return
-        self.avisar_origen(tabla)
         window = getattr(self.ctx.services, "window", None)
         opciones = pedir_opciones(window, tabla)
         if not opciones:
             self.ctx.finish()
             return
         self.empezar(tabla, opciones, getattr(window, "document", None))
-
-    def avisar_origen(self, tabla) -> None:
-        pass
 
     def empezar(self, tabla, opciones: dict, document) -> None:
         """Después de la ventana (las pruebas llaman acá directamente)."""
@@ -591,23 +588,6 @@ class PegarTablaTool(Tool):
         self.ctx.echo(f"Tabla de {self._nombre} pegada: {a.ancho_mm * kx:.3g} × {a.alto_mm * ky:.3g} "
                       f"unidades, {len(a.textos)} texto(s), en la capa {capa} (un grupo). U la quita.")
         self.ctx.finish()
-
-
-class PegarDesdeQgisTool(PegarTablaTool):
-    """PEGARDESDEQGIS (3.24.0): el mismo PEGARTABLA, con el botón de la tablita
-    que viene de QGIS. Filas de la tabla de atributos (Ctrl+C) o una tabla de
-    una composición («Copiar tabla» en su barra GeoCAD Yaguareté)."""
-
-    NOMBRE = "GEOPASTEQGIS"
-    SIN_TABLA = ("GeoCAD Yaguareté: el portapapeles no tiene una tabla. En QGIS, copie filas "
-                 "de la tabla de atributos (Ctrl+C) o use «Copiar tabla» en la barra GeoCAD "
-                 "Yaguareté de la composición.")
-
-    def avisar_origen(self, tabla) -> None:
-        if not tabla.origen.startswith("qgis"):
-            nombre = tablas.ORIGENES.get(tabla.origen, tabla.origen)
-            self.ctx.echo(f"GeoCAD Yaguareté: lo copiado no viene de QGIS (viene de {nombre}); "
-                          "se pega igual.")
 
 
 def pedir_opciones(window, tabla):

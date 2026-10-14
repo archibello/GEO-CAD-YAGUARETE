@@ -25,7 +25,7 @@ grilla). Se deshace de una vez (Ctrl+Z).
 COPIAR TABLA (3.24.0): el camino inverso. Un segundo botón en la misma barra
 deja en el portapapeles la tabla elegida en la composición (una tabla
 manual o una tabla de atributos) con su formato: HTML (tablas.a_html) y
-texto con tabulaciones. Se pega en IngeCAD (PEGARTABLA o PEGARDESDEQGIS),
+texto con tabulaciones. Se pega en IngeCAD (PEGARTABLA),
 GenOffice, Calc, Excel o en otra composición. El Ctrl+C de la composición
 no sirve para esto: copia el elemento, no los valores de la tabla.
 
@@ -808,7 +808,7 @@ class TablasComposicion:
         al_portapapeles(tabla)
         extra = " (había varias elegidas: se copió la primera)" if len(elegidas) > 1 else ""
         self._aviso(designer, f"Tabla copiada: {tabla.n_filas} fila(s) × {tabla.n_cols} "
-                              f"columna(s), con su formato{extra}. En IngeCAD: «Pegar desde QGIS».",
+                              f"columna(s), con su formato{extra}. En IngeCAD: «Pegar tabla».",
                     "ok")
 
     def _aviso_principal(self, texto, nivel="warn"):
