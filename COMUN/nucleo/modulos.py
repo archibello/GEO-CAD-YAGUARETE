@@ -122,6 +122,12 @@ CATALOGO = {
                "«Acot-100-6mm»). Los botones de medir (lineal, alineada, angular) "
                "acotan con él y cada cota cae en su capa «COTAS Acot-100-6mm».",
                cambia_programa=True),
+        Modulo("tablas", "Tablas: Pegar tabla (PEGARTABLA)",
+               "Pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS: "
+               "reconoce de dónde viene. Como tabla, con el formato de la planilla (anchos, "
+               "combinadas, letras, colores y espesor de los bordes), ubicada con dos puntos "
+               "que le dan la escala, en el modelo o en el papel; o como dibujo y textos "
+               "(la geometría de QGIS en su lugar, con rótulos)."),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),

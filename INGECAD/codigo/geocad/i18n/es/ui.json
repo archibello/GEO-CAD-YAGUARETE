@@ -53,5 +53,6 @@
   "Angular dimension (DIMANGULAR)": "Medir: cota angular (ACOANGULAR)",
   "Dimensions": "Cotas",
   "Bring to front (DRAWORDER)": "Traer al frente (ALFRENTE)",
-  "Send to back (DRAWORDER)": "Enviar al fondo (ALFONDO)"
+  "Send to back (DRAWORDER)": "Enviar al fondo (ALFONDO)",
+  "Paste table (PASTETABLE)": "Pegar tabla (PEGARTABLA)"
 }

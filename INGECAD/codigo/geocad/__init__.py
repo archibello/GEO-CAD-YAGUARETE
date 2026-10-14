@@ -24,18 +24,19 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import barra, bloques, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
 from .texto import TextoTool
 from .partir import PartirTool
+from .pegartabla import PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.21.4"
+VERSION = "3.22.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -133,6 +134,9 @@ def construir_spec() -> PluginSpec:
         tools["GEOMATCHPROP"] = igualar.IgualarTool
     if est["texto"]:
         tools["GEOTEXT"] = TextoTool
+    if est["tablas"]:
+        tools["GEOPASTETABLE"] = PegarTablaTool
+        aliases.update({"PASTETABLE": "GEOPASTETABLE", "PT": "GEOPASTETABLE"})
     if est["georref"]:
         tools["GEORREF"] = georref.GeorrefTool
         tools["INSERTARGEO"] = imagengeo.InsertarGeoTool
@@ -161,6 +165,8 @@ def construir_spec() -> PluginSpec:
         toolbar.append(ToolbarItem("Select objects (SEL)", "SELECT", _icon("seleccionar")))
     if est["seleccion"] and "GEOFILTER" in tools:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
+    if est["tablas"]:
+        toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")))
     if est["orden"]:
         commands.update(orden.COMMANDS)
         toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
@@ -235,6 +241,8 @@ def construir_spec() -> PluginSpec:
               MenuItem("Insert georeferenced image (INSERTARGEO)", "INSERTARGEO", _icon("insertar_geo")),
               MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")))
              if est["georref"] else ())
+          + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")),)
+             if est["tablas"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
              if est["orden"] else ())
@@ -287,7 +295,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.21.4",
+        version="3.22.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -339,5 +347,6 @@ texto.instalar()
 bloques.instalar_referencias()
 orden.instalar()
 uniones.instalar()
+pegartabla.instalar()
 barra.instalar()
 PLUGIN = construir_spec()

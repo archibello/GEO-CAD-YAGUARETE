@@ -122,5 +122,8 @@
   },
   "GEODRAWBACK": {
     "name": "ALFONDO"
+  },
+  "GEOPASTETABLE": {
+    "name": "PEGARTABLA"
   }
 }

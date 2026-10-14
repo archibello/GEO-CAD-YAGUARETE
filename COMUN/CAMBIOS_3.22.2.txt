@@ -1,0 +1,27 @@
+GeoCAD - versión 3.22.2
+=======================
+CORRECCIÓN (IngeCAD): PEGAR TABLA, el segundo punto lleva la esquina inferior
+derecha de la tabla hasta el clic final (14/10/2026, pedido de Fernando al
+probar la 3.22.1: «para pasar la prueba, que al insertar el segundo punto no
+quede liberado al desplazamiento del cursor»).
+
+Lo que cambia
+- Después del primer punto, la esquina inferior derecha de la tabla
+  previsualizada queda EN el cursor (o en la referencia a objetos que se
+  enganche) hasta el clic: la tabla llena el rectángulo entre los dos
+  puntos, como el TABLE de AutoCAD ubicado por ventana. Columnas y filas se
+  estiran a lo ancho y a lo alto; los textos no se deforman: toman la
+  escala menor de las dos, así siempre entran en sus celdas. Sirve para
+  encajar la tabla justo en un recuadro (una celda del cajetín, un marco).
+- Marcas cuadradas en el primer punto y en la esquina que sigue al cursor.
+  Ya no hace falta la línea elástica: la esquina es el cursor.
+- Hacia arriba o a la izquierda del primer punto también llena el
+  rectángulo. Sin alto (o sin ancho) queda proporcional; Enter en el segundo
+  punto, el tamaño natural, como antes.
+
+Pruebas
+- test_tablas: la vista previa con la esquina en el cursor (2 x ancho y
+  4 x alto), la marca centrada en el cursor, el rectángulo hacia arriba e
+  izquierda, sin alto proporcional, sin tamaño natural; pegada con la
+  esquina en el segundo punto y los textos con la escala menor.
+- Pasan TODAS con IngeCAD 0.6.7 y con 0.6.6.

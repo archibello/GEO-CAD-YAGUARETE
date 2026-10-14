@@ -1,0 +1,57 @@
+GeoCAD - versión 3.22.0
+=======================
+FUNCIÓN NUEVA (IngeCAD): PEGAR TABLA, módulo nuevo «Tablas» (14/10/2026,
+pedido de Fernando). Propuesta completa en propuesta_tablas/.
+
+Lo que cambia
+- Botón «Pegar tabla (PEGARTABLA)» en la barra GeoCAD (tema propio) y en el
+  menú GeoCAD Yaguareté. También se escribe PEGARTABLA, PASTETABLE o PT.
+- Mira el portapapeles y reconoce de dónde viene lo copiado: GenOffice,
+  QGIS (Ctrl+C en la tabla de atributos), LibreOffice Calc, Excel, Google
+  Sheets o texto suelto / CSV. La ventana dice el origen, las filas y
+  columnas, si trae formato y si trae geometría.
+- COMO TABLA: se eligen las columnas que van. Con «Respetar el formato de la
+  planilla» (lo que trae GenOffice): ancho de cada columna, alto de cada
+  fila, celdas combinadas, fuente, tamaño, negrita, cursiva, subrayado,
+  color del texto, color de fondo (sombreado sólido), alineación y el
+  espesor de cada borde, que va al grosor de línea más cercano (0,5 pt ->
+  0,18 mm, 1 pt -> 0,35 mm). Los textos son MTEXT con la fuente escrita
+  adentro, como los del editor de texto. Sin formato (QGIS, texto): estilo
+  GeoCAD con la altura elegida, grilla completa y encabezado en negrita;
+  los números a la derecha y los códigos como «0001» a la izquierda.
+- Se ubica con DOS PUNTOS: la esquina superior izquierda y la esquina
+  opuesta, que le da la escala (el alto sigue en proporción, los textos no
+  se deforman). La tabla se ve siguiendo al cursor y creciendo con el
+  segundo punto. Enter en el segundo punto deja el tamaño natural: en una
+  presentación, los mm de la planilla en mm de hoja (respeta la escala de
+  la hoja del módulo Papel); en el modelo, a la escala elegida (1:100 de
+  entrada, o la de la Configuración común).
+- Queda en la capa GEOCAD-TABLAS (se puede cambiar), como un grupo
+  (TABLA1, TABLA2...): un clic elige la tabla entera. U la quita entera,
+  con la capa si la había creado.
+- COMO DIBUJO Y TEXTOS: lo copiado de la tabla de atributos de QGIS trae la
+  geometría (wkt_geom): cada objeto se dibuja en su lugar (polígonos con
+  sus agujeros, líneas, puntos) con el rótulo de las columnas marcadas,
+  dentro del polígono aunque tenga forma de C. También lo copiado «como
+  GeoJSON». Una planilla con columnas X / Y (o Este / Norte) da puntos con
+  su rótulo. Capa GEOCAD-PEGADO.
+- Núcleo común nuevo COMUN/nucleo/tablas.py (sin Qt), copiado a los dos
+  lados: lo usará también QGIS (3.23.0, Pegar tabla en las composiciones).
+
+Pruebas
+- test_tablas (nueva): origen de GenOffice (con el HTML real de la sonda,
+  datos inventados), Google, QGIS, LibreOffice, Excel y texto; formato de
+  GenOffice (anchos, altos, combinadas, negrita, cursiva, color, fondo,
+  alineación, bordes con su espesor); LibreOffice con atributos sueltos y
+  Excel con hoja de estilo; CSV; WKT y GeoJSON de QGIS (agujeros, Z, C);
+  armado (cada borde una vez con el más grueso, nada por dentro de las
+  combinadas); el botón, el menú, la traducción y el módulo apagado;
+  pegar en el modelo con dos puntos (escala, grosores, MTEXT con fuente y
+  color, sombreado, grupo, U) y con Enter; en el papel (mm de hoja y hoja
+  en metros); como dibujo y textos (polígonos, línea, punto, rótulos, fila
+  sin geometría, X / Y); los textos se dibujan en pantalla; sin tabla en
+  el portapapeles avisa.
+- test_modulos: el módulo Tablas en el catálogo, la barra y los nuevos.
+- La ventana se probó con el Qt de IngeCAD 0.6.7 (sin pantalla): lee el
+  portapapeles y devuelve las opciones de las dos maneras.
+- Pasan TODAS (39) con IngeCAD 0.6.7 y con 0.6.6.

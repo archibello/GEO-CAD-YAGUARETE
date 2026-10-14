@@ -1,0 +1,35 @@
+GeoCAD - versión 3.22.1
+=======================
+CORRECCIÓN (IngeCAD): PEGAR TABLA con vista previa de líneas hasta el segundo
+punto, marcas en los puntos de inserción, y X (DESCOMPONER) que separa la
+tabla en líneas y textos (14/10/2026, pedidos de Fernando al probar la
+3.22.0: «funcionaron, pero se podrían mejorar aún más»).
+
+Lo que cambia
+- Mientras se eligen los dos puntos, la tabla se ve con sus LÍNEAS (pedido
+  de Fernando: «la vista previa puede armarse sólo con las líneas»): antes
+  del primer punto, con la esquina superior izquierda en el cursor y el
+  tamaño natural; después, desde el primer punto y creciendo con el cursor
+  hasta que se confirma el segundo. En la 3.22.0 la vista previa se perdía
+  después del primer clic (IngeCAD no rehace el fantasma de una orden que
+  cambia lo que muestra).
+- Una marca cuadrada en cada punto de inserción (la esquina superior
+  izquierda y, con el segundo punto, la esquina opuesta) y la línea elástica
+  desde el primer punto.
+- La vista previa se ancla al punto que da la referencia a objetos activa
+  (Punto final, Intersección...), no al cursor suelto: se ve dónde cae la
+  tabla antes del clic.
+- X (DESCOMPONER) sobre una tabla pegada (alcanza con elegir una parte):
+  saca el grupo y borra los fondos; quedan SÓLO sus líneas y textos
+  sueltos, cada uno con su capa, grosor, fuente y color («como resultado
+  final sólo líneas y textos»; «nada de sombreados y fondos al explotar»).
+  Lo demás que se haya elegido se descompone como siempre. U vuelve a armar
+  la tabla con sus fondos. Con el módulo Tablas apagado, X como venía.
+
+Pruebas
+- test_tablas: X sobre una parte de la tabla y una polilínea (sólo líneas y
+  textos, sin fondos, la polilínea descompuesta, U lo vuelve todo); X sin
+  tablas y con el módulo apagado, como venía.
+- test_tablas: la vista previa antes y después del primer punto (líneas en
+  su lugar y con su escala, marcas, línea elástica); sin fantasma.
+- Pasan TODAS con IngeCAD 0.6.7 y con 0.6.6.
