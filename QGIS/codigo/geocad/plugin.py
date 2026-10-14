@@ -37,7 +37,7 @@ from . import actualizar, bloqueo, buzon, config, desde_ingecad, modulos, nombre
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.23.1"
+VERSION = "3.24.0"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -183,6 +183,8 @@ class GeoCAD:
             self.menu.addSeparator()
             add("pegartabla", "Pegar tabla en la composición (GenOffice, Calc, Excel, QGIS)...",
                 self.tablas.pegar_menu, self.tablas.icono())
+            add("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
+                self.tablas.copiar_menu, self.tablas.icono_copiar())
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
         add("config", "Configuración común...", self.open_config)

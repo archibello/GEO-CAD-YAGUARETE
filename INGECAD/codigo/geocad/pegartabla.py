@@ -26,6 +26,12 @@ Un solo botón que mira el portapapeles y reconoce de dónde viene lo copiado
   de las columnas elegidas. Una planilla con columnas X / Y (Este / Norte)
   da puntos con su rótulo.
 
+La ventana arranca siempre COMO TABLA, también con lo de QGIS (3.24.0: lo
+de QGIS se pega como lo de una planilla; el dibujo, si se elige).
+PEGARDESDEQGIS (GEOPASTEQGIS, 3.24.0) es el mismo PEGARTABLA con su propio
+botón (una tablita que viene de QGIS): filas de la tabla de atributos o una
+tabla de una composición («Copiar tabla» en QGIS, con su formato).
+
 Sin Qt sólo quedan las cuentas (comando_tabla, comando_dibujo): las pruebas
 las usan sin abrir ventanas.
 """
@@ -459,21 +465,28 @@ class PegarTablaTool(Tool):
     PRIMERO = "Esquina superior izquierda de la tabla:"
     SEGUNDO = "Esquina inferior derecha (la tabla llena el rectángulo) o Enter para el tamaño natural:"
 
+    NOMBRE = "GEOPASTETABLE"
+    SIN_TABLA = ("GeoCAD Yaguareté: el portapapeles no tiene una tabla. Copie celdas en "
+                 "GenOffice, Calc o Excel, o filas de la tabla de atributos de QGIS (Ctrl+C).")
+
     def start(self) -> None:
-        self.name = "GEOPASTETABLE"
+        self.name = self.NOMBRE
         self._p1 = None
         tabla = tabla_del_portapapeles()
         if tabla is None:
-            self.ctx.echo("GeoCAD Yaguareté: el portapapeles no tiene una tabla. Copie celdas en "
-                          "GenOffice, Calc o Excel, o filas de la tabla de atributos de QGIS (Ctrl+C).")
+            self.ctx.echo(self.SIN_TABLA)
             self.ctx.finish()
             return
+        self.avisar_origen(tabla)
         window = getattr(self.ctx.services, "window", None)
         opciones = pedir_opciones(window, tabla)
         if not opciones:
             self.ctx.finish()
             return
         self.empezar(tabla, opciones, getattr(window, "document", None))
+
+    def avisar_origen(self, tabla) -> None:
+        pass
 
     def empezar(self, tabla, opciones: dict, document) -> None:
         """Después de la ventana (las pruebas llaman acá directamente)."""
@@ -580,7 +593,23 @@ class PegarTablaTool(Tool):
         self.ctx.finish()
 
 
-# ------------------------------------------------------------------ la ventana
+class PegarDesdeQgisTool(PegarTablaTool):
+    """PEGARDESDEQGIS (3.24.0): el mismo PEGARTABLA, con el botón de la tablita
+    que viene de QGIS. Filas de la tabla de atributos (Ctrl+C) o una tabla de
+    una composición («Copiar tabla» en su barra GeoCAD Yaguareté)."""
+
+    NOMBRE = "GEOPASTEQGIS"
+    SIN_TABLA = ("GeoCAD Yaguareté: el portapapeles no tiene una tabla. En QGIS, copie filas "
+                 "de la tabla de atributos (Ctrl+C) o use «Copiar tabla» en la barra GeoCAD "
+                 "Yaguareté de la composición.")
+
+    def avisar_origen(self, tabla) -> None:
+        if not tabla.origen.startswith("qgis"):
+            nombre = tablas.ORIGENES.get(tabla.origen, tabla.origen)
+            self.ctx.echo(f"GeoCAD Yaguareté: lo copiado no viene de QGIS (viene de {nombre}); "
+                          "se pega igual.")
+
+
 def pedir_opciones(window, tabla):
     """La ventana de Pegar tabla. None = cancelado."""
     from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox,
@@ -610,7 +639,7 @@ def pedir_opciones(window, tabla):
     grupo_modo.addButton(modo_tabla)
     grupo_modo.addButton(modo_dibujo)
     modo_dibujo.setEnabled(puede_dibujo)
-    (modo_dibujo if col_geo >= 0 else modo_tabla).setChecked(True)
+    modo_tabla.setChecked(True)          # como una planilla (3.24.0); el dibujo, si se elige
     caja.addWidget(modo_tabla)
     caja.addWidget(modo_dibujo)
 

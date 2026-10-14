@@ -108,6 +108,7 @@ DESCRIPCIONES = {
     "SELECT": "Elige objetos con las opciones de AutoCAD (W, C, WP, CP, F...).",
     "GEOFILTER": "Elige objetos por tipo, capa, color, medidas, textos y datos de QGIS.",
     "GEOPASTETABLE": "Pega la tabla copiada en GenOffice, Calc, Excel o QGIS, con su formato; dos puntos le dan la escala.",
+    "GEOPASTEQGIS": "Pega la tabla copiada en QGIS (filas de la tabla de atributos o «Copiar tabla» de una composición), como una planilla.",
     "GEODRAWFRONT": "Lo elegido se dibuja encima de todo: líneas, sombreados, textos, bloques.",
     "GEODRAWBACK": "Lo elegido se dibuja debajo de todo: líneas, sombreados, textos, bloques.",
     "BLOCK": "Crea un bloque con los objetos elegidos y su punto base.",

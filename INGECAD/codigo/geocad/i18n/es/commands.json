@@ -125,5 +125,8 @@
   },
   "GEOPASTETABLE": {
     "name": "PEGARTABLA"
+  },
+  "GEOPASTEQGIS": {
+    "name": "PEGARDESDEQGIS"
   }
 }

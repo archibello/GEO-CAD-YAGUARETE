@@ -30,13 +30,13 @@ from .empalme import EmpalmeTool
 from .estirar import EstirarTool
 from .texto import TextoTool
 from .partir import PartirTool
-from .pegartabla import PegarTablaTool
+from .pegartabla import PegarDesdeQgisTool, PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.23.1"
+VERSION = "3.24.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -49,6 +49,29 @@ def _qgis_icon():
     """El ícono de QGIS (lo publica el complemento de QGIS al abrirse) o una flecha."""
     path = buzon.icon_path("qgis")
     return path if path.exists() else _icon("devolver")
+
+
+def _qgis_table_icon():
+    """«Pegar desde QGIS»: una tablita que viene de QGIS. Lleva el ícono de
+    QGIS que publica su complemento al abrirse; sin él, el dibujo de reserva."""
+    base = _icon("pegar_qgis")
+    logo = buzon.icon_path("qgis")
+    if base is None or not logo.exists():
+        return base
+    destino = logo.parent / "pegar_qgis.png"
+    try:
+        if destino.exists() and destino.stat().st_mtime >= max(logo.stat().st_mtime,
+                                                                base.stat().st_mtime):
+            return destino
+        from PIL import Image
+
+        im = Image.open(base).convert("RGBA")
+        im.paste((0, 0, 0, 0), (0, 0, 16, 14))
+        im.alpha_composite(Image.open(logo).convert("RGBA").resize((14, 14), Image.LANCZOS), (0, 0))
+        im.save(destino)
+        return destino
+    except Exception:  # noqa: BLE001 -- sin PIL o sin permiso: el dibujo de reserva
+        return base
 
 
 def _options_page(dialog, window):
@@ -136,7 +159,9 @@ def construir_spec() -> PluginSpec:
         tools["GEOTEXT"] = TextoTool
     if est["tablas"]:
         tools["GEOPASTETABLE"] = PegarTablaTool
-        aliases.update({"PASTETABLE": "GEOPASTETABLE", "PT": "GEOPASTETABLE"})
+        tools["GEOPASTEQGIS"] = PegarDesdeQgisTool
+        aliases.update({"PASTETABLE": "GEOPASTETABLE", "PT": "GEOPASTETABLE",
+                        "PASTEQGIS": "GEOPASTEQGIS"})
     if est["georref"]:
         tools["GEORREF"] = georref.GeorrefTool
         tools["INSERTARGEO"] = imagengeo.InsertarGeoTool
@@ -167,6 +192,8 @@ def construir_spec() -> PluginSpec:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
     if est["tablas"]:
         toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")))
+        toolbar.append(ToolbarItem("Paste table from QGIS (PASTEQGIS)", "GEOPASTEQGIS",
+                                   _qgis_table_icon()))
     if est["orden"]:
         commands.update(orden.COMMANDS)
         toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
@@ -241,7 +268,8 @@ def construir_spec() -> PluginSpec:
               MenuItem("Insert georeferenced image (INSERTARGEO)", "INSERTARGEO", _icon("insertar_geo")),
               MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")))
              if est["georref"] else ())
-          + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")),)
+          + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _icon("pegar_tabla")),
+              MenuItem("Paste table from QGIS (PASTEQGIS)", "GEOPASTEQGIS", _qgis_table_icon()))
              if est["tablas"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
@@ -295,7 +323,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.23.1",
+        version="3.24.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

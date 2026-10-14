@@ -1,0 +1,44 @@
+GeoCAD - versión 3.24.0
+=======================
+TABLAS DE QGIS A INGECAD, COMO SI VINIERAN DE EXCEL (14/10/2026, pedido de
+Fernando: «lo mismo que en una tabla de Excel, copiamos en la tabla de QGIS
+y pegamos en IngeCAD siguiendo los mismos comportamientos... también copias
+de tablas desde el espacio papel de QGIS (composiciones de impresión)»).
+
+IngeCAD
+- Botón nuevo «Pegar desde QGIS» (PEGARDESDEQGIS) en la barra GeoCAD, al
+  lado de Pegar tabla, y en el menú GeoCAD: una tablita que viene de QGIS
+  (lleva el ícono de QGIS que publica su complemento al abrirse). Es el
+  mismo PEGARTABLA: la misma ventana, dos puntos con la esquina en el
+  cursor, vista previa, un grupo, X la descompone. Si lo copiado no viene
+  de QGIS lo avisa y lo pega igual.
+- Lo copiado de la tabla de atributos de QGIS (Ctrl+C) se pega como una
+  planilla: la ventana arranca en «Como tabla» (wkt_geom sin marcar).
+  «Como dibujo y textos» sigue ahí, para elegirlo.
+
+QGIS (composiciones)
+- Botón nuevo «Copiar tabla» en la barra GeoCAD Yaguareté de cada
+  composición, al lado de Pegar tabla, y en el menú GeoCAD. Elegir una
+  tabla (manual o tabla de atributos) y apretarlo: queda en el
+  portapapeles CON su formato (anchos de columna, altos de fila, letra,
+  tamaño, negrita, cursiva, subrayado, colores, fondos, alineación,
+  grilla, márgenes y, en QGIS 3.40 o más nuevo, combinadas) y como texto
+  con tabulaciones.
+- Se pega en IngeCAD (Pegar desde QGIS o Pegar tabla: «Copiado de QGIS
+  (composición) ... con formato»), en GenOffice, Calc o Excel, o en otra
+  composición con Pegar tabla.
+- El Ctrl+C propio de la composición no sirve para esto: copia el
+  elemento, no los valores de la tabla.
+
+Sigue (3.25.0): vínculo con la planilla y «Actualizar tablas».
+
+Pruebas
+- test_copiartabla_qgis (nueva): el HTML con formato ida y vuelta; en QGIS
+  4.2.2 y 3.28.9 LTS sin ventanas, una tabla manual y una tabla de
+  atributos de una composición se copian y se leen del portapapeles con
+  sus anchos (al 0,01 mm), negrita, color, fondo, alineación y grilla.
+- test_modulos: el botón nuevo en la lista de la barra.
+- test_tablas: el botón Pegar desde QGIS (orden, ícono con el de QGIS o el
+  de reserva, menú, nombre en español, apagado con el módulo) y la ventana
+  que arranca «Como tabla».
+- Pasan TODAS (41) con IngeCAD 0.6.7 y con 0.6.6.

@@ -15,6 +15,8 @@ De dónde viene (``detectar``), probado el 14/10/2026:
   color, alineación, bordes de cada lado con su grosor y celdas combinadas.
 * QGIS (Ctrl+C en la tabla de atributos): texto con tabulaciones y un HTML
   sin formato; la primera columna ``wkt_geom`` trae la geometría.
+* QGIS (Copiar tabla en una composición, 3.24.0): el HTML que escribe
+  ``a_html`` (marcado con ``GENERADOR``), con el formato de la tabla.
 * LibreOffice Calc y Excel: su HTML (atributos sueltos o una hoja de estilo
   con clases); texto suelto o CSV: sólo los valores.
 
@@ -36,6 +38,8 @@ PX_MM = 25.4 / 96.0
 #: CAD se mide por sus mayúsculas, una planilla por el cuerpo de la letra.
 MAYUSCULA = 0.716
 LADOS = ("arriba", "abajo", "izquierda", "derecha")
+#: la marca del HTML que deja «Copiar tabla» de una composición de QGIS
+GENERADOR = "GeoCAD Yaguarete - QGIS composicion"
 
 #: grosores de línea de DXF (centésimas de mm), los que ofrece AutoCAD
 GROSORES_DXF = (0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90,
@@ -47,6 +51,7 @@ ORIGENES = {
     "libreoffice": "LibreOffice Calc",
     "excel": "Excel",
     "qgis": "QGIS (tabla de atributos)",
+    "qgis_composicion": "QGIS (composición)",
     "texto": "texto",
 }
 
@@ -233,6 +238,8 @@ def detectar(html: str = "", texto: str = "", url: str = "") -> str:
     """El origen de lo copiado: una clave de ``ORIGENES``."""
     h = (html or "")[:20000].lower()
     u = (url or "").lower()
+    if GENERADOR.lower() in h:
+        return "qgis_composicion"
     if "genoffice" in u:
         return "genoffice"
     if "<google-sheets-html-origin" in h:
@@ -606,6 +613,84 @@ def leer(html: str = "", texto: str = "", url: str = "") -> Tabla | None:
         return None
     tabla.origen = origen
     return tabla
+
+
+# ------------------------------------------------------------------ escribir (Copiar tabla, 3.24.0)
+def _mm(v: float) -> str:
+    return f"{v:.3f}mm"
+
+
+def _estilo_celda(c: Celda, tabla: Tabla) -> str:
+    est = []
+    if c.fuente:
+        est.append(f"font-family:{c.fuente}")
+    if c.tam_pt:
+        est.append(f"font-size:{c.tam_pt:g}pt")
+    if c.negrita:
+        est.append("font-weight:bold")
+    if c.cursiva:
+        est.append("font-style:italic")
+    if c.subrayado:
+        est.append("text-decoration:underline")
+    if c.color:
+        est.append(f"color:{c.color}")
+    if c.fondo:
+        est.append(f"background-color:{c.fondo}")
+    if c.alin_h:
+        est.append("text-align:" + {"izquierda": "left", "centro": "center",
+                                    "derecha": "right"}[c.alin_h])
+    if c.alin_v:
+        est.append("vertical-align:" + {"arriba": "top", "medio": "middle",
+                                        "abajo": "bottom"}[c.alin_v])
+    for lado, css in zip(LADOS, ("border-top", "border-bottom", "border-left", "border-right")):
+        b = c.bordes.get(lado)
+        if b is not None:
+            est.append(f"{css}:" + (f"{_mm(b.grosor_mm)} solid {b.color or '#000000'}"
+                                    if b.grosor_mm > 0 else "none"))
+    if c.margen_mm >= 0:
+        est.append(f"padding:{_mm(c.margen_mm)}")
+    return ";".join(est)
+
+
+def a_html(tabla: Tabla) -> str:
+    """La tabla como HTML con su formato (anchos y altos en mm, letras en pt,
+    colores, fondos, alineación, bordes y combinadas): lo que se pega con
+    formato en IngeCAD, GenOffice, Calc, Excel o en otra composición."""
+    from html import escape
+    t_est = ["border-collapse:collapse"]
+    if tabla.fuente:
+        t_est.append(f"font-family:{tabla.fuente}")
+    if tabla.tam_pt:
+        t_est.append(f"font-size:{tabla.tam_pt:g}pt")
+    partes = ['<html><head><meta charset="utf-8">',
+              f'<meta name="generator" content="{GENERADOR}"></head><body>',
+              f'<table style="{";".join(t_est)}">']
+    if tabla.anchos_mm and any(tabla.anchos_mm):
+        partes.append("<colgroup>" + "".join(
+            f'<col style="width:{_mm(w)}">' if w else "<col>" for w in tabla.anchos_mm)
+            + "</colgroup>")
+    por_fila = {}
+    for c in tabla.celdas:
+        por_fila.setdefault(c.fila, []).append(c)
+    for r in range(tabla.n_filas):
+        alto = tabla.altos_mm[r] if r < len(tabla.altos_mm) else 0.0
+        partes.append(f'<tr style="height:{_mm(alto)}">' if alto else "<tr>")
+        for c in sorted(por_fila.get(r, []), key=lambda x: x.col):
+            span = (f' colspan="{c.cols}"' if c.cols > 1 else "") + \
+                   (f' rowspan="{c.filas}"' if c.filas > 1 else "")
+            est = _estilo_celda(c, tabla)
+            texto = "<br>".join(escape(ln) for ln in c.texto.split("\n"))
+            partes.append(f'<td{span}' + (f' style="{est}"' if est else "") + f">{texto}</td>")
+        partes.append("</tr>")
+    partes.append("</table></body></html>")
+    return "".join(partes)
+
+
+def a_texto(tabla: Tabla) -> str:
+    """La tabla como texto con tabulaciones (lo que pega cualquier programa)."""
+    def limpio(t: str) -> str:
+        return t.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+    return "\n".join("\t".join(limpio(v) for v in fila) for fila in tabla.grilla())
 
 
 # ------------------------------------------------------------------ elegir columnas

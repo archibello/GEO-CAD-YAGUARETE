@@ -22,6 +22,13 @@ Los bordes: QGIS dibuja una sola grilla para toda la tabla; va con el
 grosor y el color más usados en la planilla (sin bordes en la planilla, sin
 grilla). Se deshace de una vez (Ctrl+Z).
 
+COPIAR TABLA (3.24.0): el camino inverso. Un segundo botón en la misma barra
+deja en el portapapeles la tabla elegida en la composición (una tabla
+manual o una tabla de atributos) con su formato: HTML (tablas.a_html) y
+texto con tabulaciones. Se pega en IngeCAD (PEGARTABLA o PEGARDESDEQGIS),
+GenOffice, Calc, Excel o en otra composición. El Ctrl+C de la composición
+no sirve para esto: copia el elemento, no los valores de la tabla.
+
 Sin Qt quedan las cuentas (plan, ventana, ancho_qgis): las pruebas las usan
 sin abrir QGIS.
 """
@@ -34,6 +41,7 @@ from . import tablas
 HOLGURA = 0.05                      # mm de más en el marco (no se ve: la tabla no tiene fondo)
 PROPIEDAD = "geocad_tabla"          # en la tabla: de dónde vino (para el vínculo, 3.24.0)
 ICONO = Path(__file__).resolve().parent / "iconos" / "pegar_tabla.png"
+ICONO_COPIAR = Path(__file__).resolve().parent / "iconos" / "copiar_tabla.png"
 PRIMERO = "Pegar tabla: clic en la esquina superior izquierda (Esc cancela)."
 SEGUNDO = ("Pegar tabla: clic en la esquina inferior derecha (la tabla llena el rectángulo) "
            "o Enter / botón derecho para el tamaño natural.")
@@ -160,6 +168,197 @@ def leer_portapapeles() -> tuple:
 
 def tabla_del_portapapeles():
     return tablas.leer(*leer_portapapeles())
+
+
+# ------------------------------------------------------------------ copiar tabla (3.24.0)
+def _hexa(qcolor) -> str:
+    """'#rrggbb' de un QColor; '' si no es válido o es transparente."""
+    try:
+        if qcolor is None or not qcolor.isValid() or qcolor.alpha() == 0:
+            return ""
+        return qcolor.name().lower()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _pt(fmt) -> float:
+    """El tamaño de un QgsTextFormat en puntos."""
+    try:
+        from qgis.core import Qgis
+        mm = Qgis.RenderUnit.Millimeters
+    except (ImportError, AttributeError):                  # QGIS 3.28
+        from qgis.core import QgsUnitTypes
+        mm = QgsUnitTypes.RenderMillimeters
+    tam = float(fmt.size())
+    return tam / tablas.PT_MM if fmt.sizeUnit() == mm else tam
+
+
+def _estilo_fmt(celda: tablas.Celda, fmt) -> None:
+    """Letra, tamaño, negrita, cursiva, subrayado y color de un QgsTextFormat."""
+    if fmt is None:
+        return
+    try:
+        if hasattr(fmt, "isValid") and not fmt.isValid():
+            return
+        f = fmt.font()
+        celda.fuente = f.family()
+        celda.tam_pt = round(_pt(fmt), 2)
+        celda.negrita = f.bold()
+        celda.cursiva = f.italic()
+        celda.subrayado = f.underline()
+        col = _hexa(fmt.color())
+        celda.color = "" if col == "#000000" else col
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _alin(h=None, v=None) -> tuple:
+    from qgis.PyQt.QtCore import Qt
+    A = Qt.AlignmentFlag
+
+    def tiene(valor, bandera) -> bool:
+        try:
+            return bool(int(valor) & int(bandera))
+        except TypeError:
+            return bool(valor & bandera)
+    ah = av = ""
+    if h is not None:
+        ah = "centro" if tiene(h, A.AlignHCenter) else "derecha" if tiene(h, A.AlignRight) \
+            else "izquierda"
+    if v is not None:
+        av = "arriba" if tiene(v, A.AlignTop) else "abajo" if tiene(v, A.AlignBottom) else "medio"
+    return ah, av
+
+
+def _valor(v) -> str:
+    """El texto de un valor de la tabla (QVariant, número, NULL)."""
+    if v is None:
+        return ""
+    try:
+        if hasattr(v, "isNull") and v.isNull():
+            return ""
+    except Exception:  # noqa: BLE001
+        pass
+    if isinstance(v, float):
+        return f"{v:.10g}"
+    return str(v)
+
+
+def tabla_de_elemento(t) -> tablas.Tabla | None:
+    """La tabla de la composición (QgsLayoutItemManualTable o una tabla de
+    atributos, QgsLayoutTable) como Tabla del núcleo, con su formato."""
+    from qgis.core import QgsLayoutItemManualTable
+    margen = float(t.cellMargin())
+    grilla = float(t.gridStrokeWidth()) if t.showGrid() else 0.0
+    color_grilla = _hexa(t.gridColor()) or "#000000"
+    borde = tablas.Borde(grilla, color_grilla) if grilla > 0 else None
+    try:
+        fmt_cont = t.contentTextFormat()
+        fmt_enc = t.headerTextFormat()
+    except AttributeError:                                  # QGIS viejo
+        fmt_cont = fmt_enc = None
+    columnas = list(t.columns()) if hasattr(t, "columns") else []
+    filas_datos = []          # [[(texto, celda de QGIS o None)]]
+    if isinstance(t, QgsLayoutItemManualTable):
+        for fila in t.tableContents():
+            filas_datos.append([(_valor(c.content()), c) for c in fila])
+        anchos = [float(w) for w in t.columnWidths()]
+        altos = [float(h) for h in t.rowHeights()]
+    else:
+        try:
+            t.refreshAttributes()
+        except Exception:  # noqa: BLE001
+            pass
+        for fila in t.contents():
+            filas_datos.append([(_valor(v), None) for v in fila])
+        anchos = [float(c.width()) for c in columnas]
+        altos = []
+    encabezado = []
+    if (not isinstance(t, QgsLayoutItemManualTable) or t.includeTableHeader()) and columnas:
+        encabezado = [c.heading() for c in columnas]
+    n_cols = max([len(encabezado)] + [len(f) for f in filas_datos] + [0])
+    if not n_cols:
+        return None
+    celdas, ocupado = [], set()
+    r0 = 0
+    if encabezado:
+        for c, h in enumerate(encabezado):
+            celda = tablas.Celda(0, c, h)
+            _estilo_fmt(celda, fmt_enc)
+            col = columnas[c] if c < len(columnas) else None
+            celda.alin_h, celda.alin_v = _alin(col.hAlignment() if col is not None else None,
+                                               col.vAlignment() if col is not None else None)
+            celdas.append(celda)
+        r0 = 1
+        altos = [0.0] + altos
+    for r, fila in enumerate(filas_datos):
+        for c, (texto, qc) in enumerate(fila):
+            if (r, c) in ocupado:
+                continue
+            celda = tablas.Celda(r + r0, c, texto)
+            _estilo_fmt(celda, fmt_cont)
+            col = columnas[c] if c < len(columnas) else None
+            h = v = None
+            if col is not None:
+                h, v = col.hAlignment(), col.vAlignment()
+            if qc is not None:
+                fmt = qc.textFormat()
+                if fmt is not None and (not hasattr(fmt, "isValid") or fmt.isValid()):
+                    _estilo_fmt(celda, fmt)
+                    h, v = qc.horizontalAlignment(), qc.verticalAlignment()
+                celda.fondo = "" if _hexa(qc.backgroundColor()) == "#ffffff" \
+                    else _hexa(qc.backgroundColor())
+                if hasattr(qc, "rowSpan"):                  # QGIS 3.40 o más nuevo
+                    celda.filas = max(1, qc.rowSpan())
+                    celda.cols = max(1, qc.columnSpan())
+            if h is not None or v is not None:
+                celda.alin_h, celda.alin_v = _alin(h, v)
+            for dr in range(celda.filas):
+                for dc in range(celda.cols):
+                    ocupado.add((r + dr, c + dc))
+            celdas.append(celda)
+    n_filas = len(filas_datos) + r0
+    for celda in celdas:
+        celda.margen_mm = margen
+        if borde is not None:
+            celda.bordes = {lado: tablas.Borde(borde.grosor_mm, borde.color) for lado in tablas.LADOS}
+    # QGIS da el ancho sin los márgenes ni la grilla (n + 1 líneas para n
+    # columnas); la planilla, con todo: la inversa de plan()
+    g_col = grilla * (n_cols + 1) / n_cols
+    g_fila = grilla * (n_filas + 1) / n_filas if n_filas else 0.0
+    anchos = [(w + 2 * margen + g_col) if w > 0 else 0.0
+              for w in (anchos + [0.0] * n_cols)[:n_cols]]
+    altos = [(h + 2 * margen + g_fila) if h > 0 else 0.0
+             for h in (altos + [0.0] * n_filas)[:n_filas]]
+    fuente = tam = 0
+    if fmt_cont is not None:
+        base = tablas.Celda(0, 0)
+        _estilo_fmt(base, fmt_cont)
+        fuente, tam = base.fuente, base.tam_pt
+    return tablas.Tabla(celdas, n_filas, n_cols, anchos, altos, "qgis_composicion",
+                        fuente or "", tam or 0.0, True)
+
+
+def tablas_elegidas(layout) -> list:
+    """Las tablas (manuales o de atributos) elegidas en la composición, sin repetir."""
+    from qgis.core import QgsLayoutFrame, QgsLayoutTable
+    vistas, salida = set(), []
+    for item in layout.selectedLayoutItems():
+        mf = item.multiFrame() if isinstance(item, QgsLayoutFrame) else None
+        if isinstance(mf, QgsLayoutTable) and id(mf) not in vistas:
+            vistas.add(id(mf))
+            salida.append(mf)
+    return salida
+
+
+def al_portapapeles(tabla: tablas.Tabla) -> None:
+    """HTML con formato + texto con tabulaciones, en el portapapeles del sistema."""
+    from qgis.PyQt.QtCore import QMimeData
+    from qgis.PyQt.QtWidgets import QApplication
+    datos = QMimeData()
+    datos.setHtml(tablas.a_html(tabla))
+    datos.setText(tablas.a_texto(tabla))
+    QApplication.clipboard().setMimeData(datos)
 
 
 def medidor():
@@ -521,6 +720,10 @@ class TablasComposicion:
         from qgis.PyQt.QtGui import QIcon
         return QIcon(str(ICONO))
 
+    def icono_copiar(self):
+        from qgis.PyQt.QtGui import QIcon
+        return QIcon(str(ICONO_COPIAR))
+
     def _abierto(self, designer):
         from qgis.PyQt.QtWidgets import QToolBar
         try:
@@ -538,6 +741,10 @@ class TablasComposicion:
         accion = QAction(self.icono(), "Pegar tabla (GenOffice, Calc, Excel o QGIS) — dos puntos", barra)
         accion.triggered.connect(lambda _=False, d=designer: self.pegar(d))
         barra.addAction(accion)
+        copiar = QAction(self.icono_copiar(), "Copiar tabla (la elegida, con su formato: para "
+                         "IngeCAD, GenOffice, Calc o Excel)", barra)
+        copiar.triggered.connect(lambda _=False, d=designer: self.copiar(d))
+        barra.addAction(copiar)
         win.addToolBar(barra)
         self.barras[id(designer)] = (designer, barra)
 
@@ -579,6 +786,30 @@ class TablasComposicion:
         except RuntimeError:
             pass
         self.pegar(d)
+
+    def copiar_menu(self):
+        d = self.diseñador_activo()
+        if d is None:
+            self._aviso_principal("Abra una composición, elija una tabla y use «Copiar tabla» en "
+                                  "su barra GeoCAD Yaguareté.")
+            return
+        self.copiar(d)
+
+    def copiar(self, designer):
+        elegidas = tablas_elegidas(designer.layout())
+        if not elegidas:
+            self._aviso(designer, "Elija una tabla de la composición (manual o de atributos) y "
+                                  "vuelva a «Copiar tabla».", "warn")
+            return
+        tabla = tabla_de_elemento(elegidas[0])
+        if tabla is None or not tabla.n_filas:
+            self._aviso(designer, "La tabla elegida está vacía.", "warn")
+            return
+        al_portapapeles(tabla)
+        extra = " (había varias elegidas: se copió la primera)" if len(elegidas) > 1 else ""
+        self._aviso(designer, f"Tabla copiada: {tabla.n_filas} fila(s) × {tabla.n_cols} "
+                              f"columna(s), con su formato{extra}. En IngeCAD: «Pegar desde QGIS».",
+                    "ok")
 
     def _aviso_principal(self, texto, nivel="warn"):
         from qgis.core import Qgis
