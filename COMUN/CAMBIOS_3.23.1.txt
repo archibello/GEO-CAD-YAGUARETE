@@ -1,0 +1,24 @@
+GeoCAD - versión 3.23.1
+=======================
+CORRECCIÓN (QGIS): Pegar tabla en las composiciones no se soltaba (14/10/2026,
+Fernando al probar la 3.23.0: «en IngeCAD pasó la prueba, pero en QGIS queda
+pegada la instrucción en un ciclo interminable... no deja de pegar tablas»).
+
+Lo que pasaba
+- Después de pegar, la herramienta seguía puesta en la composición: cada
+  clic siguiente pegaba otra tabla encima (unsetTool de QGIS sólo desactiva
+  la herramienta; espera que otra la reemplace).
+
+Lo que cambia
+- Al pegar (o con Esc), la composición vuelve sola a «Seleccionar/Mover
+  elemento», como después de agregar cualquier elemento en QGIS. La tabla
+  pegada queda lista para elegirla y moverla.
+- Aunque llegara un clic más, la herramienta terminada ya no pega nada.
+- Si quedó alguna tabla de más de la 3.23.0: elegirla y Supr, o Ctrl+Z.
+
+Pruebas
+- Probado con clics de mouse de verdad sobre una vista de composición (sin
+  ventanas) en QGIS 4.2.2 y 3.28.9 LTS: dos clics pegan UNA tabla, la vista
+  queda en Seleccionar y dos clics más no pegan nada.
+- test_tablas_qgis: la herramienta queda terminada y la vista en Seleccionar.
+- Pasan TODAS con IngeCAD 0.6.7 y con 0.6.6.

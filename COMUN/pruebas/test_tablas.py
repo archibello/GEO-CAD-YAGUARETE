@@ -99,7 +99,8 @@ assert por[(0, 2)].filas == 2 and por[(0, 2)].cursiva
 assert por[(1, 0)].fondo == "#ddebf7" and por[(1, 1)].texto == "Sup. m²"
 assert por[(2, 1)].alin_h == "derecha" and por[(2, 2)].texto == "esquina {norte}"
 assert t.grilla()[2] == ["1", "452,37", "esquina {norte}"]
-a = T.armar(t)
+CORTO = lambda texto, alto, negrita=False, cursiva=False, fuente="": 1.0   # todo entra: la geometría de la planilla
+a = T.armar(t, medir=CORTO)
 W, H = a.ancho_mm, a.alto_mm
 assert abs(W - (2 * 69.33333333333333 + 100) * T.PX_MM) < 1e-9 and abs(H - 3 * 20 * T.PX_MM) < 1e-9, (W, H)
 assert [(f.color, round(f.x1 - f.x0, 2)) for f in a.fondos] == [("#ddebf7", 18.34)]
@@ -232,7 +233,10 @@ herramienta._p1 = None
 herramienta.empezar(t, {"modo": "tabla", "respetar": True, "escala": 100.0}, doc)
 assert herramienta._k0 == 0.1 and herramienta.ortho_applies()
 assert not hasattr(herramienta, "ghost_entities")         # la vista previa son sólo líneas
-n_lineas = len(a.lineas)
+# la herramienta mide con la fuente real: su tabla puede ser más ancha que a
+W, H = herramienta._armado.ancho_mm, herramienta._armado.alto_mm
+assert W >= a.ancho_mm - 1e-9 and abs(H - a.alto_mm) < 1e-9
+n_lineas = len(herramienta._armado.lineas)
 # antes del primer punto: las líneas con la esquina en el cursor (ya con la
 # referencia a objetos), tamaño natural, y la marca del punto de inserción
 seg = herramienta.preview_segments((10.0, 20.0))
@@ -368,6 +372,57 @@ cmd, n, sin = PT.comando_dibujo(xy, [0], 1.5, col_x=1, col_y=2)
 hist.execute(cmd)
 pts = sorted(tuple(e.dxf.location)[:2] for e in m3 if e.dxftype() == "POINT")
 assert pts == [(5500100.25, 7020000.0), (5500200.0, 7020100.0)] and sin == 1 and n == 4
+
+# ================================================================ 3.23.0: el ancho de las columnas
+# (pedido de Fernando, 14/10/2026: la «key» de 19 dígitos se metía en la
+# columna siguiente). Ninguna columna queda más angosta que su texto.
+KEY = "1234567890123456789"
+html_key = ('<google-sheets-html-origin><table data-copy-id="x"><colgroup><col width="100"><col width="60">'
+            '</colgroup><tr style="height:20px"><td style="font-family:Arial;font-size:10pt">key</td>'
+            '<td style="font-family:Arial;font-size:10pt">name</td></tr>'
+            '<tr style="height:20px"><td style="font-family:Arial;font-size:10pt">' + KEY + '</td>'
+            '<td style="font-family:Arial;font-size:10pt">Lote 1</td></tr></table>')
+tk = T.leer(html_key, "key\tname\n" + KEY + "\tLote 1")
+assert tk.con_formato and round(tk.anchos_mm[0], 2) == round(100 * T.PX_MM, 2)
+FIJO = lambda texto, alto, negrita=False, cursiva=False, fuente="": 1.6 * alto * len(texto) if texto == KEY else 1.0
+ak = T.armar(tk, medir=FIJO)
+celdas_k = {x.texto: x for x in ak.textos}
+m_key = celdas_k[KEY]
+assert abs(m_key.ancho_mm - FIJO(KEY, m_key.alto_mm)) < 1e-9, "la columna = el texto + los márgenes"
+# la columna «key» se ensancha; «name» no cambia (su texto entra)
+xk = sorted({round(l.x0, 9) for l in ak.lineas if abs(l.x0 - l.x1) < 1e-12})
+assert len(xk) == 3 and xk[1] - xk[0] > 100 * T.PX_MM and abs(xk[2] - xk[1] - 60 * T.PX_MM) < 1e-6
+assert abs(ak.ancho_mm - xk[2]) < 1e-6 and m_key.alin_h == "derecha" and m_key.x < xk[1]
+# medir que falla o no sabe: la cuenta aproximada (nunca más angosta que antes)
+def roto(*a, **k):
+    raise RuntimeError("sin fuentes")
+for med in (roto, lambda *a, **k: None):
+    assert abs(T.armar(tk, medir=med).ancho_mm - T.armar(tk).ancho_mm) < 1e-9
+assert T.armar(tk).ancho_mm >= 160 * T.PX_MM - 1e-9
+# combinada más larga que sus columnas: se ensanchan en proporción
+html_comb = html_key.replace('<tr style="height:20px"><td style="font-family:Arial;font-size:10pt">key</td>'
+                             '<td style="font-family:Arial;font-size:10pt">name</td></tr>',
+                             '<tr style="height:20px"><td colspan="2">' + "T" * 40 + '</td></tr>')
+tc = T.leer(html_comb, "")
+LARGO = lambda texto, alto, negrita=False, cursiva=False, fuente="": (200.0 if texto.startswith("TT") else 1.0)
+ac = T.armar(tc, medir=LARGO)
+tit_c = [x for x in ac.textos if x.texto.startswith("TT")][0]
+assert tit_c.ancho_mm >= 200.0 - 1e-9
+xs_v = sorted({round(l.x0, 6) for l in ac.lineas if abs(l.x0 - l.x1) < 1e-12})
+assert len(xs_v) == 3 and abs((xs_v[1] - xs_v[0]) / (xs_v[2] - xs_v[1]) - 100 / 60) < 1e-6
+# IngeCAD mide con la fuente con que dibuja el MTEXT (la de ezdxf con los
+# parches de IngeCAD): negrita más ancha, y cada texto entra en su celda
+med = PT.medidor(doc)
+if med is not None and med(KEY, 2.5) is not None:
+    assert med(KEY, 2.5) > 0 and med(KEY, 2.5, True) >= med(KEY, 2.5) - 1e-9
+    assert abs(med(KEY, 5.0) - 2 * med(KEY, 2.5)) < 1e-6        # proporcional a la altura
+    real = T.armar(tk, medir=med)
+    for x in real.textos:
+        assert med(x.texto, x.alto_mm, x.negrita, x.cursiva, x.fuente or tk.fuente) <= x.ancho_mm + 1e-9, x.texto
+    print("  con la fuente real: la key mide", round(med(KEY, real.textos[0].alto_mm, False, False, "Arial"), 2),
+          "mm; la estimación daba", round(T.ancho_texto_mm(KEY, real.textos[0].alto_mm), 2))
+else:
+    print("  (sin fuentes TrueType en este equipo: queda la cuenta aproximada)")
 
 # ================================================================ se dibuja en pantalla
 try:

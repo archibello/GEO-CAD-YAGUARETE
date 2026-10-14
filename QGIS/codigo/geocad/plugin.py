@@ -37,7 +37,7 @@ from . import actualizar, bloqueo, buzon, config, desde_ingecad, modulos, nombre
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.22.2"
+VERSION = "3.23.1"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -117,6 +117,7 @@ class GeoCAD:
         self.toolbar = None
         self.actions = {}
         self.subs = None
+        self.tablas = None          # módulo «Tablas»: Pegar tabla en las composiciones
         self._cargando = False
         self._submenus = []
 
@@ -178,6 +179,10 @@ class GeoCAD:
                 for a in acciones:
                     sub.addAction(a)
                 self._submenus.append(sub)
+        if self.tablas is not None:
+            self.menu.addSeparator()
+            add("pegartabla", "Pegar tabla en la composición (GenOffice, Calc, Excel, QGIS)...",
+                self.tablas.pegar_menu, self.tablas.icono())
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
         add("config", "Configuración común...", self.open_config)
@@ -218,6 +223,7 @@ class GeoCAD:
             self.subs.cargar(modulos.estado(PROGRAMA))
         finally:
             self._cargando = False
+        self._sync_tablas()
         self._build_menu()
         for aviso in self.subs.tomar_avisos():
             self._bar(aviso, "ok" if aviso.startswith("Se retiró") else "warn", 10)
@@ -250,12 +256,34 @@ class GeoCAD:
         self.aplicar_modulos()
         self._bar("Módulos de GeoCAD Yaguareté activos: " + modulos.resumen(PROGRAMA) + ".", "ok")
 
+    def _sync_tablas(self) -> None:
+        """Pegar tabla en las composiciones, según el módulo «Tablas»."""
+        quiere = modulos.activo(PROGRAMA, "tablas")
+        if quiere and self.tablas is None:
+            try:
+                from .pegartabla import TablasComposicion
+                self.tablas = TablasComposicion(self.iface)
+            except Exception as exc:  # noqa: BLE001
+                self.tablas = None
+                self._bar(f"No se pudo iniciar Tablas: {type(exc).__name__}: {exc}", "warn", 10)
+        elif not quiere and self.tablas is not None:
+            self._quitar_tablas()
+
+    def _quitar_tablas(self) -> None:
+        if self.tablas is not None:
+            try:
+                self.tablas.unload()
+            except Exception:  # noqa: BLE001
+                pass
+            self.tablas = None
+
     def aplicar_modulos(self) -> None:
         if self.subs is not None:
             # Dibujo (con Bloques y Papel) y Capas se vuelven a arrancar con la
             # elección nueva; lo apagado se descarga sin dejar rastro
             self.subs.descargar()
             self._cargar_subs()
+        self._sync_tablas()
         self._build_menu()
         self._sync_toolbar()
         if not self._puente():
@@ -270,6 +298,7 @@ class GeoCAD:
         self.readonly_by_us.clear()
 
     def unload(self) -> None:
+        self._quitar_tablas()
         if self.subs is not None:
             self.subs.descargar()
             self.subs = None

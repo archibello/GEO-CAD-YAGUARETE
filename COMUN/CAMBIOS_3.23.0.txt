@@ -1,0 +1,58 @@
+GeoCAD - versión 3.23.0
+=======================
+FUNCIÓN NUEVA (QGIS): PEGAR TABLA EN LAS COMPOSICIONES, y CORRECCIÓN
+(IngeCAD): el ancho de las columnas de PEGAR TABLA (14/10/2026, acordado
+con Fernando al cerrar la 3.22.2).
+
+QGIS - Pegar tabla en las composiciones (módulo «Tablas»)
+- El módulo «Tablas» se elige también en QGIS (GeoCAD > Módulos...),
+  prendido de entrada. Apagado, no queda nada.
+- Cada ventana de composición tiene una barra «GeoCAD Yaguareté» con el
+  botón Pegar tabla (el mismo ícono que en IngeCAD). También en el menú
+  GeoCAD: «Pegar tabla en la composición...» (usa la composición abierta).
+- Reconoce de dónde viene lo copiado (GenOffice, Calc, Excel, la tabla de
+  atributos de QGIS o texto), como en IngeCAD. Ventana con las columnas que
+  van, «Respetar el formato de la planilla», encabezado en negrita y altura
+  de texto (sin el formato).
+- Dos puntos, como en IngeCAD: antes del primer clic se ven las líneas de la
+  tabla con la esquina superior izquierda en el cursor; después, la esquina
+  inferior derecha sigue al cursor y la tabla llena el rectángulo (columnas y
+  filas se estiran; las letras toman la escala menor). Enter o el botón
+  derecho en el segundo punto: tamaño natural (los mm de la planilla en mm
+  de hoja). Esc cancela. Los puntos siguen la referencia (snapping) de la
+  composición.
+- El resultado es una TABLA MANUAL NATIVA de QGIS: se edita con el editor
+  de tablas de QGIS, se mueve, se agranda y se exporta con todo lo demás.
+  Nada que instalar para quien abra el proyecto. Lleva anchos de columna,
+  altos de fila, celdas combinadas, fuente, tamaño, negrita, cursiva,
+  subrayado, color de texto y de fondo y alineación de la planilla.
+- Bordes: QGIS tiene una sola grilla por tabla; va con el grosor y el color
+  más usados en la planilla (sin bordes en la planilla, sin grilla).
+- Un solo deshacer (Ctrl+Z la quita entera).
+- QGIS 3.28 LTS: igual, pero esa versión no combina celdas (el texto de una
+  combinada queda en su primera celda).
+
+IngeCAD - el ancho de las columnas
+- Los códigos largos (la «key» de 19 dígitos) se metían un poco en la
+  columna siguiente: el ancho se estimaba con proporciones de Arial, pero
+  IngeCAD dibuja con la fuente que encuentra (Liberation Sans por Arial, o
+  la de reserva). Ahora cada texto se mide con la misma búsqueda de fuente
+  que usa IngeCAD al dibujar (la «key» de la prueba: 38,8 mm; se estimaba
+  37,5).
+- Ninguna columna queda más angosta que su texto más largo más los
+  márgenes, aunque la planilla diga menos; las que entran no cambian. Una
+  celda combinada más larga que sus columnas las ensancha en proporción.
+
+Pruebas
+- test_tablas: la columna se ensancha hasta su texto y la vecina no cambia;
+  medir que falla o no sabe: la cuenta aproximada; combinada larga
+  ensancha en proporción; con la fuente real de IngeCAD cada texto entra en
+  su celda.
+- test_tablas_qgis (nueva): los dos puntos (hacia cualquier lado, sin alto,
+  sin tamaño), el plan de la tabla de QGIS (márgenes y grilla: llena justo
+  el rectángulo), formato de cada celda, estilo GeoCAD, quitar columnas. Y
+  en QGIS real sin ventanas (Flatpak 4.2.2 y 3.28.9 LTS): la tabla dibujada
+  en su lugar y del tamaño pedido (natural y llenando una ventana 2 x 1,5),
+  combinadas, fondo, negrita, deshacer y rehacer, vista previa de la
+  herramienta.
+- Pasan TODAS con IngeCAD 0.6.7 y con 0.6.6.

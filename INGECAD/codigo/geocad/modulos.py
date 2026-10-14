@@ -145,6 +145,11 @@ CATALOGO = {
                "Presentaciones.", requiere="dibujo"),
         Modulo("capas", "Capas CAD (Layer Properties)",
                "Administrador de capas estilo AutoCAD con LAYER_CODE (antes Layer Properties 6.7)."),
+        Modulo("tablas", "Tablas: Pegar tabla en las composiciones",
+               "Botón «Pegar tabla» en la ventana de cada composición (y en el menú GeoCAD): "
+               "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "
+               "tabla de QGIS con el formato de la planilla (anchos, combinadas, letras, "
+               "colores), ubicada con dos puntos: la esquina inferior derecha sigue al cursor."),
     ),
 }
 

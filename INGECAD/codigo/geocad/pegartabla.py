@@ -90,6 +90,66 @@ def contenido_mtext(tx: tablas.Texto) -> str:
     return cuerpo
 
 
+# ------------------------------------------------------------------ medir con la fuente real
+def _fuente_estilo(document) -> str:
+    """El archivo de fuente del estilo Standard del dibujo ("" si no se sabe)."""
+    try:
+        doc = getattr(document, "doc", document)
+        return str(doc.styles.get("Standard").dxf.get("font", "") or "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def medidor(document=None):
+    """medir(texto, alto, negrita, cursiva, fuente) -> mm para tablas.armar,
+    con la fuente con que IngeCAD dibuja el MTEXT (3.23.0): la misma búsqueda
+    que el dibujo de ezdxf (find_best_match con los parches de IngeCAD, que
+    ponen Liberation Sans por Arial, etc.). Sin \\f en el texto (estilo
+    GeoCAD sin negrita) manda la fuente del estilo Standard. None si ezdxf no
+    tiene fuentes: queda la cuenta aproximada."""
+    try:
+        from ezdxf.fonts import fonts
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        from core import ezdxf_patches
+        ezdxf_patches.apply()
+    except Exception:  # noqa: BLE001 -- otra versión de IngeCAD: ezdxf tal cual
+        pass
+    estilo = _fuente_estilo(document)
+    archivos = {}
+
+    def archivo(fuente: str, negrita: bool, cursiva: bool) -> str:
+        clave = (fuente, negrita, cursiva)
+        if clave not in archivos:
+            nombre = ""
+            if fuente or negrita or cursiva:     # contenido_mtext escribe \f
+                cara = fonts.find_best_match(family=fuente or "Arial",
+                                             weight=700 if negrita else 400, italic=cursiva)
+                nombre = cara.filename if cara is not None else ""
+            elif estilo:
+                try:
+                    nombre = fonts.resolve_font_face(estilo).filename
+                except Exception:  # noqa: BLE001
+                    nombre = ""
+            if not nombre:                  # como el dibujo: la fuente de reserva de ezdxf
+                try:
+                    nombre = fonts.font_manager.fallback_font_name()
+                except Exception:  # noqa: BLE001
+                    nombre = ""
+            archivos[clave] = nombre
+        return archivos[clave]
+
+    def medir(texto: str, alto: float, negrita: bool = False, cursiva: bool = False,
+              fuente: str = ""):
+        nombre = archivo(fuente, negrita, cursiva)
+        if not nombre:
+            return None
+        return fonts.make_font(nombre, alto).text_width(texto)
+
+    return medir
+
+
 # ------------------------------------------------------------------ fábricas de objetos
 def _color_dxf(entity, hexa: str) -> None:
     """Negro -> color 7 (blanco/negro según el fondo, como AutoCAD); otro ->
@@ -437,7 +497,7 @@ class PegarTablaTool(Tool):
         quitar = opciones.get("quitar", ())
         t = tablas.sin_columnas(tabla, quitar) if quitar else tabla
         self._armado = tablas.armar(t, opciones.get("respetar", True), opciones.get("alto", 2.5),
-                                    opciones.get("encabezado", True))
+                                    opciones.get("encabezado", True), medir=medidor(document))
         self._k0 = unidades_por_mm(document, opciones.get("escala", 100.0)) if document is not None \
             else 1.0
         self._nombre = nombre

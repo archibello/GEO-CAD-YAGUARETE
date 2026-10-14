@@ -664,6 +664,8 @@ class Texto:
     subrayado: bool = False
     color: str = ""
     ancho_mm: float = 0.0           # ancho de la celda (para cortar renglones)
+    fila: int = -1                  # la celda de la tabla (QGIS arma la tabla nativa)
+    col: int = -1
 
 
 @dataclass
@@ -673,6 +675,8 @@ class Armado:
     textos: list
     ancho_mm: float
     alto_mm: float
+    xs: list = field(default_factory=list)      # bordes de las columnas (mm, desde 0)
+    ys: list = field(default_factory=list)      # bordes de las filas (mm, hacia abajo negativos)
 
 
 def _es_numero(t: str) -> bool:
@@ -705,14 +709,20 @@ def ancho_texto_mm(texto: str, alto_mm: float, negrita: bool = False) -> float:
 
 
 def armar(tabla: Tabla, respetar_formato: bool = True, alto_texto_mm: float = 2.5,
-          encabezado: bool = True, grosor_mm: float = 0.25) -> Armado:
+          encabezado: bool = True, grosor_mm: float = 0.25, medir=None) -> Armado:
     """La tabla como fondos, líneas y textos en mm (esquina superior izquierda
     en 0, 0; y hacia abajo negativa).
 
     ``respetar_formato``: anchos, altos, letras, colores, alineación y bordes
     de la planilla (si los trae). Si no: estilo GeoCAD, todo con
     ``alto_texto_mm``, la grilla completa con ``grosor_mm`` y la primera fila
-    en negrita si ``encabezado``."""
+    en negrita si ``encabezado``.
+
+    ``medir(texto, alto_mm, negrita, cursiva, fuente) -> mm`` mide un renglón
+    con la fuente con que el programa lo va a dibujar (None o un error: la
+    cuenta aproximada de ancho_texto_mm). Ninguna columna queda más angosta
+    que su texto más largo más los márgenes, aunque la planilla diga menos
+    (3.23.0: los códigos largos se metían en la columna siguiente)."""
     formato = respetar_formato and tabla.con_formato
     n_f, n_c = tabla.n_filas, tabla.n_cols
     alto_base = alto_texto_mm
@@ -732,6 +742,22 @@ def armar(tabla: Tabla, respetar_formato: bool = True, alto_texto_mm: float = 2.
     def negrita_de(c: Celda) -> bool:
         return (c.negrita if formato else False) or (encabezado and not formato and c.fila == 0)
 
+    def fuente_de(c: Celda) -> str:
+        return (c.fuente or tabla.fuente) if formato else ""
+
+    def ancho_de(renglon: str, c: Celda) -> float:
+        if not renglon:
+            return 0.0
+        h, negrita, cursiva = alto_de(c), negrita_de(c), (c.cursiva if formato else False)
+        if medir is not None:
+            try:
+                w = medir(renglon, h, negrita, cursiva, fuente_de(c))
+            except Exception:  # noqa: BLE001 -- sin fuente: la cuenta aproximada
+                w = None
+            if w is not None and w > 0:
+                return float(w)
+        return ancho_texto_mm(renglon, h, negrita)
+
     # anchos y altos: los de la planilla o calculados por el texto
     anchos = [0.0] * n_c
     altos = [0.0] * n_f
@@ -740,18 +766,28 @@ def armar(tabla: Tabla, respetar_formato: bool = True, alto_texto_mm: float = 2.
         altos = [h if h and h > 0 else 0.0 for h in (list(tabla.altos_mm or []) + [0.0] * n_f)[:n_f]]
     necesita_w = [0.0] * n_c
     necesita_h = [0.0] * n_f
+    combinadas = []                 # (primera col, n cols, ancho necesario)
     for c in tabla.celdas:
         h = alto_de(c)
         m = margen_de(c)
         renglones = c.texto.split("\n") if c.texto else [""]
+        w = max(ancho_de(r, c) for r in renglones) + 2 * m if c.texto else 0.0
         if c.cols == 1:
-            w = max(ancho_texto_mm(r, h, negrita_de(c)) for r in renglones) + 2 * m
             necesita_w[c.col] = max(necesita_w[c.col], w)
+        elif w:
+            combinadas.append((c.col, min(c.cols, n_c - c.col), w))
         if c.filas == 1:
             necesita_h[c.fila] = max(necesita_h[c.fila], len(renglones) * h * 1.6 + h * 0.6 + m)
     for i in range(n_c):
         if not anchos[i]:
             anchos[i] = max(necesita_w[i], 4 * alto_base)
+        elif necesita_w[i] > anchos[i]:
+            anchos[i] = necesita_w[i]           # la planilla daba menos: no se mete en la vecina
+    for col, n, w in combinadas:                # una combinada larga ensancha sus columnas
+        total = sum(anchos[col:col + n])
+        if w > total + 1e-9 and total > 0:
+            for i in range(col, col + n):           # en proporción: la tabla mantiene su aspecto
+                anchos[i] *= w / total
     for i in range(n_f):
         if not altos[i]:
             altos[i] = max(necesita_h[i], 2.0 * alto_base)
@@ -785,9 +821,9 @@ def armar(tabla: Tabla, respetar_formato: bool = True, alto_texto_mm: float = 2.
                             negrita_de(c), c.cursiva if formato else False,
                             c.subrayado if formato else False,
                             c.color if formato and c.color not in ("#000000",) else "",
-                            max(0.0, x1 - x0 - 2 * m)))
+                            max(0.0, x1 - x0 - 2 * m), c.fila, c.col))
     lineas = _bordes(tabla, xs, ys, formato and tabla.con_bordes(), grosor_mm)
-    return Armado(fondos, lineas, textos, xs[-1], -ys[-1])
+    return Armado(fondos, lineas, textos, xs[-1], -ys[-1], xs, ys)
 
 
 def _bordes(tabla: Tabla, xs, ys, con_formato: bool, grosor: float) -> list:
