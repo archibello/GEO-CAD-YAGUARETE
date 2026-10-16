@@ -25,7 +25,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, intercambio, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import barra, bloques, capas, intercambio, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -37,7 +37,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.25.5"
+VERSION = "3.25.6"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -101,6 +101,7 @@ def _document_open(ctx, document):
     orden.instalar()
     uniones.instalar()
     barra.instalar()
+    capas.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
@@ -345,7 +346,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.25.5",
+        version="3.25.6",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

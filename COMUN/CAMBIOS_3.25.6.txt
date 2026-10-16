@@ -1,0 +1,24 @@
+GeoCAD - versión 3.25.6
+=======================
+CANDADOS CLAROS EN EL PANEL LAYERS (16/10/2026, pedido de Fernando).
+
+El problema
+- En el panel Layers de IngeCAD el bloqueo se mostraba con dos emojis
+  (candado abierto y cerrado) que en tamaño chico se ven casi iguales.
+
+Cambio (IngeCAD)
+- Capa libre: un candado ABIERTO en gris, con el arco levantado y corrido
+  a un costado.
+- Capa bloqueada: un candado CERRADO en rojo, que se ve de un vistazo.
+- Se sigue bloqueando y desbloqueando con un clic, como siempre: el texto
+  que IngeCAD lee para saber el estado no se toca, sólo cambia el dibujo.
+- Retoque fijo de IngeCAD (sin módulo para apagarlo: es algo puntual y de
+  uso tradicional). Se aplica al panel abierto y a los que se abran después.
+
+Pruebas
+- test_capas: qué candado corresponde a cada estado, colores, y que sin Qt
+  no rompe nada.
+- Además, se dibujó la tabla en un Qt invisible con el Python de IngeCAD
+  0.6.7: abierto gris, cerrado rojo, también en la fila seleccionada; el
+  texto de la celda queda igual.
+- 43 pruebas automáticas OK.
