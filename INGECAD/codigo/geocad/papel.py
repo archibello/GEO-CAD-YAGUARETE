@@ -24,6 +24,11 @@ GeoCAD hace que IngeCAD respete esa escala, como AutoCAD:
 4. Las presentaciones nuevas de un dibujo en metros nacen con 1 mm = 0,001.
 5. (3.6.0) En el desplegable de escala de la ventana gráfica se escribe la
    escala como en AutoCAD (1/100, 1:100, 1/250, 2:1...) y Enter la aplica.
+6. TRAZAR en una presentación imprime lo que se ve en la hoja: arranca en
+   «Layout (hoja 1:1)» con el papel y la orientación de su configuración de
+   página; y la hoja a 1:1 vuelve a salir con IngeCAD 0.6.7 (PDF, impresora,
+   PUBLICAR y VISTAPREVIA). La presentación, la vista previa y el PDF
+   muestran la misma hoja (prueba test_impresion_etapas).
 
 Con escala 1:1 (dibujos en mm, presentaciones de siempre) nada cambia.
 Apagado el módulo, IngeCAD queda como venía. Las cuentas no usan Qt.
@@ -197,8 +202,12 @@ def _envolver_plot_layout(original):
         # hoja en metros, 0,25 mm tiene que ser 0,00025 unidades.
         plumas = pdf_out._use_physical_pens
 
-        def plumas_en_unidades(scene):
-            plumas(scene)
+        def plumas_en_unidades(scene, *args, **kwargs):
+            plumas(scene, *args, **kwargs)
+            if args or kwargs:
+                # IngeCAD 0.6.7 ya pasa el grosor a unidades de la escena
+                # (le llega la escala); antes la pluma quedaba en mm.
+                return
             for item in scene.items():
                 if hasattr(item, "pen"):
                     pen = item.pen()
@@ -372,6 +381,61 @@ def preparar_combo(window) -> None:
     _refrescar(window)
 
 
+# ------------------------------------------- TRAZAR desde una presentación
+def papel_de_la_hoja(ancho: float, alto: float, tamanos) -> tuple:
+    """(índice del papel en ``tamanos`` o None, horizontal) para una hoja de
+    ``ancho`` × ``alto`` mm. ``tamanos`` son los papeles de TRAZAR, en
+    vertical (A4 210 × 297...)."""
+    corto, largo = sorted((ancho, alto))
+    indice = None
+    for i, (w, h) in enumerate(tamanos):
+        if abs(w - corto) < 0.5 and abs(h - largo) < 0.5:
+            indice = i
+            break
+    return indice, ancho >= alto
+
+
+def hoja_en_el_trazado(dialogo, window, state=None) -> None:
+    """TRAZAR en una presentación imprime lo que se ve en la hoja: arranca en
+    «Layout (hoja 1:1)», con el papel y la orientación de su configuración
+    de página, como AutoCAD. IngeCAD lo hacía sólo en el modelo; en la
+    presentación dejaba A4 horizontal y recordaba «Extents» de la vez
+    anterior: la hoja vertical salía chica en una página horizontal.
+    Una ventana recién marcada (Window <) se respeta."""
+    nombre = getattr(dialogo, "_layout_name", "Model")
+    document = getattr(window, "document", None)
+    if nombre == "Model" or document is None or nombre not in document.doc.layouts:
+        return
+    if state and state.get("area") == "window":
+        return
+    from core import layouts
+    from formats import pdf_out
+    pagina = layouts.effective_page(document.doc.layouts.get(nombre))   # en mm
+    indice, horizontal = papel_de_la_hoja(
+        pagina["width"], pagina["height"], list(pdf_out.PAPER_SIZES_MM.values()))
+    if indice is not None:
+        dialogo.paper.setCurrentIndex(indice)
+    i = dialogo.orientation.findData(horizontal)
+    if i >= 0:
+        dialogo.orientation.setCurrentIndex(i)
+    i = dialogo.area.findData("layout")
+    if i >= 0 and dialogo.area.currentData() != "layout":
+        dialogo.area.setCurrentIndex(i)
+
+
+def _envolver_print_init(original):
+    def __init__(self, window, state=None, *args, **kwargs):
+        original(self, window, state, *args, **kwargs)
+        if activo():
+            try:
+                hoja_en_el_trazado(self, window, state)
+            except Exception:  # noqa: BLE001 - el diálogo queda como venía
+                pass
+    __init__._puente_original = original
+    __init__._puente_fabrica = _envolver_print_init
+    return __init__
+
+
 LAYOUTS = {"paper_frame": _envolver_paper_frame,
            "effective_page": _envolver_effective_page,
            "page_setup_command": _envolver_page_setup_command}
@@ -402,3 +466,8 @@ def instalar() -> None:
     except Exception:  # noqa: BLE001
         return
     _aplicar(pdf_out, PDF_OUT, envolver)
+    try:
+        from views.print_dialog import PrintDialog
+    except Exception:  # noqa: BLE001
+        return
+    _aplicar(PrintDialog, {"__init__": _envolver_print_init}, envolver)

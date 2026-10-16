@@ -1,0 +1,41 @@
+GeoCAD - versión 3.27.1
+=======================
+LA HOJA, LA VISTA PREVIA Y EL PDF IGUALES (16/10/2026, pedido de Fernando:
+«debería haber una correlación directa entre las tres etapas del proceso
+de impresión»).
+Trae lo de la 3.27.0 (tamaño mínimo legible).
+
+El problema
+- «PRUEBA CON ETIQUETAS.dwg», Layout2: hoja A0 VERTICAL, ventana a
+  1:15000. El PDF salía en una página HORIZONTAL, con el dibujo chico en
+  el medio.
+- Causa 1 (GeoCAD): desde IngeCAD 0.6.7 la salida «Layout (sheet at 1:1)»
+  fallaba en los dibujos en metros con el módulo Papel: IngeCAD cambió cómo
+  pasa el grosor de las plumas y nuestro envoltorio no lo aceptaba. Fallaban
+  el PDF, la impresora, PUBLICAR y VISTAPREVIA.
+- Causa 2 (IngeCAD): en una presentación TRAZAR arrancaba en A4 horizontal
+  y recordaba «Extents» de la vez anterior, sin mirar la configuración de
+  página. El PDF de Fernando sale idéntico con «Extents», «Fit to paper»,
+  A0 y Horizontal.
+
+Qué cambia (módulo Papel)
+- La hoja a 1:1 vuelve a salir: PDF, impresora, PUBLICAR y VISTAPREVIA,
+  con las plumas de su grosor real (0,25 mm = 0,25 mm en la hoja).
+- TRAZAR en una presentación imprime lo que se ve en la hoja: arranca en
+  «Layout (hoja 1:1)», con el papel y la orientación de su configuración
+  de página (A0 vertical -> A0 vertical). Una ventana recién marcada
+  (Window <) se respeta. Si se elige otra área, el papel y la orientación
+  ya vienen los de la hoja.
+- Apagado el módulo Papel, IngeCAD queda como venía.
+
+Pruebas
+- test_impresion_etapas (nueva): una lámina A0 vertical en metros con una
+  ventana a 1:15000 sobre un rectángulo de 3000 × 6000 m en Gauss-Krüger
+  y un marco en la hoja. Compara la presentación (paper_frame y la ventana),
+  TRAZAR (A0 vertical), la vista previa y el PDF: misma hoja, misma
+  orientación, 200 × 400 mm y el mismo lugar (±2 mm). Sin Qt prueba la
+  presentación y TRAZAR; con el Qt de IngeCAD, también la vista previa y
+  el PDF (con la 3.26.5 instalada falla: TypeError de las plumas).
+- test_papel: la hoja a 1:1 con IngeCAD 0.6.7 y con el anterior; TRAZAR
+  arranca con la hoja de la presentación.
+- 46 pruebas automáticas OK; test_impresion_etapas también con el Qt de IngeCAD.

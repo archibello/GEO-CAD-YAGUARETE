@@ -141,4 +141,136 @@ win._scale_target_vp = lambda: None
 assert not P.aplicar_escala(win, "1/500") and "MSPACE" in ecos[-1]
 print("ok escala escrita aplicada")
 
+# ------------------------------------------------------------- 8. TRAZAR la presentación (3.26.6)
+# Fernando: Layout2 A0 VERTICAL a 1:15000 y el PDF salía HORIZONTAL. (1) Con
+# IngeCAD 0.6.7 la hoja a 1:1 fallaba en un dibujo en metros: IngeCAD le pasa
+# ahora la escala a _use_physical_pens y nuestro envoltorio no la aceptaba.
+# (2) En la presentación TRAZAR arrancaba en A4 horizontal: con «Extents»
+# salía la hoja vertical en una página horizontal.
+import formats
+falso = types.ModuleType("formats.pdf_out")
+falso.PAPER_SIZES_MM = {"A4": (210.0, 297.0), "A3": (297.0, 420.0), "A2": (420.0, 594.0),
+                        "A1": (594.0, 841.0), "A0": (841.0, 1189.0), "Letter": (215.9, 279.4)}
+llamadas = []
+
+
+class Pluma:
+    def __init__(self):
+        self.w = 0.25
+    def isCosmetic(self):
+        return False
+    def widthF(self):
+        return self.w
+    def setWidthF(self, w):
+        self.w = w
+
+
+class Item:
+    def __init__(self):
+        self.p = Pluma()
+    def pen(self):
+        return self.p
+    def setPen(self, p):
+        self.p = p
+
+
+escena = types.SimpleNamespace(items=lambda: [item])
+item = Item()
+
+
+def plumas_nuevas(scene, mm_per_unit=1.0, lineweights=True):   # IngeCAD 0.6.7
+    for it in scene.items():
+        it.pen().setWidthF(0.25 / mm_per_unit)
+
+
+def plot(document, printer, layout_name=None, area=None, mm_per_unit=None,
+         physical_pens=True, ctb=None, painter=None, lineweights=True):
+    llamadas.append((layout_name, area, mm_per_unit))
+    falso._use_physical_pens(escena, mm_per_unit, lineweights)
+
+
+falso._use_physical_pens = plumas_nuevas
+falso.plot = plot
+falso.layout_sheet = lambda document, name: P._envolver_layout_sheet(
+    lambda d, n: ((0.841, 1.189), (0.0, 0.0, 0.841, 1.189)))(document, name)
+sys.modules["formats.pdf_out"] = falso
+formats.pdf_out = falso
+
+docA0 = dibujo()
+layA0 = docA0.doc.layouts.get("Layout1")
+L.page_setup_command(layA0, 841.0, 1189.0, (20.0, 7.5, 20.0, 7.5), "ISO A0",
+                     fit_to_paper=False, scale=(1.0, 0.001)).do(docA0)
+assert abs(P.unidades_por_mm(layA0) - 0.001) < 1e-15
+pagina = L.effective_page(layA0)
+assert abs(pagina["width"] - 841.0) < 1e-6 and abs(pagina["height"] - 1189.0) < 1e-6   # en mm
+assert falso.layout_sheet(docA0, "Layout1")[0] == (841.0, 1189.0)       # el PDF, vertical
+impresora = types.SimpleNamespace(setFullPage=lambda v: None)
+P._envolver_plot_layout(lambda *a, **k: None)(docA0, impresora, "Layout1")   # antes: TypeError
+assert llamadas[-1][2] == 1000.0 and llamadas[-1][1] == (0.0, 0.0, 0.841, 1.189)
+assert abs(item.p.w - 0.00025) < 1e-15                    # 0,25 mm = 0,00025 m, no 1000 veces menos
+# IngeCAD anterior (la pluma sin escala): el envoltorio la pasa a unidades
+item = Item()
+plumas_viejas = lambda scene: None
+falso._use_physical_pens = plumas_viejas
+falso.plot = lambda *a, **k: falso._use_physical_pens(escena)
+P._envolver_plot_layout(lambda *a, **k: None)(docA0, impresora, "Layout1")
+assert abs(item.p.w - 0.00025) < 1e-15
+print("ok hoja a 1:1 con IngeCAD 0.6.7")
+
+H = P.papel_de_la_hoja
+T = list(falso.PAPER_SIZES_MM.values())
+assert H(841.0, 1189.0, T) == (4, False) and H(1189.0, 841.0, T) == (4, True)
+assert H(420.0, 297.0, T) == (1, True) and H(500.0, 700.0, T) == (None, False)
+
+
+class Combo:
+    def __init__(self, datos):
+        self.datos, self.i = datos, 0
+    def setCurrentIndex(self, i):
+        self.i = i
+    def findData(self, d):
+        return self.datos.index(d) if d in self.datos else -1
+    def currentData(self):
+        return self.datos[self.i]
+
+
+def dialogo(nombre):
+    return types.SimpleNamespace(_layout_name=nombre, paper=Combo(list(falso.PAPER_SIZES_MM)),
+                                 orientation=Combo([True, False]),
+                                 area=Combo(["layout", "extents", "view", "window"]))
+
+
+ventana = types.SimpleNamespace(document=docA0)
+d = dialogo("Layout1")
+P.hoja_en_el_trazado(d, ventana)
+assert d.paper.currentData() == "A0" and d.orientation.currentData() is False   # A0 vertical
+d = dialogo("Layout1")
+P.hoja_en_el_trazado(d, ventana, {"area": "layout"})
+assert d.paper.currentData() == "A0" and d.orientation.currentData() is False
+d = dialogo("Layout1")                           # «Extents» de la vez anterior: la hoja
+d.area.i = 1
+P.hoja_en_el_trazado(d, ventana, {"area": "extents"})
+assert d.area.currentData() == "layout" and d.orientation.currentData() is False
+d = dialogo("Layout1")                           # una ventana recién marcada: se respeta
+d.area.i = 3
+P.hoja_en_el_trazado(d, ventana, {"area": "window", "window": (0, 0, 1, 1)})
+assert d.area.currentData() == "window" and d.paper.currentData() == "A4"
+d = dialogo("Model")                             # el modelo: lo hace IngeCAD
+P.hoja_en_el_trazado(d, ventana)
+assert d.paper.currentData() == "A4"
+# el diálogo envuelto: apagado el módulo queda como venía
+class Dialogo:
+    def __init__(self, window, state=None):
+        self._layout_name = "Layout1"
+        self.paper = Combo(list(falso.PAPER_SIZES_MM))
+        self.orientation = Combo([True, False])
+        self.area = Combo(["layout", "extents"])
+Dialogo.__init__ = P._envolver_print_init(Dialogo.__init__)
+assert Dialogo(ventana).orientation.currentData() is False
+M.guardar("ingecad", {"papel": False})
+assert Dialogo(ventana).orientation.currentData() is True
+M.guardar("ingecad", {"papel": True})
+del sys.modules["formats.pdf_out"]
+print("ok TRAZAR con la hoja de la presentación")
+
 print("TODO OK PAPEL")
