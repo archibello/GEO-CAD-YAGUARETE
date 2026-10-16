@@ -1,0 +1,32 @@
+GeoCAD - versión 3.27.2
+=======================
+IMPRIMIR DESDE LA VISTA PREVIA DE PAGE SETUP Y RÓTULOS NÍTIDOS EN EL PDF
+(16/10/2026, pedidos de Fernando). Trae lo de la 3.27.1.
+
+Imprimir... también en la vista previa de Page Setup
+- Fernando: «en esta vista previa del Layout también debería estar».
+- La vista previa que se abre con «Vista previa...» en Page Setup tiene
+  ahora «Imprimir...», como la de VISTAPREVIA: aplica lo elegido en Page
+  Setup (como Aceptar), cierra las dos ventanas y abre TRAZAR en
+  «Layout (hoja 1:1)» con esa página.
+
+Rótulos que se empastaban en el PDF
+- Fernando: «los números más chicos son más legibles que los más grandes».
+  En el PDF de «PRUEBA CON ETIQUETAS» (Layout2, 1:15000) los rótulos de
+  15 m (1 mm en la hoja) salían como manchas.
+- Causa (IngeCAD): cada letra TrueType se dibuja rellena y además con un
+  borde del grosor de la capa (en pantalla es de 1 px y no se nota; en el
+  papel, 0,25 mm alrededor de una letra de 1 mm cierra los huecos).
+- Ahora los textos TrueType y los rellenos sólidos se imprimen sin ese
+  borde, como AutoCAD. Las líneas siguen con su grosor. Vale para el PDF,
+  la impresora, PUBLICAR y la vista previa (módulo Impresión; apagado,
+  IngeCAD queda como venía).
+
+Pruebas
+- test_impresion: los rellenos pierden el borde; las líneas no.
+- test_impresion_etapas (con el Qt de IngeCAD): un «265A» TrueType de 15 m
+  con grosor 0,50 mm sale sin borde; Imprimir... de la vista previa de
+  Page Setup aplica la página y recién después abre TRAZAR.
+- Comparado con la copia de «PRUEBA CON ETIQUETAS»: «265A» empastado con
+  la 3.27.1, nítido con la 3.27.2.
+- 46 pruebas automáticas OK; test_impresion_etapas también con el Qt de IngeCAD.

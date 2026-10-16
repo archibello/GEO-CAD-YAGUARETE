@@ -4,7 +4,7 @@ y los botones Editar... / Vista previa... de Page Setup. Las cuentas están
 en impresion.py."""
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon, QPainter, QPicture, QPixmap
 from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDialog,
                                QDialogButtonBox, QFormLayout,
@@ -187,7 +187,8 @@ class VistaPrevia(QDialog):
     """VISTAPREVIA: la presentación como sale impresa.
 
     ``provisoria(hacer)`` (desde Page Setup) dibuja con la página elegida
-    todavía sin aplicar; ``imprimir`` (desde la orden) cierra y abre PLOT.
+    todavía sin aplicar; ``imprimir`` cierra y abre PLOT (desde Page Setup,
+    aplicando antes la página elegida).
     """
 
     def __init__(self, parent, document, layout_name: str, ctb: str,
@@ -541,13 +542,22 @@ def agregar_a_page_setup(dialogo, window, layout) -> None:
         document = window.document
         vista = VistaPrevia(
             dialogo, document, layout.name, tabla_elegida(),
-            provisoria=lambda hacer: I.con_pagina_provisoria(document, layout, comando, hacer))
+            provisoria=lambda hacer: I.con_pagina_provisoria(document, layout, comando, hacer),
+            imprimir=True)
         vista.exec()
         if vista.ctb != tabla_elegida():
             if vista.ctb:
                 elegir(vista.ctb)
             else:
                 combo.setCurrentIndex(0)
+        if vista.imprimir_pedido:
+            # Imprimir...: se aplica lo elegido en Page Setup (Aceptar) y,
+            # cerradas las dos ventanas, TRAZAR con esa página. IngeCAD aplica
+            # la página después del exec() y recién entonces libera el
+            # diálogo (deleteLater): TRAZAR va al liberarlo.
+            dialogo.destroyed.connect(lambda *_: QTimer.singleShot(
+                0, lambda: window._invoke_command("PLOT")))
+            dialogo.accept()
 
     editar.clicked.connect(al_editar)
     previa.clicked.connect(al_previa)

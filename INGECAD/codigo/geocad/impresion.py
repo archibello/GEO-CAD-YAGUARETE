@@ -14,6 +14,11 @@ cómo editarlas ni cómo ver el resultado antes de imprimir. GeoCAD suma:
 3. En Page Setup, junto a «Plot style table», los botones Editar... y
    Vista previa... (la vista previa usa lo elegido en la ventana, todavía
    sin aplicar).
+4. (3.27.2) Los textos TrueType y los rellenos se imprimen sin contorno,
+   como AutoCAD: IngeCAD les dejaba el borde con el grosor de la capa y en
+   el papel las letras grandes salían empastadas (en pantalla el borde es
+   de 1 px y no se nota). Desde la vista previa de Page Setup se imprime
+   también (Imprimir... aplica la página y abre TRAZAR).
 
 Este archivo tiene las cuentas, sin Qt (se prueban solas); las ventanas
 están en impresion_ui.py.
@@ -203,9 +208,42 @@ def cmd_plumas(ctx, *args) -> None:
     impresion_ui.plumas(ctx.host, ctx.echo)
 
 
+# ---------------------------------------------------------------- rellenos sin contorno
+def quitar_contorno_rellenos(items, sin_relleno, sin_linea) -> int:
+    """A cada elemento relleno (letra TrueType, sombreado sólido) le saca el
+    contorno: AutoCAD imprime el relleno solo, sin el grosor de la capa.
+    ``sin_relleno`` / ``sin_linea`` son Qt.NoBrush / Qt.NoPen. Devuelve
+    cuántos cambió. Las líneas (sin relleno) quedan como estaban."""
+    cambiados = 0
+    for item in items:
+        if not (hasattr(item, "brush") and hasattr(item, "pen")):
+            continue
+        if item.brush().style() == sin_relleno:
+            continue
+        pen = item.pen()
+        if pen.style() == sin_linea:
+            continue
+        pen.setStyle(sin_linea)
+        item.setPen(pen)
+        cambiados += 1
+    return cambiados
+
+
+def _envolver_plumas(original):
+    def _use_physical_pens(scene, *args, **kwargs):
+        original(scene, *args, **kwargs)
+        if activo():
+            from PySide6.QtCore import Qt
+            quitar_contorno_rellenos(scene.items(), Qt.NoBrush, Qt.NoPen)
+    _use_physical_pens._puente_original = original
+    _use_physical_pens._puente_fabrica = _envolver_plumas
+    return _use_physical_pens
+
+
 def instalar() -> None:
-    """Botones Editar plumas... y Vista previa... en Page Setup. El envoltorio
-    mira ``activo()`` al abrir la ventana: apagado, Page Setup queda como venía."""
+    """Botones Editar plumas... y Vista previa... en Page Setup; al imprimir,
+    los rellenos sin contorno. Los envoltorios miran ``activo()`` en cada
+    llamada: apagado, IngeCAD queda como venía."""
     try:
         from views.page_setup_dialog import PageSetupDialog   # usa Qt
         from . import impresion_ui
@@ -215,3 +253,10 @@ def instalar() -> None:
     actual = getattr(PageSetupDialog.__init__, "_puente_fabrica", None)
     if actual is not impresion_ui._envolver_init:
         envolver(PageSetupDialog, "__init__", impresion_ui._envolver_init, reemplazar=True)
+    try:
+        from formats import pdf_out                  # usa Qt
+    except Exception:  # noqa: BLE001
+        return
+    if getattr(getattr(pdf_out, "_use_physical_pens", None), "_puente_fabrica", None) \
+            is not _envolver_plumas:
+        envolver(pdf_out, "_use_physical_pens", _envolver_plumas, reemplazar=True)

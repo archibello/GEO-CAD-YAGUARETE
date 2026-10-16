@@ -106,4 +106,37 @@ except ZeroDivisionError:
 assert dict(lay.dxf.all_existing_dxf_attribs()) == antes and doc.dirty is False
 print("ok página provisoria")
 
+# ------------------------------------------------------------- rellenos sin contorno (3.27.2)
+# Fernando: en el PDF los rótulos grandes salían empastados. IngeCAD dejaba a
+# cada letra TrueType (relleno) un borde con el grosor de la capa.
+SIN_RELLENO, SIN_LINEA, SOLIDA, LLENO = "NoBrush", "NoPen", "SolidLine", "SolidPattern"
+
+
+class Pluma:
+    def __init__(self):
+        self.estilo = SOLIDA
+    def style(self):
+        return self.estilo
+    def setStyle(self, e):
+        self.estilo = e
+
+
+class Cosa:
+    def __init__(self, relleno):
+        self.p, self.b = Pluma(), types.SimpleNamespace(style=lambda: relleno)
+    def pen(self):
+        return self.p
+    def setPen(self, p):
+        self.p = p
+    def brush(self):
+        return self.b
+
+
+letra, linea = Cosa(LLENO), Cosa(SIN_RELLENO)
+sin_borde = Cosa(LLENO); sin_borde.p.estilo = SIN_LINEA
+otra = types.SimpleNamespace(pen=lambda: None)          # sin brush: no se toca
+assert I.quitar_contorno_rellenos([letra, linea, sin_borde, otra], SIN_RELLENO, SIN_LINEA) == 1
+assert letra.p.estilo == SIN_LINEA and linea.p.estilo == SOLIDA
+print("ok rellenos sin contorno")
+
 print("TODO OK IMPRESION")

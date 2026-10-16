@@ -13,6 +13,8 @@ marco dibujado en la hoja:
    la misma hoja (tamaño, orientación) y el marco y el rectángulo en el
    mismo lugar, a 1:15000. Se dibujan con el Qt de IngeCAD; sin PySide6
    (las pruebas de siempre) se prueba sólo lo que no usa Qt.
+5. La vista previa de Page Setup imprime: aplica la página y abre TRAZAR.
+6. Las letras TrueType se imprimen sin el borde de la capa (no se empastan).
 """
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
@@ -163,5 +165,57 @@ rojo_pdf, azul_pdf = tinta(hoja_pdf.convertToFormat(QImage.Format_RGB32))
 assert igual(rojo_pdf, RECT) and igual(azul_pdf, MARCO), (rojo_pdf, RECT, azul_pdf, MARCO)
 assert igual(rojo_pdf, rojo_previa, 1.0) and igual(azul_pdf, azul_previa, 1.0)
 print("ok PDF = vista previa = presentación (A0 vertical, 1:15000, mismo lugar)")
+
+# 5. La vista previa de Page Setup también tiene «Imprimir...» (Fernando,
+# 3.27.2): aplica la página elegida (Aceptar) y, liberado el diálogo, TRAZAR.
+from PySide6.QtCore import QCoreApplication, QEvent, QTimer
+from PySide6.QtWidgets import QPushButton, QWidget
+from views.page_setup_dialog import PageSetupDialog
+ventana = QWidget()
+ventana.document, ventana._active_layout = documento, "Layout1"
+ordenes = []
+ventana._invoke_command = ordenes.append
+lay_doc = documento.doc.layouts.get("Layout1")
+config = PageSetupDialog(ventana, lay_doc)
+UI.agregar_a_page_setup(config, ventana, lay_doc)
+boton = [b for b in config.findChildren(QPushButton) if b.text() == "Vista previa..."][0]
+vistos = []
+
+
+def en_la_previa():
+    vista = [w for w in app.topLevelWidgets() if isinstance(w, UI.VistaPrevia) and w.isVisible()][0]
+    imprimir = [b for b in vista.findChildren(QPushButton) if b.text() == "Imprimir..."]
+    vistos.append(bool(imprimir))
+    (imprimir or [vista.findChildren(QPushButton)[-1]])[0].click()
+
+
+QTimer.singleShot(0, boton.click)
+QTimer.singleShot(50, en_la_previa)
+assert config.exec() == 1 and vistos == [True], vistos       # Page Setup aceptado
+app.processEvents()
+assert ordenes == []                    # IngeCAD aplica la página antes de TRAZAR
+config.deleteLater()
+QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+app.processEvents()
+assert ordenes == ["PLOT"], ordenes
+print("ok vista previa de Page Setup: Imprimir... aplica la página y abre TRAZAR")
+
+# 6. Las letras TrueType salen sin el borde de la capa (3.27.2): en el PDF un
+# texto de 1 mm no se empasta. Con el contorno de 0,25 mm las letras grandes
+# de Fernando salían como manchas.
+IMP = import_module("ingecad_plugin_geocad.impresion")
+IMP.instalar()
+from PySide6.QtCore import Qt as _Qt
+d2 = ezdxf.new("R2018"); d2.header["$INSUNITS"] = 6
+d2.styles.add("ARIAL", font="arial.ttf")
+d2.modelspace().add_text("265A", height=15.0, dxfattribs={"style": "ARIAL", "lineweight": 50})
+d2.saveas(carpeta / "texto.dxf")
+doc_texto = Document.load(carpeta / "texto.dxf")
+escena = pdf_out.build_graphics_scene(doc_texto, None, None)
+rellenos = [it for it in escena.items() if hasattr(it, "brush") and it.brush().style() != _Qt.NoBrush]
+assert rellenos, "el texto TrueType tendría que dibujarse relleno"
+pdf_out._use_physical_pens(escena, 1.0 / ESCALA, True)
+assert all(it.pen().style() == _Qt.NoPen for it in rellenos)
+print("ok letras TrueType sin el borde de la capa")
 
 print("TODO OK ETAPAS DE IMPRESIÓN")
