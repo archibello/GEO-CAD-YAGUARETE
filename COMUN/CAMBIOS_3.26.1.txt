@@ -1,0 +1,25 @@
+GeoCAD - versión 3.26.1
+=======================
+ROTULOSIG CON LOS OBJETOS SELECCIONADOS, SUMANDO (16/10/2026, pedido de
+Fernando). Trae lo de la 3.26.0 (rótulos estandarizados).
+
+Cambio (IngeCAD, ROTULOSIG / Rótulos desde un campo)
+- Rotula sólo los objetos seleccionados: elegidos antes de llamar a la
+  orden o al «Designe los objetos a rotular».
+- Cada selección nueva SUMA rótulos a la composición: los que ya estaban
+  quedan. Si un objeto elegido ya tenía rótulo, sólo ése se reemplaza (no
+  quedan dos encimados).
+- Enter sin elegir nada: toda la capa, reemplazando todo (como antes).
+- Si se eligen objetos de varias capas SIG, pregunta cuál rotular. Los
+  rótulos y los objetos que no son de una capa con base de datos se
+  ignoran. También se rotulan objetos de capas bloqueadas (sólo se leen).
+- La línea de comandos lo dice: «2 rótulo(s) de PARTIDA ... (2 objeto(s)
+  elegidos); reemplazan a 2 anteriores; quedan 3 de otros objetos».
+- Un deshacer devuelve los rótulos como estaban.
+
+Pruebas
+- test_barra_datos: con una capa conectada, Enter = toda la capa; con dos
+  parcelas elegidas (y un rótulo, que se ignora) se reemplazan sólo esas
+  dos y quedan las otras tres; deshacer; objetos que no son SIG.
+- test_rotulos: lo mismo con un SHP importado.
+- 44 pruebas automáticas OK.

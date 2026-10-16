@@ -1,0 +1,33 @@
+GeoCAD - versión 3.26.2
+=======================
+RÓTULOS EN EL CENTROIDE DE LA PARCELA (16/10/2026, error encontrado por
+Fernando con PC_2_DE_MAYO). Trae lo de la 3.26.0 y la 3.26.1.
+
+El error
+- Los rótulos no quedaban centrados en la parcela y algunos se salían.
+
+Causas y corrección (IngeCAD, ROTULOSIG)
+- Se ubicaban en el centro visual (el punto más alejado de los bordes). La
+  consigna es el CENTROIDE (el epicentro de la parcela): ahora el centro
+  del texto va en el centroide.
+- Con coordenadas grandes (Gauss-Krüger: X 7.431.000, Y 7.011.000) el
+  cálculo del centroide perdía los decimales y salía hasta 40 m corrido,
+  incluso fuera de parcelas de 4 vértices. Ahora se calcula relativo a un
+  vértice de la parcela: exacto.
+- El ancho del texto se medía con otra fuente que la que usa el dibujo:
+  ahora se mide como lo dibuja IngeCAD (estilo del dibujo y las mismas
+  fuentes), así ninguno se sale.
+- La altura sugerida es la prioridad: si en el centroide el rótulo no
+  entra entero pero en el centro visual sí, va ahí entero. Recién si no
+  entra en ningún lado se aplica la opción (A achicar, B rotar, C eje, D
+  omitir), y el achicado queda en el centroide.
+
+Prueba con los datos reales
+- PC_2_DE_MAYO, las 121 parcelas de la zona de la captura, altura 2,5,
+  medido con la caja real de cada texto: en A, B y C ninguno fuera de su
+  parcela y todos en el centroide salvo 1 (corrido para entrar entero).
+
+Pruebas
+- test_rotulos: centroide con coordenadas de Gauss-Krüger; altura entera
+  primero (se corre al centro visual) y achicado en el centroide.
+- 44 pruebas automáticas OK.

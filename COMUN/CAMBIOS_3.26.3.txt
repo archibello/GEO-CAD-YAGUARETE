@@ -1,0 +1,17 @@
+GeoCAD - versión 3.26.3
+=======================
+RÓTULOS ACHICADOS CON AIRE (16/10/2026, pedido de Fernando). Trae lo de
+la 3.26.0, 3.26.1 y 3.26.2.
+
+Cambio (IngeCAD, ROTULOSIG)
+- Un rótulo que no entra con la altura sugerida y se achica ocupa el 80 %
+  del espacio donde entra: ya no toca los bordes de la parcela.
+- Los que entran con la altura sugerida no cambian.
+
+Prueba con los datos reales
+- PC_2_DE_MAYO, 121 parcelas, altura 2,5: en A, B y C ninguno fuera de su
+  parcela, en el centroide (salvo 1, corrido para entrar entero).
+
+Pruebas
+- test_rotulos: el achicado es el 80 % del que entraría justo.
+- 44 pruebas automáticas OK.

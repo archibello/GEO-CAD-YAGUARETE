@@ -47,14 +47,24 @@ cs = {t.fid: e.dxf.color for t, e in tagged(key)}; assert cs[0] == 51 and cs[4] 
 hist.undo(); assert {t.fid: e.dxf.color for t, e in tagged(key)} == colors
 run("SHPTHEMEOFF"); assert all(e.dxf.color == 256 for _t, e in tagged(key))
 # rótulos (no son datos: no aparecen como objetos nuevos)
-out = run("SHPLABEL", ["PARTIDA", "1.5"]); print(out)
+out = run("SHPLABEL", ["PARTIDA", "1.5"], []); print(out)          # Enter sin elegir = toda la capa
 labels = HD.existing_labels(doc, key); assert len(labels) == 5 and labels[0].dxf.layer == "SHP-parcelas-ROTULOS"
 lab2 = [l for l in labels if l.dxf.text == "01-0002"][0]
 from ingecad_plugin_geocad import datos as D
 ring = [(x0 + 60, y0), (x0 + 60, y0 + 25), (x0 + 80, y0 + 25), (x0 + 80, y0)]
 p = lab2.dxf.insert if lab2.dxf.halign == 0 else lab2.dxf.align_point
 assert D.point_in_ring((p.x, p.y), ring) and not D.point_in_ring((p.x, p.y), [(x0 + 65, y0 + 5), (x0 + 70, y0 + 5), (x0 + 70, y0 + 10), (x0 + 65, y0 + 10)])
-out = run("SHPLABEL", ["TITULAR", "2"]); assert "reemplazan a 5" in out and len(HD.existing_labels(doc, key)) == 5
+out = run("SHPLABEL", ["TITULAR", "2"], []); assert "reemplazan a 5" in out and len(HD.existing_labels(doc, key)) == 5
+# 3.26.1: sólo lo seleccionado, y SUMA: los rótulos de los demás quedan
+dos = [e for t, e in tagged(key) if t.fid in (0, 1)]
+out = run("SHPLABEL", ["PARTIDA", "1"], dos + [lab2]); print(out)    # un rótulo elegido se ignora
+labels = HD.existing_labels(doc, key)
+assert len(labels) == 5 and "(2 objeto(s) elegidos)" in out and "reemplazan a 2" in out and "quedan 3" in out
+assert sorted(l.dxf.text for l in labels) == ["01-0000", "01-0001", "Ibáñez", "Núñez", "Ruiz"]
+hist.undo(); assert sorted(l.dxf.text for l in HD.existing_labels(doc, key)) == sorted(
+    ["Pérez", "Gómez", "Núñez", "Ibáñez", "Ruiz"])
+hist.redo()
+out = run("SHPLABEL", [], [zona]); assert "no son de una capa SIG" in out, out
 out = run("SHPSTATUS"); assert "0 nuevo(s)" in out, out
 run("SHPLABELOFF"); assert not HD.existing_labels(doc, key)
 hist.undo(); assert len(HD.existing_labels(doc, key)) == 5

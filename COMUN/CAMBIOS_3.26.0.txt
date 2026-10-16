@@ -1,0 +1,45 @@
+GeoCAD - versión 3.26.0
+=======================
+RÓTULOS ESTANDARIZADOS (16/10/2026, reglas de Fernando).
+
+El problema
+- ROTULOSIG ponía cada rótulo en un lugar distinto: en el centro de los
+  polígonos, pero en la mitad de las líneas (sobre los bordes) y al costado
+  de los puntos; los que no entraban quedaban montados sobre los vecinos.
+
+Polígonos cerrados (IngeCAD, ROTULOSIG / Rótulos desde un campo)
+- El rótulo va siempre DENTRO, con su centro en el centro visual del
+  polígono: el punto más alejado de los bordes (como QGIS). En un
+  rectángulo es el centro; en una cuña o una L queda donde hay más lugar;
+  con un hueco, fuera del hueco.
+- Para los que no entran con la altura pedida, cuatro opciones:
+  A  Achicar hasta que entren, siempre horizontales.
+  B  Rotar según el eje más largo del polígono y, si igual no entran,
+     achicar con esa orientación.
+  C  Todos según el eje más largo, con la altura pedida, achicando los que
+     quedan grandes.
+  D  Omitir los que no entran (la línea de comandos dice cuántos).
+- Se mide el texto con la fuente del dibujo y se deja un poco de aire.
+
+Líneas
+- Según el eje de la línea (el tramo donde cae la mitad del largo), en la
+  mitad: sobre la línea, por arriba o por debajo.
+
+Puntos
+- Centrado en el punto, o empezando en el punto a media altura.
+
+Para todos
+- Los textos se leen desde abajo o desde la derecha de la hoja: nunca
+  cabeza abajo; los casi verticales, de abajo hacia arriba.
+- Una sola ventana: campo, altura y las tres opciones. Recuerda lo último
+  elegido. Un deshacer quita todos los rótulos y devuelve los anteriores.
+- Los rótulos que llegan desde QGIS siguen como los manda QGIS.
+
+Pruebas
+- test_rotulos (nueva): centro visual (rectángulo, L, hueco), eje más
+  largo, lectura, las cuatro opciones de polígonos, líneas (sobre, arriba,
+  abajo, dibujadas al revés, con codos), puntos, opciones recordadas, y
+  ROTULOSIG en un dibujo con parcelas, red y pozos importados.
+- Además, la ventana y las cuatro opciones se dibujaron en un Qt invisible
+  con el Python de IngeCAD 0.6.7.
+- 44 pruebas automáticas OK.

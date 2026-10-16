@@ -336,9 +336,10 @@ def label_layer(key: str) -> str:
     return f"{key}-ROTULOS"
 
 
-def _labels_by_space(document, key):
+def _labels_by_space(document, key, fids=None):
     """[(espacio, [rótulos])]: también los que quedaron en una presentación
-    (ROTULOSIG corrido con la lámina abierta, antes de 3.25.4)."""
+    (ROTULOSIG corrido con la lámina abierta, antes de 3.25.4). Con ``fids``,
+    sólo los rótulos de esos registros (3.26.1)."""
     out = []
     for space in document.doc.layouts:
         found = []
@@ -348,28 +349,40 @@ def _labels_by_space(document, key):
             except Exception:
                 continue
             if len(values) >= 2 and values[0] == LABEL_TAG and values[1] == key:
-                found.append(e)
+                if fids is None or (len(values) > 2 and values[2] in fids):
+                    found.append(e)
         if found:
             out.append((space, found))
     return out
 
 
-def existing_labels(document, key):
-    return [e for _s, ents in _labels_by_space(document, key) for e in ents]
+def existing_labels(document, key, fids=None):
+    return [e for _s, ents in _labels_by_space(document, key, fids) for e in ents]
 
 
-def erase_labels(document, key) -> list:
+def erase_labels(document, key, fids=None) -> list:
     """Un EraseCommand por espacio: EraseCommand borra en el espacio que
     tiene fijado, y el activo no tiene por qué ser el de los rótulos."""
     commands = []
-    for space, ents in _labels_by_space(document, key):
+    for space, ents in _labels_by_space(document, key, fids):
         command = EraseCommand(ents)
         command._space = space
         commands.append(command)
     return commands
 
 
-def label_commands(document, key, field: str, height: float):
+def label_commands(document, key, field: str, height: float, opciones=None, fids=None):
+    """Los rótulos de ``field``, ubicados con las reglas de rotulos.py (3.26.0):
+    polígonos dentro y centrados, líneas según su eje, puntos centrados o
+    desde el punto. Devuelve (comando, rótulos, reemplazados); comando.omitidos
+    y comando.quedan (rótulos anteriores que siguen).
+
+    ``fids`` (3.26.1): sólo esos registros (los objetos seleccionados). Sus
+    rótulos anteriores se reemplazan y los de los demás quedan: cada
+    selección SUMA a la composición. None = toda la capa, reemplazando todo."""
+    from . import rotulos
+    op = opciones or rotulos.OpcionesRotulo()
+    medir = rotulos.medidor(document.doc)
     data = datos.layer_data(document, key)
     f = data.field(field)
     by_fid = data.entities_by_fid(document)
@@ -378,60 +391,144 @@ def label_commands(document, key, field: str, height: float):
     commands: list = []
     if layer not in document.doc.layers:
         commands.append(NewLayerCommand(layer, color=7))
-    old = existing_labels(document, key)
-    commands += erase_labels(document, key)
-    n = 0
+    if fids is not None:
+        fids = set(fids)
+        by_fid = {k: v for k, v in by_fid.items() if k in fids}
+    old = existing_labels(document, key, fids)
+    quedan = len(existing_labels(document, key)) - len(old)
+    commands += erase_labels(document, key, fids)
+    n = omitted = 0
     for fid, ents in sorted(by_fid.items()):
         text = values.get(fid, "")
         if not text:
             continue
         rings = [r for e in ents for r in datos.entity_rings(e)]
-        pt = datos.label_point(rings)
-        if pt is None:
+        u = rotulos.ubicar(text, height, rings, op, medir)
+        if u is None:
+            omitted += 1 if rings else 0
             continue
-        if all(len(p) == 1 for p, _c in rings):            # puntos: al costado
-            pt = (pt[0] + height * 0.6, pt[1] + height * 0.6)
 
-        def make(msp, text=text, pt=pt, fid=fid):
+        def make(msp, text=text, u=u, fid=fid):
             from ezdxf.enums import TextEntityAlignment
 
             ensure_appid(msp.doc)
-            entity = msp.add_text(text, height=height)
-            entity.set_placement(pt, align=TextEntityAlignment.MIDDLE_CENTER)
+            entity = msp.add_text(text, height=u.altura, rotation=u.giro)
+            entity.set_placement(u.punto, align=getattr(TextEntityAlignment, u.alineacion))
             entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, f.name)])
             return entity
 
         commands.append(AddToModelCommand("SHP label", make, layer=layer))
         n += 1
-    return CompositeCommand("SHP labels", commands), n, len(old)
+    command = CompositeCommand("SHP labels", commands)
+    command.omitidos = omitted          # polígonos donde el rótulo no entra (opción D)
+    command.quedan = quedan             # rótulos de otros objetos, que siguen
+    return command, n, len(old)
 
 
 class LabelTool(Tool):
-    """SHPLABEL: rótulos con el valor de un campo, en la capa <capa>-ROTULOS."""
+    """SHPLABEL: rótulos con el valor de un campo, en la capa <capa>-ROTULOS.
+
+    3.26.1: rotula sólo los objetos seleccionados (antes o al «Designar») y
+    SUMA a los rótulos que ya están; Enter sin elegir nada = toda la capa."""
+
+    wants_selection = True
+    modifies_selection = False          # sólo lee los objetos: también en capas bloqueadas
 
     def start(self) -> None:
         self.name = "SHPLABEL"
+
+    def selection_prompt(self) -> str:
+        return "Designe los objetos a rotular (Enter sin elegir = toda la capa):"
+
+    def on_selection(self, entities: list) -> None:
         document = _document(self.ctx)
-        key = choose_link(self.ctx, document)
+        fids = None
+        if entities:
+            elegidos = objetos_por_capa(document, entities)
+            if not elegidos:
+                self.ctx.echo("Los objetos elegidos no son de una capa SIG conectada ni de un "
+                              "SHP importado con base de datos.")
+                self.ctx.finish()
+                return
+            if len(elegidos) == 1:
+                key = next(iter(elegidos))
+            else:
+                keys = sorted(elegidos)
+                answer = self.ctx.ask_choice("¿Qué capa?", keys, keys[0])
+                key = answer if answer in elegidos else None
+            if key:
+                fids = elegidos[key]
+        else:
+            key = choose_link(self.ctx, document)
         if key:
             data = datos.layer_data(document, key)
             names = [f.name for f in data.fields]
-            field = self.ctx.ask_choice("Campo para rotular:", names, names[0]) if names else None
-            if field is not None:
-                raw = self.ctx.ask_text("Altura del texto:", f"{config.get('altura_rotulos'):g}")
-                try:
-                    height = float(str(raw).replace(",", "."))
-                    if height <= 0:
-                        raise ValueError
-                except (TypeError, ValueError):
-                    self.ctx.echo("Altura no válida.")
-                    self.ctx.finish()
-                    return
-                command, n, replaced = label_commands(document, key, field, height)
+            elegido = self._preguntar(names) if names else None
+            if elegido is not None:
+                field, height, op = elegido
+                command, n, replaced = label_commands(document, key, field, height, op, fids)
                 self.ctx.execute(command)
-                self.ctx.echo(f"{n} rótulo(s) de {field} en la capa {label_layer(key)}"
-                              + (f" (reemplazan a {replaced} anteriores)" if replaced else "") + ".")
+                self.ctx.echo(resumen_rotulos(command, n, replaced, field, key, fids))
         self.ctx.finish()
+
+    def _preguntar(self, names):
+        """(campo, altura, opciones) o None. La ventana de rotulos_ui (3.26.0);
+        sin ella, las preguntas de siempre con las últimas opciones."""
+        from . import rotulos
+        op = rotulos.leer_opciones()
+        altura = float(config.get("altura_rotulos"))
+        try:
+            from .rotulos_ui import RotulosDialog
+        except Exception:  # noqa: BLE001 -- sin Qt
+            RotulosDialog = None
+        if RotulosDialog is not None:
+            dlg = RotulosDialog(names, altura, op, getattr(self.ctx.services, "window", None))
+            if not dlg.exec():
+                return None
+            op = dlg.opciones()
+            rotulos.guardar_opciones(op)
+            return dlg.campo.currentText(), dlg.altura.value(), op
+        field = self.ctx.ask_choice("Campo para rotular:", names, names[0])
+        if field is None:
+            return None
+        raw = self.ctx.ask_text("Altura del texto:", f"{altura:g}")
+        try:
+            height = float(str(raw).replace(",", "."))
+            if height <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            self.ctx.echo("Altura no válida.")
+            return None
+        return field, height, op
+
+
+def objetos_por_capa(document, entities) -> dict:
+    """{capa SIG: {registros}} de los objetos elegidos (los rótulos y lo que
+    no es de una capa con base de datos se ignoran)."""
+    out: dict = {}
+    keys = list(datos.data_tables(document))
+    for e in entities:
+        for key in keys:
+            fid = datos.fid_of(document, e, key)
+            if fid is not None:
+                out.setdefault(key, set()).add(fid)
+                break
+    return out
+
+
+def resumen_rotulos(command, n: int, replaced: int, field: str, key: str, fids=None) -> str:
+    omitidos = getattr(command, "omitidos", 0)
+    quedan = getattr(command, "quedan", 0)
+    texto = f"{n} rótulo(s) de {field} en la capa {label_layer(key)}"
+    if fids is not None:
+        texto += f" ({len(fids)} objeto(s) elegidos)"
+    if replaced:
+        texto += f"; reemplazan a {replaced} anteriores"
+    if quedan:
+        texto += f"; quedan {quedan} de otros objetos"
+    if omitidos:
+        texto += f"; {omitidos} no entraban en su polígono y se omitieron"
+    return texto + "."
 
 
 class LabelOffTool(Tool):
