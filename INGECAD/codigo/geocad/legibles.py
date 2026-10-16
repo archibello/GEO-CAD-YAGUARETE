@@ -19,6 +19,12 @@ chicos se esconden como antes) y el archivo no cambia: es sólo la pantalla.
 Retoque fijo de IngeCAD, como los candados (pedido de Fernando: «es
 fundamental en un SIG poder ver las etiquetas legibles a cada escala»).
 
+Tamaño mínimo configurable (3.27.0, elegido por Fernando): los 2 píxeles
+de IngeCAD (``MIN_TEXT_PX`` de views/viewport.py, que lee en cada dibujado)
+pasan a ser el ajuste «texto_minimo_px» de la configuración común (6 por
+defecto; 0 = no esconder ninguno). Se aplica al cargar GeoCAD y cada vez
+que se guarda la configuración: sólo se repinta, sin regenerar.
+
 La regen en paralelo de IngeCAD usa fork: los procesos hijos heredan el
 retoque. La clave del balde conserva el tipo al final (pack ordena por
 él); el escalón va justo antes, como texto.
@@ -26,6 +32,7 @@ retoque. La clave del balde conserva el tipo al final (pack ordena por
 from __future__ import annotations
 
 import math
+from importlib import import_module
 
 #: escalones por cada vez que se duplica la altura (2 = media octava, √2)
 ESCALONES_POR_OCTAVA = 2
@@ -126,10 +133,71 @@ def instalar() -> bool:
     return nuevo
 
 
+#: lo que trae IngeCAD (0.6.7) si no se puede leer la configuración
+MINIMO_INGECAD = 2.0
+
+
+def minimo_px(valores=None) -> float:
+    """El tamaño mínimo (píxeles) de la configuración común."""
+    try:
+        if valores is None:
+            from . import config
+            valores = config.load()
+        v = float(valores["texto_minimo_px"])
+    except Exception:  # noqa: BLE001
+        return MINIMO_INGECAD
+    return v if v >= 0 and not math.isinf(v) else MINIMO_INGECAD
+
+
+def aplicar_minimo(valores=None) -> bool:
+    """Pone el tamaño mínimo en la pantalla de IngeCAD y la repinta.
+    True si cambió. Con otro IngeCAD (sin ``MIN_TEXT_PX``), no toca nada."""
+    try:
+        viewport = import_module("views.viewport")
+    except Exception:  # noqa: BLE001 -- sin la pantalla de IngeCAD
+        return False
+    if not isinstance(getattr(viewport, "MIN_TEXT_PX", None), (int, float)):
+        return False
+    v = minimo_px(valores)
+    if viewport.MIN_TEXT_PX == v:
+        return False
+    viewport.MIN_TEXT_PX = v
+    _repintar(viewport)
+    return True
+
+
+def _repintar(viewport) -> None:
+    clase = getattr(viewport, "Viewport", None)
+    try:
+        from PySide6.QtWidgets import QApplication
+    except Exception:  # noqa: BLE001 -- sin Qt
+        return
+    app = QApplication.instance()
+    if app is None or clase is None:
+        return
+    for w in app.allWidgets():
+        if isinstance(w, clase):
+            w.update()
+
+
+def escuchar_config() -> None:
+    """Cada vez que se guarda la configuración (Opciones, SHPCONFIG), el
+    tamaño mínimo se aplica en el momento (una sola vez por carga)."""
+    from . import config
+    if aplicar_minimo not in config.AL_GUARDAR:
+        config.AL_GUARDAR.append(aplicar_minimo)
+
+
 def aplicar_ya() -> None:
     """Al cargar GeoCAD (3.26.5): el retoque se pone antes de abrir un dibujo.
     Si ya hay uno abierto (Actualizar sin reiniciar IngeCAD), la pantalla se
-    regenera una vez con la regla nueva: antes hacía falta reiniciar."""
+    regenera una vez con la regla nueva: antes hacía falta reiniciar.
+    El tamaño mínimo (3.27.0) se pone también acá y al guardar la configuración."""
+    try:
+        escuchar_config()
+        aplicar_minimo()
+    except Exception:  # noqa: BLE001 -- queda el de IngeCAD
+        pass
     if not instalar():
         return
     try:

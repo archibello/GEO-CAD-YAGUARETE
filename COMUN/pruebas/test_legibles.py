@@ -84,4 +84,36 @@ assert vis < vis_cerca and vis_lejos == 0
 d = dibujo(); d.doc.modelspace().add_line((0, 0), (10, 10), dxfattribs={"layer": "ROTULOS"})
 assert B.build_scene(d).lines.vertex_count > 0
 print("ok cada escalón de tamaño se esconde por su propia altura; de cerca todos, de lejos ninguno")
+
+# 3.27.0: tamaño mínimo configurable (MIN_TEXT_PX de views/viewport.py, que
+# IngeCAD lee en cada dibujado). Sin Qt, una pantalla de mentira.
+C = import_module("ingecad_plugin_geocad.config")
+assert C.BY_KEY["texto_minimo_px"].default == 6.0 and C.load()["texto_minimo_px"] == 6.0
+assert C.validate("texto_minimo_px", "5,5") == 5.5 and C.validate("texto_minimo_px", 0) == 0
+for malo in (-1, 51, "x"):
+    try:
+        C.validate("texto_minimo_px", malo)
+        raise AssertionError(malo)
+    except ValueError:
+        pass
+assert L.aplicar_minimo() is False                     # sin la pantalla: no hace nada
+vp = types.SimpleNamespace(MIN_TEXT_PX=2.0)
+sys.modules["views.viewport"] = vp
+assert L.aplicar_minimo() is True and vp.MIN_TEXT_PX == 6.0       # el valor por defecto
+assert L.aplicar_minimo() is False                     # igual: no repinta
+L.escuchar_config(); L.escuchar_config()
+assert C.AL_GUARDAR.count(L.aplicar_minimo) == 1       # una sola vez
+C.save({"texto_minimo_px": 3}, "prueba")
+assert vp.MIN_TEXT_PX == 3.0                           # al guardar, en el momento
+C.save({"texto_minimo_px": 0}, "prueba")
+assert vp.MIN_TEXT_PX == 0.0                           # 0 = no esconder ninguno
+assert L.minimo_px({"texto_minimo_px": "x"}) == 2.0    # ilegible: el de IngeCAD
+# con la regla real: a 6 px los de 20 m a 0,2 px/u (4 px) ya no se ven; a 2 px sí
+assert sum(c for _f, c in despues.triangles.visible_runs((-1e12, -1e12, 1e12, 1e12), 0.2, 6.0)) == 0
+assert sum(c for _f, c in despues.triangles.visible_runs((-1e12, -1e12, 1e12, 1e12), 0.2, 2.0)) > 0
+# un oyente que falla no rompe el guardado
+C.AL_GUARDAR.insert(0, lambda v: 1 / 0)
+assert C.save({"texto_minimo_px": 6}, "prueba")["texto_minimo_px"] == 6.0 and vp.MIN_TEXT_PX == 6.0
+del sys.modules["views.viewport"]
+print("ok tamaño mínimo configurable (6 px), aplicado al guardar sin reiniciar")
 print("TODO OK test_legibles")

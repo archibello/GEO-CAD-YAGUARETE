@@ -1,0 +1,25 @@
+GeoCAD - versión 3.27.0
+=======================
+TAMAÑO MÍNIMO LEGIBLE CONFIGURABLE (16/10/2026, elegido por Fernando:
+VISUALIZACIÓN DE RÓTULOS, propuesta 1).
+
+Qué cambia
+- Al alejarse, IngeCAD esconde los textos que en pantalla miden menos de
+  2 píxeles (no se leen y frenan la vista). Ese número ahora es un ajuste
+  de la configuración común: «IngeCAD: tamaño mínimo de los textos en
+  pantalla (píxeles; 0 = todos)».
+- Por defecto 6 píxeles (decisión de Fernando): la vista queda más limpia
+  y más rápida al alejarse; lo que se esconde, de todos modos no se leía.
+  2 = como trae IngeCAD; 0 = no esconder ningún texto. Entre 0 y 50.
+- Dónde: Herramientas > Opciones > GeoCAD, menú GeoCAD > Configuración, o
+  SHPCONFIG. Se aplica en el momento, sin reiniciar ni regenerar (sólo se
+  repinta), también en las ventanas de las hojas (Layouts).
+- Va junto con lo de la 3.26.4: cada texto se esconde según SU tamaño.
+- Es sólo la pantalla: el archivo y la impresión no cambian.
+
+Pruebas
+- test_legibles: el valor por defecto (6), los límites, que se aplique al
+  cargar y al guardar la configuración (una sola vez el oyente), 0 = todos,
+  y con la regla real de IngeCAD: a 6 px se esconden los que a 2 px se ven.
+- Además, con el Python y el Qt de IngeCAD 0.6.7 (sin ventana): al cargar
+  GeoCAD la pantalla pasa de 2 a 6 px y al guardar otro valor cambia ya.

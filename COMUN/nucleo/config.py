@@ -111,6 +111,11 @@ SETTINGS = (
             "float", 5.0, "Menor = más vértices y más fidelidad al arco.", (), 0.5, 45),
     Setting("altura_rotulos", "Altura de los rótulos (unidades del dibujo)", "float", 2.5,
             "Altura de texto que propone el comando de rótulos.", (), 0.01, 10000),
+    Setting("texto_minimo_px", "IngeCAD: tamaño mínimo de los textos en pantalla "
+            "(píxeles; 0 = todos)", "float", 6.0,
+            "Al alejarse, IngeCAD esconde los textos que en pantalla miden menos que esto: "
+            "no se leen y frenan la vista. IngeCAD trae 2; 5-6 deja la vista más limpia. "
+            "Se aplica en el momento, sin reiniciar.", (), 0, 50),
     Setting("bloquear_en_qgis", "En QGIS, solo lectura para las capas tomadas por IngeCAD",
             "bool", True),
     Setting("recargar_qgis", "Recargar la capa en QGIS cuando IngeCAD guarda", "bool", True),
@@ -121,6 +126,10 @@ SETTINGS = (
             "Se busca ahí la versión más nueva."),
 )
 BY_KEY = {s.key: s for s in SETTINGS}
+
+#: funciones que se llaman con todos los valores después de cada ``save``
+#: (IngeCAD aplica así lo que se ve en pantalla, sin reiniciar; 3.27.0)
+AL_GUARDAR: list = []
 
 
 def validate(key: str, value):
@@ -204,7 +213,13 @@ def save(changes: dict, program: str) -> dict:
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
     os.replace(tmp, path)
-    return load()
+    values = load()
+    for fn in list(AL_GUARDAR):
+        try:
+            fn(values)
+        except Exception:  # noqa: BLE001 -- lo guardado ya está guardado
+            pass
+    return values
 
 
 def display(key: str, value) -> str:
