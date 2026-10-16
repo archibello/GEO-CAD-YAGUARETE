@@ -8,6 +8,9 @@ este módulo sólo la dibuja y conecta:
 * Seleccionar en el dibujo marca las filas.
 * Editar una celda valida el valor y lo deja pendiente con deshacer
   (AttrEditCommand); se escribe en el archivo sólo al guardar.
+* También muestra los SHP importados con base de datos (IMPORTARSHP,
+  3.25.1): ahí el cambio queda en el dibujo, con deshacer, y sale con
+  EXPORTARSHP.
 """
 from __future__ import annotations
 
@@ -17,7 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDockWid
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
                                QTableView, QVBoxLayout, QWidget)
 
-from . import datos, enlace, puente
+from . import datos, puente
 
 PENDING_BG = QColor(255, 243, 176)       # amarillo suave: cambio sin guardar
 NEW_BG = QColor(214, 245, 214)           # verde suave: objeto nuevo
@@ -170,13 +173,13 @@ class AttributePanel(QWidget):
 
     def reload(self) -> None:
         doc = self.document()
-        links = enlace.read_links(doc.doc) if doc is not None else {}
+        tablas = datos.data_tables(doc) if doc is not None else {}
         keep = self.current_key()
         self.layer_combo.blockSignals(True)
         self.layer_combo.clear()
-        for key in sorted(links):
-            self.layer_combo.addItem(f"{key}  ({links[key].name})", key)
-        if keep in links:
+        for key in sorted(tablas):
+            self.layer_combo.addItem(tablas[key], key)
+        if keep in tablas:
             self.layer_combo.setCurrentIndex(self.layer_combo.findData(keep))
         self.layer_combo.blockSignals(False)
         self._layer_changed()
@@ -186,9 +189,11 @@ class AttributePanel(QWidget):
         doc = self.document()
         if key is None or doc is None:
             self.model.set_state(None)
-            self.status.setText("No hay capas SIG conectadas (QGIS ▸ Conectar datos SIG).")
+            self.status.setText("No hay capas SIG conectadas (QGIS ▸ Conectar datos SIG) "
+                                "ni SHP importados con base de datos (IMPORTARSHP).")
             return
         old = self.model.state
+        self.only_conn.setEnabled(not datos.is_imported(doc, key))     # importado: no hay vínculo
         try:
             state = datos.TableState(doc, key)
         except Exception as exc:
@@ -229,7 +234,7 @@ class AttributePanel(QWidget):
         except Exception as exc:
             QMessageBox.warning(self, "Valor no válido", str(exc))
             return False
-        self.window.tools._execute(enlace.AttrEditCommand(state.key, fid, field, text))
+        self.window.tools._execute(datos.edit_command(self.document(), state.key, fid, field, text))
         QTimer.singleShot(0, self.reload)        # recargar fuera de setData
         return True
 
@@ -243,10 +248,11 @@ class AttributePanel(QWidget):
         out = set()
         if ctrl is None or key is None:
             return out
+        doc = self.document()
         for e in ctrl._selection_entities():
-            tag = enlace.feat_tag(e)
-            if tag is not None and tag.key == key:
-                out.add(tag.fid)
+            fid = datos.fid_of(doc, e, key)
+            if fid is not None:
+                out.add(fid)
         return out
 
     def sync_from_drawing(self, *_args) -> None:

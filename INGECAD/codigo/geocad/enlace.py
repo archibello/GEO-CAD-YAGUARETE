@@ -17,11 +17,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from core.actions import AddEntityCommand
 from core.commands import Command, CompositeCommand
 from core.layers import NewLayerCommand
 from core.xdata import APPID, ensure_appid
 
+from .modelo import AddToModelCommand
 from . import shpio
 
 DICT_NAME = "INGECAD_SHP"
@@ -342,7 +342,7 @@ def _feature_commands(link: Link, features, pres=None):
         layer, color = where.get(fid, (key, None))
         for part_no, pts in enumerate(parts):
             z = zs[part_no][0] if (kind == "point" and zs) else None
-            commands.append(AddEntityCommand(
+            commands.append(AddToModelCommand(
                 "SHP feature", _factory(kind, key, fid, part_no, pts, z, color, symbols.get(fid)),
                 layer=layer))
             n += 1

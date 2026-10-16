@@ -125,5 +125,17 @@
   },
   "GEOPASTETABLE": {
     "name": "PEGARTABLA"
+  },
+  "GEOCRS": {
+    "name": "SISTEMAGEO"
+  },
+  "GEOREPROJECT": {
+    "name": "REPROYECTAR"
+  },
+  "GEOIMPORTSHP": {
+    "name": "IMPORTARSHP"
+  },
+  "GEOEXPORTSHP": {
+    "name": "EXPORTARSHP"
   }
 }

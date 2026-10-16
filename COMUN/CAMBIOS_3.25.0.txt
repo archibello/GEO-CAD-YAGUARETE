@@ -1,0 +1,76 @@
+GeoCAD - versión 3.25.0
+=======================
+SISTEMA DE COORDENADAS DEL DIBUJO, IMPORTAR SHP Y EXPORTAR SHP (15/10/2026,
+pedido y decisiones de Fernando; propuesta en propuesta_importar/).
+
+Módulo nuevo «Intercambio» (IngeCAD). Se elige al instalar y en GeoCAD >
+Módulos...; quien actualiza lo ve como módulo nuevo. Menú GeoCAD y cuatro
+botones al final de la barra GeoCAD.
+
+GeoCAD > Sistema de coordenadas
+- Definir o redefinir sistema de coordenadas... (SISTEMAGEO, también
+  MAPCSASSIGN). Declara en qué sistema están las coordenadas del dibujo.
+  NO MUEVE NADA. Lista argentina (POSGAR 2007, 98 y 94 y Campo Inchauspe,
+  fajas 1 a 7; WGS 84 / UTM 18S-22S), cualquier código EPSG escrito a mano
+  o «Tomar el de un .prj o .shp». Se guarda dentro del dibujo, en el
+  registro GEOREF de IngeCAD (lo ven también Terreno y el Puente). Si el
+  dibujo ya tenía otro sistema y tiene objetos, pregunta: «Sólo declarar»
+  o «Reproyectar...».
+- Reproyectar dibujo... (REPROYECTAR). Convierte las coordenadas del
+  sistema actual a otro con PROJ (el pyproj de IngeCAD), dice qué
+  conversión usa y con qué precisión (p. ej. Campo Inchauspe -> POSGAR
+  2007: ≈ 5 m) y pide confirmar. Todo el dibujo (también lo que miran las
+  ventanas del papel) o sólo lo seleccionado (con aviso). Convierte
+  puntos, líneas, polilíneas, círculos, arcos, elipses, textos, MTEXT,
+  bloques con sus atributos, sombreados, splines, sólidos, imágenes,
+  directrices y cotas (estas con IngeCAD 0.6.7); textos, bloques y arcos
+  giran con el norte (convergencia de meridianos). Un solo U lo deshace,
+  exacto. Los objetos de capas CONECTADAS (CONECTARSHP) no se tocan: al
+  guardarlas se escribirían en su archivo coordenadas de otro sistema.
+  Sin sistema definido, primero pide definirlo.
+
+GeoCAD > Importar > Importar SHP... (IMPORTARSHP, también MAPIMPORT)
+- Uno o varios .shp. La ventana muestra de cada uno el tipo, los
+  registros, el sistema del .prj y la codificación; a los que no tienen
+  .prj se les puede decir en qué sistema están (o «como viene»).
+- Se llevan al sistema del dibujo. Dibujo sin sistema: adopta el del
+  primer SHP que lo traiga (se puede destildar).
+- Capa: una por archivo, una sola, o según el valor de un campo.
+- Puntos: como punto, como bloque del dibujo, o como texto de un campo.
+- Polígonos como polilíneas cerradas (los huecos, aparte); líneas como
+  polilíneas.
+- Atributos guardados en cada objeto (con su tipo y ancho). Atributos del
+  objeto (SHPINFO) los muestra. Vuelven a salir con EXPORTARSHP.
+- Rótulos con un campo, en el centro de cada objeto; altura a elegir.
+- Un solo U, zoom a lo importado e informe en la línea de comandos.
+  Es una copia sin vínculo: para editar el SHP sigue CONECTARSHP.
+
+GeoCAD > Exportar > Exportar SHP... (EXPORTARSHP, también MAPEXPORT)
+- Qué: lo seleccionado, todo el dibujo o las capas elegidas.
+- Archivos: uno por capa y tipo (CAPA_puntos, CAPA_lineas,
+  CAPA_poligonos) o uno por tipo con todas las capas y el campo LAYER.
+- Sistema: el del dibujo u otro (se reproyecta). Siempre con .prj y .cpg
+  (UTF-8).
+- Campos LAYER, COLOR y TIPO_CAD; en los puntos TEXTO, ALTURA, GIRO
+  (textos) y BLOQUE, GIRO, ESCALA (bloques); más los atributos que trae
+  cada objeto importado, con su esquema original (ancho y decimales).
+- Polilíneas cerradas y círculos como polígonos (o como líneas); arcos y
+  curvas a tramos de 1 cm; sombreados como polígonos con sus huecos.
+- Antes de escribir muestra la lista de archivos y pide confirmar; si
+  alguno ya existe, lo dice y pide confirmar el reemplazo.
+
+Queda para más adelante (propuesta_importar/): filtro por ventana o
+condición, perfil de importación, Z de un campo, sombreado de los
+polígonos importados, el sistema en la barra de estado, y volver a juntar
+en un registro las partes de un polígono con huecos al exportar.
+
+Pruebas
+- test_intercambio (nueva): menú, barra y módulo; la lista de sistemas;
+  SISTEMAGEO no mueve nada; REPROYECTAR contra PROJ (puntos, líneas,
+  polilíneas, arcos, textos y bloques girados, sombreados, splines), las
+  conectadas quedan, un deshacer exacto, sólo la selección; IMPORTARSHP
+  (adopta el sistema, reproyecta, sin .prj, capa por campo, puntos como
+  texto, rótulos, bloque inexistente); EXPORTARSHP por capa y tipo y por
+  tipo con LAYER, reproyectado, leído con pyshp; ida y vuelta; SHPINFO.
+- test_modulos y test_yaguarete: el módulo y los botones nuevos.
+- Pasan TODAS (42) con IngeCAD 0.6.7 y con 0.6.6.

@@ -1,0 +1,42 @@
+GeoCAD - versión 3.25.1
+=======================
+IMPORTARSHP CON BASE DE DATOS (15/10/2026, pedido de Fernando: «lo más
+importante de la importación de un SHP es el vectorial y la base de datos;
+las etiquetas son un detalle que engrosa el tamaño del archivo... incluso
+es parte de un proceso que podemos generar después a partir de la base de
+datos de los vectores»).
+
+IngeCAD, GeoCAD > Importar > Importar SHP... (IMPORTARSHP)
+- La ventana tiene arriba, junto a los archivos, «Base de datos»: «Con base
+  de datos» (de entrada) o «Sólo la geometría».
+- Se sacan los rótulos de la ventana: no se generan al importar. Se hacen
+  después, desde la base, con ROTULOSIG (y se quitan con QUITARROTULOS).
+  La altura queda sólo para «Puntos como texto del campo».
+- Cada objeto guarda también su número de registro: las partes de un mismo
+  registro (los huecos de un polígono, las partes de una multilínea) son
+  UNA fila de la tabla.
+- Cada archivo es una tabla con su nombre; si ya hay una con ese nombre
+  (importar dos veces el mismo), la nueva se llama «nombre (2)».
+- El informe dice qué tablas se crearon.
+
+Tabla de atributos (TABLASIG) y la barra Datos
+- La Tabla de atributos muestra también los SHP importados («parcelas
+  (importado, 5 registros)»), con sus campos y el área o la longitud.
+  Filtrar, ordenar, elegir filas que seleccionan en el dibujo y al revés.
+- Las celdas se editan con la misma validación que el .dbf (tipo, ancho y
+  decimales); el cambio queda en el dibujo, en todas las partes del
+  registro, con deshacer. Sale con EXPORTARSHP. No hay archivo que guardar
+  (es una copia sin vínculo: para editar el SHP sigue CONECTARSHP).
+- CONSULTASIG, UBICACIONSIG, TEMATICO, QUITARTEMATICO, ROTULOSIG y
+  QUITARROTULOS ofrecen también las tablas importadas. NUEVOSIG sigue sólo
+  con capas conectadas.
+- Lo importado con 3.25.0 se ve igual (una fila por objeto).
+
+Pruebas
+- test_intercambio: sin rótulos al importar; la tabla importada (filas,
+  huecos en su fila, tipos, área, filtro), editar con validación y un
+  deshacer, CONSULTASIG, ROTULOSIG desde la tabla, importar dos veces el
+  mismo archivo, sólo la geometría, lo editado sale con EXPORTARSHP y lo
+  importado con 3.25.0.
+- Ventana y Tabla de atributos verificadas en IngeCAD 0.6.7 real (sin
+  pantalla): la tabla lista lo importado, edita y selecciona.

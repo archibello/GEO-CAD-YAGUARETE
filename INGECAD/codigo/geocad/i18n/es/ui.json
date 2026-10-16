@@ -54,5 +54,16 @@
   "Dimensions": "Cotas",
   "Bring to front (DRAWORDER)": "Traer al frente (ALFRENTE)",
   "Send to back (DRAWORDER)": "Enviar al fondo (ALFONDO)",
-  "Paste table (PASTETABLE)": "Pegar tabla (PEGARTABLA)"
+  "Paste table (PASTETABLE)": "Pegar tabla (PEGARTABLA)",
+  "Coordinate system": "Sistema de coordenadas",
+  "Import": "Importar",
+  "Export": "Exportar",
+  "Define or redefine coordinate system... (GEOCRS)": "Definir o redefinir sistema de coordenadas... (SISTEMAGEO)",
+  "Reproject drawing... (REPROJECT)": "Reproyectar dibujo... (REPROYECTAR)",
+  "Import SHP... (IMPORTSHP)": "Importar SHP... (IMPORTARSHP)",
+  "Export SHP... (EXPORTSHP)": "Exportar SHP... (EXPORTARSHP)",
+  "Coordinate system of the drawing (GEOCRS)": "Sistema de coordenadas del dibujo (SISTEMAGEO)",
+  "Reproject drawing (REPROJECT)": "Reproyectar dibujo (REPROYECTAR)",
+  "Import SHP (IMPORTSHP)": "Importar SHP (IMPORTARSHP)",
+  "Export SHP (EXPORTSHP)": "Exportar SHP (EXPORTARSHP)"
 }

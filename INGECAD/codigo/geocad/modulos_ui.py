@@ -37,21 +37,37 @@ def elegir(QtWidgets, parent, programa: str, primera_vez: bool = False):
     label = QtWidgets.QLabel(intro, dlg)
     label.setWordWrap(True)
     lay.addWidget(label)
+    # Aceptar arriba, junto al texto (pedido de Fernando, 16/10/2026): con
+    # muchos módulos la ventana se alarga y el botón quedaba fuera de la vista.
+    botones = QtWidgets.QDialogButtonBox(dlg)
+    ok_role = getattr(QtWidgets.QDialogButtonBox, "StandardButton", QtWidgets.QDialogButtonBox)
+    botones.setStandardButtons(ok_role.Ok | ok_role.Cancel)
+    botones.accepted.connect(dlg.accept)
+    botones.rejected.connect(dlg.reject)
+    lay.addWidget(botones)
+    # la lista, con barra de desplazamiento: la ventana entra en la pantalla
+    zona = QtWidgets.QScrollArea(dlg)
+    zona.setWidgetResizable(True)
+    lista = QtWidgets.QWidget()
+    lay_lista = QtWidgets.QVBoxLayout(lista)
+    zona.setWidget(lista)
+    zona.setMinimumHeight(360)
+    lay.addWidget(zona, 1)
     est = modulos.estado(programa)
     cajas = {}
     for m in modulos.catalogo(programa):
         texto = m.nombre + ("  (cambia el comportamiento del programa)" if m.cambia_programa else "")
         if not m.disponible:
             texto += "  — próximamente"
-        caja = QtWidgets.QCheckBox(texto, dlg)
+        caja = QtWidgets.QCheckBox(texto, lista)
         caja.setChecked(bool(est.get(m.clave)))
         caja.setEnabled(m.disponible)
         caja.setToolTip(m.detalle)
-        lay.addWidget(caja)
-        detalle = QtWidgets.QLabel("      " + m.detalle, dlg)
+        lay_lista.addWidget(caja)
+        detalle = QtWidgets.QLabel("      " + m.detalle, lista)
         detalle.setWordWrap(True)
         detalle.setEnabled(m.disponible)
-        lay.addWidget(detalle)
+        lay_lista.addWidget(detalle)
         cajas[m.clave] = caja
 
     def _dependencias(*_):
@@ -64,13 +80,11 @@ def elegir(QtWidgets, parent, programa: str, primera_vez: bool = False):
     for caja in cajas.values():
         caja.toggled.connect(_dependencias)
     _dependencias()
+    lay_lista.addStretch(1)
+    pantalla = getattr(dlg, "screen", lambda: None)()
+    alto = pantalla.availableGeometry().height() if pantalla is not None else 900
+    dlg.resize(780, min(760, int(alto * 0.85)))
 
-    botones = QtWidgets.QDialogButtonBox(dlg)
-    ok_role = getattr(QtWidgets.QDialogButtonBox, "StandardButton", QtWidgets.QDialogButtonBox)
-    botones.setStandardButtons(ok_role.Ok | ok_role.Cancel)
-    botones.accepted.connect(dlg.accept)
-    botones.rejected.connect(dlg.reject)
-    lay.addWidget(botones)
     aceptado = bool(_exec(dlg))
     if not aceptado:
         if primera_vez and not modulos.elegido(programa):

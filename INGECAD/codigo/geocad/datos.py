@@ -174,6 +174,10 @@ class LayerData:
             values = {f.name: typed(f.family, pend.get(f.name)) for f in self.fields}
             self.rows.append(Row(fid, values, set(pend), new=True))
 
+    @property
+    def kind(self) -> str:
+        return self.link.kind
+
     def field(self, name: str) -> Field:
         for f in self.fields:
             if f.name.lower() == name.lower():
@@ -199,6 +203,68 @@ class LayerData:
         for tag, e in tagged:
             out.setdefault(tag.fid, []).append(e)
         return out
+
+
+# -- conectadas e importadas, con la misma cara ------------------------------------------
+
+def data_tables(document) -> dict:
+    """{clave: texto para elegirla}: capas conectadas y SHP importados con
+    base de datos (IMPORTARSHP)."""
+    from . import importados
+
+    out = {k: f"{k}  ({v.name})" for k, v in enlace.read_links(document.doc).items()}
+    for k, n in importados.tablas(document.doc).items():
+        out.setdefault(k, f"{k}  (importado, {n} registros)")
+    return out
+
+
+def is_imported(document, key: str) -> bool:
+    return key not in enlace.read_links(document.doc)
+
+
+def layer_data(document, key: str):
+    """``LayerData`` de una capa conectada o ``ImportedData`` de una importada."""
+    if not is_imported(document, key):
+        return LayerData(document, key)
+    from . import importados
+
+    return importados.ImportedData(document, key)
+
+
+def tagged(document, key: str) -> list:
+    """[(fid, entidad)] de una capa conectada o importada."""
+    if not is_imported(document, key):
+        tagged_, _ = enlace.linked_entities(document, key)
+        return [(t.fid, e) for t, e in tagged_]
+    from . import importados
+
+    return [(fid, e) for _o, fid, e in importados.objetos(document.doc, key)]
+
+
+def fid_of(document, entity, key: str):
+    """El registro de ``entity`` en la capa ``key`` (o None)."""
+    if not is_imported(document, key):
+        tag = enlace.feat_tag(entity)
+        return tag.fid if tag is not None and tag.key == key else None
+    from . import importados
+
+    leido = importados._leer(entity)
+    if leido is None or leido[0] != key:
+        return None
+    if leido[1] is not None:
+        return leido[1]
+    for _o, fid, e in importados.objetos(document.doc, key):      # importado antes de 3.25.1
+        if e is entity or e.dxf.handle == entity.dxf.handle:
+            return fid
+    return None
+
+
+def edit_command(document, key: str, fid: int, field_name: str, text: str):
+    if not is_imported(document, key):
+        return enlace.AttrEditCommand(key, fid, field_name, text)
+    from . import importados
+
+    return importados.EditarAtributoCommand(key, fid, field_name, text)
 
 
 def fid_label(fid: int) -> str:
@@ -537,10 +603,9 @@ def spatial_select(document, key: str, zone_entities, mode: str, distance: float
     """FIDs de la capa que cumplen la relación con alguna de las zonas."""
     zone = [r for e in zone_entities for r in entity_rings(e)]
     out = set()
-    tagged, _ = enlace.linked_entities(document, key)
     by_fid: dict[int, list] = {}
-    for tag, e in tagged:
-        by_fid.setdefault(tag.fid, []).append(e)
+    for fid, e in tagged(document, key):
+        by_fid.setdefault(fid, []).append(e)
     for fid, ents in by_fid.items():
         rings = [r for e in ents for r in entity_rings(e)]
         if relation(rings, zone, mode, distance):
@@ -633,9 +698,9 @@ class TableState:
         self.reload()
 
     def reload(self) -> None:
-        self.data = LayerData(self.document, self.key)
+        self.data = layer_data(self.document, self.key)
         self.ents = self.data.entities_by_fid(self.document)
-        kinds = self.data.link.kind
+        kinds = self.data.kind
         self.measure = {"polygon": "Área", "line": "Longitud"}.get(kinds)
         self.columns = ["FID"] + [f.name for f in self.data.fields] + \
             ([self.measure] if self.measure else [])

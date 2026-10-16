@@ -1,0 +1,18 @@
+GeoCAD - versión 3.25.3
+=======================
+ACEPTAR ARRIBA EN LA VENTANA DE INSTALACIÓN (16/10/2026, pedido de
+Fernando, «para todas las versiones futuras»). Trae también todo lo de la
+3.25.2 (capa con el nombre del SHP, color y espesor al importar).
+
+IngeCAD y QGIS, ventana «Módulos de GEO-CAD-YAGUARETÉ» (al instalar, al
+actualizar con módulos nuevos y en GeoCAD > Módulos...)
+- Aceptar y Cancelar van arriba, debajo del texto, no al final.
+- La lista de módulos tiene barra de desplazamiento: la ventana entra en
+  la pantalla (con 23 módulos pasaba el alto y el botón quedaba fuera de
+  la vista).
+- Queda como regla en 00_FLUJO_DE_TRABAJO.txt.
+
+Pruebas
+- test_modulos: el botón está arriba y la lista en una zona con
+  desplazamiento (QGIS de prueba con QScrollArea).
+- Ventana verificada en IngeCAD 0.6.7 real (sin pantalla).

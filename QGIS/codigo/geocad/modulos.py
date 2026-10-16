@@ -128,6 +128,12 @@ CATALOGO = {
                "combinadas, letras, colores y espesor de los bordes), ubicada con dos puntos "
                "que le dan la escala, en el modelo o en el papel; o como dibujo y textos "
                "(la geometría de QGIS en su lugar, con rótulos)."),
+        Modulo("intercambio", "Intercambio: sistema de coordenadas, Importar y Exportar SHP",
+               "Menú GeoCAD > Sistema de coordenadas (SISTEMAGEO declara en qué sistema está "
+               "el dibujo, sin mover nada; REPROYECTAR lo convierte a otro con PROJ), "
+               "Importar > SHP (uno o varios, llevados al sistema del dibujo, con sus "
+               "atributos en cada objeto) y Exportar > SHP (por capa y tipo o por tipo con "
+               "LAYER, en el sistema del dibujo u otro, con .prj)."),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),

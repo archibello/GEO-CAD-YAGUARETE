@@ -24,11 +24,11 @@ from __future__ import annotations
 import math
 import re
 
-from core.actions import AddEntityCommand
 from core.commands import Command, CompositeCommand
 from core.layers import NewLayerCommand
 from core.xdata import APPID, ensure_appid
 
+from .modelo import AddToModelCommand
 from . import enlace
 
 INVALID = r'[<>/\\":;?*|=`,]'
@@ -306,10 +306,10 @@ def label_commands(document, key, rotulos: dict, fids) -> list:
                                      (1000, "QGIS")])
             return entity
 
-        commands.append(AddEntityCommand("SHP label", make, layer=layer))
+        commands.append(AddToModelCommand("SHP label", make, layer=layer))
         bg = _background(raw[7] if len(raw) > 7 else None, key, fid)
         if bg is not None:
-            commands.append(AddEntityCommand("SHP label background", bg, layer=layer))
+            commands.append(AddToModelCommand("SHP label background", bg, layer=layer))
     if commands and layer not in document.doc.layers:
         commands.insert(0, NewLayerCommand(layer, color=7))
     return commands

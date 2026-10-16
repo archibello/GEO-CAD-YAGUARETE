@@ -4,12 +4,13 @@ formulario. Todo lo que cambia el dibujo es un Command con deshacer exacto;
 nada de esto escribe en el archivo de datos (eso es sólo el guardado)."""
 from __future__ import annotations
 
-from core.actions import AddEntityCommand, EraseCommand
+from core.actions import EraseCommand
 from core.commands import Command, CompositeCommand
 from core.layers import NewLayerCommand
 from core.xdata import APPID, ensure_appid
 from tools.base import Tool
 
+from .modelo import AddToModelCommand
 from . import config, datos, enlace, puente
 
 LABEL_TAG = "SHP-LABEL"
@@ -33,18 +34,23 @@ def _document(ctx):
     return document
 
 
-def choose_link(ctx, document, kinds=None):
+def choose_link(ctx, document, kinds=None, imported=True):
+    """Capa conectada o (``imported``) SHP importado con base de datos."""
     links = enlace.read_links(document.doc)
     if kinds:
         links = {k: v for k, v in links.items() if v.kind in kinds}
-    if not links:
+    names = {k: f"{k}  ({v.name})" for k, v in links.items()}
+    if imported and not kinds:
+        names = {**datos.data_tables(document), **names}
+    if not names:
         ctx.echo("No hay capas SIG conectadas" + (" de ese tipo" if kinds else "") +
-                 " (QGIS ▸ Conectar datos SIG).")
+                 " (QGIS ▸ Conectar datos SIG)"
+                 + (" ni SHP importados con base de datos (IMPORTARSHP)." if imported else "."))
         return None
-    if len(links) == 1:
-        return next(iter(links))
-    keys = sorted(links)
-    labels = [f"{k}  ({links[k].name})" for k in keys]
+    if len(names) == 1:
+        return next(iter(names))
+    keys = sorted(names)
+    labels = [names[k] for k in keys]
     answer = ctx.ask_choice("¿Qué capa?", labels, labels[0])
     return None if answer is None else keys[labels.index(answer)]
 
@@ -65,8 +71,7 @@ def select(ctx, entities) -> None:
 
 def entities_of(document, key, fids):
     fids = set(fids)
-    tagged, _ = enlace.linked_entities(document, key)
-    return [e for t, e in tagged if t.fid in fids]
+    return [e for fid, e in datos.tagged(document, key) if fid in fids]
 
 
 # -- comandos con deshacer -------------------------------------------------------------------
@@ -205,7 +210,7 @@ class QueryTool(Tool):
 
 
 def run_query(ctx, document, key, text):
-    data = datos.LayerData(document, key)
+    data = datos.layer_data(document, key)
     try:
         test = datos.parse_query(text, data.fields)
     except datos.QueryError as exc:
@@ -215,7 +220,7 @@ def run_query(ctx, document, key, text):
     fids = [r.fid for r in data.rows if test(r)]
     ents = entities_of(document, key, fids)
     select(ctx, ents)
-    sin_dibujo = len(fids) - len({enlace.feat_tag(e).fid for e in ents})
+    sin_dibujo = len(fids) - len({datos.fid_of(document, e, key) for e in ents})
     ctx.echo(f"{len(fids)} registro(s) cumplen «{text}»; {len(ents)} objeto(s) seleccionados."
              + (f" ({sin_dibujo} sin geometría)" if sin_dibujo > 0 else ""))
     return fids
@@ -253,7 +258,7 @@ class SpatialQueryTool(Tool):
                         self.ctx.finish()
                         return
                 code = ("dentro", "toca", "distancia")[self.MODES.index(mode)]
-                zone = [e for e in entities if not (enlace.feat_tag(e) and enlace.feat_tag(e).key == key)] or entities
+                zone = [e for e in entities if datos.fid_of(document, e, key) is None] or entities
                 fids = datos.spatial_select(document, key, zone, code, dist)
                 ents = entities_of(document, key, fids)
                 select(self.ctx, ents)
@@ -275,7 +280,7 @@ class ThemeTool(Tool):
 
     def _theme(self, document, key) -> None:
         echo = self.ctx.echo
-        data = datos.LayerData(document, key)
+        data = datos.layer_data(document, key)
         labels = [f.name for f in data.fields]
         if not labels:
             echo("La capa no tiene campos.")
@@ -322,8 +327,7 @@ class ThemeOffTool(Tool):
         document = _document(self.ctx)
         key = choose_link(self.ctx, document)
         if key:
-            tagged, _ = enlace.linked_entities(document, key)
-            self.ctx.execute(ColorCommand([(e, 256) for _t, e in tagged]))
+            self.ctx.execute(ColorCommand([(e, 256) for _f, e in datos.tagged(document, key)]))
             self.ctx.echo(f"{key}: colores por capa.")
         self.ctx.finish()
 
@@ -332,20 +336,41 @@ def label_layer(key: str) -> str:
     return f"{key}-ROTULOS"
 
 
-def existing_labels(document, key):
+def _labels_by_space(document, key):
+    """[(espacio, [rótulos])]: también los que quedaron en una presentación
+    (ROTULOSIG corrido con la lámina abierta, antes de 3.25.4)."""
     out = []
-    for e in document.doc.modelspace():
-        try:
-            values = [v for _c, v in e.get_xdata(APPID)]
-        except Exception:
-            continue
-        if len(values) >= 2 and values[0] == LABEL_TAG and values[1] == key:
-            out.append(e)
+    for space in document.doc.layouts:
+        found = []
+        for e in space:
+            try:
+                values = [v for _c, v in e.get_xdata(APPID)]
+            except Exception:
+                continue
+            if len(values) >= 2 and values[0] == LABEL_TAG and values[1] == key:
+                found.append(e)
+        if found:
+            out.append((space, found))
     return out
 
 
+def existing_labels(document, key):
+    return [e for _s, ents in _labels_by_space(document, key) for e in ents]
+
+
+def erase_labels(document, key) -> list:
+    """Un EraseCommand por espacio: EraseCommand borra en el espacio que
+    tiene fijado, y el activo no tiene por qué ser el de los rótulos."""
+    commands = []
+    for space, ents in _labels_by_space(document, key):
+        command = EraseCommand(ents)
+        command._space = space
+        commands.append(command)
+    return commands
+
+
 def label_commands(document, key, field: str, height: float):
-    data = datos.LayerData(document, key)
+    data = datos.layer_data(document, key)
     f = data.field(field)
     by_fid = data.entities_by_fid(document)
     values = {r.fid: datos.show(r.values.get(f.name)) for r in data.rows}
@@ -354,8 +379,7 @@ def label_commands(document, key, field: str, height: float):
     if layer not in document.doc.layers:
         commands.append(NewLayerCommand(layer, color=7))
     old = existing_labels(document, key)
-    if old:
-        commands.append(EraseCommand(old))
+    commands += erase_labels(document, key)
     n = 0
     for fid, ents in sorted(by_fid.items()):
         text = values.get(fid, "")
@@ -377,7 +401,7 @@ def label_commands(document, key, field: str, height: float):
             entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, f.name)])
             return entity
 
-        commands.append(AddEntityCommand("SHP label", make, layer=layer))
+        commands.append(AddToModelCommand("SHP label", make, layer=layer))
         n += 1
     return CompositeCommand("SHP labels", commands), n, len(old)
 
@@ -390,7 +414,7 @@ class LabelTool(Tool):
         document = _document(self.ctx)
         key = choose_link(self.ctx, document)
         if key:
-            data = datos.LayerData(document, key)
+            data = datos.layer_data(document, key)
             names = [f.name for f in data.fields]
             field = self.ctx.ask_choice("Campo para rotular:", names, names[0]) if names else None
             if field is not None:
@@ -420,7 +444,7 @@ class LabelOffTool(Tool):
         if key:
             old = existing_labels(document, key)
             if old:
-                self.ctx.execute(EraseCommand(old))
+                self.ctx.execute(CompositeCommand("SHP labels off", erase_labels(document, key)))
             texts = sum(1 for e in old if e.dxftype() == "TEXT")
             extra = len(old) - texts
             self.ctx.echo(f"{texts} rótulo(s) borrados"
@@ -460,7 +484,7 @@ class NewFeatureTool(Tool):
                 kinds.add("point")
             elif t in ("LWPOLYLINE", "POLYLINE", "LINE"):
                 kinds.update(("line", "polygon") if t != "LINE" else ("line",))
-        key = choose_link(self.ctx, document, kinds or None)
+        key = choose_link(self.ctx, document, kinds or None, imported=False)
         if not key:
             return
         link = enlace.read_links(document.doc)[key]

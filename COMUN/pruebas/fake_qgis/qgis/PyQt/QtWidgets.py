@@ -38,8 +38,17 @@ class QCheckBox(_W):
     def setChecked(self, b): self.checked = bool(b)
     def isChecked(self): return self.checked
 class QVBoxLayout:
-    def __init__(self, *a): self.widgets = []
-    def addWidget(self, w): self.widgets.append(w)
+    def __init__(self, *a):
+        self.widgets = []
+        if a and a[0] is not None: a[0].lay = self
+    def addWidget(self, w, *a): self.widgets.append(w)
+    def addStretch(self, *a): pass
+class QWidget(_W):
+    pass
+class QScrollArea(_W):
+    def setWidgetResizable(self, b): pass
+    def setWidget(self, w): self.widget = w
+    def setMinimumHeight(self, h): pass
 class QDialogButtonBox(_W):
     class StandardButton(enum.IntFlag):
         Ok = 1; Cancel = 2
@@ -50,6 +59,7 @@ class QDialog(_W):
     abiertos = []
     def __init__(self, *a): super().__init__(); QDialog.abiertos.append(self)
     def setWindowTitle(self, t): self.title = t
+    def resize(self, w, h): pass
     def accept(self): pass
     def reject(self): pass
     def exec(self): return QDialog.respuesta

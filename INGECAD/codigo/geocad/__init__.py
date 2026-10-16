@@ -12,6 +12,7 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Igualar propiedades (igualar.py): MATCHPROP con el origen resaltado
     Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
     Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
+    Intercambio (intercambio.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -24,7 +25,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import barra, bloques, intercambio, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -36,7 +37,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.24.1"
+VERSION = "3.25.4"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -192,6 +193,16 @@ def construir_spec() -> PluginSpec:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
     if est["tablas"]:
         toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()))
+    if est["intercambio"]:
+        commands.update(intercambio.COMMANDS)
+        aliases.update({"MAPCSASSIGN": "GEOCRS", "MAPIMPORT": "GEOIMPORTSHP",
+                        "MAPEXPORT": "GEOEXPORTSHP"})
+        toolbar += [
+            ToolbarItem("Coordinate system of the drawing (GEOCRS)", "GEOCRS", _icon("sistema")),
+            ToolbarItem("Reproject drawing (REPROJECT)", "GEOREPROJECT", _icon("reproyectar")),
+            ToolbarItem("Import SHP (IMPORTSHP)", "GEOIMPORTSHP", _icon("importar_shp")),
+            ToolbarItem("Export SHP (EXPORTSHP)", "GEOEXPORTSHP", _icon("exportar_shp")),
+        ]
     if est["orden"]:
         commands.update(orden.COMMANDS)
         toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
@@ -251,6 +262,20 @@ def construir_spec() -> PluginSpec:
                 MenuItem("Save changes of one layer...", "SHPCHECKIN"),
                 MenuItem("Disconnect GIS layer", "SHPRELEASE"),
             )),
+        ]
+    if est["intercambio"]:
+        menu += [
+            Submenu("Coordinate system", (
+                MenuItem("Define or redefine coordinate system... (GEOCRS)", "GEOCRS", _icon("sistema")),
+                MenuItem("Reproject drawing... (REPROJECT)", "GEOREPROJECT", _icon("reproyectar")),
+            )),
+            Submenu("Import", (
+                MenuItem("Import SHP... (IMPORTSHP)", "GEOIMPORTSHP", _icon("importar_shp")),
+            )),
+            Submenu("Export", (
+                MenuItem("Export SHP... (EXPORTSHP)", "GEOEXPORTSHP", _icon("exportar_shp")),
+            )),
+            SEPARATOR,
         ]
     menu += [
         Submenu("Drawing", (
@@ -320,7 +345,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.24.1",
+        version="3.25.4",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

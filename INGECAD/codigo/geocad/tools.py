@@ -495,7 +495,15 @@ class InfoTool(Tool):
         echo = self.ctx.echo
         tagged = _tagged(entities)
         if not tagged:
-            echo("El objeto no pertenece a una capa SHP conectada.")
+            from . import intercambio
+            origen, attrs = next(((o, a) for o, a in map(intercambio.atributos, entities) if a),
+                                 ("", []))
+            if attrs:                    # importado con IMPORTARSHP (3.25.0): copia sin vínculo
+                echo(f"Importado de {origen} (copia, sin vínculo)")
+                for nombre, _tipo, texto in attrs:
+                    echo(f"  {nombre} = {texto}")
+            else:
+                echo("El objeto no pertenece a una capa SHP conectada.")
             self.ctx.finish()
             return
         tag, _e = tagged[0]

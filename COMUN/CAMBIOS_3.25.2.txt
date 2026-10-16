@@ -1,0 +1,22 @@
+GeoCAD - versión 3.25.2
+=======================
+REVISIÓN DE LA 3.25.1 (16/10/2026, pedido de Fernando para darla por
+aprobada).
+
+IngeCAD, IMPORTARSHP
+- La capa lleva por defecto el nombre del SHP de origen: «Una por archivo»
+  viene elegida y «Una sola» propone el nombre del (primer) archivo en vez
+  de «SHP».
+- El recuadro «Capa y presentación» tiene Color (el selector de colores de
+  IngeCAD) y Espesor de línea (los de IngeCAD; «Por defecto» o 0.00 a
+  2.11 mm). Se asignan a las capas que crea la importación y los objetos
+  quedan «por capa»: se cambia después desde Capas, como cualquier capa.
+- Las capas que ya existían en el dibujo conservan su color y espesor; el
+  informe lo dice.
+
+Pruebas
+- test_intercambio: color y espesor en las capas nuevas, los objetos por
+  capa, las capas que ya estaban no se tocan, sin elegir queda blanco y
+  por defecto.
+- Ventana verificada en IngeCAD 0.6.7 y 0.6.6 reales (sin pantalla):
+  nombre por defecto, color y espesor elegidos llegan a la importación.

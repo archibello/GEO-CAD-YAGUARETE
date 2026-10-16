@@ -561,3 +561,76 @@ def build_files(sf: Shapefile, rows: list[tuple[bytes, bytes]]):
     dbf_header[1:4] = bytes((today.year - 1900, today.month, today.day))
     dbf = bytes(dbf_header) + b"".join(rec for _c, rec in rows) + sf.dbf_tail
     return shp, shx, dbf
+
+
+# -- un shapefile nuevo (3.25.0, EXPORTARSHP) ----------------------------------------
+
+def nuevo_campo(name: str, ftype: str, size: int, decimals: int = 0) -> tuple:
+    """(nombre, tipo, ancho, decimales) de un campo para :func:`escribir_nuevo`."""
+    return (name, ftype, int(size), int(decimals))
+
+
+def escribir_nuevo(shp_path, shape_type: int, campos, filas, encoding: str = "utf-8") -> int:
+    """Escribe .shp, .shx, .dbf y .cpg nuevos. ``campos``: [(nombre, tipo,
+    ancho, decimales)]; ``filas``: [(Geometry, {campo: texto})]. Cada celda
+    pasa por :func:`encode_value`: un valor que no entra es un error, nunca
+    se recorta. Todo se arma en memoria y recién entonces se escribe; si
+    algo falla no queda nada a medias. Devuelve la cantidad de registros."""
+    shp_path = Path(shp_path)
+    fields, off = [], 1
+    for name, ftype, size, dec in campos:
+        fields.append(DbfField(name, ftype, size, dec, off))
+        off += size
+    record_length = off
+    contents, recs = [], []
+    for geom, valores in filas:
+        contents.append(encode_geometry(geom))
+        buf = bytearray(b" " * record_length)
+        for f in fields:
+            texto = valores.get(f.name, "")
+            if f.type == "L" and texto in ("", None):
+                buf[f.offset:f.offset + 1] = b"?"
+                continue
+            buf[f.offset:f.offset + f.size] = encode_value(f, texto, encoding)
+        recs.append(bytes(buf))
+    # .shp y .shx
+    shp_body, shx_body = bytearray(), bytearray()
+    offset_w = 50
+    xs, ys = [], []
+    for number, content in enumerate(contents, start=1):
+        length_w = len(content) // 2
+        shp_body += struct.pack(">2i", number, length_w) + content
+        shx_body += struct.pack(">2i", offset_w, length_w)
+        offset_w += 4 + length_w
+    for geom, _v in filas:
+        for part in geom.parts:
+            for x, y in part:
+                xs.append(x)
+                ys.append(y)
+    header = bytearray(100)
+    struct.pack_into(">i", header, 0, 9994)
+    struct.pack_into("<2i", header, 28, 1000, shape_type)
+    if xs:
+        struct.pack_into("<4d", header, 36, min(xs), min(ys), max(xs), max(ys))
+    shp_header, shx_header = bytearray(header), bytearray(header)
+    struct.pack_into(">i", shp_header, 24, (100 + len(shp_body)) // 2)
+    struct.pack_into(">i", shx_header, 24, (100 + len(shx_body)) // 2)
+    # .dbf (dBASE III, la que leen QGIS, GDAL y AutoCAD Map)
+    today = _dt.date.today()
+    hlen = 32 + 32 * len(fields) + 1
+    dbf = bytearray(struct.pack("<B3BIHH20x", 0x03, today.year - 1900, today.month, today.day,
+                                len(recs), hlen, record_length))
+    for f in fields:
+        d = bytearray(32)
+        nombre = f.name.encode("ascii", errors="replace")[:10]
+        d[:len(nombre)] = nombre
+        d[11] = ord(f.type)
+        d[16], d[17] = f.size, f.decimals
+        dbf += d
+    dbf += b"\x0D" + b"".join(recs) + b"\x1A"
+    datos = {".shp": bytes(shp_header) + bytes(shp_body), ".shx": bytes(shx_header) + bytes(shx_body),
+             ".dbf": bytes(dbf), ".cpg": b"UTF-8" if codecs.lookup(encoding).name == "utf-8"
+             else encoding.encode("ascii")}
+    for ext, contenido in datos.items():
+        shp_path.with_suffix(ext).write_bytes(contenido)
+    return len(recs)

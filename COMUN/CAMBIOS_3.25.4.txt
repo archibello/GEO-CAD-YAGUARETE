@@ -1,0 +1,26 @@
+GeoCAD - versión 3.25.4
+=======================
+LOS DATOS DEL TERRENO VAN SIEMPRE AL MODELO (16/10/2026, error encontrado
+por Fernando al preparar una lámina).
+
+El error
+- Al preparar la lámina, la hoja se veía como una cuadrícula con
+  diagonales y un cuadro negro. En el dibujo había 652 rótulos de las
+  manzanas EN EL PAPEL (con 250 de alto y coordenadas del modelo, a 7.300
+  km de la hoja): ROTULOSIG se había corrido con la presentación abierta, y
+  GeoCAD creaba los objetos en el espacio activo.
+
+Corrección (IngeCAD)
+- IMPORTARSHP, ROTULOSIG, los rótulos y objetos que llegan de QGIS
+  (capas conectadas) e INSERTARGEO crean siempre en el espacio modelo,
+  aunque esté abierta una presentación.
+- ROTULOSIG reemplaza y QUITARROTULOS borra también los rótulos que
+  hayan quedado en una presentación (dibujos hechos antes): así se limpia
+  un dibujo como el de la prueba, con deshacer.
+- Pegar tabla e insertar bloques siguen en el espacio activo (en la lámina
+  es donde se quieren).
+
+Pruebas
+- test_intercambio: con una presentación abierta, importar y rotular van
+  al modelo; los rótulos que quedaron en el papel se reemplazan y se
+  quitan; deshacer los devuelve a su lugar.

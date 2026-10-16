@@ -185,7 +185,8 @@ def insertar_command(ruta, ancho: int, alto: int, coef):
         img.dxf.v_pixel = (c, f, 0.0)
         return img
 
-    cmd = actions.AddEntityCommand("INSERTARGEO", factory)
+    from .modelo import AddToModelCommand
+    cmd = AddToModelCommand("INSERTARGEO", factory)
     cmd.needs_regen = True                     # como IMAGEATTACH: los píxeles piden la regeneración
     return cmd
 
