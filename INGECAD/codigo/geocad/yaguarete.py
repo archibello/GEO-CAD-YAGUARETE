@@ -165,6 +165,16 @@ def nombre_local(orden: str, nombres=None) -> str:
     return max(candidatas, key=len) if candidatas else orden
 
 
+def _traducir(texto: str) -> str:
+    """Al idioma de IngeCAD, si tiene traducción (botones del módulo Datos
+    que IngeCAD deja en inglés: «Labels from a field...», 3.25.5)."""
+    try:
+        from core.i18n import tr
+        return tr(texto)
+    except Exception:  # noqa: BLE001
+        return texto
+
+
 def texto_cartel(nombre: str, orden: str | None, nombres=None) -> str:
     """El cartel, como el de AutoCAD: nombre en negrita, qué hace, la orden."""
     partes = [f"<b>{html.escape(nombre)}</b>"]
@@ -224,7 +234,9 @@ def armar(window, iconos=None) -> None:
                 nativa = a
                 break
         if nativa is not None:
-            icono, etiqueta = nativa.icon(), nativa.text()
+            # el texto del botón de IngeCAD puede venir sin traducir (los
+            # del módulo Datos: «Labels from a field...», 3.25.5)
+            icono, etiqueta = nativa.icon(), tr(nativa.text())
             nativa.setVisible(False)
             ocultas.append(nativa)
         else:
@@ -302,7 +314,7 @@ def _filtro_carteles():
                 return
             nombre, orden = separar_orden(act.toolTip() or act.text())
             orden = act.property("geocad_orden") or orden
-            QToolTip.showText(QCursor.pos(), texto_cartel(nombre or act.text(), orden), b)
+            QToolTip.showText(QCursor.pos(), texto_cartel(_traducir(nombre or act.text()), orden), b)
 
     return Carteles
 

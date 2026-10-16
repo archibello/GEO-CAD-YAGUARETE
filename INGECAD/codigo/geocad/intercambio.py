@@ -23,8 +23,11 @@ ventanas están en intercambio_ui.py.
 """
 from __future__ import annotations
 
+import json
 import math
+import os
 import re
+import tempfile
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -88,6 +91,105 @@ def nombre(code: str) -> str:
         return f"{CRS.from_user_input(code).name} ({code})"
     except Exception:  # noqa: BLE001 -- sin pyproj o código desconocido
         return code
+
+
+# ------------------------------------------------------------------ favoritos y buscador (3.25.5)
+#: los sistemas que se van eligiendo quedan primero, como los «usados
+#: recientemente» de QGIS (Fernando, 16/10/2026); el último elegido, arriba.
+MAX_FAVORITOS = 20
+
+
+def _archivo_favoritos() -> Path:
+    from . import config
+    return config.config_path().parent / "sistemas_favoritos.json"
+
+
+def favoritos() -> list[str]:
+    """Los códigos «EPSG:xxxx» elegidos antes, el más reciente primero. Un
+    archivo dañado o ausente es una lista vacía."""
+    try:
+        data = json.loads(_archivo_favoritos().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, list):
+        return []
+    out = []
+    for c in data:
+        c = normalizar(c) if isinstance(c, str) else ""
+        if c and c not in out:
+            out.append(c)
+    return out[:MAX_FAVORITOS]
+
+
+def _guardar_favoritos(lista: list[str]) -> None:
+    ruta = _archivo_favoritos()
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=ruta.parent, prefix=".favoritos-", suffix=".json")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(lista[:MAX_FAVORITOS], fh, ensure_ascii=False, indent=1)
+    os.replace(tmp, ruta)
+
+
+def agregar_favorito(code: str) -> list[str]:
+    """Pone ``code`` primero en los favoritos (sin repetirlo)."""
+    code = normalizar(code)
+    if not code:
+        return favoritos()
+    lista = [code] + [c for c in favoritos() if c != code]
+    try:
+        _guardar_favoritos(lista)
+    except OSError:
+        pass
+    return lista[:MAX_FAVORITOS]
+
+
+def quitar_favorito(code: str) -> list[str]:
+    lista = [c for c in favoritos() if c != normalizar(code)]
+    try:
+        _guardar_favoritos(lista)
+    except OSError:
+        pass
+    return lista
+
+
+_CATALOGO: dict = {}
+
+
+def catalogo(solo_metros: bool = False) -> list[tuple[str, str]]:
+    """[(«EPSG:xxxx», nombre)] de todos los sistemas EPSG vigentes que conoce
+    PROJ (proyectados y, si no es ``solo_metros``, también geográficos), como
+    el buscador de QGIS. Sin pyproj, la lista corta."""
+    if solo_metros in _CATALOGO:
+        return _CATALOGO[solo_metros]
+    try:
+        from pyproj.database import query_crs_info
+        from pyproj.enums import PJType
+        tipos = [PJType.PROJECTED_CRS]
+        if not solo_metros:
+            tipos += [PJType.GEOGRAPHIC_2D_CRS]
+        info = query_crs_info(auth_name="EPSG", pj_types=tipos)
+        # los argentinos, con el nombre de la lista corta («... faja 5»)
+        out = sorted(((f"EPSG:{i.code}", crs_mod.KNOWN.get(int(i.code), i.name))
+                      for i in info if not i.deprecated and i.code.isdigit()),
+                     key=lambda t: t[1].lower())
+    except Exception:  # noqa: BLE001 -- sin pyproj
+        out = lista_corta()
+    _CATALOGO[solo_metros] = out
+    return out
+
+
+def buscar_sistemas(texto: str, solo_metros: bool = False, limite: int = 500) -> list[tuple[str, str]]:
+    """Los del catálogo cuyo nombre o código tienen todas las palabras de
+    ``texto`` («posgar 5», «5347», «utm 21s»)."""
+    palabras = str(texto or "").lower().split()
+    out = []
+    for code, nombre_s in catalogo(solo_metros):
+        donde = f"{nombre_s} {code}".lower()
+        if all(p in donde for p in palabras):
+            out.append((code, nombre_s))
+            if len(out) >= limite:
+                break
+    return out
 
 
 def validar(code: str) -> str:
@@ -493,6 +595,7 @@ class OpcionesImportar:
     capa_fija: str = "SHP"
     campo_capa: str = ""
     atributos: bool = True
+    columnas: Optional[dict] = None  # {ruta .shp: [campos]} que se copian al dibujo; None = todos (3.25.5)
     puntos: str = "punto"           # punto | bloque | texto
     bloque: str = ""
     campo_texto: str = ""
@@ -512,13 +615,23 @@ class VistaShp:
     campos: list
     sistema: str
     codificacion: str
+    muestra: list = field(default_factory=list)    # primeros registros, como texto (vista previa)
 
 
-def ver_shp(ruta) -> VistaShp:
+def ver_shp(ruta, filas: int = 8) -> VistaShp:
     sf = shpio.Shapefile(ruta)
+    campos = [f.name for f in sf.fields]
+    muestra = []
+    for i in range(len(sf)):
+        if len(muestra) >= filas:
+            break
+        if sf.is_deleted(i):
+            continue
+        valores = sf.attributes(i)
+        muestra.append([shpio.display_value(valores.get(c)) for c in campos])
     return VistaShp(Path(sf.shp_path), shpio.SHAPE_NAMES.get(sf.shape_type, str(sf.shape_type)),
                     sum(1 for i in range(len(sf)) if not sf.is_deleted(i)),
-                    [f.name for f in sf.fields], sistema_de_prj(sf.shp_path), sf.encoding)
+                    campos, sistema_de_prj(sf.shp_path), sf.encoding, muestra)
 
 
 _CAPA_MALA = re.compile(r'[<>/\\":;?*|=`]')
@@ -590,8 +703,12 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
         if op.puntos == "bloque" and tipo == "punto" and not bloque_ok:
             avisos.append(f"{nombre_a}: el bloque «{op.bloque}» no está en el dibujo; "
                           "los puntos entran como puntos.")
+        # sólo las columnas elegidas: el .dbf de origen no se toca (3.25.5)
+        elegidas = None if op.columnas is None else set(op.columnas.get(str(Path(ruta)), ()))
+        campos_a = [f for f in sf.fields if elegidas is None or f.name in elegidas]
+        con_base = op.atributos and bool(campos_a)
         tabla = nombre_a
-        if op.atributos:
+        if con_base:
             tabla = importados.nombre_libre(nombre_a, tablas_usadas)
             tablas_usadas.add(tabla)
         registros = objetos = sin_geo = 0
@@ -621,13 +738,13 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
             for n_parte, parte in enumerate(partes):
                 z = zs[n_parte][0] if (tipo == "punto" and zs) else 0.0
                 fabricas.append((capa, _fabrica(tipo, parte, z, op, bloque_ok, valores,
-                                                tabla, sf.fields if op.atributos else None, i)))
+                                                tabla, campos_a if con_base else None, i)))
                 objetos += 1
         if sin_geo:
             avisos.append(f"{nombre_a}: {sin_geo} registro(s) sin geometría (o fuera del sistema) "
                           "no entraron.")
         por_archivo.append((nombre_a, registros, objetos, sistema, conversion))
-        if op.atributos and registros:
+        if con_base and registros:
             tablas.append(tabla)
         total += objetos
     comandos: list = []

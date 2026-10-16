@@ -12,10 +12,11 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog,
                                QDialogButtonBox, QDoubleSpinBox, QFileDialog,
-                               QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
                                QLineEdit, QListWidget, QListWidgetItem,
                                QMessageBox, QPushButton, QRadioButton,
-                               QTableWidget, QTableWidgetItem, QVBoxLayout)
+                               QTabWidget, QTableWidget, QTableWidgetItem, QToolButton,
+                               QVBoxLayout)
 
 from . import intercambio as IX
 
@@ -23,37 +24,174 @@ TITULO = "GeoCAD Yaguareté"
 
 
 # ------------------------------------------------------------------ piezas comunes
-class ElegirSistema(QComboBox):
-    """La lista corta argentina, editable: también se escribe cualquier
-    código EPSG («5347», «EPSG:27700»)."""
+OTRO = "__otro__"
 
-    def __init__(self, actual: str = "", vacio: str = "", parent=None) -> None:
+
+class ElegirSistema(QComboBox):
+    """Primero los favoritos (los elegidos antes, el último arriba), después
+    la lista corta argentina y al final «Otro sistema...», que abre el
+    buscador como el de QGIS (3.25.5). También se escribe cualquier código
+    EPSG («5347», «EPSG:27700»). ``solo_metros``: sólo proyectados."""
+
+    def __init__(self, actual: str = "", vacio: str = "", parent=None,
+                 solo_metros: bool = True) -> None:
         super().__init__(parent)
+        self.vacio = vacio
+        self.solo_metros = solo_metros
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.NoInsert)
         self.setMinimumWidth(360)
-        if vacio:
-            self.addItem(vacio, "")
+        self.setMaxVisibleItems(24)
+        self._llenar(actual)
+        self.activated.connect(self._elegido)
+
+    def _llenar(self, actual: str = "") -> None:
+        self.blockSignals(True)
+        self.clear()
+        if self.vacio:
+            self.addItem(self.vacio, "")
+        favs = IX.favoritos()
+        for code in favs:
+            self.addItem("★ " + IX.nombre(code), code)
+        if favs:
+            self.insertSeparator(self.count())
         for code, nombre_s in IX.lista_corta():
-            self.addItem(f"{nombre_s} ({code})", code)
+            if code not in favs:
+                self.addItem(f"{nombre_s} ({code})", code)
+        self.insertSeparator(self.count())
+        self.addItem("Otro sistema... (buscar por nombre o código, como en QGIS)", OTRO)
+        self.blockSignals(False)
         if actual:
             self.poner(actual)
+        else:
+            self.setCurrentIndex(0)
 
     def poner(self, code: str) -> None:
         i = self.findData(code)
         if i < 0:
-            self.addItem(IX.nombre(code), code)
-            i = self.count() - 1
+            self.insertItem(self.count() - 2, IX.nombre(code), code)
+            i = self.findData(code)
         self.setCurrentIndex(i)
+
+    def _elegido(self, i: int) -> None:
+        if self.itemData(i) != OTRO:
+            return
+        dlg = BuscarSistemaDialog(self.solo_metros, self)
+        code = dlg.codigo() if dlg.exec() else ""
+        if code:
+            IX.agregar_favorito(code)
+        self._llenar(code)
+
+    def recordar(self) -> None:
+        """Lo elegido pasa a los favoritos (al aceptar la ventana)."""
+        code = self.codigo()
+        if code:
+            IX.agregar_favorito(code)
 
     def codigo(self) -> str:
         texto = self.currentText().strip()
         i = self.currentIndex()
         if i >= 0 and self.itemText(i) == texto:
-            return self.itemData(i) or ""
+            dato = self.itemData(i) or ""
+            return "" if dato == OTRO else dato
         if not texto:
             return ""
         return IX.normalizar(texto.rsplit("(", 1)[-1].rstrip(")")) or IX.normalizar(texto)
+
+
+class BuscarSistemaDialog(QDialog):
+    """Como «Sistema de referencia de coordenadas» de QGIS: filtro, los
+    usados recientemente (con la X para quitarlos) y todos los de PROJ."""
+
+    def __init__(self, solo_metros: bool = True, parent=None) -> None:
+        super().__init__(parent)
+        self.solo_metros = solo_metros
+        self._code = ""
+        self.setWindowTitle("Elegir sistema de coordenadas")
+        self.resize(760, 620)
+        lay = QVBoxLayout(self)
+        self.filtro = QLineEdit()
+        self.filtro.setPlaceholderText("Filtro: nombre o código (p. ej. «posgar 5», «32721», «utm 18n»)")
+        self.filtro.setClearButtonEnabled(True)
+        self.filtro.textChanged.connect(self._filtrar)
+        lay.addWidget(self.filtro)
+        lay.addWidget(QLabel("Sistemas usados recientemente"))
+        self.recientes = QTableWidget(0, 3)
+        self.recientes.setHorizontalHeaderLabels(("Sistema", "Authority ID", ""))
+        lay.addWidget(self.recientes, 1)
+        lay.addWidget(QLabel("Todos los sistemas" + (" en metros (proyectados)" if solo_metros else "")))
+        self.todos = QTableWidget(0, 2)
+        self.todos.setHorizontalHeaderLabels(("Sistema", "Authority ID"))
+        lay.addWidget(self.todos, 2)
+        for t in (self.recientes, self.todos):
+            t.setSelectionBehavior(QTableWidget.SelectRows)
+            t.setSelectionMode(QTableWidget.SingleSelection)
+            t.setEditTriggers(QTableWidget.NoEditTriggers)
+            t.verticalHeader().setVisible(False)
+            t.horizontalHeader().setStretchLastSection(False)
+            t.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+            t.cellDoubleClicked.connect(lambda *_a: self.accept())
+            t.itemSelectionChanged.connect(self._elegir_de(t))
+        self.elegido = QLabel("")
+        self.elegido.setWordWrap(True)
+        lay.addWidget(self.elegido)
+        lay.addWidget(_botones(self))
+        self._recientes()
+        self._filtrar("")
+
+    def _elegir_de(self, tabla):
+        def f() -> None:
+            filas = tabla.selectionModel().selectedRows()
+            if not filas:
+                return
+            otra = self.todos if tabla is self.recientes else self.recientes
+            otra.blockSignals(True)
+            otra.clearSelection()
+            otra.blockSignals(False)
+            self._code = tabla.item(filas[0].row(), 1).text()
+            self.elegido.setText(f"Elegido: <b>{IX.nombre(self._code)}</b>")
+        return f
+
+    def _recientes(self) -> None:
+        favs = IX.favoritos()
+        t = self.recientes
+        t.setRowCount(len(favs))
+        for i, code in enumerate(favs):
+            t.setItem(i, 0, QTableWidgetItem(IX.nombre(code).rsplit(" (", 1)[0]))
+            t.setItem(i, 1, QTableWidgetItem(code))
+            x = QToolButton()
+            x.setText("✕")
+            x.setAutoRaise(True)
+            x.setToolTip("Quitar de los usados recientemente")
+            x.clicked.connect(lambda _c=False, code=code: self._quitar(code))
+            t.setCellWidget(i, 2, x)
+        t.resizeColumnToContents(1)
+        t.resizeColumnToContents(2)
+
+    def _quitar(self, code: str) -> None:
+        IX.quitar_favorito(code)
+        if self._code == code:
+            self._code = ""
+            self.elegido.setText("")
+        self._recientes()
+
+    def _filtrar(self, texto: str) -> None:
+        filas = IX.buscar_sistemas(texto, self.solo_metros)
+        t = self.todos
+        t.setRowCount(len(filas))
+        for i, (code, nombre_s) in enumerate(filas):
+            t.setItem(i, 0, QTableWidgetItem(nombre_s))
+            t.setItem(i, 1, QTableWidgetItem(code))
+        t.resizeColumnToContents(1)
+
+    def codigo(self) -> str:
+        return self._code
+
+    def accept(self) -> None:
+        if not self._code:
+            self.elegido.setText("Elija un sistema de la lista.")
+            return
+        super().accept()
 
 
 def _botones(dlg, texto_ok: str = "Aceptar") -> QDialogButtonBox:
@@ -177,6 +315,7 @@ class SistemaDialog(QDialog):
         if motivo:
             self.aviso.setText(motivo)
             return
+        self.combo.recordar()
         super().accept()
 
 
@@ -261,6 +400,7 @@ class ReproyectarDialog(QDialog):
         if IX.validar(code) or code == self.actual:
             self._describir()
             return
+        self.combo.recordar()
         super().accept()
 
 
@@ -329,7 +469,7 @@ class ImportarDialog(QDialog):
             if v.sistema:
                 tabla.setItem(i, 3, QTableWidgetItem(IX.nombre(v.sistema)))
             else:                    # sin .prj: que lo diga quien lo conoce
-                c = ElegirSistema("", "sin .prj: como viene")
+                c = ElegirSistema("", "sin .prj: como viene", solo_metros=False)
                 tabla.setCellWidget(i, 3, c)
                 self.sistemas[str(v.ruta)] = c
             tabla.setItem(i, 4, QTableWidgetItem(v.codificacion))
@@ -340,10 +480,10 @@ class ImportarDialog(QDialog):
         self.adoptar.setChecked(True)
         self.adoptar.setVisible(not destino)
         lay.addWidget(self.adoptar)
-        lugar_base = lay.count()            # la base de datos va arriba, junto a los archivos
+        lay.addWidget(self._columnas(vistas))
         campos = sorted({c for v in vistas for c in v.campos})
         # capa
-        g = QGroupBox("Capa y presentación")
+        g = QGroupBox("Capa y representación")
         f = QFormLayout(g)
         self.capa_archivo = QRadioButton("Una por archivo (el nombre del archivo)")
         self.capa_fija = QRadioButton("Una sola:")
@@ -369,43 +509,71 @@ class ImportarDialog(QDialog):
         fila.addWidget(self.grosor, 1)
         f.addRow("Color:", fila)
         lay.addWidget(g)
-        # puntos
-        g = QGroupBox("Puntos")
-        f = QFormLayout(g)
-        self.pt_punto = QRadioButton("Como punto")
-        self.pt_bloque = QRadioButton("Como bloque:")
-        self.pt_texto = QRadioButton("Como texto del campo:")
-        self.pt_punto.setChecked(True)
-        self.bloque = QComboBox()
-        self.bloque.addItems(sorted(b.name for b in doc.blocks
-                                    if not b.name.startswith("*") and not b.is_any_layout))
-        self.pt_bloque.setEnabled(self.bloque.count() > 0)
-        self.campo_texto = QComboBox()
-        self.campo_texto.addItems(campos)
-        f.addRow(self.pt_punto)
-        f.addRow(self.pt_bloque, self.bloque)
-        f.addRow(self.pt_texto, self.campo_texto)
-        self.altura = QDoubleSpinBox()
-        self.altura.setRange(0.01, 10000)
-        self.altura.setDecimals(2)
-        self.altura.setValue(2.5)
-        f.addRow("Altura del texto:", self.altura)
-        lay.addWidget(g)
-        # base de datos (lo principal, con el vectorial; los rótulos se hacen después)
-        g = QGroupBox("Base de datos")
-        v = QVBoxLayout(g)
-        self.con_base = QRadioButton("Con base de datos: cada objeto lleva su registro, con el "
-                                     "esquema del .dbf")
-        self.sin_base = QRadioButton("Sólo la geometría (sin atributos)")
-        self.con_base.setChecked(True)
-        v.addWidget(self.con_base)
-        nota = QLabel("Una tabla por archivo en la Tabla de atributos (TABLASIG).\n"
-                      "Los rótulos, después, desde la tabla con ROTULOSIG.")
-        nota.setContentsMargins(24, 0, 0, 4)
-        v.addWidget(nota)
-        v.addWidget(self.sin_base)
-        lay.insertWidget(lugar_base, g)
         lay.addWidget(_botones(self, "Importar"))
+
+    def _columnas(self, vistas) -> QGroupBox:
+        """La vista previa de la tabla de atributos: una casilla por columna,
+        todas destildadas (Fernando, 16/10/2026). El .dbf no se toca: el
+        dibujo guarda una copia sólo con las tildadas; ninguna = sólo la
+        geometría. Cada geometría entra como es; los rótulos, después, con
+        SHPLABEL."""
+        g = QGroupBox("Columnas de la tabla de atributos que se llevan al dibujo")
+        v = QVBoxLayout(g)
+        nota = QLabel("Tilde las columnas útiles (clic en la casilla o en el título). El .dbf "
+                      "original no se modifica. Sin ninguna tildada entra sólo la geometría.")
+        nota.setWordWrap(True)
+        v.addWidget(nota)
+        self.previas = {}
+        hojas = QTabWidget()
+        for vista in vistas:
+            t = QTableWidget(len(vista.muestra) + 1, len(vista.campos))
+            t.setHorizontalHeaderLabels(vista.campos)
+            t.setEditTriggers(QTableWidget.NoEditTriggers)
+            t.setVerticalHeaderLabels(["Importar"] + [str(n + 1) for n in range(len(vista.muestra))])
+            for j in range(len(vista.campos)):
+                casilla = QTableWidgetItem("")
+                casilla.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                casilla.setCheckState(Qt.Unchecked)
+                t.setItem(0, j, casilla)
+            for i, fila in enumerate(vista.muestra, start=1):
+                for j, texto in enumerate(fila):
+                    t.setItem(i, j, QTableWidgetItem(texto))
+            t.horizontalHeader().sectionClicked.connect(lambda j, t=t: self._alternar(t, j))
+            t.resizeColumnsToContents()
+            t.setMinimumHeight(170)
+            self.previas[str(vista.ruta)] = (t, vista.campos)
+            hojas.addTab(t, vista.ruta.name)
+        hojas.tabBar().setVisible(len(vistas) > 1)
+        v.addWidget(hojas)
+        fila = QHBoxLayout()
+        todas = QPushButton("Tildar todas")
+        todas.clicked.connect(lambda: self._todas(Qt.Checked))
+        ninguna = QPushButton("Destildar todas")
+        ninguna.clicked.connect(lambda: self._todas(Qt.Unchecked))
+        fila.addWidget(todas)
+        fila.addWidget(ninguna)
+        fila.addStretch(1)
+        v.addLayout(fila)
+        return g
+
+    @staticmethod
+    def _alternar(t, j: int) -> None:
+        casilla = t.item(0, j)
+        casilla.setCheckState(Qt.Unchecked if casilla.checkState() == Qt.Checked else Qt.Checked)
+
+    def _todas(self, estado) -> None:
+        for t, campos in self.previas.values():
+            for j in range(len(campos)):
+                t.item(0, j).setCheckState(estado)
+
+    def columnas(self) -> dict:
+        return {ruta: [c for j, c in enumerate(campos) if t.item(0, j).checkState() == Qt.Checked]
+                for ruta, (t, campos) in self.previas.items()}
+
+    def accept(self) -> None:
+        for c in self.sistemas.values():
+            c.recordar()
+        super().accept()
 
     def _elegir_color(self) -> None:
         try:
@@ -430,11 +598,9 @@ class ImportarDialog(QDialog):
         op.capa = "fija" if self.capa_fija.isChecked() else "campo" if self.capa_campo.isChecked() else "archivo"
         op.capa_fija = self.nombre_capa.text().strip() or "SHP"
         op.campo_capa = self.campo_capa.currentText()
-        op.puntos = "bloque" if self.pt_bloque.isChecked() else "texto" if self.pt_texto.isChecked() else "punto"
-        op.bloque = self.bloque.currentText()
-        op.campo_texto = self.campo_texto.currentText()
-        op.atributos = self.con_base.isChecked()
-        op.altura = self.altura.value()
+        op.puntos = "punto"                 # cada geometría como es (3.25.5)
+        op.columnas = self.columnas()
+        op.atributos = any(op.columnas.values())
         op.color = self.color
         op.grosor = self.grosor.currentData()
         op.sistema_shp = {ruta: c.codigo() for ruta, c in self.sistemas.items()}
@@ -556,6 +722,7 @@ class ExportarDialog(QDialog):
         if self.capas.isChecked() and not self.capas_elegidas():
             self.aviso.setText("Tilde al menos una capa.")
             return
+        self.sistema.recordar()
         super().accept()
 
 

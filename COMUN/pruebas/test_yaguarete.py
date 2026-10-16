@@ -44,6 +44,13 @@ c = Y.texto_cartel("Empalme", "FILLET", nombres)
 assert c.startswith("<b>Empalme</b><br>Redondea") and c.endswith("Orden: EMPALME</span>"), c
 assert Y.texto_cartel("Guardar", None) == "<b>Guardar</b>"
 assert "&lt;" in Y.texto_cartel("a<b", None)
+# 3.25.5: el nombre del botón, al idioma de IngeCAD (los de Datos venían en inglés)
+import core.i18n as _i18n
+_viejo = _i18n.tr
+_i18n.tr = lambda t, **k: {"Labels from a field...": "Rótulos desde un campo..."}.get(t, t)
+assert Y._traducir("Labels from a field...") == "Rótulos desde un campo..."
+assert Y._traducir("Empalme") == "Empalme"
+_i18n.tr = _viejo
 assert Y.ESPERA_MS == 1000
 # toda herramienta de la barra y de las barras Dibujo/Modificar tiene su línea
 for o in ("LINE", "PLINE", "CIRCLE", "ARC", "REVCLOUD", "SPLINE", "ELLIPSE", "RECTANG", "POLYGON",

@@ -1,0 +1,46 @@
+GeoCAD - versión 3.25.5
+=======================
+IMPORTARSHP MÁS SIMPLE Y SISTEMAS COMO EN QGIS (16/10/2026, novedades 1 a 4
+de Fernando).
+
+Sistemas de coordenadas (IngeCAD; todas las ventanas que eligen sistema:
+Importar SHP, Definir sistema, Reproyectar y Exportar SHP)
+- Al final de la lista, «Otro sistema...»: abre un buscador como el de
+  QGIS, con todos los sistemas EPSG que conoce PROJ (para usuarios de
+  cualquier país). Se filtra por nombre o código («posgar 2007 faja 5»,
+  «32721», «utm 18n»).
+- Los sistemas que se van eligiendo quedan como favoritos, el último
+  arriba (★ en la lista), como los «usados recientemente» de QGIS. En el
+  buscador se ven con su Authority ID y se quitan con la ✕.
+- Para el sistema de un SHP sin .prj se ofrecen también los geográficos
+  (grados, p. ej. WGS 84 EPSG:4326); para el dibujo, sólo los en metros.
+
+Ventana IMPORTARSHP
+- «Capa y presentación» pasa a llamarse «Capa y representación».
+- Se sacan los grupos «Puntos» y «Base de datos». Cada geometría entra
+  como lo que es: puntos como puntos, líneas como líneas, polígonos como
+  polilíneas cerradas. Los rótulos, después, con SHPLABEL (Rótulos desde
+  un campo).
+- En su lugar, una vista previa de la tabla de atributos (los primeros
+  registros) con una casilla en cada columna, todas destildadas. Se tilda
+  con un clic en la casilla o en el título de la columna; botones «Tildar
+  todas» y «Destildar todas». Con varios archivos, una solapa por archivo.
+- El .dbf de origen no se modifica nunca: el dibujo guarda una copia sólo
+  con las columnas tildadas, para no sobrecargar el archivo. Sin ninguna
+  tildada entra sólo la geometría (sin tabla en TABLASIG).
+
+Barra GeoCAD
+- Los nombres de los botones del módulo Datos que IngeCAD dejaba en inglés
+  («Labels from a field...») se muestran en español en el cartel
+  («Rótulos desde un campo...»).
+
+Pruebas
+- test_intercambio: sólo las columnas tildadas llegan a cada objeto y a la
+  tabla; ninguna = sólo geometría; el .dbf queda intacto; favoritos (el
+  último arriba, sin repetir, máximo 20, se quitan, archivo dañado = lista
+  vacía); el buscador encuentra por nombre y por código, con o sin
+  geográficos.
+- test_yaguarete: el nombre del cartel pasa por la traducción de IngeCAD.
+- Además, la ventana nueva se armó en un Qt invisible con el Python de
+  IngeCAD 0.6.7: casillas, favoritos, buscador y la ✕.
+- 42 pruebas automáticas OK.

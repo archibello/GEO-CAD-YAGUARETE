@@ -417,4 +417,49 @@ try:
     IX.plan_exportar(list(doc3.doc.modelspace()), doc3.doc); raise AssertionError
 except ValueError as exc:
     assert "elija" in str(exc)
+# ------------------------------------------------------------- 3.25.5: columnas y favoritos
+# vista previa: los primeros registros como texto, en el orden de los campos
+v = IX.ver_shp(parcelas, filas=3)
+assert len(v.muestra) == 3 and len(v.muestra[0]) == len(v.campos)
+assert v.muestra[0][v.campos.index("PARTIDA")] == "01-0000"
+# sólo las columnas tildadas; el .dbf de origen no cambia
+dbf = Path(parcelas).with_suffix(".dbf")
+antes_dbf = dbf.read_bytes()
+doc = Document(ezdxf.new("R2018")); hist = History(doc); msp = doc.modelspace()
+op = IX.OpcionesImportar(columnas={str(Path(parcelas)): ["TITULAR", "SUP_M2"]})
+plan = IX.plan_importar(doc.doc, [parcelas], op)
+hist.execute(plan.comando)
+_o, at = IX.atributos(next(iter(msp.query("LWPOLYLINE"))))
+assert [n for n, _t, _x in at] == ["TITULAR", "SUP_M2"], at
+assert plan.tablas == ["parcelas"] and dbf.read_bytes() == antes_dbf
+# ninguna tildada: sólo la geometría, sin tabla
+doc = Document(ezdxf.new("R2018")); hist = History(doc); msp = doc.modelspace()
+plan = IX.plan_importar(doc.doc, [parcelas], IX.OpcionesImportar(columnas={str(Path(parcelas)): []}))
+hist.execute(plan.comando)
+assert list(msp.query("LWPOLYLINE")) and not plan.tablas
+assert IX.atributos(next(iter(msp.query("LWPOLYLINE"))))[1] in (None, [], ())
+print("ok IMPORTARSHP: sólo las columnas tildadas, ninguna = sólo geometría, el .dbf intacto")
+
+# favoritos: el último arriba, sin repetir, se quitan; archivo dañado = vacío
+fav = Path(tempfile.mkdtemp()) / "favoritos.json"
+IX._archivo_favoritos = lambda: fav
+assert IX.favoritos() == []
+IX.agregar_favorito("5347"); IX.agregar_favorito("EPSG:4326"); IX.agregar_favorito("epsg:5347")
+assert IX.favoritos() == ["EPSG:5347", "EPSG:4326"]
+assert IX.quitar_favorito("EPSG:5347") == ["EPSG:4326"] and IX.favoritos() == ["EPSG:4326"]
+for n in range(IX.MAX_FAVORITOS + 5):
+    IX.agregar_favorito(str(32600 + n))
+assert len(IX.favoritos()) == IX.MAX_FAVORITOS and IX.favoritos()[0] == f"EPSG:{32600 + IX.MAX_FAVORITOS + 4}"
+fav.write_text("{dañado", encoding="utf-8")
+assert IX.favoritos() == []
+# buscador: todos los de PROJ, por nombre o código, con o sin geográficos
+r = IX.buscar_sistemas("posgar 2007 faja 5", solo_metros=True)
+assert ("EPSG:5347", IX.crs_mod.KNOWN[5347]) in r, r[:5]
+assert any(c == "EPSG:5347" for c, _n in IX.buscar_sistemas("5347", solo_metros=True))
+assert any(c == "EPSG:27700" for c, _n in IX.buscar_sistemas("27700", solo_metros=True))
+assert any(c == "EPSG:4326" for c, _n in IX.buscar_sistemas("wgs 84", solo_metros=False))
+assert not any(c == "EPSG:4326" for c, _n in IX.buscar_sistemas("wgs 84", solo_metros=True))
+assert len(IX.catalogo(True)) > 3000
+print("ok sistemas: favoritos (último arriba, X para quitar) y buscador como el de QGIS")
+
 print("TODO OK test_intercambio")
