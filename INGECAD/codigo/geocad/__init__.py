@@ -25,7 +25,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, capas, intercambio, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import barra, bloques, capas, intercambio, legibles, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -37,7 +37,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.26.3"
+VERSION = "3.26.5"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -102,6 +102,7 @@ def _document_open(ctx, document):
     uniones.instalar()
     barra.instalar()
     capas.instalar()
+    legibles.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
@@ -346,7 +347,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.26.3",
+        version="3.26.5",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -401,3 +402,9 @@ uniones.instalar()
 pegartabla.instalar()
 barra.instalar()
 PLUGIN = construir_spec()
+# los textos se esconden según su tamaño (3.26.4): antes de abrir un dibujo,
+# y al actualizar sin reiniciar IngeCAD, con una regeneración (3.26.5)
+try:
+    legibles.aplicar_ya()
+except Exception:  # noqa: BLE001 -- la pantalla queda como la arma IngeCAD
+    pass

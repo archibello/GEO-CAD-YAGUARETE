@@ -88,6 +88,15 @@ assert abs(uB.giro - 80) < 1e-6 and uB.altura == 2.5                    # rotado
 uC = R.en_poligono("0016", 2.5, angosta, [], "C", med)
 assert abs(uC.giro - 80) < 1e-6 and uC.altura == 2.5
 assert R.en_poligono("0016", 2.5, angosta, [], "D", med) is None        # se omite
+# 3.26.5, E: según el eje como prioridad, entero; si no, horizontal entero; si no, se omite
+uE = R.en_poligono("0016", 2.5, angosta, [], "E", med)
+assert abs(uE.giro - 80) < 1e-6 and uE.altura == 2.5
+uE = R.en_poligono("0016", 2.5, grande, [], "E", med)
+assert abs(uE.giro - 5) < 1e-6 and uE.altura == 2.5                   # aunque horizontal entraba
+assert R.en_poligono("0016" * 6, 2.5, angosta, [], "E", med) is None   # nunca se achica
+cruz = rect(0, 0, 12, 10, 30)                   # casi cuadrada: entra girado u horizontal
+uE = R.en_poligono("00001", 1.6, cruz, [], "E", med)
+assert uE is not None and uE.altura == 1.6
 # B: rotado tampoco entra entero -> se achica con la nueva orientación
 uB2 = R.en_poligono("0016" * 6, 2.5, angosta, [], "B", med)
 assert abs(uB2.giro - 80) < 1e-6 and uB2.altura < 2.5

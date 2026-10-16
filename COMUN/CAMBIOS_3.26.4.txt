@@ -1,0 +1,35 @@
+GeoCAD - versión 3.26.4
+=======================
+LOS TEXTOS SE VEN MIENTRAS SE LEEN, CADA UNO SEGÚN SU TAMAÑO (16/10/2026,
+error encontrado por Fernando con los rótulos de PC_2_DE_MAYO).
+
+El error (de IngeCAD 0.6.7, también sin GeoCAD)
+- Al alejar la vista desaparecían también los rótulos grandes, que se
+  leían perfectamente.
+- Para moverse rápido en un catastro, IngeCAD no dibuja los textos que en
+  pantalla miden menos de 2 píxeles. Pero no lo decide texto por texto:
+  junta todos los de la misma capa, color y espesor y usa la altura
+  PROMEDIO. En una capa de rótulos con muchos chicos (parcelas urbanas) y
+  algunos grandes (chacras), el promedio es chico: o se veían todos (aun
+  los ilegibles) o no se veía ninguno.
+
+Corrección (IngeCAD, retoque fijo de la pantalla)
+- Los textos se agrupan además por tamaño (escalones de media octava:
+  alturas que difieren a lo sumo 1,41 veces). Cada escalón se esconde
+  recién cuando SUS textos ya no se leen.
+- Al alejarse, primero se van los rótulos chicos y quedan los grandes;
+  al acercarse aparecen los demás. De cerca se ven todos.
+- Vale para todos los textos del dibujo. El archivo no cambia: es sólo
+  cómo se ve. La regeneración en paralelo de IngeCAD también lo usa.
+
+Prueba con los datos reales
+- PC_2_DE_MAYO completo (4905 rótulos de 0,41 a 10 m, opción C): antes,
+  con los de 10 m a 2,5 px no se veía ningún rótulo y un poco más cerca se
+  dibujaban todos (también los ilegibles); ahora se ve el 44 %, 46 %,
+  50 % y 68 % a medida que uno se acerca: los que se leen.
+
+Pruebas
+- test_legibles (nueva), con la pantalla real de IngeCAD: sin el retoque
+  reproduce el error (ningún texto visible); con él los grandes se ven,
+  de cerca todos y de muy lejos ninguno; lo que no es texto no cambia.
+- 45 pruebas automáticas OK.

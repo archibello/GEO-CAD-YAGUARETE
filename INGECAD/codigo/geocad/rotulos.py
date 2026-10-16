@@ -11,6 +11,8 @@ bordes, como QGIS), entero (3.26.2). Los que igual no entran:
      se achican con esa orientación;
   C  todos según el eje más largo; los que no entran, achicados;
   D  se omiten.
+  E  según el eje más largo como prioridad; si así no entran, horizontales;
+     si tampoco, se omiten. Nunca se achican (3.26.5, Fernando).
 LÍNEAS: según el eje de la línea (el tramo donde cae la mitad del largo),
 nunca cabeza abajo; en la mitad, sobre la línea o por arriba / por debajo.
 PUNTOS: centrado en el punto, o empezando en el punto a media altura.
@@ -28,7 +30,8 @@ from pathlib import Path
 from typing import Callable, Optional
 
 POLIGONO = {"A": "Achicar (horizontal)", "B": "Rotar al eje más largo y, si no entra, achicar",
-            "C": "Todos según el eje más largo, achicando los grandes", "D": "Omitir los que no entran"}
+            "C": "Todos según el eje más largo, achicando los grandes", "D": "Omitir los que no entran",
+            "E": "Según el eje más largo (si no, horizontal); omitir los que no entran"}
 LINEA = {"sobre": "Sobre la línea", "arriba": "Por arriba de la línea",
          "abajo": "Por debajo de la línea"}
 PUNTO = {"centro": "Centrado en el punto", "desde": "Empezando en el punto, a media altura"}
@@ -364,6 +367,8 @@ def en_poligono(texto: str, altura: float, externo, huecos, modo: str,
 
     if modo == "C":
         return entero(eje) or achicado(eje)
+    if modo == "E":
+        return entero(eje) or (entero(0.0) if eje != 0.0 else None)
     u = entero(0.0)
     if u is not None or modo == "D":
         return u

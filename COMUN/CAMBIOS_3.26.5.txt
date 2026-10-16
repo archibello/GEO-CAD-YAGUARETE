@@ -1,0 +1,26 @@
+GeoCAD - versión 3.26.5
+=======================
+OPCIÓN E Y TEXTOS VISIBLES SIN REINICIAR (16/10/2026, pedidos de Fernando).
+Trae lo de la 3.26.4.
+
+Rótulos: opción E (IngeCAD, ROTULOSIG)
+- E  Según el eje más largo del polígono como prioridad, entero, en el
+     centroide; si girado no entra, horizontal entero; si tampoco, se
+     omite. Nunca se achica.
+- Con PC_2_DE_MAYO (121 parcelas, altura 2,5): E rotula 57 contra 34 de
+  la D, ninguno fuera de su parcela, todos en el centroide.
+
+Textos visibles al alejarse, sin reiniciar
+- El retoque de la 3.26.4 (cada texto se esconde según SU tamaño) se ponía
+  recién al abrir un dibujo: con IngeCAD abierto desde antes de actualizar,
+  la pantalla seguía con la regla vieja y los rótulos grandes desaparecían.
+- Ahora se pone al cargar GeoCAD, antes de abrir cualquier dibujo, y si ya
+  hay uno abierto (Actualizar sin reiniciar) la pantalla se regenera una
+  vez con la regla nueva.
+
+Pruebas
+- test_rotulos: opción E (girado entero, horizontal si no, nunca achica).
+- test_legibles: el retoque se pone al cargar el plugin, una sola vez.
+- Además, con el Qt de IngeCAD: al cargarse con un dibujo abierto regenera
+  una sola vez.
+- 45 pruebas automáticas OK.
