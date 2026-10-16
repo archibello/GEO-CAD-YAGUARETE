@@ -9,7 +9,9 @@ Cada objeto se ve con su color de CAD. Los textos llegan como líneas
 cortas del ancho del texto, en su dirección, con el texto en «etiqueta»:
 QGIS las rotula sobre la línea, así el rótulo queda en el lugar, con la
 dirección y el tamaño (altura en unidades del mapa) del texto de CAD. Las capas temporales se pierden al
-cerrar QGIS si no se guardan (QGIS ofrece «Hacer permanente»).
+cerrar QGIS si no se guardan (QGIS ofrece «Hacer permanente»). Lo que se
+importó en IngeCAD con IMPORTARSHP llega con su tabla (3.27.3): las mismas
+columnas, tipos y valores del .dbf, después de capa, color y tipo_cad.
 
 La parte sin QGIS (campos, nombres, la dirección de cada capa) se prueba sola.
 """
@@ -37,11 +39,89 @@ CAMPOS = {
 DESTINO_ABIERTO, DESTINO_NUEVO = "abierto", "nuevo"
 
 
-def uri(tipo: str, crs: str) -> str:
-    """La dirección de la capa en memoria, con sus campos."""
+def uri(tipo: str, crs: str, propios=()) -> str:
+    """La dirección de la capa en memoria, con sus campos (y los de la
+    tabla importada, ver :func:`campos_propios`)."""
     partes = [f"crs={crs}"] if crs else []
     partes += [f"field={nombre}:{clase}" for nombre, clase in CAMPOS[tipo]]
+    partes += [f"field={nombre}:{clase_dbf(*defi)}" for nombre, defi, _orig in propios]
     return GEOMETRIA[tipo] + "?" + "&".join(partes)
+
+
+# -- la tabla de lo importado con IMPORTARSHP (3.27.3) ------------------------------
+# Cada elemento puede traer «atributos»: [[nombre, tipo, ancho, decimales, texto]]
+# con el esquema del .dbf de origen. La capa nueva lleva esas mismas columnas.
+
+def clase_dbf(t: str, ancho: int, dec: int) -> str:
+    """El tipo de campo de la capa en memoria para un campo del .dbf."""
+    if t == "C":
+        return f"string({ancho})"
+    if t == "N" and dec == 0:
+        return f"integer({ancho})" if ancho <= 9 else f"long({ancho})"
+    if t in "NF":
+        return f"double({ancho},{dec})"
+    if t == "D":
+        return "date"
+    if t == "L":
+        return "boolean"
+    return "string"
+
+
+def _nombre_libre(nombre: str, usados: set) -> str:
+    base = "".join(c if c.isalnum() or c == "_" else "_" for c in str(nombre)) or "CAMPO"
+    nuevo, i = base, 1
+    while nuevo.lower() in usados:
+        nuevo, i = f"{base}_{i}", i + 1
+    usados.add(nuevo.lower())
+    return nuevo
+
+
+def campos_propios(tipo: str, elementos: list) -> list:
+    """[(nombre en la capa, (tipo, ancho, dec), nombre en el .dbf)] en el orden
+    de la tabla. Si dos objetos traen el mismo campo con distinto esquema,
+    queda como texto. Un nombre igual a uno de GeoCAD («capa»...) se renombra."""
+    propios: dict = {}
+    for elemento in elementos:
+        for n, t, a, d, _x in elemento.get("atributos") or ():
+            defi = (str(t), int(a), int(d))
+            if n not in propios:
+                propios[n] = defi
+            elif propios[n] != defi:
+                propios[n] = ("C", 254, 0)
+    usados = {n.lower() for n, _c in CAMPOS[tipo]}
+    return [(_nombre_libre(n, usados), defi, n) for n, defi in propios.items()]
+
+
+def valor_dbf(t: str, dec: int, texto):
+    """El valor de una celda del .dbf (como la guarda IMPORTARSHP) en su tipo.
+    Vacío o ilegible = sin dato (NULL), como lo muestra QGIS al abrir el .shp."""
+    import datetime as _dt
+    texto = "" if texto is None else str(texto).strip()
+    if not texto:
+        return None
+    try:
+        if t == "C":
+            return texto
+        if t == "N" and dec == 0:
+            return int(float(texto))
+        if t in "NF":
+            return float(texto)
+        if t == "D":                 # 05/10/2026; años viejos sin ceros: 05/03/878
+            import re
+            m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{1,4})", texto)
+            if m:
+                return _dt.date(int(m[3]), int(m[2]), int(m[1]))
+            m = re.fullmatch(r"(\d{4})-?(\d{2})-?(\d{2})", texto)
+            return _dt.date(int(m[1]), int(m[2]), int(m[3])) if m else None
+        if t == "L":
+            if texto.lower() in ("verdadero", "true", "t", "y", "s", "si", "sí", "1"):
+                return True
+            if texto.lower() in ("falso", "false", "f", "n", "no", "0"):
+                return False
+            return None
+    except (TypeError, ValueError):
+        return None
+    return texto
 
 
 def nombre_grupo(dibujo: str, cuando: float | None = None) -> str:
@@ -56,7 +136,7 @@ def capas_del_mensaje(msg: dict) -> list:
     return [(t, NOMBRES[t], capas[t]) for t in TIPOS if capas.get(t)]
 
 
-def valores(tipo: str, elemento: dict) -> list:
+def valores(tipo: str, elemento: dict, propios=()) -> list:
     """Los atributos de un elemento en el orden de los campos."""
     out = []
     for nombre, clase in CAMPOS[tipo]:
@@ -69,6 +149,15 @@ def valores(tipo: str, elemento: dict) -> list:
         elif v is not None:
             v = str(v)
         out.append(v)
+    if propios:
+        suyos = {n: (t, d, x) for n, t, _a, d, x in elemento.get("atributos") or ()}
+        for _nombre, (t, _a, d), orig in propios:
+            if orig in suyos:
+                t0, d0, x = suyos[orig]
+                out.append(valor_dbf(t, d, x) if (t0, d0) == (t, d) or t == "C"
+                           else None)
+            else:
+                out.append(None)
     return out
 
 
@@ -200,11 +289,24 @@ def _rotulos(layer) -> None:
     layer.setRenderer(QgsNullSymbolRenderer())
 
 
+def _qt(v):
+    """Las fechas, como QDate: la capa en memoria no toma las de Python."""
+    import datetime as _dt
+    if isinstance(v, _dt.date):
+        try:
+            from qgis.PyQt.QtCore import QDate
+            return QDate(v.year, v.month, v.day)
+        except Exception:  # noqa: BLE001
+            return None
+    return v
+
+
 def crear_capa(tipo: str, nombre: str, elementos: list, crs: str):
     """(capa en memoria, cuántos elementos no se pudieron leer)."""
     from qgis.core import QgsFeature, QgsGeometry, QgsVectorLayer
 
-    layer = QgsVectorLayer(uri(tipo, crs), nombre, "memory")
+    propios = campos_propios(tipo, elementos)
+    layer = QgsVectorLayer(uri(tipo, crs, propios), nombre, "memory")
     feats, malos = [], 0
     for elemento in elementos:
         geom = QgsGeometry.fromWkt(elemento.get("wkt") or "")
@@ -213,7 +315,7 @@ def crear_capa(tipo: str, nombre: str, elementos: list, crs: str):
             continue
         f = QgsFeature(layer.fields())
         f.setGeometry(geom)
-        f.setAttributes(valores(tipo, elemento))
+        f.setAttributes([_qt(v) for v in valores(tipo, elemento, propios)])
         feats.append(f)
     layer.dataProvider().addFeatures(feats)
     layer.updateExtents()

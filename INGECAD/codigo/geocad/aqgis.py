@@ -17,7 +17,9 @@ capa temporal, una por tipo:
 Los arcos y curvas se pasan a tramos rectos (cada tramo se aparta de la
 curva menos que ``TOLERANCIA`` unidades del dibujo). Cada objeto lleva su
 capa CAD, su color (el propio o el de su capa) y su tipo de CAD. Lo demás
-(cotas, imágenes...) se saltea y se cuenta.
+(cotas, imágenes...) se saltea y se cuenta. Lo importado con IMPORTARSHP
+lleva además su fila de la tabla (3.27.3): QGIS arma las mismas columnas,
+con sus tipos y valores.
 
 La parte sin IngeCAD (qué sale de cada objeto) se prueba sola; el envío es
 un mensaje del buzón que QGIS atiende (ver desde_ingecad.py de QGIS).
@@ -239,9 +241,32 @@ def renglones(e, doc) -> list:
     return out
 
 
+def atributos_importados(e) -> list:
+    """[[nombre, tipo, ancho, decimales, texto]] de la tabla que trajo el
+    objeto con IMPORTARSHP (su XDATA), o [] (3.27.3: ENVIARQGIS no los
+    mandaba y la capa nueva de QGIS llegaba sin la tabla)."""
+    from .importados import atributos
+    try:
+        _origen, attrs = atributos(e)
+    except Exception:  # noqa: BLE001
+        return []
+    return [[n, t, int(a), int(d), texto] for n, (t, a, d), texto in attrs]
+
+
 def elementos(e, doc, tolerancia: float = TOLERANCIA):
     """(tipo, [{wkt y atributos}]) de un objeto, o (None, motivo). Un MTEXT
-    da un elemento por renglón; lo demás, uno."""
+    da un elemento por renglón; lo demás, uno. Lo importado con IMPORTARSHP
+    lleva además «atributos»: su fila de la tabla, con el esquema del .dbf."""
+    tipo, out = _elementos(e, doc, tolerancia)
+    if tipo is not None:
+        attrs = atributos_importados(e)
+        if attrs:
+            for dato in out:
+                dato["atributos"] = attrs
+    return tipo, out
+
+
+def _elementos(e, doc, tolerancia: float = TOLERANCIA):
     if e.dxftype() in ("TEXT", "MTEXT"):
         base = {"capa": e.dxf.get("layer", "0"), "color": color_de(e, doc),
                 "tipo_cad": e.dxftype()}

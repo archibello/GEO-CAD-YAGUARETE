@@ -1,0 +1,41 @@
+GeoCAD - versión 3.27.3
+=======================
+ENVIARQGIS LLEVA LA TABLA DE LO IMPORTADO CON IMPORTARSHP (16/10/2026,
+error encontrado por Fernando).
+
+El error
+- Fernando: al pasar a QGIS desde IngeCAD (ENVIARQGIS, «Enviar la selección
+  a QGIS como capas nuevas») los polígonos y los textos de los rótulos
+  llegaban bien, pero la capa nueva NO traía la tabla de atributos del SHP
+  con el que trabajaba (PC_2_DE_MAYO, importado con IMPORTARSHP).
+- Causa: ENVIARQGIS mandaba de cada objeto sólo la geometría, la capa CAD,
+  el color y el tipo; no leía los atributos que IMPORTARSHP guarda en la
+  XDATA de cada objeto (EXPORTARSHP sí los leía).
+
+La corrección
+- Cada objeto importado viaja con su fila de la tabla y el esquema del .dbf
+  (nombre, tipo, ancho y decimales de cada columna).
+- En QGIS la capa nueva tiene, después de capa, color y tipo_cad, las mismas
+  columnas del .shp, en el mismo orden y con su tipo: texto con su largo,
+  enteros (enteros largos si no entran), decimales con su precisión, fechas y
+  lógicos. Las celdas vacías quedan sin dato (NULL), como al abrir el .shp.
+- Sólo van las columnas que se tildaron al importar (3.25.5). Una columna que
+  se llame como las de GeoCAD («capa»...) llega como «capa_1». Lo que no se
+  importó con IMPORTARSHP sigue llegando sin tabla, como antes.
+- Fechas de años viejos (PC_2_DE_MAYO tiene una del año 878) también llegan.
+
+Pruebas
+- test_aqgis_tabla (nueva): un .shp latin-1 con texto, enteros, enteros
+  largos, decimales, fecha, lógico y celdas vacías se importa como
+  IMPORTARSHP, se manda con ENVIARQGIS y la tabla que arma QGIS tiene las
+  mismas columnas, tipos y valores que el .dbf; con sólo algunas columnas
+  tildadas llegan sólo esas.
+- Con una copia de PC_2_DE_MAYO (4906 registros): la capa en memoria de
+  QGIS 3.40.5 tiene los 34 campos del .shp y todos los valores iguales a los
+  del .shp abierto en QGIS; los tipos se comprobaron además en QGIS 4.2.2.
+- Todas las pruebas automáticas OK.
+
+Queda igual
+- Las 5 parcelas de PC_2_DE_MAYO que tienen dos partes llegan como dos
+  filas cada una (4911 objetos), igual que antes (cada parte es un objeto en
+  IngeCAD).
