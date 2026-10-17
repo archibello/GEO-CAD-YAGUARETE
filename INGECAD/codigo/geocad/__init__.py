@@ -12,6 +12,7 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Igualar propiedades (igualar.py): MATCHPROP con el origen resaltado
     Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
     Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
+    Pegar imagen (pegarimagen.py): Ctrl+V o PEGARIMAGEN, la captura del portapapeles en dos clics
     Intercambio (intercambio.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
@@ -25,7 +26,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import barra, bloques, capas, intercambio, legibles, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import barra, bloques, capas, intercambio, legibles, pegarimagen, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -37,7 +38,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.27.3"
+VERSION = "3.28.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -169,6 +170,8 @@ def construir_spec() -> PluginSpec:
         tools["GEORREF"] = georref.GeorrefTool
         tools["INSERTARGEO"] = imagengeo.InsertarGeoTool
         tools["EXPORTARGEO"] = imagengeo.ExportarGeoTool
+        tools["GEOPASTEIMAGE"] = pegarimagen.PegarImagenTool
+        aliases.update({"PASTEIMAGE": "GEOPASTEIMAGE", "PASTECLIP": "GEOPASTEIMAGE"})
         aliases.update({"RUBBERSHEET": "GEORREF", "AJUSTEIMAGEN": "GEORREF"})
     if est["bloques"]:
         tools.update({"GEOBLOCK": bloques.BloqueTool, "GEOINSERT": bloques.InsertarTool,
@@ -195,6 +198,9 @@ def construir_spec() -> PluginSpec:
         toolbar.append(ToolbarItem("Selection filters (FILTER)", "GEOFILTER", _icon("filtro")))
     if est["tablas"]:
         toolbar.append(ToolbarItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()))
+    if est["georref"]:
+        toolbar.append(ToolbarItem("Paste clipboard image (PASTEIMAGE)", "GEOPASTEIMAGE",
+                                   _icon("pegar_imagen")))
     if est["intercambio"]:
         commands.update(intercambio.COMMANDS)
         aliases.update({"MAPCSASSIGN": "GEOCRS", "MAPIMPORT": "GEOIMPORTSHP",
@@ -291,7 +297,8 @@ def construir_spec() -> PluginSpec:
           + ((MenuItem("Match properties (MATCHPROP)", "MATCHPROP"),) if est["igualar"] else ())
           + ((MenuItem("Adjust image with control points (GEORREF)", "GEORREF", _icon("georref")),
               MenuItem("Insert georeferenced image (INSERTARGEO)", "INSERTARGEO", _icon("insertar_geo")),
-              MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")))
+              MenuItem("Export georeferenced copy (EXPORTARGEO)", "EXPORTARGEO", _icon("exportar_geo")),
+              MenuItem("Paste clipboard image (PASTEIMAGE)", "GEOPASTEIMAGE", _icon("pegar_imagen")))
              if est["georref"] else ())
           + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()),)
              if est["tablas"] else ())
@@ -347,7 +354,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.27.3",
+        version="3.28.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -400,6 +407,7 @@ bloques.instalar_referencias()
 orden.instalar()
 uniones.instalar()
 pegartabla.instalar()
+pegarimagen.instalar()
 barra.instalar()
 PLUGIN = construir_spec()
 # los textos se esconden según su tamaño (3.26.4): antes de abrir un dibujo,

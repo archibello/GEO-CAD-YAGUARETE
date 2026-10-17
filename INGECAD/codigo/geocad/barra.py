@@ -20,7 +20,7 @@ TEMAS = {
     "BLOCK": "bloques", "INSERT": "bloques", "GEOREFEDIT": "bloques", "GEOBLOCKBASE": "bloques",
     "SELECT": "seleccion", "GEOFILTER": "seleccion",
     "GEOPREVIEW": "impresion", "GEOPLOTSTYLES": "impresion",
-    "GEOPASTETABLE": "tablas",
+    "GEOPASTETABLE": "tablas", "GEOPASTEIMAGE": "tablas",
     "GEOCRS": "intercambio", "GEOREPROJECT": "intercambio", "GEOIMPORTSHP": "intercambio",
     "GEOEXPORTSHP": "intercambio",
     "GEODIMSETUP": "cotas", "DIMLINEAR": "cotas", "DIMALIGNED": "cotas", "DIMANGULAR": "cotas",

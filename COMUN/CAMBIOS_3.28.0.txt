@@ -1,0 +1,44 @@
+GeoCAD - versión 3.28.0
+=======================
+PEGAR UNA CAPTURA DE PANTALLA CON CTRL+V Y DOS CLICS (17/10/2026, pedido de
+Fernando, adelantado a la hoja de ruta).
+
+Cómo se usa (IngeCAD)
+1. Capturar: Impr Pant (o Mayús+Impr Pant para una zona), o copiar una
+   imagen en el navegador, en GIMP, o un archivo de imagen en el explorador.
+2. Ctrl+V en IngeCAD y clic en la esquina INFERIOR IZQUIERDA de la imagen.
+3. Clic en la esquina INFERIOR DERECHA: el contorno de la imagen sigue al
+   cursor y el clic le da la escala. Fin.
+- La dirección del 1º al 2º punto es el borde de abajo: con ORTO (F8) queda
+  derecha; sin ORTO, queda girada como se marque. En el 2º punto también se
+  puede escribir el ancho (en unidades del dibujo).
+- Ctrl+V sólo pega la imagen si el portapapeles tiene una imagen; si tiene
+  objetos copiados en IngeCAD (Ctrl+C) los pega como siempre.
+- También como orden: PEGARIMAGEN (GEOPASTEIMAGE, PASTEIMAGE), botón en la
+  barra GeoCAD (junto a Pegar tabla) y en GeoCAD > Dibujo.
+
+Dónde queda la imagen
+- Una IMAGE de IngeCAD siempre apunta a un archivo: la captura se guarda
+  como PNG (captura_AAAAMMDD_HHMMSS.png) en la carpeta
+  «<nombre del dibujo>_imagenes», junto al dibujo. Si el dibujo todavía no
+  se guardó, va a Imágenes/GeoCAD y se avisa (al llevar el dibujo a otra
+  computadora hay que llevar también la imagen).
+- Un archivo de imagen copiado en el explorador se usa tal cual (no se copia).
+- Va en la capa actual; U la quita.
+
+Módulo
+- Es parte del módulo «georref» (imágenes). Apagado en GeoCAD > Módulos...,
+  no hay botón ni orden y Ctrl+V queda como venía.
+
+Pruebas
+- test_pegarimagen (nueva): botón, menú, alias y traducción; las cuentas
+  (horizontal, girada); la elección de Ctrl+V (imagen u objetos de
+  IngeCAD); carpeta junto al dibujo o Imágenes/GeoCAD, nombres sin pisar;
+  la imagen en el dibujo con su escala, giro y ancho escrito, archivo
+  copiado, error al guardar, portapapeles vacío, U.
+- Ctrl+V con el Qt real de IngeCAD 0.6.7 (sin ventana): una imagen en el
+  portapapeles arranca PEGARIMAGEN y se guarda como PNG; una copia de
+  objetos de IngeCAD, un Ctrl+C recién hecho o un texto siguen con el pegado
+  de siempre; un archivo de imagen copiado se toma tal cual.
+- test_modulos al día con el botón nuevo. Todas las pruebas automáticas OK
+  (48 de 48).

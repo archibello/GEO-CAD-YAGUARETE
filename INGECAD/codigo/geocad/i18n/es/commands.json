@@ -126,6 +126,9 @@
   "GEOPASTETABLE": {
     "name": "PEGARTABLA"
   },
+  "GEOPASTEIMAGE": {
+    "name": "PEGARIMAGEN"
+  },
   "GEOCRS": {
     "name": "SISTEMAGEO"
   },

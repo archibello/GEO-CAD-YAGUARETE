@@ -72,7 +72,8 @@ CATALOGO = {
                "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin "
                "Plate Spline y Proyectiva, que rehacen la imagen; .points de QGIS). INSERTARGEO inserta una imagen con archivo de mundo o GeoTIFF en "
                "su lugar. EXPORTARGEO guarda una copia con su archivo de mundo donde se "
-               "elija, que QGIS abre en su lugar."),
+               "elija, que QGIS abre en su lugar. Ctrl+V (o PEGARIMAGEN) pega la captura de "
+               "pantalla del portapapeles con dos clics (esquinas inferior izquierda y derecha)."),
         Modulo("orden", "Orden de dibujo (ALFRENTE, ALFONDO)",
                "Dos botones en la barra GeoCAD, como el DRAWORDER de AutoCAD: lo "
                "elegido se dibuja encima o debajo de todo (líneas, sombreados, "

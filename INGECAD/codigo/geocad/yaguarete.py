@@ -108,6 +108,7 @@ DESCRIPCIONES = {
     "SELECT": "Elige objetos con las opciones de AutoCAD (W, C, WP, CP, F...).",
     "GEOFILTER": "Elige objetos por tipo, capa, color, medidas, textos y datos de QGIS.",
     "GEOPASTETABLE": "Pega la tabla copiada en GenOffice, Calc, Excel o QGIS (tabla de atributos o «Copiar tabla» de una composición), con su formato; dos puntos le dan la escala.",
+    "GEOPASTEIMAGE": "Ctrl+V con una captura de pantalla (o una imagen copiada): 1er punto, esquina inferior izquierda; 2º, inferior derecha, que da la escala.",
     "GEOCRS": "Declara en qué sistema de coordenadas está el dibujo (POSGAR, Campo Inchauspe, UTM, cualquier EPSG). No mueve nada.",
     "GEOREPROJECT": "Convierte las coordenadas del dibujo a otro sistema (PROJ) y lo deja declarado. Un U lo deshace.",
     "GEOIMPORTSHP": "Importa uno o varios shapefiles al dibujo, llevados a su sistema, con los atributos en cada objeto.",
