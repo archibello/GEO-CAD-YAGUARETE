@@ -1,0 +1,29 @@
+GeoCAD - versión 3.30.2
+=======================
+IMPORTARKML: LOS RÓTULOS NO ENTRAN EN LA TABLA (18/10/2026, de la prueba
+KI4; Fernando: «trajo los polígonos con la tabla de atributos»).
+
+Por qué
+- Al importar el KMZ de «PRUEBA CON ETIQUETAS» (16 parcelas con datos y 13
+  rótulos exportados por EXPORTARKML), la tabla quedaba con 29 registros
+  en vez de 16, y TABLASIG medía «Longitud» en vez de «Área»: los rótulos
+  (textos, sin datos) se cargaban en la misma tabla que las parcelas.
+
+Qué cambia en IMPORTARKML
+- Un rótulo (marcador sin chinche, como los que escribe EXPORTARKML para
+  los textos) entra como texto en su capa, pero en la tabla sólo si trae
+  datos propios.
+- Los demás marcadores siguen como en la 3.30.0: un renglón por marcador
+  con geometría, aunque venga sin datos (como un SHP).
+- Con el KMZ de PRUEBA CON ETIQUETAS: 16 registros, TABLASIG con «Área», y
+  los 13 rótulos en PC_2_DE_MAYO-ROTULOS.
+
+Pruebas
+- test_importarkml: polígono con datos y rótulo sin datos: la tabla tiene
+  sólo el polígono, es de polígonos y TABLASIG mide «Área»; el rótulo entra
+  como texto. En el KML de prueba de la 3.30.0, 6 renglones (antes 7: el
+  rótulo sin datos).
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KI6 en 02_PRUEBAS_MANUALES.txt.

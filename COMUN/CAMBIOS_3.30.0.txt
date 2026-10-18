@@ -1,0 +1,65 @@
+GeoCAD - versión 3.30.0
+=======================
+IMPORTAR KML / KMZ DE GOOGLE EARTH (18/10/2026; hoja de ruta: KML/KMZ
+dividido en 3.29.0 Exportar y 3.30.0 Importar).
+Incluye la 3.29.2 (EXPORTARKML: los bloques sin datos salen como su dibujo).
+
+Orden nueva IMPORTARKML (módulo «Intercambio»)
+- Menú GeoCAD > Importar > KML / KMZ... y botón en la barra GeoCAD (el globo
+  con la flecha hacia adentro).
+- Lee un .kmz (el doc.kml de adentro) o un .kml y lo lleva de WGS 84 (el de
+  Google Earth) al sistema del dibujo, con PROJ.
+- Si el dibujo no tiene sistema, lo pregunta con la ventana de SISTEMAGEO
+  ya propuesta según dónde cae el KML: POSGAR 2007 en la faja de su
+  longitud (Candelaria: faja 6); el marco (POSGAR 2007 o Campo Inchauspe)
+  lo elige usted. Fuera de la Argentina propone el UTM de WGS 84. Queda
+  asignado al dibujo y el mismo U lo deshace.
+- Si el dibujo tiene sistema y sus X dicen otra faja, avisa como
+  SISTEMAGEO y EXPORTARKML (3.29.1).
+- Qué entra:
+  - Puntos como puntos; líneas (y recorridos gx:Track) como polilíneas;
+    polígonos como polilíneas cerradas, cada hueco otra polilínea cerrada
+    con los mismos datos.
+  - Cada carpeta del KML a una capa (la carpeta más cercana; lo suelto, en
+    una capa con el nombre del archivo), o todo en una capa a elección.
+    Las capas que ya estaban conservan su color y espesor.
+  - El color de cada marcador (estilo propio, compartido o StyleMap). El
+    blanco de Google Earth queda como el blanco/negro de CAD.
+  - Los datos extendidos (ExtendedData: Data y SchemaData) como atributos,
+    igual que IMPORTARSHP: una tabla con el nombre del archivo en la Tabla
+    de atributos (TABLASIG), un renglón por marcador; las columnas con sólo
+    números quedan numéricas.
+  - El nombre de cada marcador como rótulo, si se tilda (altura a
+    elección): en el centroide del polígono, a mitad de la línea, al lado
+    del punto.
+  - Los textos que exportó EXPORTARKML (marcador sin ícono) vuelven como
+    textos.
+- No se importan (y se cuentan): imágenes superpuestas, vínculos de red,
+  modelos 3D, marcadores sin geometría. La altura (Z) no se toma: todo en 0.
+- Todo es un solo paso: U lo deshace.
+
+Ida y vuelta con EXPORTARKML
+- Exportar a KMZ (o KML) e importar ese archivo en otro dibujo con el mismo
+  sistema devuelve todo en el mismo lugar: diferencia máxima 0,06 mm en la
+  prueba. Mismas capas, colores, textos y atributos. Los polígonos pueden
+  volver con los vértices en el otro sentido (EXPORTARKML los orienta).
+
+Del KMLIN de Terreno (IngeCAD 0.6.7) se tomaron las reglas de lectura
+(StyleMap, MultiGeometry, gx:Track, el doc.kml del KMZ); no se lo llama:
+pone todo en una sola capa y no lee los datos extendidos.
+
+Pruebas
+- test_importarkml (nueva): menú, barra y módulo; lectura de un KMZ como
+  los de Google Earth (carpetas anidadas, StyleMap, huecos, MultiGeometry,
+  gx:Track, Data y SchemaData, textos, lo que no se importa); la faja según
+  la longitud; importar a Campo Inchauspe faja 6 igual que pyproj, capas,
+  colores, atributos y un deshacer; opciones (una capa, sin colores, sin
+  atributos, rótulos); sin sistema; ida y vuelta con EXPORTARKML en .kmz y
+  .kml al milímetro. Con el Qt del IngeCAD instalado: la faja propuesta y
+  la ventana de opciones.
+- test_intercambio y test_modulos: IMPORTARKML en el menú Importar y en la
+  barra.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KI1-KI5 en 02_PRUEBAS_MANUALES.txt.

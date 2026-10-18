@@ -140,5 +140,11 @@
   },
   "GEOEXPORTSHP": {
     "name": "EXPORTARSHP"
+  },
+  "GEOEXPORTKML": {
+    "name": "EXPORTARKML"
+  },
+  "GEOIMPORTKML": {
+    "name": "IMPORTARKML"
   }
 }

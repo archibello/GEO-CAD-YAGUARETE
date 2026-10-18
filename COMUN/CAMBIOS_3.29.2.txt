@@ -1,0 +1,27 @@
+GeoCAD - versión 3.29.2
+=======================
+BLOQUES EN EL KMZ COMO SU DIBUJO (18/10/2026, de la prueba de la 3.29.1;
+Fernando: «volvieron a exportarse los nombres de los bloques»; elegido:
+«sin rótulo ni marcador»).
+
+Qué cambia en EXPORTARKML
+- Los bloques SIN datos (puertas, ventanas, artefactos, árboles...) ya no
+  van como un marcador con su nombre: se exportan como su dibujo (líneas,
+  círculos, sombreados), igual que se ven en IngeCAD, sin rótulo.
+  - Lo dibujado en la capa 0 del bloque va a la capa del bloque (su
+    carpeta en Google Earth); lo «por bloque» toma el color y el grosor
+    del bloque.
+  - Los bloques dentro de bloques, también.
+- Los bloques CON datos (atributos, o los de IMPORTARSHP) siguen como
+  marcador con su tabla en el globo; si su nombre es automático (A$C…,
+  *U…), sin rótulo (3.29.1).
+
+Pruebas
+- test_kml: un bloque con línea en capa 0, línea de color por bloque y un
+  bloque anidado sale como dos líneas y un polígono, en su lugar, en la
+  capa y el color que corresponden, sin marcador ni nombre; los bloques con
+  atributos siguen como marcador (A$C y *U sin rótulo).
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KE8 en 02_PRUEBAS_MANUALES.txt.

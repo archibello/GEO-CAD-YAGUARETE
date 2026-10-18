@@ -1,0 +1,38 @@
+GeoCAD - versión 3.30.4
+=======================
+IMPORTARKML ROTULA CON ROTULOSIG (18/10/2026, de la prueba KI3; Fernando:
+«el tema son los usuarios novatos, ellos esperan un resultado; lo mejor que
+les podemos dar es algo que ya tenemos desarrollado y probado»).
+
+Por qué
+- La opción «El nombre de cada marcador como rótulo» ponía un texto
+  horizontal en el centro, del tamaño elegido, sin mirar si entraba. El
+  resultado esperado es el de ROTULOSIG: dentro del polígono, según su eje,
+  achicando los que no entran.
+
+Qué cambia en IMPORTARKML
+- Si el archivo trae datos (tabla de atributos), la casilla dice «Rotular
+  con un campo de la tabla, como ROTULOSIG». Al terminar de importar se
+  abre la MISMA ventana de ROTULOSIG: campo (propone «name» si está),
+  altura y cómo se ubican (A-E en polígonos, líneas, puntos). Recuerda lo
+  último elegido, como ROTULOSIG.
+- Los rótulos quedan en la capa <tabla>-ROTULOS, enlazados a la tabla:
+  QUITARROTULOS los borra y ROTULOSIG los reemplaza. U los deshace (un
+  paso), y otro U deshace la importación.
+- En ese caso los textos sueltos que trae el archivo (los rótulos que
+  escribió EXPORTARKML) no se traen, para que no quede cada parcela con dos
+  números. La línea de comandos lo cuenta.
+- Si el archivo no trae datos (algo dibujado en Google Earth), sigue «El
+  nombre de cada marcador como rótulo, de altura: ...», como antes.
+- Sin los atributos tildados no hay tabla: la casilla de ROTULOSIG se
+  apaga.
+
+Pruebas
+- test_importarkml: la ventana con tabla (ROTULOSIG, sin altura) y sin
+  tabla (el nombre, con altura); rótulos de ROTULOSIG en <tabla>-ROTULOS,
+  enlazados (QUITARROTULOS los ve), con la altura elegida, y U los deshace;
+  los textos del archivo no se traen y se cuentan.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KI8 en 02_PRUEBAS_MANUALES.txt.

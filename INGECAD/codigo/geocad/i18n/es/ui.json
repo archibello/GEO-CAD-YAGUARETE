@@ -66,5 +66,9 @@
   "Coordinate system of the drawing (GEOCRS)": "Sistema de coordenadas del dibujo (SISTEMAGEO)",
   "Reproject drawing (REPROJECT)": "Reproyectar dibujo (REPROYECTAR)",
   "Import SHP (IMPORTSHP)": "Importar SHP (IMPORTARSHP)",
-  "Export SHP (EXPORTSHP)": "Exportar SHP (EXPORTARSHP)"
+  "Export SHP (EXPORTSHP)": "Exportar SHP (EXPORTARSHP)",
+  "KML / KMZ... (EXPORTKML)": "KML / KMZ... (EXPORTARKML)",
+  "Export KML / KMZ for Google Earth (EXPORTKML)": "Exportar KML / KMZ a Google Earth (EXPORTARKML)",
+  "KML / KMZ... (IMPORTKML)": "KML / KMZ... (IMPORTARKML)",
+  "Import KML / KMZ from Google Earth (IMPORTKML)": "Importar KML / KMZ de Google Earth (IMPORTARKML)"
 }

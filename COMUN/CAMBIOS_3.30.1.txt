@@ -1,0 +1,27 @@
+GeoCAD - versión 3.30.1
+=======================
+LA TABLA DE ATRIBUTOS EN EL GLOBO DE GOOGLE EARTH (18/10/2026, de la prueba
+KE4; Fernando: «los polígonos no van con su tabla de atributos y eso es muy
+importante»).
+
+Por qué
+- El KMZ sí llevaba los atributos de cada objeto (ExtendedData: key,
+  name...), pero Google Earth no los muestra cuando el objeto también tiene
+  descripción: el globo mostraba sólo «Capa ... Área ... perímetro».
+
+Qué cambia en EXPORTARKML
+- Al hacer clic en un objeto con datos, el globo muestra arriba su tabla de
+  atributos (nombre del campo y valor, como en TABLASIG) y debajo la capa y
+  las medidas (área y perímetro, o largo).
+- Los ExtendedData siguen en el KMZ igual que antes: QGIS e IMPORTARKML los
+  leen como siempre.
+
+Pruebas
+- test_kml: el globo de una parcela trae la tabla (PARTIDA, TITULAR...)
+  antes de las medidas, con los caracteres especiales (& < >) bien escritos.
+- Probado con el plano real «PRUEBA CON ETIQUETAS» (557 parcelas de
+  PC_2_DE_MAYO): cada globo con key y name.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KE9 en 02_PRUEBAS_MANUALES.txt.

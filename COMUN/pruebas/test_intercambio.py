@@ -38,8 +38,8 @@ assert set(ORDENES) <= set(spec.tools) | set(spec.commands), "faltan las órdene
 sub = {getattr(s, "label", ""): s for s in spec.menu}
 assert {"Coordinate system", "Import", "Export"} <= set(sub), list(sub)
 assert [i.command for i in sub["Coordinate system"].items] == ["GEOCRS", "GEOREPROJECT"]
-assert [i.command for i in sub["Import"].items] == ["GEOIMPORTSHP"]
-assert [i.command for i in sub["Export"].items] == ["GEOEXPORTSHP"]
+assert [i.command for i in sub["Import"].items] == ["GEOIMPORTSHP", "GEOIMPORTKML"]   # 3.30.0
+assert [i.command for i in sub["Export"].items] == ["GEOEXPORTSHP", "GEOEXPORTKML"]   # 3.29.0
 assert {t.command for t in spec.toolbar} >= set(ORDENES)
 assert all(barra.TEMAS.get(o) == "intercambio" for o in ORDENES)
 assert spec.aliases.get("MAPCSASSIGN") == "GEOCRS" and spec.aliases.get("MAPIMPORT") == "GEOIMPORTSHP"

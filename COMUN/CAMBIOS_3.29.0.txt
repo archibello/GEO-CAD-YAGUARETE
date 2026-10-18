@@ -1,0 +1,56 @@
+GeoCAD - versión 3.29.0
+=======================
+EXPORTAR KML / KMZ A GOOGLE EARTH DESDE INGECAD (18/10/2026, elegido por
+Fernando: «sigamos por ahí»). Orden nueva EXPORTARKML, módulo «Intercambio».
+
+Dónde
+- Menú GeoCAD > Exportar > KML / KMZ... (EXPORTARKML), debajo de Exportar SHP.
+- Barra GeoCAD: botón «Exportar KML / KMZ a Google Earth» (globo con chinche),
+  junto a los de SISTEMAGEO, REPROYECTAR, IMPORTARSHP y EXPORTARSHP.
+
+Qué hace
+- Convierte del sistema del dibujo (SISTEMAGEO, p. ej. POSGAR 2007 faja 7) a
+  WGS 84, el de Google Earth, con PROJ (pyproj de IngeCAD). Las coordenadas
+  van con 9 decimales (0,1 mm). No se mueve nada del dibujo.
+- Si el dibujo no tiene sistema, lo pregunta con la ventana de SISTEMAGEO y
+  lo deja asignado (U lo deshace).
+- Qué: lo seleccionado, las capas elegidas o todo el dibujo.
+- Cómo: una carpeta por capa (se prenden y apagan en Google Earth) o todo
+  junto.
+- Estilo: el color de cada objeto o de su capa (ACI o color verdadero; el
+  blanco/negro de CAD sale blanco, que se ve sobre la imagen satelital) y su
+  grosor (0,25 mm = 2 px, 0,50 mm = 3 px, 1 mm = 6 px).
+- Polilíneas cerradas, círculos y sombreados como polígonos con relleno
+  semitransparente: el porcentaje se elige (40 % si no; 0 = sin relleno). Los
+  sombreados van sin borde, con sus huecos y sus islas sueltas.
+- Arcos, círculos y curvas en tramos rectos de 1 cm.
+- Textos como rótulos (sin chinche); bloques y puntos como marcadores (el
+  bloque con su nombre).
+- Los atributos de IMPORTARSHP (y los de un bloque) van como datos
+  extendidos: la tabla del globo al hacer clic en Google Earth. Cada objeto
+  dice además su capa y su largo, o su área y perímetro.
+- Nombre de líneas y polígonos: «capa y número» o un atributo a elegir.
+- Todo pegado al suelo, como el KMLOUT de Terreno.
+- Salida KMZ (un zip con doc.kml, se abre con doble clic) o KML. Si el
+  archivo ya existe, pregunta; se escribe a un temporal y se reemplaza al
+  final.
+
+Del KMLOUT de Terreno (IngeCAD 0.6.7)
+- Se revisaron KMLIN / KMLOUT. Se toman sus formatos probados con Google
+  Earth (color aabbggrr, pegado al suelo, 9 decimales, KMZ con doc.kml). No
+  se lo llama: es interno de otro complemento y no escribe carpetas,
+  grosores, relleno a elegir ni datos extendidos. La geometría y los
+  atributos salen de lo de EXPORTARSHP.
+
+Pruebas
+- test_kml nueva: menú, barra y módulo; coordenadas iguales a pyproj;
+  arcos y círculos en tramos de 1 cm; KMZ con doc.kml; carpetas por capa o
+  todo junto; estilos (color ACI de capa y propio, grosor, relleno 40 % y
+  0 %); sombreado con hueco e isla suelta; textos, bloques con atributos,
+  puntos; ExtendedData; nombre desde un atributo; sin sistema no exporta;
+  reemplazo sin dejar temporales.
+- La ventana, armada con el Qt del IngeCAD instalado (sin pantalla).
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KE1-KE5 en 02_PRUEBAS_MANUALES.txt.

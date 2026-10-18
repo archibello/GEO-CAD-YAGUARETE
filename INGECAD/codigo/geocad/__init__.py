@@ -13,7 +13,8 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
     Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
     Pegar imagen (pegarimagen.py): Ctrl+V o PEGARIMAGEN, la captura del portapapeles en dos clics
-    Intercambio (intercambio.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP
+    Intercambio (intercambio.py, kml.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP,
+    EXPORTARKML, IMPORTARKML
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -38,7 +39,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.28.2"
+VERSION = "3.30.4"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -211,6 +212,10 @@ def construir_spec() -> PluginSpec:
             ToolbarItem("Reproject drawing (REPROJECT)", "GEOREPROJECT", _icon("reproyectar")),
             ToolbarItem("Import SHP (IMPORTSHP)", "GEOIMPORTSHP", _icon("importar_shp")),
             ToolbarItem("Export SHP (EXPORTSHP)", "GEOEXPORTSHP", _icon("exportar_shp")),
+            ToolbarItem("Export KML / KMZ for Google Earth (EXPORTKML)", "GEOEXPORTKML",
+                        _icon("exportar_kml")),
+            ToolbarItem("Import KML / KMZ from Google Earth (IMPORTKML)", "GEOIMPORTKML",
+                        _icon("importar_kml")),
         ]
     if est["orden"]:
         commands.update(orden.COMMANDS)
@@ -280,9 +285,11 @@ def construir_spec() -> PluginSpec:
             )),
             Submenu("Import", (
                 MenuItem("Import SHP... (IMPORTSHP)", "GEOIMPORTSHP", _icon("importar_shp")),
+                MenuItem("KML / KMZ... (IMPORTKML)", "GEOIMPORTKML", _icon("importar_kml")),
             )),
             Submenu("Export", (
                 MenuItem("Export SHP... (EXPORTSHP)", "GEOEXPORTSHP", _icon("exportar_shp")),
+                MenuItem("KML / KMZ... (EXPORTKML)", "GEOEXPORTKML", _icon("exportar_kml")),
             )),
             SEPARATOR,
         ]
@@ -355,7 +362,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.28.2",
+        version="3.30.4",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

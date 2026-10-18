@@ -1,0 +1,41 @@
+GeoCAD - versión 3.29.1
+=======================
+CONTROL DE FAJA Y BLOQUES SIN RÓTULO AUTOMÁTICO (18/10/2026, de la prueba
+KE2 de la 3.29.0; Fernando: «terminar la propuesta de la 3.29.1»).
+
+Por qué
+- El KMZ de «Casa en La Candelaria» cayó 700 km al oeste: el dibujo estaba
+  declarado en faja 7 y sus coordenadas eran de faja 6 (X 6.620.549). La
+  conversión estaba bien; el sistema declarado, no.
+- En Google Earth aparecía el rótulo «A$CBF30FDEB»: un bloque con el nombre
+  que pone AutoCAD al copiar y pegar.
+
+Control de faja (SISTEMAGEO y EXPORTARKML)
+- En Gauss-Krüger argentino el millón de la coordenada Este dice la faja
+  (6.620.549 = faja 6). Se mira el centro de cada objeto y vale la faja de
+  la mayoría (un bloque suelto en 0,0 no confunde).
+- Si no coincide con la del sistema elegido o declarado, avisa: «Las
+  coordenadas Este del dibujo empiezan con 6 (6.620.549 a 6.620.580): son
+  de la faja 6, no de ... faja 7». Botones: Usar faja 6 / Dejar faja 7 /
+  Cancelar. Se mantiene el marco (POSGAR 2007, Campo Inchauspe...).
+- En EXPORTARKML, «Usar faja ...» corrige el sistema del dibujo como
+  SISTEMAGEO «sólo declarar»: no mueve nada y U lo deshace.
+- Si el dibujo no tiene sistema, la ventana ya viene con POSGAR 2007 en la
+  faja de las X (el marco lo elige usted: lo sabe el plano).
+- No se avisa con UTM, geográficas o X mezcladas: no se puede saber.
+
+Bloques en el KMZ
+- Los bloques con nombre automático (A$C… de copiar y pegar, *U… anónimos)
+  van como marcador sin rótulo. Si tienen el atributo elegido para el
+  nombre, se usa ese. Los demás siguen con su nombre.
+
+Pruebas
+- test_kml: faja según las X (concuerda, otra faja, mismo marco, sin
+  sistema, UTM, objeto suelto, mitad y mitad); bloques A$C y *U sin nombre.
+- test_kml con el Qt del IngeCAD instalado (sin pantalla): el aviso con sus
+  tres botones, que no pregunte si concuerda, y SISTEMAGEO con la faja
+  propuesta. Sin PySide6 esa parte se saltea.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KE6-KE7 en 02_PRUEBAS_MANUALES.txt.

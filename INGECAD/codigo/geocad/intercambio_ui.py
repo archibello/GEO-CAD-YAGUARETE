@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Ventanas del módulo «Intercambio» (3.25.0): SISTEMAGEO, REPROYECTAR,
-IMPORTARSHP y EXPORTARSHP. Las cuentas están en intercambio.py.
+IMPORTARSHP, EXPORTARSHP, EXPORTARKML (3.29.0) e IMPORTARKML (3.30.0). Las cuentas están en
+intercambio.py y kml.py.
 
 Antes de cambiar el sistema de un dibujo con objetos, y antes de escribir
 archivos, siempre se pregunta y se confirma (decisiones de Fernando 10 y
@@ -14,11 +15,12 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog,
                                QDialogButtonBox, QDoubleSpinBox, QFileDialog,
                                QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
                                QLineEdit, QListWidget, QListWidgetItem,
-                               QMessageBox, QPushButton, QRadioButton,
+                               QMessageBox, QPushButton, QRadioButton, QSpinBox,
                                QTabWidget, QTableWidget, QTableWidgetItem, QToolButton,
                                QVBoxLayout)
 
 from . import intercambio as IX
+from . import kml as KML
 
 TITULO = "GeoCAD Yaguareté"
 
@@ -276,7 +278,7 @@ def _confirmar(parent, texto: str, ok: str = "Sí, seguir") -> bool:
 
 # ================================================================== SISTEMAGEO
 class SistemaDialog(QDialog):
-    def __init__(self, actual: str, parent=None) -> None:
+    def __init__(self, actual: str, parent=None, propuesto: str = "") -> None:
         super().__init__(parent)
         self.setWindowTitle("Sistema de coordenadas del dibujo (SISTEMAGEO)")
         lay = QVBoxLayout(self)
@@ -284,7 +286,7 @@ class SistemaDialog(QDialog):
         lay.addWidget(QLabel("Declara en qué sistema están las coordenadas. <b>No mueve "
                              "ningún objeto</b>: para convertirlas use REPROYECTAR."))
         form = QFormLayout()
-        self.combo = ElegirSistema(actual)
+        self.combo = ElegirSistema(propuesto or actual)
         form.addRow("Sistema:", self.combo)
         fila = QHBoxLayout()
         prj = QPushButton("Tomar el de un .prj o .shp...")
@@ -319,13 +321,41 @@ class SistemaDialog(QDialog):
         super().accept()
 
 
+def _controlar_faja(ctx, code: str, despues: str) -> str:
+    """Si las X del dibujo dicen otra faja que ``code`` (el error típico: un
+    plano de faja 6 declarado en faja 7), se avisa y se ofrece la faja de las
+    X. Devuelve el sistema con que seguir; "" si se cancela."""
+    xs = IX.este_de(ctx.document.doc.modelspace())
+    otro = IX.faja_sugerida(code, xs)
+    if not otro:
+        return code
+    faja = IX.faja_de(otro)[0]
+    mil = lambda x: f"{x:,.0f}".replace(",", ".")  # noqa: E731
+    xs = [x for x in xs if int(x // 1_000_000) == faja]      # sin los objetos sueltos
+    caja = QMessageBox(QMessageBox.Warning, TITULO,
+                       f"Las coordenadas Este del dibujo empiezan con {faja} "
+                       f"({mil(min(xs))} a {mil(max(xs))}): son de la faja {faja}, "
+                       f"no de {IX.nombre(code)}.\n\n{despues}", parent=ctx.host)
+    usar = caja.addButton(f"Usar faja {faja}", QMessageBox.AcceptRole)
+    dejar = caja.addButton(f"Dejar faja {IX.faja_de(code)[0]}", QMessageBox.ActionRole)
+    caja.addButton("Cancelar", QMessageBox.RejectRole)
+    caja.exec()
+    if caja.clickedButton() is usar:
+        return otro
+    return code if caja.clickedButton() is dejar else ""
+
+
 def sistema(ctx) -> None:
     doc = ctx.document.doc
     actual = IX.sistema_del_dibujo(doc)
     dlg = SistemaDialog(actual, ctx.host)
     if not dlg.exec():
         return
-    code = dlg.combo.codigo()
+    code = _controlar_faja(ctx, dlg.combo.codigo(),
+                           "Declarado en otra faja, en Google Earth o QGIS el dibujo cae "
+                           "cientos de kilómetros corrido.")
+    if not code:
+        return
     if code == actual:
         ctx.echo(f"SISTEMAGEO: el dibujo ya está en {IX.nombre(code)}.")
         return
@@ -772,3 +802,374 @@ def exportar(ctx) -> None:
         ctx.echo(f"EXPORTARSHP: no se pudo escribir en {carpeta} ({exc}).")
         return
     ctx.echo("EXPORTARSHP: " + IX.resumen_exportar(plan, hechos))
+
+
+# ================================================================== EXPORTARKML
+class ExportarKmlDialog(QDialog):
+    def __init__(self, doc, n_sel: int, ruta: str, campos, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Exportar KML / KMZ a Google Earth (EXPORTARKML)")
+        self.setMinimumWidth(560)
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel(f"De <b>{IX.nombre(IX.sistema_del_dibujo(doc))}</b> (el sistema del "
+                             "dibujo) a <b>WGS 84</b>, el de Google Earth."))
+        # qué
+        g = QGroupBox("Qué")
+        v = QVBoxLayout(g)
+        self.sel = QRadioButton(f"Lo seleccionado ({n_sel} objeto(s))")
+        self.todo = QRadioButton("Todo el dibujo")
+        self.capas = QRadioButton("Las capas elegidas:")
+        (self.sel if n_sel else self.todo).setChecked(True)
+        self.sel.setEnabled(n_sel > 0)
+        self.lista = QListWidget()
+        for capa in sorted((l.dxf.name for l in doc.layers), key=str.lower):
+            item = QListWidgetItem(capa)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Unchecked)
+            self.lista.addItem(item)
+        self.lista.setMaximumHeight(120)
+        for w in (self.sel, self.todo, self.capas, self.lista):
+            v.addWidget(w)
+        lay.addWidget(g)
+        # cómo
+        g = QGroupBox("Cómo")
+        f = QFormLayout(g)
+        self.por_capa = QRadioButton("Una carpeta por capa (se prenden y apagan en Google Earth)")
+        self.junto = QRadioButton("Todo junto")
+        self.por_capa.setChecked(True)
+        f.addRow(self.por_capa)
+        f.addRow(self.junto)
+        self.poligonos = QCheckBox("Polilíneas cerradas y círculos como polígonos (con relleno)")
+        self.poligonos.setChecked(True)
+        f.addRow(self.poligonos)
+        self.relleno = QSpinBox()
+        self.relleno.setRange(0, 100)
+        self.relleno.setSuffix(" %")
+        self.relleno.setValue(KML.RELLENO)
+        f.addRow("Relleno de polígonos y sombreados (0 = sin relleno, 100 = opaco):", self.relleno)
+        self.nombre = QComboBox()
+        self.nombre.addItem("Capa y número", "")
+        for c in campos:
+            self.nombre.addItem(f"Atributo {c}", c)
+        f.addRow("Nombre de líneas y polígonos:", self.nombre)
+        lay.addWidget(g)
+        lay.addWidget(QLabel("Color y grosor: los de cada objeto o su capa. Textos y bloques van "
+                             "como marcadores; los atributos (IMPORTARSHP), en la tabla del globo."))
+        # archivo
+        form = QFormLayout()
+        fila = QHBoxLayout()
+        self.ruta = QLineEdit(ruta)
+        elegir = QPushButton("Elegir...")
+        elegir.clicked.connect(self._elegir)
+        fila.addWidget(self.ruta, 1)
+        fila.addWidget(elegir)
+        form.addRow("Archivo:", fila)
+        lay.addLayout(form)
+        self.aviso = QLabel("")
+        self.aviso.setStyleSheet("color: #b00020")
+        lay.addWidget(self.aviso)
+        lay.addWidget(_botones(self, "Exportar..."))
+
+    def _elegir(self) -> None:
+        ruta, _f = QFileDialog.getSaveFileName(self, "Exportar a Google Earth", self.ruta.text(),
+                                               "Google Earth KMZ (*.kmz);;KML (*.kml)")
+        if ruta:
+            self.ruta.setText(_host_path(ruta))
+
+    def capas_elegidas(self) -> set:
+        return {self.lista.item(i).text() for i in range(self.lista.count())
+                if self.lista.item(i).checkState() == Qt.Checked}
+
+    def archivo(self) -> Path:
+        p = Path(self.ruta.text().strip())
+        return p if p.suffix.lower() in (".kmz", ".kml") else p.with_name(p.name + ".kmz")
+
+    def accept(self) -> None:
+        if not self.ruta.text().strip():
+            self.aviso.setText("Elija el archivo.")
+            return
+        if self.capas.isChecked() and not self.capas_elegidas():
+            self.aviso.setText("Tilde al menos una capa.")
+            return
+        super().accept()
+
+
+def _asegurar_sistema(ctx) -> str:
+    """El sistema del dibujo; si no tiene, se pregunta (la ventana de
+    SISTEMAGEO) y queda asignado. "" si se cancela."""
+    doc = ctx.document.doc
+    actual = IX.sistema_del_dibujo(doc)
+    aviso = ("Si se exporta así, en Google Earth el dibujo cae cientos de kilómetros "
+             "corrido.\n\n«Usar faja ...» corrige el sistema del dibujo, como SISTEMAGEO "
+             "«sólo declarar»: no mueve ningún objeto y U lo deshace.")
+    if actual:
+        code = _controlar_faja(ctx, actual, aviso)
+        if code and code != actual:
+            ctx.execute(IX.DefinirSistemaCommand(code))
+            ctx.echo(f"EXPORTARKML: el dibujo queda en {IX.nombre(code)} (antes: "
+                     f"{IX.nombre(actual)}). No se movió ningún objeto. U lo deshace.")
+        return code
+    propuesto = IX.faja_sugerida("", IX.este_de(doc.modelspace()))
+    QMessageBox.information(ctx.host, TITULO,
+                            "El dibujo no tiene sistema de coordenadas declarado y Google Earth "
+                            "necesita saber dónde está.\n\nElija en qué sistema están las "
+                            "coordenadas del dibujo"
+                            + (f" (por las X, la faja {IX.faja_de(propuesto)[0]}; el marco de "
+                               "referencia, POSGAR 2007 o Campo Inchauspe, lo sabe el plano)"
+                               if propuesto else " (por ejemplo POSGAR 2007 faja 7)")
+                            + ". Queda asignado al dibujo, como con SISTEMAGEO; no se mueve "
+                            "ningún objeto.")
+    dlg = SistemaDialog("", ctx.host, propuesto)
+    if not dlg.exec():
+        return ""
+    code = _controlar_faja(ctx, dlg.combo.codigo(), aviso)
+    if not code:
+        return ""
+    ctx.execute(IX.DefinirSistemaCommand(code))
+    ctx.echo(f"EXPORTARKML: el dibujo queda en {IX.nombre(code)} (SISTEMAGEO). U lo deshace.")
+    return code
+
+
+def exportar_kml(ctx) -> None:
+    doc = ctx.document.doc
+    if not _asegurar_sistema(ctx):
+        return
+    elegidos = _seleccion(ctx)
+    archivo = getattr(ctx.document, "path", None)
+    base = Path(str(archivo)).stem if archivo else "dibujo"
+    ruta = str(Path(str(archivo)).with_suffix(".kmz")) if archivo else str(Path(_inicio()) / "dibujo.kmz")
+    dlg = ExportarKmlDialog(doc, len(elegidos), ruta, KML.campos_de(doc.modelspace()), ctx.host)
+    if not dlg.exec():
+        return
+    if dlg.sel.isChecked():
+        entidades = elegidos
+    elif dlg.capas.isChecked():
+        capas = dlg.capas_elegidas()
+        entidades = [e for e in doc.modelspace() if e.dxf.get("layer", "0") in capas]
+    else:
+        entidades = list(doc.modelspace())
+    try:
+        plan = KML.plan_kml(entidades, doc, base, dlg.por_capa.isChecked(), dlg.relleno.value(),
+                                dlg.poligonos.isChecked(), dlg.nombre.currentData() or "")
+    except Exception as exc:  # noqa: BLE001
+        ctx.echo(f"EXPORTARKML: {exc}")
+        return
+    if not plan.marcas:
+        ctx.echo("EXPORTARKML: no hay nada que se pueda exportar en lo elegido.")
+        return
+    destino = dlg.archivo()
+    if destino.exists() and not _confirmar(ctx.host, f"Ya existe {destino.name} en {destino.parent}. "
+                                                     "¿Reemplazarlo?", "Reemplazar"):
+        return
+    try:
+        KML.escribir(plan, destino)
+    except Exception as exc:  # noqa: BLE001
+        ctx.echo(f"EXPORTARKML: no se pudo escribir {destino} ({exc}).")
+        return
+    _recordar(destino)
+    ctx.echo("EXPORTARKML: " + KML.resumen(plan, destino))
+
+
+# ================================================================== IMPORTARKML (3.30.0)
+class ImportarKmlDialog(QDialog):
+    def __init__(self, nombre_a: str, lugares, salteados, destino: str, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Importar KML / KMZ de Google Earth (IMPORTARKML)")
+        self.setMinimumWidth(560)
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel(f"De <b>WGS 84</b> (Google Earth) a <b>{IX.nombre(destino)}</b>, "
+                             "el sistema del dibujo."))
+        tipos = {k: sum(1 for lg in lugares if lg.tipo == k) for k in ("punto", "linea", "poligono")}
+        carpetas = sorted({lg.carpeta for lg in lugares if lg.carpeta}, key=str.lower)
+        columnas = list(dict.fromkeys(n for lg in lugares for n, _v in lg.datos))
+        texto = (f"<b>{nombre_a}</b>: {len({lg.n for lg in lugares})} marcador(es) — "
+                 f"{tipos['punto']} punto(s), {tipos['linea']} línea(s), "
+                 f"{tipos['poligono']} polígono(s); {len(carpetas)} carpeta(s).")
+        if salteados:
+            texto += " No se importan: " + ", ".join(f"{k} {v}" for k, v in sorted(salteados.items())) + "."
+        info = QLabel(texto)
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        g = QGroupBox("Capas")
+        f = QFormLayout(g)
+        self.por_carpeta = QRadioButton("Una por carpeta del KML (lo suelto, en «"
+                                        f"{IX.nombre_de_capa(Path(nombre_a).stem, 'KML')}»)")
+        self.fija = QRadioButton("Una sola:")
+        self.nombre_capa = QLineEdit(IX.nombre_de_capa(Path(nombre_a).stem, "KML"))
+        (self.por_carpeta if carpetas else self.fija).setChecked(True)
+        f.addRow(self.por_carpeta)
+        f.addRow(self.fija, self.nombre_capa)
+        if carpetas:
+            muestra = ", ".join(carpetas[:8]) + (" ..." if len(carpetas) > 8 else "")
+            nota = QLabel(f"Carpetas: {muestra}")
+            nota.setWordWrap(True)
+            f.addRow(nota)
+        lay.addWidget(g)
+        g = QGroupBox("Qué se trae")
+        f = QFormLayout(g)
+        self.colores = QCheckBox("El color de cada marcador (si no, el de la capa)")
+        self.colores.setChecked(True)
+        f.addRow(self.colores)
+        self.atributos = QCheckBox("Los datos extendidos como atributos (Tabla de atributos): "
+                                   + (", ".join(columnas[:6]) + (" ..." if len(columnas) > 6 else "")
+                                      if columnas else "el archivo no trae"))
+        self.atributos.setChecked(bool(columnas))
+        self.atributos.setEnabled(bool(columnas))
+        f.addRow(self.atributos)
+        # 3.30.4: con tabla, los rótulos los hace ROTULOSIG (Fernando: «lo mejor que les
+        # podemos dar es algo que ya tenemos desarrollado y probado»); sin tabla, el
+        # nombre de cada marcador.
+        self.con_tabla = bool(columnas)
+        self.rotulos = QCheckBox(
+            "Rotular con un campo de la tabla, como ROTULOSIG (al terminar se elige el campo, "
+            "la altura y la ubicación)" if self.con_tabla else
+            "El nombre de cada marcador como rótulo, de altura:")
+        self.altura = QDoubleSpinBox()
+        self.altura.setRange(0.01, 10000)
+        self.altura.setDecimals(2)
+        self.altura.setValue(IX.OpcionesImportar.altura)
+        self.altura.setVisible(not self.con_tabla)
+        if self.con_tabla:
+            self.atributos.toggled.connect(self._rotular_posible)
+        fila = QHBoxLayout()
+        fila.addWidget(self.rotulos)
+        fila.addWidget(self.altura)
+        fila.addStretch(1)
+        f.addRow(fila)
+        lay.addWidget(g)
+        nota = QLabel("Puntos, líneas y polígonos (cada hueco, otra polilínea cerrada). Los "
+                      "textos que exportó EXPORTARKML vuelven como textos.")
+        nota.setWordWrap(True)
+        lay.addWidget(nota)
+        lay.addWidget(_botones(self, "Importar"))
+
+    def _rotular_posible(self, con_atributos: bool) -> None:
+        """ROTULOSIG necesita la tabla: sin los atributos no hay con qué rotular."""
+        self.rotulos.setEnabled(con_atributos)
+        if not con_atributos:
+            self.rotulos.setChecked(False)
+
+    def rotular_con_tabla(self) -> bool:
+        return self.con_tabla and self.atributos.isChecked() and self.rotulos.isChecked()
+
+    def opciones(self, sistema: str) -> KML.OpcionesKml:
+        op = KML.OpcionesKml()
+        op.capa = "carpeta" if self.por_carpeta.isChecked() else "fija"
+        op.capa_fija = self.nombre_capa.text().strip() or "KML"
+        op.colores = self.colores.isChecked()
+        op.atributos = self.atributos.isChecked()
+        op.rotulos = self.rotulos.isChecked() and not self.con_tabla   # con tabla: ROTULOSIG
+        op.textos = not self.rotular_con_tabla()     # y no se traen los textos del KML
+        op.altura = self.altura.value()
+        op.sistema = sistema
+        return op
+
+
+def _sistema_para_kml(ctx, lugares) -> tuple[str, str]:
+    """(sistema del dibujo, sistema a asignarle). Sin sistema se pregunta,
+    proponiendo la faja según dónde cae el KML; con sistema, se controla la
+    faja de las X (3.29.1). ("", "") si se cancela."""
+    doc = ctx.document.doc
+    actual = IX.sistema_del_dibujo(doc)
+    aviso = ("Lo que se importe se ubicaría con el sistema declarado y no caería junto a lo que "
+             "ya está dibujado.\n\n«Usar faja ...» corrige el sistema del dibujo, como SISTEMAGEO "
+             "«sólo declarar»: no mueve ningún objeto y U lo deshace.")
+    if actual:
+        code = _controlar_faja(ctx, actual, aviso)
+        if code and code != actual:
+            ctx.execute(IX.DefinirSistemaCommand(code))
+            ctx.echo(f"IMPORTARKML: el dibujo queda en {IX.nombre(code)} (antes: "
+                     f"{IX.nombre(actual)}). No se movió ningún objeto. U lo deshace.")
+        return code, ""
+    pts = [p for lg in lugares for parte in ([lg.geometria] if lg.tipo != "poligono"
+                                              else lg.geometria) for p in parte]
+    propuesto = IX.sistema_por_ubicacion([p[0] for p in pts], [p[1] for p in pts])
+    faja = IX.faja_de(propuesto) if propuesto else None
+    QMessageBox.information(ctx.host, TITULO,
+                            "El dibujo no tiene sistema de coordenadas declarado: hay que elegir "
+                            "a cuál llevar lo que viene de Google Earth (WGS 84)"
+                            + (f". Por la ubicación del KML corresponde la faja {faja[0]}; el "
+                               "marco (POSGAR 2007 o Campo Inchauspe) es el de los planos con "
+                               "que se va a trabajar" if faja else
+                               (f"; por la ubicación del KML se propone {IX.nombre(propuesto)}"
+                                if propuesto else ""))
+                            + ". Queda asignado al dibujo, como con SISTEMAGEO.")
+    dlg = SistemaDialog("", ctx.host, propuesto)
+    if not dlg.exec():
+        return "", ""
+    code = _controlar_faja(ctx, dlg.combo.codigo(), aviso)
+    return code, code
+
+
+def importar_kml(ctx) -> None:
+    ruta, _f = QFileDialog.getOpenFileName(ctx.host, "Importar de Google Earth", _inicio(),
+                                           "Google Earth (*.kmz *.kml)")
+    if not ruta:
+        return
+    ruta = _host_path(ruta)
+    _recordar(ruta)
+    try:
+        lugares, salteados = KML.leer(ruta)
+    except Exception as exc:  # noqa: BLE001 -- archivo dañado o que no es KML
+        ctx.echo(f"IMPORTARKML: no se puede leer {Path(ruta).name} ({exc}).")
+        return
+    if not lugares:
+        ctx.echo(f"IMPORTARKML: {Path(ruta).name} no trae puntos, líneas ni polígonos.")
+        return
+    destino, asignar = _sistema_para_kml(ctx, lugares)
+    if not destino:
+        return
+    doc = ctx.document.doc
+    dlg = ImportarKmlDialog(Path(ruta).name, lugares, salteados, destino, ctx.host)
+    if not dlg.exec():
+        return
+    antes = {e.dxf.handle for e in doc.modelspace()}
+    try:
+        plan = KML.plan_importar(doc, ruta, lugares, dlg.opciones(asignar), salteados)
+    except Exception as exc:  # noqa: BLE001
+        ctx.echo(f"IMPORTARKML: no se pudo importar ({exc}). No se cambió nada.")
+        return
+    ctx.execute(plan.comando)
+    _refrescar(ctx)
+    _zoom(ctx, [e for e in doc.modelspace() if e.dxf.handle not in antes])
+    ctx.echo("IMPORTARKML: " + KML.resumen_importar(plan))
+    if plan.tablas:
+        try:
+            from . import puente
+            puente.table_refresh()
+        except Exception:  # noqa: BLE001 -- sin el módulo de datos
+            pass
+        if dlg.rotular_con_tabla():
+            _rotular_como_rotulosig(ctx, plan.tablas[0])
+
+
+def _rotular_como_rotulosig(ctx, key: str) -> None:
+    """Los rótulos de lo importado con el motor y la ventana de ROTULOSIG
+    (3.30.4): dentro del polígono y según su eje, en la capa <tabla>-ROTULOS,
+    enlazados a la tabla (QUITARROTULOS los borra). Otro paso de U."""
+    try:
+        from . import config, datos, rotulos as R
+        from . import herramientas_datos as HD
+        from .rotulos_ui import RotulosDialog
+        nombres = [f.name for f in datos.layer_data(ctx.document, key).fields]
+    except Exception as exc:  # noqa: BLE001 -- sin el módulo de datos
+        ctx.echo(f"IMPORTARKML: no se pudo abrir ROTULOSIG ({exc}); los rótulos se pueden hacer "
+                 "después con ROTULOSIG.")
+        return
+    if not nombres:
+        return
+    op = R.leer_opciones()
+    dlg = RotulosDialog(nombres, float(config.get("altura_rotulos")), op, ctx.host)
+    i = next((j for j, n in enumerate(nombres) if n.lower() in ("name", "nombre")), 0)
+    dlg.campo.setCurrentIndex(i)
+    if not dlg.exec():
+        ctx.echo("IMPORTARKML: sin rótulos; se pueden hacer después con ROTULOSIG.")
+        return
+    op = dlg.opciones()
+    R.guardar_opciones(op)
+    campo = dlg.campo.currentText()
+    command, n, reemplazados = HD.label_commands(ctx.document, key, campo, dlg.altura.value(), op)
+    ctx.execute(command)
+    _refrescar(ctx)
+    ctx.echo("ROTULOSIG: " + HD.resumen_rotulos(command, n, reemplazados, campo, key)
+             + " U los deshace.")

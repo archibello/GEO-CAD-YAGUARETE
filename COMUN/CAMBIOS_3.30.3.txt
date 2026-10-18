@@ -1,0 +1,27 @@
+GeoCAD - versión 3.30.3
+=======================
+IMPORTARKML: SIN RÓTULOS INVENTADOS (18/10/2026, de la prueba KI3;
+Fernando: «es así, tu idea es la mejor opción»).
+
+Por qué
+- Al importar con «El nombre de cada marcador como rótulo», cada parcela
+  de PRUEBA CON ETIQUETAS quedaba con dos textos encimados: su número de
+  partida (el rótulo original) y «PC_2_DE_MAYO 5», el nombre que pone
+  EXPORTARKML cuando no se elige un atributo para el nombre. Ese segundo
+  no le dice nada a nadie.
+
+Qué cambia en IMPORTARKML
+- Los nombres «carpeta + número» (PC_2_DE_MAYO 5 dentro de la carpeta
+  PC_2_DE_MAYO) no se escriben como rótulo.
+- Se siguen rotulando los nombres de verdad: los puestos en Google Earth y
+  los que EXPORTARKML tomó de un atributo («Nombre: Atributo name»).
+- Con el KMZ de PRUEBA CON ETIQUETAS y la opción tildada: sólo los 13
+  rótulos originales.
+
+Pruebas
+- test_importarkml: «capa número» no se rotula; un nombre de Google Earth
+  o tomado de un atributo (01-0042) sí.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KI7 en 02_PRUEBAS_MANUALES.txt.

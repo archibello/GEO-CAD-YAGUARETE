@@ -281,6 +281,74 @@ def cantidad_de_objetos(doc) -> int:
     return len(doc.modelspace())
 
 
+# ================================================================== control de faja
+def este_de(entidades) -> list[float]:
+    """La X (Este) del centro de cada objeto."""
+    from ezdxf import bbox
+    return [(c.extmin.x + c.extmax.x) / 2 for c in bbox.multi_flat(entidades, fast=True)
+            if c.has_data]
+
+
+def faja_de_x(xs) -> Optional[int]:
+    """La faja Gauss-Krüger argentina que dicen las X: el millón de la
+    coordenada Este (6.620.549 = faja 6, falso Este 6.500.000). La de la
+    mayoría de los objetos, si son más de la mitad (un bloque suelto en 0,0
+    no cuenta); None si no se puede decir."""
+    cuenta = Counter(int(x // 1_000_000) for x in xs)
+    if not cuenta:
+        return None
+    faja, n = cuenta.most_common(1)[0]
+    return faja if 1 <= faja <= 7 and n * 2 > len(xs) else None
+
+
+def faja_de(code: str) -> Optional[tuple[int, int]]:
+    """(faja, EPSG de la faja 1 de su datum) de un sistema Gauss-Krüger."""
+    n = _epsg(code) or 0
+    for _nombre, base, _geo in crs_mod.DATUMS:
+        if base <= n < base + 7:
+            return n - base + 1, base
+    return None
+
+
+def faja_sugerida(code: str, xs) -> str:
+    """El sistema que corresponde a las X si no es el declarado: el mismo
+    datum en la faja que dicen las X (POSGAR 2007 si el dibujo no tiene
+    sistema). "" si concuerdan o no se puede decir (UTM, geográficas, X
+    mezcladas)."""
+    faja = faja_de_x(xs)
+    if faja is None:
+        return ""
+    if not code:
+        return f"EPSG:{crs_mod.DATUMS[0][1] + faja - 1}"
+    actual = faja_de(code)
+    if actual is None or actual[0] == faja:
+        return ""
+    return f"EPSG:{actual[1] + faja - 1}"
+
+
+def faja_de_lon(lon: float) -> Optional[int]:
+    """La faja Gauss-Krüger argentina de una longitud (meridianos centrales
+    -72 a -54, de 3 en 3); None fuera de las siete fajas (3.30.0)."""
+    if not -73.5 <= lon < -52.5:
+        return None
+    return min(7, max(1, round((lon + 72) / 3) + 1))
+
+
+def sistema_por_ubicacion(lons, lats) -> str:
+    """El sistema que se propone para lo que llega en WGS 84 (un KML) a un
+    dibujo sin sistema: POSGAR 2007 en la faja de la longitud del medio si
+    cae en la Argentina; si no, el UTM de WGS 84 de esa zona (3.30.0)."""
+    lons, lats = sorted(lons), sorted(lats)
+    if not lons:
+        return ""
+    lon, lat = lons[len(lons) // 2], lats[len(lats) // 2]
+    faja = faja_de_lon(lon)
+    if faja is not None and -56 <= lat <= -21:
+        return f"EPSG:{crs_mod.DATUMS[0][1] + faja - 1}"
+    zona = min(60, max(1, int((lon + 180) // 6) + 1))
+    return f"EPSG:{(32700 if lat < 0 else 32600) + zona}"
+
+
 # ================================================================== reproyectar
 
 class Proyeccion:
@@ -1049,4 +1117,6 @@ COMMANDS = {
     "GEOREPROJECT": _orden("REPROYECTAR", "reproyectar"),
     "GEOIMPORTSHP": _orden("IMPORTARSHP", "importar"),
     "GEOEXPORTSHP": _orden("EXPORTARSHP", "exportar"),
+    "GEOEXPORTKML": _orden("EXPORTARKML", "exportar_kml"),
+    "GEOIMPORTKML": _orden("IMPORTARKML", "importar_kml"),
 }
