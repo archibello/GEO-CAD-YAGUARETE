@@ -135,6 +135,11 @@ CATALOGO = {
                "Importar > SHP (uno o varios, llevados al sistema del dibujo, con sus "
                "atributos en cada objeto) y Exportar > SHP (por capa y tipo o por tipo con "
                "LAYER, en el sistema del dibujo u otro, con .prj)."),
+        Modulo("dwg", "Control de los DWG al guardar",
+               "IngeCAD revisa cada DWG que guarda. GeoCAD descarta las falsas alarmas "
+               "conocidas de LibreDWG (bordes de sombreados con Y = 0 y estilos de vista "
+               "de AutoCAD 2013+, en planos viejos de AutoCAD) sólo cuando el dibujo las explica, y muestra en español los "
+               "errores que quedan, con su texto."),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),

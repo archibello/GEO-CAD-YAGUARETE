@@ -1,0 +1,36 @@
+GeoCAD - versión 3.28.2
+=======================
+TAMPOCO SALTA EL AVISO POR LOS ESTILOS DE VISTA DE AUTOCAD (18/10/2026,
+prueba DW1 de Fernando).
+
+El aviso
+- Con la 3.28.1 ya no salían las 59 quejas de los sombreados, y el aviso que
+  quedó venía en español y con su texto:
+  «LibreDWG informó errores al armar el DWG: «ERROR: DETAILVIEWSTYLE:
+  Unexpected DXF code 340, expected 90 for "flags"» (3 veces); «ERROR:
+  SECTIONVIEWSTYLE: ...» (2 veces); ...; y 2 más» (8 líneas en total).
+- Sólo pasa con el dibujo que se abrió desde el original de AutoCAD (AC1018,
+  AutoCAD 2004-2006): el DWG que guarda IngeCAD ya no trae esos objetos.
+- Causa: otro error de LibreDWG. No vuelve a leer esos objetos tal como él
+  mismo los escribe: el DXF que arma IngeCAD los trae idénticos a los que dio
+  dwg2dxf al abrir el plano.
+- Qué son: los estilos que AutoCAD 2013+ crea solo en todo dibujo
+  («Imperial24», «Metric50») para las vistas de detalle y de corte de
+  modelos 3D (VIEWBASE). El DWG r2000 que escribe IngeCAD no los tiene y
+  LibreDWG los descarta siempre: no se pierde nada del dibujo.
+
+La corrección (módulo «Control de los DWG al guardar»)
+- Las líneas «ERROR: DETAILVIEWSTYLE: ...» y «ERROR: SECTIONVIEWSTYLE: ...»
+  se descartan como falsa alarma conocida. Los errores de cualquier otro
+  objeto se siguen mostrando.
+
+Pruebas
+- test_controldwg: estilos de vista, sombreado y un error real juntos: se
+  descartan los dos primeros y se muestra el real; un error de otro objeto
+  (DIMSTYLE) se queda.
+- Con una copia del plano original de AutoCAD guardada como lo hace IngeCAD: 67 errores de LibreDWG (59 de
+  sombreados y 8 de estilos de vista), los 67 descartados, ningún error real.
+- Todas las pruebas automáticas OK.
+
+Prueba manual
+- DW2 en 02_PRUEBAS_MANUALES.txt.

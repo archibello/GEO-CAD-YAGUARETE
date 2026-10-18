@@ -1,0 +1,46 @@
+GeoCAD - versión 3.28.1
+=======================
+SIN FALSAS ALARMAS AL GUARDAR DWG (18/10/2026, aviso encontrado por
+Fernando).
+
+El aviso
+- Fernando, al guardar en IngeCAD 0.6.7 un dibujo hecho sobre un plano viejo
+  de AutoCAD: «Saved with a warning ... the DWG writer
+  reported internal errors while packing the file». IngeCAD no decía cuál.
+- Lo que había: 59 líneas «ERROR: Unknown DXF code 21 for HATCH» de LibreDWG
+  (dxf2dwg, el programa que arma el DWG).
+- Causa: error de LibreDWG, no del plano. Su lector de DXF (in_dxf.c,
+  add_HATCH) acepta el código 21 de un borde de sombreado (la Y del punto
+  final de una recta, del eje mayor de una elipse o de un punto de una
+  spline) sólo si NO vale 0. Con Y = 0, algo muy común en bloques dibujados
+  desde el origen, lo da por desconocido; pero ese valor ya era 0, así que
+  el sombreado sale igual.
+- Comprobado con una copia del plano: ida y vuelta DWG -> DXF -> DWG con el
+  LibreDWG de IngeCAD; los 122 sombreados (105 sólidos y 17 de patrón)
+  quedan idénticos, con todas sus aristas; el plano tiene exactamente 59
+  códigos 21 = 0 en sus sombreados, uno por cada queja.
+
+La corrección (módulo nuevo «Control de los DWG al guardar», encendido)
+- GeoCAD descarta esas quejas SÓLO si el DXF que se convirtió tiene al menos
+  tantos códigos 21 = 0 en sus sombreados como quejas hubo. Si hay más
+  quejas que ceros, se dejan todas.
+- Los avisos que quedan salen en español y con el texto del error:
+  «LibreDWG informó errores al armar el DWG: «ERROR: ...» (3 veces); ...»
+  (hasta 3 distintos y cuántos más); «se perdieron objetos del dibujo al
+  guardar (10 → 8); guarde también en DXF»; «no se pudo volver a abrir el
+  DWG guardado para controlarlo».
+- El control de IngeCAD sigue igual: si faltan objetos, avisa siempre.
+- Con el módulo apagado (GeoCAD > Módulos...), IngeCAD queda como venía.
+
+Pruebas
+- test_controldwg (nueva): un DXF con un sombreado de rectas desde el origen
+  y otro de elipse en un bloque (3 códigos 21 = 0): 3 quejas se descartan,
+  4 no; un error real se queda y se muestra; los avisos en español; con el
+  módulo apagado, el aviso de siempre; instalar dos veces no envuelve dos
+  veces.
+- Con los mensajes reales del plano de Fernando: 59 ceros, 59 quejas
+  descartadas, ningún error real.
+- Todas las pruebas automáticas OK.
+
+Prueba manual
+- DW1 en 02_PRUEBAS_MANUALES.txt.
