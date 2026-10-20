@@ -26,7 +26,7 @@ assert lp.spec.tools.get("BREAKATPOINT") is T
 _y = import_module("ingecad_plugin_geocad.yaguarete")   # 3.13.0: van en la barra Yaguareté Tools
 _b = [o for o, _m in _y.elegidas(mods.estado("ingecad"))]
 assert _b == ["RECTANG", "TEXT", "STRETCH", "BREAKATPOINT", "CHAMFER", "FILLET",
-              "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO"]
+              "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN"]
 assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in lp.spec.toolbar}
 
 

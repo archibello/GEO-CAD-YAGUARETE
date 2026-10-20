@@ -71,12 +71,26 @@ def comando(ruta, ancho: int, alto: int, p1, p2):
         img.dxf.insert = (x0, y0, 0.0)
         img.dxf.u_pixel = (u[0], u[1], 0.0)
         img.dxf.v_pixel = (v[0], v[1], 0.0)
+        if _con_alfa(ruta):
+            # sin «usar transparencia» IngeCAD muestra los píxeles invisibles (3.31.1)
+            img.set_flag_state(img.USE_TRANSPARENCY, state=True)
         return img
 
     from core.actions import AddEntityCommand
     cmd = AddEntityCommand("GEOPASTEIMAGE", factory)
     cmd.needs_regen = True                     # como IMAGEATTACH: los píxeles piden la regeneración
     return cmd
+
+
+def _con_alfa(ruta) -> bool:
+    try:
+        from PIL import Image
+
+        from .imagengeo import tiene_alfa
+        with Image.open(str(ruta)) as im:
+            return tiene_alfa(im)
+    except Exception:  # noqa: BLE001 -- sin PIL o archivo raro: como antes
+        return False
 
 
 # ------------------------------------------------------------------ dónde se guarda

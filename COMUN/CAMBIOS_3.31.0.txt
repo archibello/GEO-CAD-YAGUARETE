@@ -1,0 +1,68 @@
+GeoCAD - versión 3.31.0
+=======================
+ASPECTOIMAGEN: EL ASPECTO DE UNA IMAGEN DEL DIBUJO (20/10/2026, pedido de
+Fernando para llevar planos de mensura escaneados encima de otros dibujos y,
+en la 3.32.0, a Google Earth; ventana confirmada por Fernando: «me encantó»).
+
+Cómo se usa (IngeCAD)
+1. ASPECTOIMAGEN (también IMAGEASPECT), botón en la barra «Yaguareté Tools»
+   junto a INSERTARGEO, GEORREF y EXPORTARGEO, o GeoCAD > Dibujo > Aspecto de
+   la imagen.
+2. Clic en la imagen o en su borde (se ilumina al pasar). Si ya estaba
+   elegida, la ventana se abre directamente.
+3. En la ventana «Aspecto de la imagen»:
+   - Fondo: «Fondo transparente» y «Blanco que se borra» (0 a 80 %, empieza
+     en 25 %). Subirlo si el papel es amarillento o el escaneo quedó gris.
+   - Líneas: como están, en negativo (lo negro pasa a blanco, para verlas
+     sobre un fondo oscuro) o de un color elegido.
+   - Opacidad: de 10 a 100 %.
+   - Vista previa al instante, sobre cuadriculado, blanco o un fondo oscuro
+     tipo satélite (sólo para mirar; no queda en el dibujo).
+   - Volver al original, Valores iniciales, Aceptar, Cancelar.
+
+Cómo se calcula
+- La transparencia sale de la oscuridad de cada píxel: el negro queda
+  opaco, el blanco invisible y lo de en medio, en proporción; así los bordes
+  de las líneas quedan suaves. «Blanco que se borra» dice desde qué tono
+  claro ya no se ve nada. Se respeta la transparencia que la imagen ya
+  tenía y se multiplica por la opacidad.
+
+El original no se toca
+- Se guarda una copia PNG, <nombre>_aspecto.png, en la carpeta de imágenes
+  del dibujo («<dibujo>_imagenes», la de PEGARIMAGEN; con el dibujo sin
+  guardar, Imágenes/GeoCAD y se avisa). Nunca pisa otra copia
+  (<nombre>_aspecto_2.png, ...).
+- La imagen del dibujo pasa a usar la copia, en el mismo lugar y tamaño. U
+  lo deshace (vuelve a la copia o al original de antes).
+- Cambiar el aspecto otra vez rehace la copia desde el ORIGINAL, no desde
+  la copia anterior.
+- «Volver al original»: la imagen vuelve a su archivo original (la copia
+  queda en el disco). U lo deshace.
+
+Los valores quedan con la imagen
+- Se guardan en la imagen (XDATA GEOCAD_ASPECTO), con el archivo original:
+  la ventana vuelve a abrir con ellos y se guardan con el dibujo. Los usará
+  EXPORTARKML en la 3.32.0. Una imagen nueva abre con los últimos usados.
+
+Módulo
+- Es parte del módulo «georref» (imágenes). Apagado en GeoCAD > Módulos...,
+  no hay botón ni orden.
+
+Pruebas
+- test_aspecto (nueva): botón, menú, ícono, alias y traducción; valores y
+  sus márgenes; los píxeles (negro opaco, blanco invisible, gris a medias,
+  papel amarillento borrado, negativo, color, opacidad, transparencia
+  propia, escala de grises y paleta); la orden: Cancelar, elegida de antes,
+  copia junto al dibujo, original intacto, «usar transparencia», valores
+  guardados, segunda vez desde el original sin pisar la copia, volver al
+  original, U de cada paso, guardar y abrir el DXF, rutas largas, original
+  perdido.
+- La ventana, con el Qt real de IngeCAD 0.6.7 (sin pantalla): se arma, la
+  vista previa cambia con cada control, Valores iniciales y Volver al
+  original.
+- test_chaflan, test_partir, test_imagengeo, test_yaguarete y test_modulos:
+  la orden nueva en sus listas.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- AI1 a AI6 en 02_PRUEBAS_MANUALES.txt.

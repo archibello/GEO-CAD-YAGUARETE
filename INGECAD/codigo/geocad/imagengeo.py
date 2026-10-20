@@ -109,6 +109,14 @@ def _abrir_imagen(ruta):
     return Image.open(ruta)
 
 
+def tiene_alfa(im) -> bool:
+    """¿La imagen (PIL) trae transparencia propia? (PNG RGBA o LA, paleta
+    con color transparente). Sin la marca «usar transparencia» en la IMAGE,
+    IngeCAD la ignora y se ven los píxeles invisibles con su color: un
+    negativo de ASPECTOIMAGEN salía como un rectángulo blanco (3.31.1)."""
+    return im.mode in ("RGBA", "LA", "PA", "RGBa", "La") or "transparency" in im.info
+
+
 def leer(ruta) -> dict:
     """Lo que hace falta para insertar ``ruta``: tamaño en píxeles,
     coeficientes, de dónde salieron y su sistema de coordenadas (si se
@@ -117,7 +125,8 @@ def leer(ruta) -> dict:
     with _abrir_imagen(ruta) as im:
         w, h = im.size
         tags = dict(getattr(im, "tag_v2", {}) or {})
-    out = {"ancho": int(w), "alto": int(h), "coef": None, "fuente": "", "crs": ""}
+        alfa = tiene_alfa(im)
+    out = {"ancho": int(w), "alto": int(h), "coef": None, "fuente": "", "crs": "", "alfa": alfa}
     coef = coef_de_geotiff(tags) if tags else None
     if coef is not None:                       # como GDAL: lo de adentro primero
         out.update(coef=coef, fuente="georreferencia del GeoTIFF")
@@ -171,9 +180,10 @@ def aviso_crs(crs_imagen: str, crs_proyecto: str) -> str:
             "no se reproyecta (quedaría corrida).")
 
 
-def insertar_command(ruta, ancho: int, alto: int, coef):
+def insertar_command(ruta, ancho: int, alto: int, coef, transparente: bool = False):
     """La IMAGE en su lugar (capa actual, deshacer de IngeCAD): la esquina de
-    abajo a la izquierda y los vectores por píxel salen de ``coef``."""
+    abajo a la izquierda y los vectores por píxel salen de ``coef``. Con
+    ``transparente`` (la imagen trae alfa) lleva «usar transparencia»."""
     a, b, c, d, e, f = coef
     esquina = G.aplicar(coef, (0.0, -float(alto)))
 
@@ -183,6 +193,8 @@ def insertar_command(ruta, ancho: int, alto: int, coef):
         img.dxf.insert = (esquina[0], esquina[1], 0.0)
         img.dxf.u_pixel = (b, e, 0.0)
         img.dxf.v_pixel = (c, f, 0.0)
+        if transparente:
+            img.set_flag_state(img.USE_TRANSPARENCY, state=True)
         return img
 
     from .modelo import AddToModelCommand
@@ -276,7 +288,7 @@ class InsertarGeoTool(Tool):
                           "mundo .pgw / .jgw / .tfw / .wld, ni GeoTIFF). Insértela con IMAGEATTACH "
                           "y ajústela con GEORREF.")
             return None
-        cmd = insertar_command(ruta, datos["ancho"], datos["alto"], datos["coef"])
+        cmd = insertar_command(ruta, datos["ancho"], datos["alto"], datos["coef"], datos["alfa"])
         self.ctx.execute(cmd)
         img = cmd.entity
         esq = G.esquinas(img)

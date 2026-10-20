@@ -31,7 +31,7 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Texto como AutoCAD (TEXTO / DT), "
                                 "Estirar al instante y con vista previa (ESTIRA / S), "
                                 "Partir en punto (PARTEENPUNTO), "
-                                "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO), "
+                                "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN), "
                                 "Orden de dibujo (ALFRENTE, ALFONDO), "
                                 "Uniones de los grosores en pantalla, "
                                 "Selección estilo AutoCAD (SEL, FILTRO; W, C, WP, CP, F...), "
@@ -94,7 +94,7 @@ assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec
-assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE"} and "QGISEXPORT" not in items(spec.menu)
+assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "ASPECTOIMAGEN"} and "QGISEXPORT" not in items(spec.menu)
 assert {"GEOCADMODULES", "QGISUPDATE", "GEOCADABOUT", "ANGREL"} <= set(spec.commands)
 # GEOCADMODULES sin ventana: informa; ACERCAGEOCAD dice la versión y los módulos
 log = []; ctx = types.SimpleNamespace(host=None, echo=log.append)

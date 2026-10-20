@@ -1,0 +1,23 @@
+GeoCAD - versión 3.30.5
+=======================
+IMPORTARKML: DOS DETALLES DE LAS PRUEBAS (20/10/2026, de KI8 y KI5;
+Fernando: «sigamos entonces»).
+
+Qué cambia en IMPORTARKML
+- Ya no queda una capa vacía cuando no se traen los textos del archivo
+  (el caso de «Rotular con un campo de la tabla, como ROTULOSIG»). Antes,
+  si los textos venían en una carpeta propia (por ejemplo
+  PC_2_DE_MAYO-ROTULOS), se creaba esa capa aunque quedara sin nada.
+- La cuenta de la línea de comandos ya no suma los rótulos como objetos.
+  Con «El nombre de cada marcador como rótulo», 3 marcadores con 2 nombres
+  decían «3 marcador(es), 5 objeto(s)»; ahora dicen «3 marcador(es),
+  3 objeto(s) ... Con 2 rótulo(s) del nombre de cada marcador».
+
+Pruebas
+- test_importarkml: la capa de una carpeta que sólo trae textos no se crea
+  si los textos no se traen; un archivo como Prueba KI5.kmz (2 líneas con
+  nombre y un punto sin nombre) cuenta 3 objetos y 2 rótulos aparte.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- KI9 y KI10 en 02_PRUEBAS_MANUALES.txt.

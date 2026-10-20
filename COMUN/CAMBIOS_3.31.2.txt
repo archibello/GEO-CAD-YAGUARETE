@@ -1,0 +1,37 @@
+GeoCAD - versión 3.31.2
+=======================
+ASPECTOIMAGEN CON BARRA DE PROGRESO (20/10/2026, pedido de Fernando: con un
+plano grande el sistema mostraba «IngeCAD no responde»; «estaría bueno que el
+programa en vez de mostrar esta advertencia muestre una barra del estado
+porcentual de la tarea, mientras se va completando el proceso, para disminuir
+la ansiedad del operario»).
+
+Qué cambia en ASPECTOIMAGEN
+- Al aceptar, una ventanita con barra y porcentaje, en cuatro etapas:
+    1/4 Abriendo la imagen (cuenta regresiva)
+    2/4 Aplicando el aspecto (el porcentaje real: se procesa por franjas)
+    3/4 Guardando la copia (cuenta regresiva)
+    4/4 Actualizando la pantalla (espera a que IngeCAD vuelva a dibujar)
+  El trabajo pesado corre aparte y la ventana sigue respondiendo: el sistema
+  ya no avisa que IngeCAD no responde. Es la misma ventanita de GEORREF
+  (3.21.2). Las cuentas regresivas aprenden lo que tarda esta computadora.
+- Al abrir la ventana de ASPECTOIMAGEN, mientras se lee el plano para la
+  vista previa: «Abriendo la imagen para la vista previa».
+- «Volver al original»: la barra mientras se actualiza la pantalla.
+- Por franjas usa mucha menos memoria con planos grandes (un plano de 37
+  megapíxeles ocupaba más de 1 GB en decimales de una sola vez).
+- La copia PNG se guarda con compresión 3 en vez de 6: con el plano 31429
+  (37 megapíxeles) guardar tarda 4,4 s en vez de 9,5 s; el archivo queda
+  un 15 % más grande (20,5 MB en vez de 17,9 MB).
+- Medido con ese plano y el Qt real de IngeCAD 0.6.7: abrir 1,3 s, aplicar
+  el aspecto 2,1 s, guardar 4,4 s (más lo que tarde la pantalla).
+- El resultado es exactamente el mismo que antes, píxel por píxel.
+
+Pruebas
+- test_aspecto: por franjas da lo mismo que de una sola vez (con la última
+  franja incompleta y los cuatro tipos de aspecto); el avance llega al 100 %;
+  la cuenta regresiva aprende el ritmo; la ventanita sin Qt.
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- AI8 en 02_PRUEBAS_MANUALES.txt.

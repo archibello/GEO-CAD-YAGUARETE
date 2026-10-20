@@ -32,6 +32,7 @@
   "Adjust image with control points (GEORREF)": "Ajustar imagen con puntos de control (GEORREF)",
   "Insert georeferenced image (INSERTARGEO)": "Insertar imagen georreferenciada (INSERTARGEO)",
   "Export georeferenced copy (EXPORTARGEO)": "Exportar copia georreferenciada (EXPORTARGEO)",
+  "Image appearance (ASPECTOIMAGEN)": "Aspecto de la imagen (ASPECTOIMAGEN)",
   "AutoCAD-style chamfer (CHAMFER)": "Chaflán estilo AutoCAD (CHAFLAN)",
   "Blocks": "Bloques",
   "Create block (BLOCK)": "Crear bloque (BLOQUE)",

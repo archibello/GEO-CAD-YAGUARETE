@@ -1,0 +1,37 @@
+GeoCAD - versión 3.31.1
+=======================
+UNA IMAGEN TRANSPARENTE INSERTADA SALÍA COMO UN RECTÁNGULO BLANCO
+(20/10/2026, prueba de Fernando con la 3.31.0: «el resultado me parece
+superlativo, pero a la hora de guardar la imagen me encontré con este
+resultado»).
+
+Qué pasaba
+- ASPECTOIMAGEN en negativo quedó bien. EXPORTARGEO copió esa imagen (PNG
+  transparente) a otra carpeta, y al insertarla con INSERTARGEO en otro
+  dibujo se veía un rectángulo blanco.
+- INSERTARGEO no le ponía a la imagen la marca «usar transparencia». Sin
+  ella, IngeCAD ignora la transparencia del PNG y muestra los píxeles
+  invisibles con su color. En un negativo, ese color era blanco.
+
+Qué cambia
+- INSERTARGEO pone «usar transparencia» cuando la imagen trae
+  transparencia (PNG RGBA, o con color transparente). Un JPG o un PNG sin
+  transparencia, como antes.
+- PEGARIMAGEN con un archivo de imagen copiado en el explorador, lo mismo.
+- ASPECTOIMAGEN avisa si la imagen quedó invisible. Pasa al aplicarlo sobre
+  un negativo ya hecho (líneas blancas): lo claro es justo lo que «Blanco
+  que se borra» quita. Conviene usar la imagen original o quitar «Fondo
+  transparente».
+
+Verificado
+- Guardar en DWG (LibreDWG de IngeCAD 0.6.7) conserva la marca «usar
+  transparencia» y los valores de ASPECTOIMAGEN guardados en la imagen.
+
+Pruebas
+- test_aspecto: el recorrido de Fernando (negativo, EXPORTARGEO,
+  INSERTARGEO con la marca, PEGARIMAGEN de un archivo con y sin
+  transparencia, el aviso sobre el negativo ya hecho).
+- Todas las pruebas automáticas OK.
+
+Pruebas manuales
+- AI7 en 02_PRUEBAS_MANUALES.txt (y AI1-AI6 de la 3.31.0, si faltan).

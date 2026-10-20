@@ -791,7 +791,7 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
     if op.atributos and columnas:
         campos = [IX.shpio.DbfField(n_c, *_tipo_campo(vs), 0) for n_c, vs in columnas.items()]
         tabla = importados.nombre_libre(nombre_a, set(importados.tablas(doc)))
-    fuera = textos_fuera = 0
+    fuera = textos_fuera = rotulos = 0
     marcadores = set()
     for lg in lugares:
         try:
@@ -800,14 +800,14 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
         except Exception:  # noqa: BLE001
             fuera += 1
             continue
+        if lg.tipo == "punto" and lg.solo_rotulo and not lg.datos and not op.textos:
+            textos_fuera += 1           # 3.30.4: los rótulos los hace ROTULOSIG
+            continue                    # 3.30.5: antes de pedir la capa (no queda una vacía)
         capa = capa_para(op.capa_fija if op.capa == "fija" else lg.carpeta)
         color = lg.color if op.colores else ""
         valores = dict(lg.datos)
         marcadores.add(lg.n)
         cs = campos
-        if lg.tipo == "punto" and lg.solo_rotulo and not lg.datos and not op.textos:
-            textos_fuera += 1           # 3.30.4: los rótulos los hace ROTULOSIG
-            continue
         if lg.tipo == "punto" and lg.solo_rotulo and lg.nombre:
             # 3.30.1: un rótulo (marcador sin chinche) es anotación, no un objeto: a la
             # tabla sólo si trae datos. Los de EXPORTARKML no traen y, mezclados con
@@ -830,6 +830,9 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
             else:
                 p = _centro(geom[0]) if lg.tipo == "poligono" else _medio(geom)
                 fabricas.append((capa, _fab_texto(lg.nombre, p, op.altura, "MIDDLE_CENTER", color)))
+            rotulos += 1
+    if rotulos:                         # 3.30.5: aparte de los objetos (antes 3 marcadores daban «5»)
+        avisos.append(f"Con {rotulos} rótulo(s) del nombre de cada marcador.")
     if fuera:
         avisos.append(f"{fuera} geometría(s) fuera del área del sistema no entraron.")
     if textos_fuera:
@@ -849,7 +852,8 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
     comandos += [IX.AddToModelCommand("IMPORTARKML", f, layer=c) for c, f in fabricas]
     conversion = f"de WGS 84 a {IX.nombre(destino)}"
     return IX.PlanImportar(IX.CompositeCommand("importar KML", comandos), len(fabricas),
-                           [(Path(ruta).name, len(marcadores), len(fabricas), WGS84, conversion)],
+                           [(Path(ruta).name, len(marcadores), len(fabricas) - rotulos, WGS84,
+                             conversion)],
                            avisos, adoptado, [tabla] if campos is not None and fabricas else [])
 
 

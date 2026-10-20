@@ -401,6 +401,27 @@ for campo, esperados in (("", ["MZA 12"]), ("PARTIDA", ["01-0042", "MZA 12"])):
     assert textos == esperados, (campo, textos)       # sin atributo: «LOTES 1» no se escribe
 print("ok 3.30.3: con «el nombre como rótulo», los nombres «capa número» no se escriben")
 
+# ------------------------------------------------------------- 3.30.5: sin capa vacía; rótulos aparte
+lote = KML.Lugar("poligono", [[(-55.90, -27.40), (-55.899, -27.40), (-55.899, -27.399)]], "0270",
+                 "PARCELAS", datos=[("PARTIDA", "0270")], n=1)
+texto = KML.Lugar("punto", [(-55.8995, -27.3998)], "0270", "PARCELAS-TEXTOS", n=2, solo_rotulo=True)
+nd = Document(ezdxf.new("R2018")); write_georef(nd.doc, Georef(crs=SIS7))
+plan_v = KML.plan_importar(nd.doc, "Vacia.kmz", [lote, texto], KML.OpcionesKml(textos=False))
+History(nd).execute(plan_v.comando)
+assert "PARCELAS" in nd.doc.layers and "PARCELAS-TEXTOS" not in nd.doc.layers   # la de los textos no
+assert "1 marcador(es), 1 objeto(s)" in KML.resumen_importar(plan_v), KML.resumen_importar(plan_v)
+# como Prueba KI5.kmz: «Lineas 1» y «Lineas 2» movidas a otra carpeta y un punto sin nombre
+ki5 = [KML.Lugar("linea", [(-55.90, -27.40), (-55.899, -27.40)], "Lineas 1", "Prueba KI5", n=1),
+       KML.Lugar("linea", [(-55.90, -27.401), (-55.899, -27.401)], "Lineas 2", "Prueba KI5", n=2),
+       KML.Lugar("punto", [(-55.8995, -27.4005)], "", "Prueba KI5", n=3)]
+nd = Document(ezdxf.new("R2018")); write_georef(nd.doc, Georef(crs=SIS7))
+plan_k = KML.plan_importar(nd.doc, "Prueba KI5.kmz", ki5, KML.OpcionesKml(rotulos=True))
+History(nd).execute(plan_k.comando)
+r = KML.resumen_importar(plan_k)
+assert "3 marcador(es), 3 objeto(s)" in r and "Con 2 rótulo(s) del nombre" in r, r
+assert sorted(e.dxftype() for e in nd.modelspace()) == ["LWPOLYLINE", "LWPOLYLINE", "POINT", "TEXT", "TEXT"]
+print("ok 3.30.5: sin la capa vacía de los textos que no se traen; los rótulos se cuentan aparte")
+
 # ------------------------------------------------------------- 3.30.4: rótulos con ROTULOSIG al importar
 try:
     from PySide6.QtWidgets import QApplication

@@ -92,14 +92,21 @@ class Progreso:
             self.dlg.deleteLater()
             self.dlg = None
 
-    def _mostrar(self, etapa: str, estimado: float, pasado: float, base: int, ancho: int) -> None:
+    def _mostrar(self, etapa: str, estimado: float, pasado: float, base: int, ancho: int,
+                 hecho=None) -> None:
         if self.dlg is None:
+            return
+        if hecho is not None:
+            # avance real (ASPECTOIMAGEN, 3.31.2): el trabajo dice cuánto lleva
+            parte = min(1.0, max(0.0, float(hecho[0])))
+            self.dlg.setLabelText(f"{etapa}... {int(parte * 100)} %")
+            self.dlg.setValue(base + int(ancho * parte))
             return
         self.dlg.setLabelText(f"{etapa}... {texto_falta(estimado, pasado)}")
         avance = min(0.97, pasado / estimado) if estimado > 0 else 0.0
         self.dlg.setValue(base + int(ancho * avance))
 
-    def _esperar(self, listo, etapa, estimado, base, ancho, tope=None) -> None:
+    def _esperar(self, listo, etapa, estimado, base, ancho, tope=None, hecho=None) -> None:
         """Gira el bucle de Qt (la ventana se mueve) hasta que ``listo()``."""
         QtCore, QtWidgets = self.qt
         t0 = time.monotonic()
@@ -107,13 +114,15 @@ class Progreso:
             pasado = time.monotonic() - t0
             if tope is not None and pasado > tope:
                 return
-            self._mostrar(etapa, estimado, pasado, base, ancho)
+            self._mostrar(etapa, estimado, pasado, base, ancho, hecho)
             QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.AllEvents, 50)
             time.sleep(0.05)
 
-    def trabajo(self, etapa: str, fn, estimado: float, base: int = 0, ancho: int = 70):
+    def trabajo(self, etapa: str, fn, estimado: float, base: int = 0, ancho: int = 70,
+                hecho=None):
         """Corre ``fn()`` (en un hilo, con la cuenta regresiva) y devuelve lo
-        que devuelve; sus errores se levantan acá."""
+        que devuelve; sus errores se levantan acá. Con ``hecho`` (una lista
+        [0..1] que ``fn`` va llenando) la barra muestra el avance real."""
         if self.qt is None:
             return fn()
         out = {}
@@ -126,7 +135,7 @@ class Progreso:
 
         hilo = threading.Thread(target=correr, daemon=True)
         hilo.start()
-        self._esperar(lambda: not hilo.is_alive(), etapa, estimado, base, ancho)
+        self._esperar(lambda: not hilo.is_alive(), etapa, estimado, base, ancho, hecho=hecho)
         hilo.join()
         if "e" in out:
             raise out["e"]
@@ -134,7 +143,8 @@ class Progreso:
             self.dlg.setValue(base + ancho)
         return out["r"]
 
-    def regeneracion(self, ventana, handle=None, base: int = 70, ancho: int = 30) -> None:
+    def regeneracion(self, ventana, handle=None, base: int = 70, ancho: int = 30,
+                     etapa: str = "2/2  Actualizando la pantalla") -> None:
         """Espera a que IngeCAD vuelva a dibujar la pantalla con la imagen
         nueva; si no arrancó a regenerar, se lo pide (ocultando antes la
         textura vieja de la imagen)."""
@@ -148,7 +158,7 @@ class Progreso:
         ms = (getattr(ventana, "_regen_ms", None) or {}).get(capa)
         estimado = max(1.0, (ms or 2000.0) / 1000.0)
         self._esperar(lambda: getattr(ventana, "_regen_worker", None) is None,
-                      "2/2  Actualizando la pantalla", estimado, base, ancho, tope=MAX_REGEN)
+                      etapa, estimado, base, ancho, tope=MAX_REGEN)
         if self.dlg is not None:
             self.dlg.setValue(100)
 
