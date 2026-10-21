@@ -1,0 +1,90 @@
+GeoCAD - versión 3.33.3
+=======================
+GOOGLE EARTH: MENOS FALLAS, MOSAICO QUE NO SE RINDE Y VISTA PREVIA
+(21/10/2026, con las pruebas de Fernando en IngeCAD; hecha en la copia
+provisoria sin el disco y pasada al disco el mismo día).
+
+Fernando: «la captura funciona el 50 % de las veces», «Mosaico falló todas
+las veces», «en vez de dar tantos mensajes de error debería empezar el ciclo
+de una nueva captura; lo peor que puede pasar es que se demore un poco más».
+
+Capturas que no fallan
+- «Google Earth no fue a la posición pedida» estando enlazado: GeoCAD pedía
+  que la cámara quedara a 20 cm de lo pedido y daba un solo intento. Ahora
+  acepta el 1 % de la altura (la imagen se sigue ubicando por las cruces, sin
+  perder precisión) y, si Google Earth no responde, pide el vuelo de nuevo.
+- Pantalla: si la vista ya está derecha y con las cruces, saca la foto sin
+  volar (el vuelo «quieto» de pocos centímetros era lo que fallaba).
+  Probado por Fernando: Pantalla anduvo el 100 % de las veces, en 5 s.
+- Si algo falla, la captura empieza de nuevo sola (hasta 3 veces) y avisa
+  «intento 2 de 3». Sólo sale un error si se cortó el enlace, si hacen falta
+  demasiadas piezas o después de los 3 intentos; y el error dice qué pasó
+  (no respondió, quedó inclinado, quedó corrido, enlace cortado).
+
+Mosaico y «Lo que veo en IngeCAD / QGIS»
+- Con la cámara alta (p. ej. 2300 m) y piezas de 200 m hacían falta más de
+  25 piezas y fallaba siempre. Ahora la altura de las piezas sube sola hasta
+  que entren en 25, y la ventanita lo dice («25 piezas a 680 m, subida de
+  200 m»).
+- Una pieza que no sale no frena el mosaico: se sigue con las demás, al final
+  se repiten las que faltaron y, si alguna no sale, se entrega lo que hay
+  (los huecos en blanco) y se avisa cuáles faltaron.
+  Probado por Fernando: 25 piezas a 750 m, píxel de 0,25 m (Pantalla daba
+  0,77 m), «es impresionante el resultado final».
+
+Ventanita
+- Vista previa de Google Earth arriba (idea de Fernando: «disminuye la
+  ansiedad del usuario y lo mantiene entretenido»), unas 4 por segundo y
+  también mientras captura, sin trabar el programa.
+- Cerrar la ventanita ya no corta el enlace con Google Earth: no hace falta
+  volver a abrirlo con GeoCAD cada vez. El enlace sigue hasta apagar el
+  módulo o cerrar el programa. «Abrir Google Earth con GeoCAD» no duplica el
+  enlace si ya está. Ctrl+Alt+G sigue sólo con la ventanita abierta.
+- Fecha de la imagen: GeoCAD no toca la línea de tiempo de Google Earth (se
+  captura la fecha que el usuario tenga puesta). Lo que se escribe es sólo el
+  rótulo, vale para esa captura y ya no queda guardado. (Google Earth Pro no
+  le dice a GeoCAD qué fecha tiene puesta: se probó.)
+
+Archivos
+- Nombre con fecha y hora de la captura, el lugar en coordenadas y la fecha
+  de la imagen, sólo con letras sin acento, números, guiones y puntos (sirve
+  en cualquier computadora):
+      GE_20261021-093512_S27.09633_W54.88868_img-9-7-2023.png
+- Registro de los vuelos en ~/.config/geocad/googleearth_registro.txt (para
+  encontrar por qué Google Earth a veces tarda en responder).
+
+Convivencia con Google Earth, IngeCAD y QGIS (recomendaciones)
+- Google Earth Pro de escritorio (no la versión web); en Linux va por X11
+  (con Wayland, por XWayland).
+- Google Earth Pro en Flatpak: si al abrirlo dice que no puede acceder a la
+  ubicación del archivo de caché, o no deja guardar en Documentos, una vez:
+      mkdir -p ~/.googleearth
+      flatpak override --user --filesystem=~/.googleearth \
+              --filesystem=xdg-documents com.google.EarthPro
+  y salir de Google Earth del todo (Archivo > Salir) antes de reabrirlo.
+- Abrir Google Earth desde la ventanita («Abrir Google Earth con GeoCAD») y
+  dejar UN solo «GeoCAD Yaguareté» en Google Earth (en Lugares temporales):
+  no guardarlo en Mis lugares; borrar los que hayan quedado de antes (dos
+  enlaces a la vez mueven la cámara dos veces).
+- Capturar desde un programa por vez (IngeCAD o QGIS); la imagen llega al
+  otro por el Puente.
+- Mientras captura, no mover Google Earth ni taparlo o minimizarlo (la foto
+  es de su ventana). La chincheta del buscador y la brújula pueden tapar una
+  cruz.
+- La fecha se elige en Google Earth (imágenes históricas) antes de capturar.
+- Más detalle: ventana de Google Earth grande (Pantalla) o Mosaico.
+- Las imágenes de Google Earth tienen las condiciones de uso de Google:
+  sirven de referencia; respetar su atribución.
+- Lo mismo, en INSTALAR.md (6 bis).
+
+Pruebas
+- test_googleearth_vuelo (nueva): un Google Earth simulado que se traga
+  vuelos, redondea, se corta o se inclina; reintentos, mosaico incompleto,
+  tope que se ajusta, nombres, fecha, vista previa.
+- test_googleearth al día con lo nuevo.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+
+Pendiente
+- El mosaico de 25 piezas tardó 18 min (lo previsto: unos 4): Google Earth
+  deja muchos vuelos sin respuesta. Con el registro se busca la causa.
+- Costuras de hasta 1 m entre piezas en esa prueba: revisar.

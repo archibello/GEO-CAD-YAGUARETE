@@ -100,6 +100,39 @@ Una sola vez, en una terminal:
   flatpak override --user --talk-name=org.freedesktop.Flatpak org.qgis.qgis
   ```
 
+## 6 bis. Google Earth junto a IngeCAD y QGIS (módulo Google Earth)
+
+Para capturar imágenes de Google Earth ya ubicadas en el dibujo
+(**GeoCAD Yaguareté > Google Earth**):
+
+- Hace falta **Google Earth Pro de escritorio** (no la versión web). En
+  Linux funciona por X11 (con Wayland, por XWayland: así viene en Ubuntu).
+- Si Google Earth Pro está instalado como **Flatpak** y al abrirlo dice que
+  *no puede acceder a la ubicación del archivo de caché*, o no deja guardar
+  en Documentos, una sola vez:
+
+  ```bash
+  mkdir -p ~/.googleearth
+  flatpak override --user --filesystem=~/.googleearth --filesystem=xdg-documents com.google.EarthPro
+  ```
+
+  y salir de Google Earth del todo (**Archivo > Salir**; cerrar la ventana
+  no alcanza) antes de volver a abrirlo.
+- Abrir Google Earth **desde la ventanita de GeoCAD** («Abrir Google Earth
+  con GeoCAD»). En Google Earth tiene que haber **un solo** «GeoCAD
+  Yaguareté» (en *Lugares temporales*): no guardarlo en *Mis lugares* y
+  borrar los que hayan quedado de antes.
+- Capturar desde **un programa por vez** (IngeCAD **o** QGIS): la imagen
+  llega igual al otro por el Puente.
+- Mientras captura, **no mover Google Earth** ni taparlo o minimizarlo: la
+  foto es de su ventana (la vista previa de la ventanita muestra lo que ve
+  GeoCAD). La chincheta del buscador y la brújula pueden tapar una cruz.
+- La **fecha** de la imagen se elige en Google Earth (imágenes históricas)
+  antes de capturar: GeoCAD captura la que esté puesta.
+- Más detalle: ventana de Google Earth grande (Pantalla) o Mosaico.
+- Las imágenes de Google Earth tienen las condiciones de uso de Google:
+  sirven de referencia; respetar su atribución.
+
 ## 7. Actualizar más adelante
 
 Ya no hace falta repetir la instalación: **GeoCAD Yaguareté > Actualizar
