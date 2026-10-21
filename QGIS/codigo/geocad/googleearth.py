@@ -243,6 +243,29 @@ def kml_marcas(marcas, url_icono: str) -> bytes:
         '</coordinates></Point></Placemark>' for _k, lon, lat in marcas))
 
 
+def kml_camara(vuelo, marcas, url_icono: str) -> bytes:
+    """Lo que devuelve /camara (3.33.4): el vuelo, si hay uno pendiente, y las
+    cruces que tienen que verse. Google Earth NO vuelve a pedir /vista después
+    de un vuelo pedido por el enlace (registro del 21/10/2026: 1069 vuelos,
+    ninguna vista nueva), así que las cruces de cada pieza viajan con el vuelo
+    y se renuevan cada segundo por este mismo enlace."""
+    cuerpo = ""
+    if vuelo is not None:
+        lon, lat, rango = vuelo
+        if not posicion_valida(lon, lat, rango):
+            raise GoogleEarthError(f"Posición inválida ({lon}, {lat}, {rango} m): no se vuela.")
+        cuerpo += (f"<LookAt><longitude>{lon:.9f}</longitude><latitude>{lat:.9f}</latitude>"
+                   "<altitude>0</altitude><heading>0</heading><tilt>0</tilt>"
+                   f"<range>{rango:.2f}</range><altitudeMode>relativeToGround</altitudeMode></LookAt>")
+    if marcas:
+        cuerpo += (f'<Style id="m"><IconStyle><scale>1</scale><Icon><href>{url_icono}</href></Icon>'
+                   '<hotSpot x="0.5" y="0.5" xunits="fraction" yunits="fraction"/></IconStyle>'
+                   '<LabelStyle><scale>0</scale></LabelStyle></Style>')
+        cuerpo += "".join(f'<Placemark><styleUrl>#m</styleUrl><Point><coordinates>{lon:.9f},{lat:.9f},0'
+                          '</coordinates></Point></Placemark>' for _k, lon, lat in marcas)
+    return _kml(cuerpo)
+
+
 def kml_lookat(lon: float, lat: float, rango: float) -> bytes:
     """El vuelo: siempre norte arriba y vista vertical."""
     if not posicion_valida(lon, lat, rango):
@@ -316,6 +339,30 @@ def leer_vista(q: dict):
         return None
     return Vista(o, s, e, n, lon, lat, rango, incl, rumbo, *(px + [0, 0])[:2],
                  fecha=fecha_de_ge(q.get("t")))
+
+
+def vista_vertical(vista: Vista) -> Vista:
+    """La vista mirando hacia abajo con el norte arriba sobre el mismo punto
+    y a la misma altura: ella misma si ya lo está; si no, su BBOX estimado
+    (Google Earth no manda la vista nueva después de enderezarla)."""
+    if vista.vertical:
+        return vista
+    m_lon = 111320.0 * math.cos(math.radians(vista.lat))
+    dx = ANCHO_POR_METRO * vista.rango / 2 / m_lon
+    dy = ALTO_POR_METRO * vista.rango / 2 / 110574.0
+    if vista.ancho_px and vista.alto_px:                 # la forma de la ventana de verdad
+        dy = dx * m_lon / 110574.0 * vista.alto_px / vista.ancho_px
+    return Vista(vista.lon - dx, vista.lat - dy, vista.lon + dx, vista.lat + dy, vista.lon,
+                 vista.lat, vista.rango, 0.0, 0.0, vista.ancho_px, vista.alto_px)
+
+
+def bbox_en(vista: Vista, lon: float, lat: float, rango: float) -> tuple:
+    """El BBOX que tendrá la cámara vertical en (lon, lat, rango), a escala del
+    de ``vista`` (vertical): lo que se ve crece con la altura."""
+    k = rango / vista.rango
+    dx = (vista.este - vista.oeste) / 2 * k
+    dy = (vista.norte - vista.sur) / 2 * k
+    return lon - dx, lat - dy, lon + dx, lat + dy
 
 
 def marcas_de_bbox(o: float, s: float, e: float, n: float, adentro: float = ADENTRO):
@@ -429,6 +476,23 @@ def detectar(a, minimo: int = 25, radio: int = 60) -> dict:
                                "que estar quieta, vertical y con el norte arriba.")
     out["largo"] = max(largos)
     return out
+
+
+def forma_coincide(det: dict, marcas, tolerancia: float = 0.12) -> bool:
+    """¿Las cruces de la foto (``det``, de detectar) tienen la forma del
+    rectángulo de ``marcas`` en el suelo (ancho / alto)? Si la cámara todavía
+    no llegó, las cruces de la pieza nueva no forman ese rectángulo."""
+    m = {k: (lon, lat) for k, lon, lat in marcas}
+    try:
+        ancho_px = ((det["NE"][0] - det["NO"][0]) + (det["SE"][0] - det["SO"][0])) / 2
+        alto_px = ((det["SO"][1] - det["NO"][1]) + (det["SE"][1] - det["NE"][1])) / 2
+        ancho_m = distancia_m(*m["NO"], *m["NE"])
+        alto_m = distancia_m(*m["NO"], *m["SO"])
+    except KeyError:
+        return True
+    if min(ancho_px, alto_px, ancho_m, alto_m) <= 0:
+        return False
+    return abs((ancho_px / alto_px) / (ancho_m / alto_m) - 1) <= tolerancia
 
 
 # ================================================================== transformación

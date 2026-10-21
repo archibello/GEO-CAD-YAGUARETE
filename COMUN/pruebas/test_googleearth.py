@@ -243,9 +243,16 @@ def pedir(ruta):
 consulta = (f"/vista?BBOX=-55.9,-27.4,-55.8,-27.3&cam={LON0},{LAT0},374,0,0&px=2630,1846")
 assert b"<Placemark>" not in pedir(consulta), "cruces sin capturar"
 assert srv.vista.rango == 374 and len(srv.marcas) == 4
-srv.armado = True
-assert pedir(consulta).count(b"<Placemark>") == 4 and f"{URL}/marca.png".encode() in pedir(consulta)
+srv.armado = True                       # 3.33.4: las cruces van por /camara, nunca por /vista
+assert b"<Placemark>" not in pedir(consulta)
+k = pedir("/camara")
+assert k.count(b"<Placemark>") == 4 and f"{URL}/marca.png".encode() in k and b"<LookAt>" not in k
 srv.armado = False
+assert b"<Placemark>" not in pedir("/camara")
+srv.cruces = GE.marcas_de_bbox(-55.9, -27.4, -55.8, -27.3)      # las de una pieza
+assert pedir("/camara").count(b"<Placemark>") == 4
+srv.cruces = None
+srv.t_camara = 0.0                      # (lo de abajo prueba el enlace desde cero)
 assert pedir("/marca.png").startswith(b"\x89PNG")
 assert b"/vista" in pedir("/geocad.kml")
 assert not srv.conectado()
@@ -290,6 +297,9 @@ class EnlaceSimulado(threading.Thread):
             self.sim.marcas = GE.marcas_de_bbox(o, s, e, n)
 
     def run(self):
+        # 3.33.4: como el Google Earth de verdad (registro del 21/10/2026):
+        # manda /vista al empezar (cuando lo mueve el usuario) y NUNCA después
+        # de un vuelo pedido por el enlace; las cruces llegan por /camara
         self.vista()
         while not self.parar.is_set():
             k = pedir("/camara")
@@ -298,7 +308,10 @@ class EnlaceSimulado(threading.Thread):
             if m:
                 self.sim.cam = [float(m.group(1)), float(m.group(2)), float(m.group(3))]
                 self.vuelos.append(tuple(self.sim.cam))
-                self.vista()
+            cruces = [(float(a), float(b)) for a, b in
+                      _re.findall(rb"<coordinates>([-\d.]+),([-\d.]+),0", k)]
+            claves = ["SO", "SE", "NE", "NO"] if len(cruces) == 4 else [None] * len(cruces)
+            self.sim.marcas = [(kk, lo, la) for kk, (lo, la) in zip(claves, cruces)]
             time.sleep(0.05)
 
 
@@ -336,7 +349,12 @@ pasos = []
 cap = V.Captura(srv, sim.foto, aviso=lambda t, f=None: pasos.append(t), paso=0.02, quietas=2,
                 tope_quieta=10, tope_vuelo=10)
 cap.pantalla()
-assert pasos[0] == "1/5 Enderezando la vista y poniendo las cruces..." and pasos[-1].startswith("3/5 Foto")
+# 3.33.4: la vista está derecha: se ponen las cruces sin mover la cámara
+assert pasos[0] == "1/5 Poniendo las cruces..." and pasos[-1].startswith("3/5 Foto"), pasos
+n_vuelos = len(enlace.vuelos)
+pasos = []
+cap.pantalla(volar=True)                                 # al reintentar: se endereza volando
+assert pasos[0] == "1/5 Enderezando la vista y poniendo las cruces..." and len(enlace.vuelos) > n_vuelos
 assert any(p.startswith("2/5 Cruces puestas; esperando que cargue la imagen... ") for p in pasos)
 time.sleep(0.3)
 
@@ -363,6 +381,7 @@ assert any(a.startswith("2/5 Pieza 9 de 9: volando... · faltan unos") for a in 
 assert any(a.startswith("2/5 Pieza 1 de 9: esperando que cargue la imagen... 0 s") for a in avisos)
 assert avisos[-1] == "3/5 Volviendo a la vista de antes..."
 assert all(GE.posicion_valida(*vv) for vv in enlace.vuelos)
+time.sleep(0.2)                          # el simulador mueve la cámara al leer /camara
 assert abs(sim.cam[0] - LON0) < 1e-9 and abs(sim.cam[2] - 374) < 1e-6, "la vista no volvió"
 time.sleep(0.3)
 assert sim.marcas == [] and not srv.armado
@@ -392,6 +411,7 @@ try:
     raise AssertionError("no se canceló")
 except V.Cancelado:
     pass
+time.sleep(0.2)
 assert abs(sim.cam[0] - LON0) < 1e-9 and abs(sim.cam[2] - 374) < 1e-6 and not srv.armado
 print(f"ok mosaico 3 x 3 a 200 m: UNA imagen de {ancho_m:.0f} x {alto_m:.0f} m con píxel de "
       f"{mc.res:.2f} m, costuras hasta {max(c for *_x, c in cost) * 100:.1f} cm, error "
@@ -574,16 +594,16 @@ lon, lat, rango = GE.camara_para_zona(Z, a_geo, srv.vista, a_planas)     # medid
 srv.volar(lon, lat, rango)
 while abs(sim.cam[2] - rango) > 0.01:
     time.sleep(0.05)
-while not GE.llego(srv.vista, lon, lat, rango):
-    time.sleep(0.05)
+enlace.vista()                          # (Google Earth la manda cuando el usuario lo toca)
 cx, cy, ancho, alto = GE._entre_marcas(srv.vista, a_planas)
 assert ancho * GE.UTIL >= 300 - 0.5 and alto * GE.UTIL >= 200 - 0.5, (ancho, alto)
 assert abs(cx - (X0 - 30)) < 1 and abs(cy - (Y0 + 40)) < 1
 assert min(ancho * GE.UTIL - 300, alto * GE.UTIL - 200) < 1, "más alto de lo necesario"   # un lado justo
 print(f"ok Llevar Google Earth: la zona de 300 x 200 m queda entre las cruces (cámara a {rango:.0f} m)")
 srv.volar(LON0, LAT0, 374)
-while not GE.llego(srv.vista, LON0, LAT0, 374):
+while abs(sim.cam[2] - 374) > 0.01:
     time.sleep(0.05)
+enlace.vista()
 plan = GE.plan_mosaico(srv.vista, a_planas, a_geo, 200, zona=Z)
 assert (plan.columnas, plan.filas) == (2, 2), (plan.columnas, plan.filas)
 try:

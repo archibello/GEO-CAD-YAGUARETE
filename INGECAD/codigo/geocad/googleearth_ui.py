@@ -283,6 +283,59 @@ def abrir(QtCore, QtGui, QtWidgets, parent, programa, capturar: bool = False,
     return v
 
 
+#: los colores de la barra de fotogramas (3.33.4, idea de Fernando)
+COLOR_FOTOGRAMA = {"ok": "#27ae60", "falla": "#e74c3c", "actual": "#f1c40f", "": None}
+
+
+def resumen_fotogramas(estados) -> str:
+    """«12 de 25 listos · 2 a repetir» para el costado de la barra."""
+    ok = sum(1 for e in estados if e == "ok")
+    mal = sum(1 for e in estados if e == "falla")
+    return f"{ok} de {len(estados)} listos" + (f" · {mal} a repetir" if mal else "")
+
+
+def _Fotogramas(QtCore, QtGui, QtWidgets, parent):  # noqa: N802
+    """La barra de fotogramas: una celda por pieza (Pantalla: una sola);
+    verde las que quedaron, roja las que hay que repetir, amarilla la que se
+    está haciendo y vacías las que faltan."""
+
+    class Fotogramas(QtWidgets.QWidget):
+        def __init__(self):
+            super().__init__(parent)
+            self.estados = []
+            self.setFixedHeight(22)
+            self.setToolTip("Fotogramas: verde listos, rojo a repetir, amarillo el que se está "
+                            "haciendo, vacío los que faltan.")
+            self.hide()
+
+        def poner(self, estados):
+            estados = list(estados)
+            if estados != self.estados:
+                self.estados = estados
+                self.setToolTip(resumen_fotogramas(estados))
+                self.show()
+                self.update()
+
+        def paintEvent(self, _ev):  # noqa: N802
+            n = len(self.estados)
+            if not n:
+                return
+            p = QtGui.QPainter(self)
+            ancho = self.width() - 1
+            borde = QtGui.QColor("#888888")
+            for i, e in enumerate(self.estados):
+                x0, x1 = int(i * ancho / n), int((i + 1) * ancho / n)
+                r = QtCore.QRect(x0, 1, max(1, x1 - x0 - 1), self.height() - 3)
+                color = COLOR_FOTOGRAMA.get(e)
+                if color:
+                    p.fillRect(r, QtGui.QColor(color))
+                p.setPen(borde)
+                p.drawRect(r)
+            p.end()
+
+    return Fotogramas()
+
+
 def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
     Qt = QtCore.Qt
 
@@ -329,19 +382,36 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
 
         # -- armado
         def _armar(self):
-            lay = QtWidgets.QVBoxLayout(self)
-            # 3.33.3 (idea de Fernando): lo que se ve en Google Earth, como la
-            # miniatura de la barra de tareas
+            exterior = QtWidgets.QVBoxLayout(self)
+            # 3.33.3/3.33.4 (ideas de Fernando): Google Earth en VIDEO, sólo la
+            # vista 3D y a todo el ancho; abajo, un fotograma por pieza
             self.previa = QtWidgets.QLabel("Google Earth no está a la vista.", self)
             self.previa.setAlignment(_enum(Qt, "AlignmentFlag", "AlignCenter"))
-            self.previa.setFixedHeight(180)
+            self.previa.setFixedHeight(220)
+            self.previa.setMinimumWidth(200)
+            self.previa.setSizePolicy(_enum(QtWidgets.QSizePolicy, "Policy", "Ignored"),
+                                      _enum(QtWidgets.QSizePolicy, "Policy", "Fixed"))
             self.previa.setStyleSheet("background:#202020; color:#aaaaaa;")
-            lay.addWidget(self.previa)
-            self._cuadro = None                 # (número, arreglo) que deja el hilo de la vista previa
+            exterior.addWidget(self.previa)
+            self.fotogramas = _Fotogramas(QtCore, QtGui, QtWidgets, self)
+            exterior.addWidget(self.fotogramas)
+            self._cuadro = None                 # (número, arreglo) que deja el hilo del video
             self._cuadro_visto = 0
             self._hilo_previa = None
             self._parar_previa = threading.Event()
-            self._ancho_previa = 440
+            self._ancho_previa = 800
+            self._forma_previa = 0.0
+            self.reloj_video = QtCore.QTimer(self)
+            self.reloj_video.timeout.connect(self._mostrar_previa)
+            # el resto se desplaza si no entra (en pantallas chicas se encimaba)
+            desliz = QtWidgets.QScrollArea(self)
+            desliz.setWidgetResizable(True)
+            desliz.setFrameShape(_enum(QtWidgets.QFrame, "Shape", "NoFrame"))
+            adentro = QtWidgets.QWidget(desliz)
+            lay = QtWidgets.QVBoxLayout(adentro)
+            lay.setContentsMargins(0, 0, 0, 0)
+            desliz.setWidget(adentro)
+            exterior.addWidget(desliz, 1)
             titulo = QtWidgets.QLabel("<b>Listo para capturar:</b>", self)
             lay.addWidget(titulo)
             self.lista = QtWidgets.QLabel(self)
@@ -400,6 +470,8 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 "(norte arriba, mirando hacia abajo).", self)
             aviso.setWordWrap(True)
             lay.addWidget(aviso)
+            lay.addStretch(1)
+            lay = exterior                      # CAPTURAR, la barra y el resultado: siempre a la vista
 
             self.boton = QtWidgets.QPushButton("CAPTURAR  (Ctrl+Alt+G)", self)
             f = self.boton.font()
@@ -422,6 +494,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
             self._sc = atajo(QtGui.QKeySequence("Ctrl+Alt+G"), self)
             self._sc.activated.connect(self.capturar)
             self.setMinimumWidth(420)
+            self.resize(560, 900)
 
         def _escribir_kml(self):
             ruta = GE.archivo_kml()
@@ -495,17 +568,20 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 f"{_miles(z[3] - z[1])} m, cámara a {_miles(rango)} m), norte arriba."))
 
         # -- temporizador
-        # -- vista previa: un hilo saca fotos chicas de Google Earth (unas 4
-        #    por segundo, sin trabar la ventana) y el reloj muestra la última
+        # -- el video: un hilo filma la vista 3D de Google Earth (unos 25
+        #    cuadros por segundo, sin trabar la ventana) y otro reloj muestra
+        #    el último cuadro (3.33.4)
         def _iniciar_previa(self):
             if self._hilo_previa is not None:
                 return
             self._parar_previa.clear()
             self._hilo_previa = threading.Thread(target=self._sacar_previas,
-                                                 name="geocad-ge-previa", daemon=True)
+                                                 name="geocad-ge-video", daemon=True)
             self._hilo_previa.start()
+            self.reloj_video.start(40)
 
         def _detener_previa(self):
+            self.reloj_video.stop()
             self._parar_previa.set()
             if self._hilo_previa is not None:
                 self._hilo_previa.join(2)
@@ -513,25 +589,26 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
 
         def _sacar_previas(self):
             try:
-                foto = V.FotoX11()
-            except Exception:  # noqa: BLE001 -- sin X11: sin vista previa
+                video = V.VideoX11()
+            except Exception:  # noqa: BLE001 -- sin X11: sin video
                 return
             n = 0
             try:
                 while not self._parar_previa.is_set():
                     t = time.time()
                     try:
-                        a = foto.previa(self._ancho_previa)
+                        a = video.cuadro(self._ancho_previa)
                     except Exception:  # noqa: BLE001
                         a = None
                     n += 1
                     self._cuadro = (n, a)
-                    self._parar_previa.wait(max(0.05, 0.25 - (time.time() - t)))
+                    self._parar_previa.wait(max(0.005, 0.04 - (time.time() - t)))
             finally:
-                foto.cerrar()
+                video.cerrar()
 
         def _mostrar_previa(self):
-            self._ancho_previa = max(200, self.previa.width())
+            escala = self.previa.devicePixelRatioF() if hasattr(self.previa, "devicePixelRatioF") else 1.0
+            self._ancho_previa = max(200, int(self.previa.width() * escala))
             cuadro = self._cuadro
             if cuadro is None or cuadro[0] == self._cuadro_visto:
                 return
@@ -540,17 +617,26 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 self.previa.setText("Google Earth no está a la vista (¿minimizado o cerrado?).")
                 return
             h, w = a.shape[:2]
+            forma = w / h
+            if abs(forma - self._forma_previa) > 0.01:      # el alto, a la forma de la vista 3D
+                self._forma_previa = forma
+                self.previa.setFixedHeight(max(140, min(380, int(self.previa.width() / forma))))
             img = QtGui.QImage(a.data, w, h, 3 * w, _enum(QtGui.QImage, "Format", "Format_RGB888")).copy()
             pm = QtGui.QPixmap.fromImage(img).scaled(
-                self.previa.width(), 180, _enum(Qt, "AspectRatioMode", "KeepAspectRatio"),
+                int(self.previa.width() * escala), int(self.previa.height() * escala),
+                _enum(Qt, "AspectRatioMode", "KeepAspectRatio"),
                 _enum(Qt, "TransformationMode", "SmoothTransformation"))
+            if hasattr(pm, "setDevicePixelRatio"):
+                pm.setDevicePixelRatio(escala)
             self.previa.setPixmap(pm)
 
         def _tic(self):
             if self._tecla.is_set():
                 self._tecla.clear()
                 self.capturar()
-            self._mostrar_previa()
+            cap = self._captura
+            if cap is not None and cap.estados:
+                self.fotogramas.poner(cap.estados)
             ocupado = self._hilo is not None
             enlazado = self.srv.conectado()
             self.boton_ge.setVisible(not enlazado)
@@ -676,6 +762,8 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                             "error": "", "ruta": None, "crs": crs, "datos": datos}
             self.barra.setValue(0)
             self.barra.show()
+            self.fotogramas.poner([])
+            self.fotogramas.hide()
             self.boton.setText("Cancelar")
             self._hilo = threading.Thread(target=self._trabajar, args=(datos,),
                                           name="geocad-ge-captura", daemon=True)
@@ -755,12 +843,16 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
             finally:
                 if foto is not None:
                     foto.cerrar()
+                if self._captura is not None:
+                    av["estados"] = list(self._captura.estados)
                 self._captura = None
                 av["fin"] = True
 
         def _terminar(self, av):
             self.boton.setText("CAPTURAR  (Ctrl+Alt+G)")
             self.barra.hide()
+            if av.get("estados"):
+                self.fotogramas.poner(av["estados"])     # queda a la vista cómo salió
             if av["error"]:
                 self._error(av["error"])
                 return
