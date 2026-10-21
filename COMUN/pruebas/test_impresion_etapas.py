@@ -16,6 +16,7 @@ marco dibujado en la hoja:
 5. La vista previa de Page Setup imprime: aplica la página y abre TRAZAR.
 6. Las letras TrueType se imprimen sin el borde de la capa (no se empastan).
 """
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

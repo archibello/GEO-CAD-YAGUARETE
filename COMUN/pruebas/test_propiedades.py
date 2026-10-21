@@ -1,6 +1,7 @@
 """3.3.0 Propiedades en masa: con varios objetos del mismo tipo la paleta
 Properties de IngeCAD muestra (y cambia en todos) lo propio del tipo; suma
 «Atributos» de los bloques y «Totales (GeoCAD)» con largo y área."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

@@ -2,6 +2,7 @@
 derecho = Enter. Sin ventana: un controlador falso que hace lo mismo que
 ToolController.on_text (parse_point de IngeCAD + tool.on_point) con las
 herramientas LÍNEA y POLILÍNEA reales de IngeCAD."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import math, os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

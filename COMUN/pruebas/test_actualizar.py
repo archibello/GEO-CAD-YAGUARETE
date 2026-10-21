@@ -1,5 +1,6 @@
 """Actualizar el puente desde el menú, en los dos lados: busca la versión
 más nueva en la carpeta de actualizaciones, la instala y avisa al otro."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, shutil, zipfile, re, importlib.util
 CFG = tempfile.mkdtemp(); os.environ["XDG_CONFIG_HOME"] = CFG
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME

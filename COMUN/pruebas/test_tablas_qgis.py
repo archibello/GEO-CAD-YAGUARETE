@@ -3,6 +3,7 @@
 QGIS con el formato de la planilla. Las cuentas se prueban sin QGIS; si el
 QGIS de Flatpak está instalado, además se arma la tabla en una composición
 de verdad (sin ventanas) y se mide dibujada."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, subprocess, shutil, json
 os.environ["HOME"] = HOME = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__))

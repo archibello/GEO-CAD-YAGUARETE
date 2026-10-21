@@ -30,7 +30,14 @@ import json
 import math
 import re
 from dataclasses import dataclass, field, replace
-from html.parser import HTMLParser
+try:
+    from html.parser import HTMLParser
+    HAY_HTML = True
+except ImportError:     # la AppImage de IngeCAD 0.6.8 no lo trae (3.31.3): sólo el texto
+    HAY_HTML = False
+
+    class HTMLParser:   # para poder definir _LectorHTML; no se usa
+        pass
 
 PT_MM = 25.4 / 72.0
 PX_MM = 25.4 / 96.0
@@ -508,7 +515,10 @@ _PROPS_FORMATO = ("font-weight", "font-style", "color", "background-color", "bac
 
 
 def leer_html(html: str, origen: str = "") -> Tabla | None:
-    """La primera tabla del HTML con su formato, o None si no hay tabla."""
+    """La primera tabla del HTML con su formato, o None si no hay tabla
+    (también si este Python no trae html.parser: se usa el texto)."""
+    if not HAY_HTML:
+        return None
     lector = _LectorHTML()
     try:
         lector.feed(html or "")

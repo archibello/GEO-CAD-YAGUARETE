@@ -1,6 +1,7 @@
 """Empalme y chaflán en un cruce: el lado que queda es el que se toca, en los
 4 cuadrantes, con líneas y polilíneas dibujadas en cualquier sentido (error
 encontrado por Fernando: con polilíneas sólo andaba un cuadrante)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile, sys; os.environ["HOME"]=tempfile.mkdtemp()
 from pathlib import Path
 from importlib import import_module

@@ -2,6 +2,7 @@
 IngeCAD, venga o no de QGIS, viaja como capa temporal por tipo (puntos,
 líneas, polígonos, textos). Lado IngeCAD (qué sale de cada objeto, el
 mensaje) y lado QGIS sin QGIS (campos, direcciones de las capas en memoria)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__))

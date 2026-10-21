@@ -1,4 +1,5 @@
 """GeoPackage de punta a punta con archivos reales creados por GDAL."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, shutil, sqlite3, zipfile, types, hashlib
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from pathlib import Path

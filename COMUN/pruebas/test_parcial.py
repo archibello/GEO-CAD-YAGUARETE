@@ -1,5 +1,6 @@
 """Envío selectivo: conectar sólo lo pedido, ampliar, y devolver sólo lo seleccionado."""
 from pathlib import Path
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, shutil
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

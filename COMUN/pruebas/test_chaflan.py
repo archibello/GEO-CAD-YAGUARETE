@@ -1,6 +1,7 @@
 """Chaflán estilo AutoCAD para IngeCAD (módulo «Chaflán»): lo que el CHAMFER
 nativo no hace (polilíneas, lado elegido, propiedades, distancias 0, Ángulo,
 Polilínea entera, Múltiple, desHacer) sobre la misma geometría del Empalme."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

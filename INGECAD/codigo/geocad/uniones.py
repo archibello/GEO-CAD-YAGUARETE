@@ -14,6 +14,11 @@ queda llena a cualquier zoom. No se agregan vértices: la escena pesa lo
 mismo y el orden de dibujo, las tandas y lo oculto siguen igual. En ángulos
 muy agudos el inglete se acorta (como el límite de inglete de AutoCAD). Los
 cruces de tres o más tramos quedan como venían.
+
+Desde IngeCAD 0.6.8 IngeCAD ya cierra las esquinas de una misma polilínea;
+GeoCAD une el resto (dos LÍNEAs, la punta de una polilínea con una línea) y
+deja como vienen las puntas que IngeCAD ya unió y los puntos de DASHDOT
+(3.31.3).
 """
 from __future__ import annotations
 
@@ -50,9 +55,22 @@ def unir(batch) -> int:
     n = len(v)
     pos, normal = v["pos"], v["normal"]
     p0, p1 = pos[:, 0], pos[:, 2]
-    nrm = normal[:, 0].astype(np.float64)                     # la dirección «+» del tramo
-    if not np.allclose(normal[:, 2], nrm, atol=1e-5):         # no es la forma esperada
+    # la dirección «+» de cada tramo, sacada de sus puntas. Desde IngeCAD
+    # 0.6.8 la punta puede traer otra: el inglete que IngeCAD ya pone entre
+    # tramos seguidos de una misma polilínea, o el cuadrado de un punto de
+    # DASHDOT (tramo de largo 0). Esas puntas se dejan como vienen; se unen
+    # sólo las que IngeCAD dejó cuadradas (las de objetos distintos).
+    d = (p1 - p0).astype(np.float64)
+    largo_tramo = np.hypot(d[:, 0], d[:, 1])
+    punto = largo_tramo == 0.0
+    nrm = np.column_stack((-d[:, 1], d[:, 0])) / np.where(punto, 1.0, largo_tramo)[:, None]
+    ini, fin = normal[:, 0].astype(np.float64), normal[:, 2].astype(np.float64)
+    t = ~punto                                                # no es la forma esperada:
+    if not (np.allclose(normal[t, 1], -ini[t], atol=1e-5) and np.allclose(normal[t, 4], -ini[t], atol=1e-5)
+            and np.allclose(normal[t, 3], fin[t], atol=1e-5) and np.allclose(normal[t, 5], -fin[t], atol=1e-5)):
         return 0
+    cuadrada_ini = t & np.isclose(ini, nrm, atol=1e-3).all(axis=1)
+    cuadrada_fin = t & np.isclose(fin, nrm, atol=1e-3).all(axis=1)
     grosor = np.zeros(n, dtype=np.float32)
     for r in getattr(batch, "ranges", ()):
         grosor[r.first // 6:(r.first + r.count) // 6] = r.lineweight
@@ -84,7 +102,9 @@ def unir(batch) -> int:
     n1 = sa[:, None] * nrm[ta]                       # el camino: A llega, B sale
     n2 = -sb[:, None] * nrm[tb]
     den = 1.0 + (n1 * n2).sum(axis=1)
+    cuadrada = np.concatenate((cuadrada_ini, cuadrada_fin))
     ok = (den > 1e-6) & (ta != tb)                   # no una vuelta atrás, no el mismo tramo
+    ok &= cuadrada[a] & cuadrada[b]                  # ni lo que IngeCAD ya unió
     m = (n1 + n2) / np.where(ok, den, 1.0)[:, None]
     largo = np.hypot(m[:, 0], m[:, 1])
     m *= np.minimum(1.0, LIMITE / np.maximum(largo, 1e-12))[:, None]

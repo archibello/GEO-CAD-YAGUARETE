@@ -1,6 +1,7 @@
 """Panel Layers de IngeCAD (3.25.6): candado abierto en gris para las capas
 libres y cerrado en rojo para las bloqueadas, sin tocar el texto que IngeCAD
 lee al hacer clic. Sin Qt: qué se dibuja según el texto de la celda."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

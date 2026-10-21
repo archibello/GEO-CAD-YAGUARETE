@@ -1,6 +1,7 @@
 from pathlib import Path
 """Los dos lados del puente juntos: el complemento de QGIS (con un QGIS
 simulado) y el plugin de IngeCAD (núcleo real), en una misma carpeta personal."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, shutil, importlib
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +35,7 @@ iface = types.SimpleNamespace(mainWindow=lambda: MW(), helpMenu=lambda: types.Si
                               messageBar=lambda: bar, addToolBar=lambda n: TB(), activeLayer=lambda: None,
                               mapCanvas=lambda: types.SimpleNamespace(extent=lambda: __import__("qgis.core").core._Rect(10, 20, 30, 40)))
 P = ingecad_puente.classFactory(iface); P.initGui()
-print("menú QGIS:", [i if isinstance(i, str) else i.text for i in P.menu.items])
+print("menú QGIS:", [i if isinstance(i, str) else getattr(i, "text", getattr(i, "title", "")) for i in P.menu.items])
 assert P.toolbar is None                       # botones apagados por defecto
 
 tmp = Path(HOME) / "SIG"; tmp.mkdir()

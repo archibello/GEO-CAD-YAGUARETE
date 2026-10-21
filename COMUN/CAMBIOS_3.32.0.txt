@@ -1,0 +1,55 @@
+GeoCAD - versión 3.32.0
+=======================
+IMÁGENES EN KML / KMZ (20/10/2026, pedido de Fernando). Las imágenes del
+dibujo viajan a Google Earth y vuelven. Incluye todo lo de la 3.31.3
+(GeoCAD con IngeCAD 0.6.8).
+
+EXPORTARKML lleva las imágenes
+- Cada imagen del dibujo va como superposición de Google Earth
+  (GroundOverlay), en la carpeta de su capa y debajo de las líneas.
+- Con sus cuatro esquinas (gx:LatLonQuad), no con una caja norte-sur: el
+  norte de la faja Gauss-Krüger no es el geográfico, y una imagen girada
+  también cae en su lugar.
+- Con su aspecto de ASPECTOIMAGEN: se lleva la copia con el aspecto (fondo
+  transparente, negativo, color, opacidad), que es la que usa el dibujo. El
+  nombre en Google Earth es el del original (sin «_aspecto»).
+- Siempre en PNG (acordado con Fernando): un PNG va tal cual; JPG, TIF y los
+  demás se convierten, con su transparencia.
+- En un KMZ, las imágenes van adentro (carpeta «imagenes»). En un KML, en
+  la carpeta «<nombre>_imagenes» junto al .kml. Si esa carpeta es la de las
+  imágenes del dibujo (el .kml se llama como el dibujo), no se pisa nada:
+  la que ya está se usa tal cual y otra con el mismo nombre sale como «_2».
+- Una imagen cuyo archivo no está se cuenta en el aviso («imágenes sin su
+  archivo»).
+
+IMPORTARKML trae las imágenes
+- Las superposiciones (GroundOverlay) llegan como imágenes georreferenciadas
+  en la capa de su carpeta, en el mismo deshacer que lo demás (U las
+  quita). La ventana las cuenta.
+- Las cuatro esquinas (gx:LatLonQuad, como las escribe EXPORTARKML) o la
+  caja de Google Earth (LatLonBox, con su giro) se pasan al sistema del
+  dibujo; la imagen se ubica con un ajuste afín (Polinómica 1). Si las
+  esquinas no forman un paralelogramo en el dibujo, se avisa cuánto se
+  apartan.
+- El archivo se copia a «<dibujo>_imagenes», como PEGARIMAGEN, sin pisar
+  ninguno; importar otra vez el mismo KMZ usa la copia que ya estaba.
+- Con transparencia (PNG con alfa), la imagen lleva «usar transparencia».
+- Las superposiciones de internet (http) no se bajan, y las de pantalla
+  (leyendas) y fotos no se traen: el aviso las cuenta. Una imagen que no
+  está en el KMZ ni junto al KML también se avisa.
+- Ida y vuelta EXPORTARKML -> IMPORTARKML: la imagen en el mismo lugar (a
+  menos de 0,1 mm en la prueba).
+
+Pruebas
+- test_imagenkml (nueva): esquinas en WGS 84; KMZ con PNG adentro (JPG
+  convertido, el del aspecto tal cual) y gx:LatLonQuad; KML con su carpeta
+  sin pisar las imágenes del dibujo; ida y vuelta KMZ y KML al milímetro, con
+  capa, transparencia y deshacer; LatLonBox girado de Google Earth; las de
+  internet y las que faltan; tamaño de un PNG sin Pillow.
+- test_importarkml: una superposición sin ubicación ahora se cuenta como
+  «imágenes sin ubicación».
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+- La AppImage oficial de IngeCAD 0.6.8 con --check: GeoCAD disponible.
+
+Pruebas manuales
+- IK1-IK5 en 02_PRUEBAS_MANUALES.txt. Quedan además V81-V84 de la 3.31.3.

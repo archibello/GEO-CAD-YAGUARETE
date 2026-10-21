@@ -18,12 +18,12 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
-import sqlite3
 import tempfile
 import zipfile
 from pathlib import Path
 
 from . import gpkgio as G
+from .gpkgio import sqlite3  # o su reemplazo, si este Python no lo trae
 from .checkin import (CommitError, CommitResult, GeometryError, Plan, backup_dir,
                       carry_values, orient_ring, part_from_entity, prune_backups,
                       scope_filter)

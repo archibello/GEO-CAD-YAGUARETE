@@ -1,0 +1,57 @@
+GeoCAD - versión 3.31.3
+=======================
+GEOCAD CON INGECAD 0.6.8 (20/10/2026). Salió IngeCAD 0.6.8 (UCS, PEDIT Unir,
+cotas asociativas, puntos de DASHDOT/CENTER, XLINE infinitas, esquinas de
+las polilíneas con grosor, textos por tamaño, selección sin capas ocultas,
+DWG sin falsas alarmas). Se revisó todo lo que GeoCAD usa o envuelve: las
+firmas siguen compatibles; tres retoques de GeoCAD chocaban con arreglos que
+IngeCAD hizo por su cuenta. Sigue andando igual con la 0.6.7.
+
+GeoCAD carga en la AppImage de IngeCAD 0.6.8
+- La AppImage oficial de IngeCAD está armada con PyInstaller, que sólo
+  empaqueta las partes de Python que usa IngeCAD: no trae html.parser ni
+  sqlite3 (el Flatpak sí). GeoCAD usaba html.parser al cargarse (tablas
+  pegadas desde una planilla) e IngeCAD lo dejaba sin cargar: «plugin geocad:
+  UNAVAILABLE ModuleNotFoundError: No module named 'html.parser'» (lo dice
+  IngeCAD-0.6.8-x86_64.AppImage --check). Encontrado por Fernando.
+- Ahora GeoCAD carga igual. En esa AppImage: PEGARTABLA lee la tabla del
+  texto del portapapeles (sin el formato de la planilla), y abrir o guardar
+  un GeoPackage avisa que ese IngeCAD no trae SQLite (SHP anda normal).
+  Con el Flatpak, todo como siempre.
+
+Uniones de los grosores en pantalla
+- IngeCAD 0.6.8 ya cierra las esquinas de una misma polilínea. El módulo de
+  GeoCAD, al ver esos ingletes, se apartaba de toda la tanda y volvía la
+  muesca entre LÍNEAs sueltas que se tocan (en un plano con polilíneas, casi
+  siempre). Ahora une sólo las puntas que IngeCAD dejó cuadradas (dos
+  LÍNEAs, la punta de una polilínea con una línea) y deja como vienen las
+  que IngeCAD ya unió y los puntos de DASHDOT.
+
+Control de los DWG al guardar
+- IngeCAD 0.6.8 cambió sus avisos al guardar DWG: el de errores trae el
+  detalle y los tres salen traducidos. GeoCAD ya no los reconocía y quedaba
+  el texto de IngeCAD. Ahora reconoce las dos formas y muestra el suyo.
+- IngeCAD 0.6.8 corrigió en su LibreDWG las dos falsas alarmas de la 3.28.1
+  (bordes de sombreado con Y = 0) y la 3.28.2 (estilos de vista de AutoCAD
+  2013+). El filtro de GeoCAD queda para los IngeCAD anteriores.
+
+Textos visibles según su tamaño
+- IngeCAD 0.6.8 ya separa los textos por tamaño para esconder los chicos
+  (el arreglo de la 3.26.4, hecho por IngeCAD). Con ese IngeCAD el retoque
+  de GeoCAD se aparta, para no mezclar los dos escalones; con la 0.6.7 sigue
+  como estaba. El tamaño mínimo configurable (3.27.0) no cambia.
+
+Pruebas
+- test_uniones: dos LÍNEAs junto a polilíneas en la misma tanda; puntos de
+  un tipo de línea (largo 0) sin tocar; «apagado» con dos LÍNEAs.
+- test_controldwg: los avisos nuevos, en inglés y en español de IngeCAD.
+- test_sin_modulos (nueva): GeoCAD carga en un Python sin html.parser ni
+  sqlite3, las tablas se leen del texto y GeoPackage avisa.
+- test_legibles: con IngeCAD 0.6.8 el retoque se aparta (y se saca si
+  estaba puesto) y los textos grandes se siguen viendo.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+- La AppImage oficial de IngeCAD 0.6.8 con --check: GeoCAD disponible (antes
+  UNAVAILABLE).
+
+Pruebas manuales
+- V80-V84 en 02_PRUEBAS_MANUALES.txt.

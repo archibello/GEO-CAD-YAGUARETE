@@ -18,13 +18,40 @@ import datetime as _dt
 import hashlib
 import math
 import re
-import sqlite3
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from .shpio import ShapefileError as DataError  # mismo tipo de error para la GUI
+
+
+def _sin_sqlite():
+    """Lo poco de sqlite3 que usa GeoCAD, para un Python que no lo trae (la
+    AppImage de IngeCAD 0.6.8, 3.31.3): GeoCAD carga igual y abrir un
+    GeoPackage avisa por qué no se puede."""
+    import types
+
+    class Error(Exception):
+        pass
+
+    class OperationalError(Error):
+        pass
+
+    def connect(*_a, **_k):
+        raise Error("este IngeCAD no trae SQLite (la AppImage de IngeCAD); "
+                    "para GeoPackage use el Flatpak o pase la capa a SHP")
+
+    return types.SimpleNamespace(Error=Error, OperationalError=OperationalError,
+                                 Connection=object, connect=connect)
+
+
+try:
+    import sqlite3
+    HAY_SQLITE = True
+except ImportError:
+    HAY_SQLITE = False
+    sqlite3 = _sin_sqlite()
 
 # -- tipos WKB --------------------------------------------------------------------
 

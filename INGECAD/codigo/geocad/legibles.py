@@ -28,6 +28,11 @@ que se guarda la configuración: sólo se repinta, sin regenerar.
 La regen en paralelo de IngeCAD usa fork: los procesos hijos heredan el
 retoque. La clave del balde conserva el tipo al final (pack ordena por
 él); el escalón va justo antes, como texto.
+
+3.31.3: IngeCAD 0.6.8 lo corrigió por su cuenta (``_text_size_step``: un
+escalón por octava, en la misma posición de la clave, como número). Con ese
+IngeCAD el retoque se aparta: no se mezclan los dos escalones en la clave y
+queda el de IngeCAD. El tamaño mínimo configurable sigue igual.
 """
 from __future__ import annotations
 
@@ -105,12 +110,26 @@ def _envolver_bucket(original):
     return _bucket
 
 
+def ingecad_lo_hace(backend) -> bool:
+    """IngeCAD ya separa los textos por tamaño (desde 0.6.8)."""
+    return callable(getattr(backend, "_text_size_step", None))
+
+
 def compatible(backend) -> bool:
     """El backend de IngeCAD es el que conocemos (0.6.7): baldes por
     (grupo, capa, color, espesor, tipo) y el tipo en ``_kind``."""
     vb = getattr(backend, "VertexBackend", None)
     return (vb is not None and hasattr(vb, "_bucket") and hasattr(vb, "enter_entity")
             and hasattr(vb, "exit_entity"))
+
+
+def quitar(backend) -> None:
+    """Saca el retoque si estaba puesto (deja los de IngeCAD)."""
+    from .dibujo import desenvolver
+    vb = getattr(backend, "VertexBackend", None)
+    for nombre in ("enter_entity", "exit_entity", "_bucket"):
+        if vb is not None and hasattr(getattr(vb, nombre, None), "_puente_original"):
+            desenvolver(vb, nombre)
 
 
 def instalar() -> bool:
@@ -121,6 +140,9 @@ def instalar() -> bool:
     except Exception:  # noqa: BLE001 -- sin la pantalla de IngeCAD
         return False
     if not compatible(backend):
+        return False
+    if ingecad_lo_hace(backend):
+        quitar(backend)
         return False
     from .dibujo import envolver
     vb = backend.VertexBackend

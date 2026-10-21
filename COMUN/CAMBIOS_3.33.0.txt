@@ -1,0 +1,96 @@
+GeoCAD - versión 3.33.0
+=======================
+MÓDULO GOOGLE EARTH (20/10/2026, pedido de Fernando): captura
+georreferenciada de lo que se ve en Google Earth Pro, llevada a planas, en
+una sola operación, desde IngeCAD y desde QGIS. Incluye el MOSAICO: una sola
+imagen hecha de varias capturas más cercanas (más detalle real). Va encima
+de la 3.32.0. Visibilidad de rótulos pasa a la 3.34.0 (Fernando).
+
+Módulo nuevo «Google Earth» (IngeCAD y QGIS)
+- Se elige en GeoCAD > Módulos (en IngeCAD necesita «Imágenes
+  georreferenciadas»). Apagado no deja rastro: sin menú, sin servidor, sin
+  atajo y sin el archivo del enlace.
+- Menú GeoCAD > Google Earth: «Abrir Google Earth con GeoCAD», «Capturar
+  vista (Ctrl+Alt+G)» y «Configurar captura...». En IngeCAD también como
+  órdenes: ABRIRGE, CAPTURARGE y CONFIGURARGE.
+
+Cómo funciona
+- «Abrir Google Earth con GeoCAD» abre en Google Earth un enlace
+  (NetworkLink) que queda en Lugares temporales; Mis lugares no se toca. Con
+  él GeoCAD sabe qué se ve y puede mover la cámara.
+- La ventanita «GeoCAD Yaguareté — Google Earth» queda al frente, al lado
+  de Google Earth: estado del enlace, calidad, fecha de la imagen (escrita
+  por el usuario, la que Google Earth muestra abajo), resumen de la salida y
+  el botón CAPTURAR. Mientras está abierta el servidor local está vivo
+  (Google Earth abandona el enlace si se cae).
+- Ctrl+Alt+G captura con Google Earth al frente (o con la ventanita). No se
+  toca ningún atajo del escritorio: GeoCAD lo escucha sólo mientras la
+  ventanita está abierta (Google Earth va por X11).
+- Al capturar, la vista se endereza (norte arriba, mirando hacia abajo),
+  aparecen cuatro cruces magenta cerca de las esquinas, GeoCAD espera a que
+  la imagen termine de cargar, saca la foto de la ventana (en silencio, sin
+  apretar teclas) y las cruces se van.
+- El centro de cada cruz se toma del cruce de sus brazos: aunque la brújula
+  o el logo tapen media cruz, no se corre. Si falta una cruz, avisa cuál y
+  qué puede estar tapándola (la chincheta del buscador, la brújula, el logo).
+- Con las cuatro cruces se calcula una proyectiva píxel -> planas en el
+  sistema elegido; la convergencia de meridianos sale sola. La imagen se
+  rehace con el norte de la faja arriba y se recorta por dentro de las
+  cruces (no quedan en la imagen).
+- Mosaico: cubre lo que se ve ahora con piezas a 200 m de altura (se cambia
+  en Configurar captura). La ventanita dice cuántas piezas son y cuánto
+  tarda (unos 8 s cada una; tope 25). Google Earth vuela solo a cada pieza
+  y al final vuelve a donde estaba (también si se cancela). Las piezas se
+  unen en UNA sola imagen: cada punto sale de la pieza que lo ve más cerca
+  de su centro, y se miden las costuras entre vecinas.
+- Seguros: nunca se vuela a una posición inválida (la lección del 0°, 0° de
+  la prueba); si Google Earth no responde, se avisa y no se queda colgado.
+
+La salida
+- Formato: GeoTIFF (con su sistema adentro), PNG + PGW + PRJ o JPG + JGW +
+  PRJ. El GeoTIFF lo escribe GeoCAD (IngeCAD no trae GDAL y QGIS no trae
+  PIL): lo leen QGIS e INSERTARGEO.
+- Sistema: el del dibujo (SISTEMAGEO) en IngeCAD, el del proyecto en QGIS,
+  u otro elegido. Tiene que ser en planas; si falta, se sugiere el de la
+  zona (POSGAR 2007 en su faja). Aviso si la vista cae lejos de la faja.
+- UNA carpeta, común a IngeCAD y QGIS (pedido de Fernando): por defecto
+  ~/Documentos/GeoCAD Google Earth. Se elige en Configurar captura desde
+  cualquiera de los dos y vale para ambos (~/.config/geocad/googleearth.json).
+  GeoCAD comprueba que se pueda escribir y no acepta rutas del «portal» de
+  Flatpak (/run/user/.../doc), que el otro programa no ve.
+- Nombre: GE_<fecha>_<AAAAMMDD-HHMMSS>.<ext>, y al lado un .txt con la
+  fecha, la calidad, el sistema, el píxel, el tamaño, el control de las
+  marcas, las costuras y la cámara.
+- Después de capturar: se inserta en el dibujo de IngeCAD (en su lugar,
+  como INSERTARGEO; U la quita) o se agrega como capa en QGIS; y, si se
+  eligió, se manda al otro programa por el Puente.
+
+Probado antes de programar (20/10/2026, Google Earth Pro 7.3.6 Flatpak):
+error 6-11 mm respecto de Google, costuras 1,3-1,8 cm, y a 200 m 3 a 5 veces
+más detalle real que a 374 m. En este equipo: la foto de la ventana y el
+atajo andan desde el Flatpak de IngeCAD y desde QGIS 4.2 y 3.28 LTS.
+
+Pruebas
+- test_googleearth (nueva), sin Google Earth real: un Google Earth simulado
+  (terreno conocido en POSGAR 2007 faja 7, vista en geográficas, BBOX que
+  no coincide con lo que se ve) habla con el servidor por HTTP como el de
+  verdad. Cruces (también tapadas a medias, y la que falta avisada),
+  proyectiva y convergencia, GeoTIFF / PNG / JPG leídos de nuevo, carpeta
+  común y ajustes, servidor (cruces sólo al capturar, nunca a 0,0, puerto
+  ocupado), captura de pantalla de punta a punta (menos de medio píxel; y
+  la prueba nota un píxel corrido), mosaico 3 x 3 en UNA imagen con
+  costuras medidas (y una pieza corrida 1 m se nota), cancelar y que la
+  vista vuelva, sin Google Earth ni X11; en IngeCAD: menú y órdenes sólo con
+  el módulo, la captura insertada al milímetro, lo que manda QGIS y el
+  apagado sin rastro.
+- test_sin_modulos: GeoCAD carga sin ctypes.util (la AppImage de IngeCAD
+  0.6.8 no lo trae; sí trae http.server, numpy, pyproj y libX11).
+- test_modulos: el módulo nuevo en las dos listas y en el menú de QGIS.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+- La AppImage oficial de IngeCAD 0.6.8 con --check: GeoCAD disponible (y
+  una copia rota a propósito sí sale «UNAVAILABLE»: la comprobación vale).
+- Ventanita y Configurar captura armadas con el Qt real de IngeCAD
+  (PySide6), QGIS 4.2 (PyQt6) y QGIS 3.28 LTS (PyQt5), sin pantalla.
+
+Pruebas manuales
+- GE1-GE10 en 02_PRUEBAS_MANUALES.txt.

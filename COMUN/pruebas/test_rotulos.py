@@ -4,6 +4,7 @@ entran: A achicar horizontal, B rotar al eje más largo y achicar, C todos
 según el eje, D omitir. Líneas: según el eje, en la mitad, sobre / arriba /
 abajo, nunca cabeza abajo. Puntos: centrado o desde el punto a media
 altura. ROTULOSIG los dibuja así y recuerda lo último elegido."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

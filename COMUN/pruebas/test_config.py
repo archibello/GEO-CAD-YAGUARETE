@@ -1,4 +1,5 @@
 """Configuración común: el mismo archivo para IngeCAD y QGIS."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, json
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

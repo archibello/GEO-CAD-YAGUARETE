@@ -1,4 +1,5 @@
 """Prueba de punta a punta del complemento, sin ventana."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, shutil, zipfile, json, types
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)

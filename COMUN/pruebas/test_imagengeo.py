@@ -2,6 +2,7 @@
 imagen con archivo de mundo o GeoTIFF entra en su lugar; una imagen del
 dibujo sale como copia con su archivo de mundo, donde se elija. Ida y vuelta:
 exportar e insertar la copia la deja exactamente donde estaba."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

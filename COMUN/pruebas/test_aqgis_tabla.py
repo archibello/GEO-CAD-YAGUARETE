@@ -6,6 +6,7 @@ Se arma un .shp latin-1 con texto, enteros, decimales, fecha, lógico y celdas
 vacías; se importa como IMPORTARSHP (todas las columnas y sólo algunas), se
 manda con la orden ENVIARQGIS y se compara, del lado de QGIS sin QGIS, la tabla
 que se arma (campos y valores) con la que lee pyshp del .dbf."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, datetime, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

@@ -2,6 +2,7 @@
 mismos ángulos que el núcleo, submenús en GeoCAD, se encuentran entre sí con
 sus nombres de siempre, se prenden y apagan sin rastro y retiran los
 complementos sueltos de antes."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, shutil, json, math, compileall
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,7 @@ print("ok ángulos iguales en el núcleo y en Dibujo CAD")
 
 # ---- 2. catálogo: Bloques y Papel dependen de Dibujo ----------------------------------
 assert modulos.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True,
-                                  "capas": True, "tablas": True}
+                                  "capas": True, "tablas": True, "googleearth": True}
 modulos.guardar("qgis", {"dibujo": False})
 e = modulos.estado("qgis"); assert not e["bloques"] and not e["papel"] and e["capas"]
 modulos.guardar("qgis", {"dibujo": True})
@@ -116,7 +117,8 @@ creados.clear()
 G = qp.GeoCAD(iface); G.initGui(); G.subs.fabrica = fabrica
 for f in QTimer.shots: f()
 QTimer.shots.clear()
-titulos = lambda: [i.title for i in G.menu.items if isinstance(getattr(i, "title", None), str)]
+titulos = lambda: [i.title for i in G.menu.items if isinstance(getattr(i, "title", None), str)
+                   and i.title != "Google Earth"]          # el de Google Earth es propio (3.33.0)
 assert titulos() == ["Dibujo CAD", "Capas CAD"]
 sub_dibujo = [i for i in G.menu.items if isinstance(getattr(i, "title", None), str) and i.title == "Dibujo CAD"][0]
 assert [a.text for a in sub_dibujo.items] == ["acción de DibujoCADPlugin"]

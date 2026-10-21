@@ -1,0 +1,69 @@
+GeoCAD - versión 3.33.1
+=======================
+GOOGLE EARTH: QUE SE VEA QUE TRABAJA (20/10/2026, pedido de Fernando en la
+prueba GE2: «no sé si está funcionando, no hay nada que disminuya la
+ansiedad del usuario»). Corrige la 3.33.0 (no se entregó por separado).
+
+Lo que pasaba
+- Con Google Earth enlazado pero sin la vista (Google Earth la manda recién
+  cuando la cámara se detiene) y el dibujo sin SISTEMAGEO, la ventanita
+  decía arriba «Google Earth conectado» y abajo, en rojo, «no está
+  conectado». Al apretar CAPTURAR sólo se repetía el mismo texto.
+
+La ventanita, ahora
+- «Listo para capturar»: una lista que se pone al día sola, con ✔ en verde
+  o ✘ en rojo y qué hacer si falta algo:
+    Google Earth enlazado (si no: «Abrir Google Earth con GeoCAD»)
+    Vista recibida, con la altura (si no: «mové un poco Google Earth»)
+    Sistema, y de dónde sale (si no: SISTEMAGEO o Configurar captura, con el
+      sugerido para la zona)
+    Carpeta lista (o por qué no se puede guardar)
+- CAPTURAR queda en gris hasta que todo está en ✔, y en verde cuando se
+  puede. Con Ctrl+Alt+G sin estar listo, dice qué falta.
+- Al apretar, respuesta inmediata con pasos numerados y la barra:
+    1/5 Enderezando la vista y poniendo las cruces
+    2/5 Esperando que cargue la imagen... N s (en el mosaico: Pieza n de N,
+        volando / esperando, y «faltan unos N s»)
+    3/5 Foto sacada; quitando las cruces (mosaico: volviendo a la vista)
+    4/5 Uniendo y llevando a planas... %
+    5/5 Guardando e insertando
+  y debajo «trabajando hace N s; Cancelar la corta y la vista vuelve».
+- Cada mensaje lleva la hora, para distinguir un intento nuevo de uno viejo.
+- Al terminar: «✔ Captura lista en N s» en verde, con la ruta, el tamaño y
+  los controles; el mismo aviso en la línea de comandos de IngeCAD y en la
+  barra de mensajes de QGIS.
+
+LA PANTALLA DE INGECAD O QGIS POSICIONA GOOGLE EARTH (idea de Fernando, mismo
+día: «congeniar esfuerzos entre los distintos programas»)
+- Botón «Llevar Google Earth a lo que veo en IngeCAD» (o «en QGIS»): toma el
+  rectángulo que está en pantalla, lo pasa a geográficas y Google Earth vuela
+  a mostrarlo entero entre las cruces, norte arriba. Cuánto ve por metro de
+  altura se mide de la vista real de Google Earth (depende de su ventana);
+  si la vista informada es disparatada, se usa lo medido en la prueba.
+- Calidad nueva «Lo que veo en IngeCAD» (o «en QGIS»): un mosaico que cubre
+  EXACTAMENTE lo que se ve en la pantalla del programa (las piezas se planean
+  con un margen y la imagen se recorta justo a esa zona), aunque Google Earth
+  esté mostrando otra cosa. La lista «listo para capturar» suma la zona con
+  su tamaño, y la ventanita anuncia cuántas piezas son.
+- La pantalla está en el sistema del dibujo / proyecto; si la captura va en
+  otro (Configurar captura > Este:), la zona se convierte y se toma el
+  rectángulo que entra en ella.
+- Lo útil entre las cruces quedó en 0,85 de la vista (con 0,9 el mosaico
+  quedaba corto unos metros en los bordes).
+
+Pruebas
+- test_googleearth: la lista de «listo para capturar» (el caso de la
+  captura de Fernando: enlazado, sin vista ni sistema), los pasos 1/5-3/5
+  de la pantalla y del mosaico con los segundos y lo que falta; la zona de
+  la pantalla: cámara para una zona (queda entre las cruces, un lado justo),
+  cambio de faja, recorte, vista disparatada, y un mosaico de una zona de
+  300 x 200 m de punta a punta con el Google Earth simulado (2 x 2 piezas,
+  UNA imagen justo de la zona, menos de medio píxel); la pantalla de
+  IngeCAD (ViewTransform2D) como zona.
+- La ventanita con el Qt real de IngeCAD (PySide6), QGIS 4.2 (PyQt6) y QGIS
+  3.28 LTS (PyQt5), sin pantalla: botón en gris con lo que falta, verde con
+  todo listo, y el aviso con hora al apretar sin estar listo.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+
+Pruebas manuales
+- GE11-GE13 en 02_PRUEBAS_MANUALES.txt (y siguen GE1-GE10 de la 3.33.0).

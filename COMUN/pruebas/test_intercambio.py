@@ -4,6 +4,7 @@ dibujo (SISTEMAGEO), REPROYECTAR con un solo deshacer exacto, IMPORTARSHP
 EXPORTARSHP (por capa y tipo o por tipo con LAYER, en el sistema del dibujo
 u otro, con .prj y .cpg). Ida y vuelta: importar y exportar devuelve los
 mismos atributos y las mismas coordenadas."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import datetime, math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

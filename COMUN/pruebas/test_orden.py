@@ -1,6 +1,7 @@
 """Orden de dibujo (3.16.0): Traer al frente / Enviar al fondo en la barra
 GeoCAD, sobre la orden DRAWORDER de IngeCAD, para líneas, polilíneas,
 sombreados, textos, cotas y bloques."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

@@ -1,6 +1,7 @@
 """3.5.0 Espacio papel como AutoCAD: la presentación respeta la escala de su
 configuración de página (1 mm = 0,001 unidades con el dibujo en metros), así
 una ventana a 1:100 (1/100XP) muestra una grilla de 100 m en 1000 mm."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

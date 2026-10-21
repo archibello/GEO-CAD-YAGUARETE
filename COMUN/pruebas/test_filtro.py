@@ -1,6 +1,7 @@
 """3.2.0 FILTRO (FI) estilo FILTER de AutoCAD: condiciones por tipo, capa, color,
 medidas, textos y datos de QGIS; grupos Y / O / XO / NO; filtros guardados;
 la orden FILTRO y FI dentro de cualquier «Designar objetos»."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

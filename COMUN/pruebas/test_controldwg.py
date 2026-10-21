@@ -3,6 +3,7 @@
 error de LibreDWG (el código 21 = 0 de los bordes de sombreado le resulta
 «desconocido»). Se descarta sólo si el DXF tiene esos ceros; lo demás se
 avisa en español y con el texto del error."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, shutil, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path
@@ -66,6 +67,23 @@ assert C.traducir(C.AVISO_REABRIR, []).startswith("no se pudo volver a abrir")
 assert C.traducir("some drawing objects did not survive the save (10 → 8)", []).startswith(
     "se perdieron objetos del dibujo al guardar (10 → 8)")
 assert C.traducir("otra cosa", []) == "otra cosa"
+# 3.31.3: los avisos de IngeCAD 0.6.8, con el detalle y traducidos
+assert C.traducir(C.AVISO_ERRORES + ": «Invalid table entry» (×2)", [otro]) == \
+    "LibreDWG informó errores al armar el DWG: «ERROR: Invalid table entry»"
+from core import i18n
+if hasattr(i18n, "set_language"):
+    i18n.set_language("es")
+    try:
+        es = i18n.tr(C._ERRORES_068, detail="«x»")
+        if es != C._ERRORES_068.format(detail="«x»"):                 # IngeCAD con la traducción
+            assert C.traducir(es, [otro]).startswith("LibreDWG informó errores"), es
+            assert C.traducir(i18n.tr(C._PERDIDOS_068, before=10, after=8), []).startswith(
+                "se perdieron objetos del dibujo al guardar (10 → 8)")
+            assert C.traducir(i18n.tr(C.AVISO_REABRIR), []).startswith("no se pudo volver a abrir")
+            print("ok traducir los avisos en español de IngeCAD:", es)
+    finally:
+        i18n.set_language("en")
+assert C.traducir("otra cosa", []) == "otra cosa"
 print("ok traducir")
 
 # ------------------------------------------------------------- 4. verify_dwg envuelto
@@ -87,7 +105,8 @@ assert B.verify_dwg(dxf, dwg, "\n".join([FALSA] * 3)) == []                  # f
 av = B.verify_dwg(dxf, dwg, f"{FALSA}\n{otro}")
 assert av == ["LibreDWG informó errores al armar el DWG: «ERROR: Invalid table entry»"], av
 mods.poner("ingecad", "dwg", False)                                          # apagado: como viene
-assert B.verify_dwg(dxf, dwg, "\n".join([FALSA] * 3)) == [C.AVISO_ERRORES]
+av = B.verify_dwg(dxf, dwg, "\n".join([FALSA] * 3))   # 0.6.8: con el detalle detrás
+assert len(av) == 1 and av[0].startswith(C.AVISO_ERRORES), av
 mods.poner("ingecad", "dwg", True)
 print("ok verify_dwg")
 

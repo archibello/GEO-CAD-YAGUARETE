@@ -4,6 +4,7 @@ tabla de puntos con residuos y error medio, Lineal / Helmert / Polinómica 1
 sin rehacer la imagen (un solo U la vuelve atrás) y el .points de QGIS.
 3.21.0: Proyectiva, Polinómica 2-3 y Thin Plate Spline, que rehacen la imagen
 (remuestreo y fondo transparente, blanco o los dos)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

@@ -4,6 +4,7 @@ capa (o todo junto), color ACI y grosor, polígonos y sombreados con relleno
 semitransparente (el % elegido), arcos y círculos en tramos, textos y
 bloques como marcadores, atributos de IMPORTARSHP en ExtendedData, y el KMZ
 como un zip con doc.kml."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import json, math, os, tempfile, zipfile
 os.environ["HOME"] = tempfile.mkdtemp()
 import xml.etree.ElementTree as ET

@@ -3,6 +3,7 @@ la base, capa actual, redefinir, Centro / abajo-Izquierda, Convertir /
 Retener / Borrar) y edición EN EL LUGAR (doble clic): contenido en su sitio,
 lo nuevo se suma, Guardar actualiza todas las referencias en un paso que se
 deshace, Descartar deja todo como estaba, no se guarda el dibujo a medias."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

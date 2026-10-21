@@ -2,6 +2,7 @@
 pantalla al momento (la orden dice qué tocó, la vista no regenera), lo
 atrapado entero sigue al cursor como en DESPLAZA y lo que se estira se ve
 estirado antes del clic. Con el módulo apagado, el STRETCH de IngeCAD."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

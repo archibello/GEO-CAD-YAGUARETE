@@ -2,6 +2,7 @@
 altura en mm de hoja (dibujo en metros), lo deja activo y se deshace con U;
 toda cota con un estilo nuestro cae en su capa «COTAS Acot-100-6mm» sin
 cambiar la capa actual. (La ventana usa Qt: se prueba aparte, en IngeCAD.)"""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 os.environ["XDG_CONFIG_HOME"] = os.path.join(os.environ["HOME"], ".config")

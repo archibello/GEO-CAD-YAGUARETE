@@ -18,6 +18,11 @@ colores y sus datos extendidos como atributos.
   la tabla del globo de Google Earth.
 * Todo pegado al suelo (clampToGround), como KMLOUT de Terreno: Google
   Earth nunca entierra un borde bajo su relieve.
+* Las imágenes (3.32.0) van como superposiciones (GroundOverlay) con sus
+  cuatro esquinas (gx:LatLonQuad): el norte de la faja Gauss-Krüger no es
+  el geográfico y una caja norte-sur las torcería. Se lleva el archivo al
+  que apunta la imagen (con ASPECTOIMAGEN, su copia con el aspecto), siempre
+  en PNG: dentro del KMZ, o en «<nombre>_imagenes» junto a un .kml.
 
 Del KMLOUT de Terreno (IngeCAD 0.6.7) se toman los formatos ya probados con
 Google Earth (color aabbggrr, tessellate, 9 decimales = 0,1 mm, el KMZ como
@@ -38,6 +43,7 @@ from pathlib import Path
 from . import intercambio as IX
 
 KML_NS = "http://www.opengis.net/kml/2.2"
+GX_NS = "http://www.google.com/kml/ext/2.2"
 WGS84 = "EPSG:4326"
 RELLENO = 40            # % de opacidad del relleno de los polígonos, si no se elige otro
 #: los grosores de CAD (mm) en píxeles de Google Earth: 0,25 mm (el normal) = 2 px
@@ -48,6 +54,10 @@ GROSOR_NORMAL = 25      # centésimas de mm: «Por defecto» de AutoCAD e IngeCA
 
 def _q(tag: str) -> str:
     return f"{{{KML_NS}}}{tag}"
+
+
+def _gx(tag: str) -> str:
+    return f"{{{GX_NS}}}{tag}"
 
 
 # ------------------------------------------------------------------ estilo
@@ -159,6 +169,16 @@ class Marca:
 
 
 @dataclass
+class Superposicion:
+    """Una imagen del dibujo como GroundOverlay (3.32.0)."""
+    nombre: str
+    capa: str
+    archivo: Path                   # el que usa la imagen en el dibujo
+    esquinas: list                  # [(lon, lat)]: abajo izq., abajo der., arriba der., arriba izq.
+    href: str = ""                  # dentro del KMZ o junto al .kml (lo pone escribir)
+
+
+@dataclass
 class PlanKml:
     marcas: list
     salteados: Counter
@@ -166,12 +186,15 @@ class PlanKml:
     titulo: str
     por_capa: bool = True
     relleno: int = RELLENO
+    superposiciones: list = field(default_factory=list)
 
     def carpetas(self) -> list[tuple[str, list]]:
+        """[(capa, [Superposicion... Marca...])]: las imágenes primero, abajo de todo."""
+        todo = self.superposiciones + self.marcas
         if not self.por_capa:
-            return [("", self.marcas)]
+            return [("", todo)]
         grupos: dict = {}
-        for m in self.marcas:
+        for m in todo:
             grupos.setdefault(m.capa, []).append(m)
         return sorted(grupos.items(), key=lambda kv: kv[0].lower())
 
@@ -235,9 +258,10 @@ def desarmar(entidades, doc, nivel: int = 0):
 
 def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
              relleno: int = RELLENO, cerradas_como_poligono: bool = True,
-             campo_nombre: str = "") -> PlanKml:
+             campo_nombre: str = "", ruta_dibujo=None) -> PlanKml:
     """Lo elegido como marcas en WGS 84. ``campo_nombre``: el atributo del
-    que sale el nombre de líneas y polígonos (si no, «capa número»)."""
+    que sale el nombre de líneas y polígonos (si no, «capa número»).
+    ``ruta_dibujo``: para hallar las imágenes con ruta relativa."""
     origen = IX.sistema_del_dibujo(doc)
     if not origen:
         raise ValueError("el dibujo no tiene sistema de coordenadas (SISTEMAGEO)")
@@ -247,8 +271,16 @@ def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
         return [proy.xy(x, y) for x, y in pts]
 
     marcas, salteados, cuenta = [], Counter(), Counter()
+    superposiciones = []
     for e in desarmar(entidades, doc):
         t = e.dxftype()
+        if t == "IMAGE":
+            s = superposicion(e, ruta_dibujo, proy)
+            if isinstance(s, str):
+                salteados[s] += 1
+            else:
+                superposiciones.append(s)
+            continue
         try:
             tipo, partes, extra = IX.geometria_de(e, doc, cerradas_como_poligono)
         except Exception:  # noqa: BLE001
@@ -294,7 +326,25 @@ def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
             continue
         marcas.append(Marca(k, geom, str(nombre), capa, color_de(e, doc), grosor_de(e, doc),
                             desc, datos, t == "HATCH"))
-    return PlanKml(marcas, salteados, origen, titulo, por_capa, relleno)
+    return PlanKml(marcas, salteados, origen, titulo, por_capa, relleno, superposiciones)
+
+
+def superposicion(img, ruta_dibujo, proy):
+    """La IMAGE como :class:`Superposicion`, o por qué no va (un texto)."""
+    from types import SimpleNamespace
+    from . import georref as G
+    archivo = G.archivo_imagen(img, SimpleNamespace(path=ruta_dibujo))
+    if archivo is None or not archivo.is_file():
+        return "imágenes sin su archivo"
+    try:
+        w, h = G.tamano(img)
+        coef = G.coef_imagen(img)
+        # píxel de QGIS (columna, −fila): abajo a la izquierda es (0, −alto)
+        esquinas = [proy.xy(*G.aplicar(coef, s)) for s in ((0, -h), (w, -h), (w, 0), (0, 0))]
+    except Exception:  # noqa: BLE001
+        return "IMAGE fuera del sistema"
+    nombre = re.sub(r"_aspecto(_\d+)?$", "", archivo.stem)
+    return Superposicion(nombre, img.dxf.get("layer", "0"), archivo, esquinas)
 
 
 # ------------------------------------------------------------------ escribir
@@ -378,13 +428,26 @@ def globo(m: Marca) -> str:
     return tabla + pie
 
 
+def _superposicion(destino, s: Superposicion, orden: int) -> None:
+    go = ET.SubElement(destino, _q("GroundOverlay"))
+    ET.SubElement(go, _q("name")).text = s.nombre
+    ET.SubElement(go, _q("description")).text = f"Capa {s.capa}. Imagen {s.archivo.name}"
+    ET.SubElement(go, _q("drawOrder")).text = str(orden)
+    ET.SubElement(ET.SubElement(go, _q("Icon")), _q("href")).text = s.href
+    ET.SubElement(go, _q("altitudeMode")).text = "clampToGround"
+    quad = ET.SubElement(go, _gx("LatLonQuad"))
+    ET.SubElement(quad, _q("coordinates")).text = _coords(s.esquinas)
+
+
 def texto_kml(plan: PlanKml) -> str:
     ET.register_namespace("", KML_NS)
+    ET.register_namespace("gx", GX_NS)
     raiz = ET.Element(_q("kml"))
     d = ET.SubElement(raiz, _q("Document"))
     ET.SubElement(d, _q("name")).text = plan.titulo
     ET.SubElement(d, _q("description")).text = (
         f"Exportado con GeoCAD Yaguareté desde {IX.nombre(plan.origen)} a WGS 84.")
+    orden = {id(s): k for k, s in enumerate(plan.superposiciones, 1)}
     vistos = set()
     for m in plan.marcas:
         if _estilo_id(m) not in vistos:
@@ -396,6 +459,9 @@ def texto_kml(plan: PlanKml) -> str:
             destino = ET.SubElement(d, _q("Folder"))
             ET.SubElement(destino, _q("name")).text = nombre_c or "0"
         for m in marcas:
+            if isinstance(m, Superposicion):
+                _superposicion(destino, m, orden[id(m)])
+                continue
             pm = ET.SubElement(destino, _q("Placemark"))
             if m.nombre:
                 ET.SubElement(pm, _q("name")).text = m.nombre
@@ -411,19 +477,79 @@ def texto_kml(plan: PlanKml) -> str:
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(raiz, encoding="unicode")
 
 
+def nombres_png(superposiciones) -> list[str]:
+    """Un nombre de PNG por imagen, sin repetir (dos imágenes del mismo
+    archivo comparten el suyo)."""
+    usados, por_archivo, out = set(), {}, []
+    for s in superposiciones:
+        clave = str(s.archivo)
+        if clave not in por_archivo:
+            base = re.sub(r"[^\w.-]+", "_", s.archivo.stem) or "imagen"
+            nombre, k = f"{base}.png", 2
+            while nombre.lower() in usados:
+                nombre, k = f"{base}_{k}.png", k + 1
+            usados.add(nombre.lower())
+            por_archivo[clave] = nombre
+        out.append(por_archivo[clave])
+    return out
+
+
+def png(archivo) -> bytes | None:
+    """El archivo en PNG: un PNG va tal cual (None: copiarlo); los demás se
+    convierten con Pillow, con su transparencia."""
+    archivo = Path(archivo)
+    with open(archivo, "rb") as f:
+        if f.read(8) == b"\x89PNG\r\n\x1a\n":
+            return None
+    import io
+    from . import aspecto
+    im = aspecto.abrir(archivo)
+    if im.mode not in ("RGB", "RGBA", "L", "LA", "P", "1"):
+        im = im.convert("RGBA" if "A" in im.mode or "transparency" in im.info else "RGB")
+    buf = io.BytesIO()
+    im.save(buf, "PNG", compress_level=3)
+    return buf.getvalue()
+
+
 def escribir(plan: PlanKml, ruta) -> Path:
     """``.kmz`` (un zip con doc.kml, lo que abre Google Earth con doble
     clic) o ``.kml`` (texto). Se escribe a un temporal y se reemplaza al
-    final: si algo falla, el archivo que había queda como estaba."""
+    final: si algo falla, el archivo que había queda como estaba. Las
+    imágenes, en PNG: en «imagenes/» del KMZ, o en «<nombre>_imagenes»
+    junto al .kml. Esa carpeta puede ser la de las imágenes del dibujo
+    (PEGARIMAGEN, ASPECTOIMAGEN): ahí no se pisa nada; un PNG que ya está
+    se nombra tal cual."""
     ruta = Path(ruta)
-    texto = texto_kml(plan)
+    es_kml = ruta.suffix.lower() == ".kml"
+    carpeta = f"{ruta.stem}_imagenes" if es_kml else "imagenes"
+    nombres = nombres_png(plan.superposiciones)
+    archivos = list(dict.fromkeys(zip(nombres, (s.archivo for s in plan.superposiciones))))
     tmp = ruta.with_name(ruta.name + ".tmp")
     try:
-        if ruta.suffix.lower() == ".kml":
-            tmp.write_text(texto, encoding="utf-8")
+        if es_kml:
+            final = {}
+            for n, archivo in archivos:
+                datos = png(archivo)
+                if datos is None and archivo.resolve().parent == (ruta.parent / carpeta).resolve():
+                    final[n] = archivo.name
+                    continue
+                if datos is None:
+                    datos = archivo.read_bytes()
+                final[n] = guardar_imagen(datos, ruta.parent / carpeta, n).name
+            for s, n in zip(plan.superposiciones, nombres):
+                s.href = f"{carpeta}/{final[n]}"
+            tmp.write_text(texto_kml(plan), encoding="utf-8")
         else:
+            for s, n in zip(plan.superposiciones, nombres):
+                s.href = f"{carpeta}/{n}"
             with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-                z.writestr("doc.kml", texto)
+                z.writestr("doc.kml", texto_kml(plan))
+                for n, archivo in archivos:      # el PNG ya viene comprimido
+                    datos = png(archivo)
+                    if datos is None:
+                        z.write(archivo, f"{carpeta}/{n}", zipfile.ZIP_STORED)
+                    else:
+                        z.writestr(f"{carpeta}/{n}", datos, zipfile.ZIP_STORED)
         tmp.replace(ruta)
     finally:
         if tmp.exists():
@@ -435,9 +561,12 @@ def resumen(plan: PlanKml, ruta) -> str:
     tipos = Counter(m.tipo for m in plan.marcas)
     nombres = {"poligono": "polígono(s)", "linea": "línea(s)", "texto": "texto(s)",
                "bloque": "bloque(s)", "punto": "punto(s)"}
-    partes = ", ".join(f"{tipos[k]} {v}" for k, v in nombres.items() if tipos[k])
+    partes = ", ".join([f"{tipos[k]} {v}" for k, v in nombres.items() if tipos[k]]
+                       + ([f"{len(plan.superposiciones)} imagen(es)"]
+                          if plan.superposiciones else []))
     carpetas = len(plan.carpetas()) if plan.por_capa else 0
-    texto = (f"{len(plan.marcas)} objeto(s) a {Path(ruta).name} ({partes}), de "
+    total = len(plan.marcas) + len(plan.superposiciones)
+    texto = (f"{total} objeto(s) a {Path(ruta).name} ({partes}), de "
              f"{IX.nombre(plan.origen)} a WGS 84")
     texto += f", en {carpetas} carpeta(s) (una por capa)." if carpetas else ", todo junto."
     if plan.salteados:
@@ -464,6 +593,7 @@ class Lugar:
     datos: list = field(default_factory=list)      # ExtendedData: [(nombre, texto)]
     n: int = 0                      # número de Placemark (las partes de un MultiGeometry comparten datos)
     solo_rotulo: bool = False       # marcador sin ícono: un texto (así exporta los textos EXPORTARKML)
+    href: str = ""                  # imagen (3.32.0): su archivo; geometria = las 4 esquinas
 
 
 def _local(tag) -> str:
@@ -615,6 +745,44 @@ def _geometrias(el, base: Lugar, colores: dict, out: list, salteados: Counter) -
         salteados["modelos 3D"] += 1
 
 
+def esquinas_caja(norte, sur, este, oeste, giro=0.0) -> list:
+    """Las 4 esquinas de un LatLonBox (abajo izq., abajo der., arriba der.,
+    arriba izq.), giradas ``giro`` grados en sentido antihorario alrededor
+    del centro, como lo dibuja Google Earth."""
+    cx, cy = (este + oeste) / 2, (norte + sur) / 2
+    co, si = math.cos(math.radians(giro)), math.sin(math.radians(giro))
+    out = []
+    for x, y in ((oeste, sur), (este, sur), (este, norte), (oeste, norte)):
+        dx, dy = x - cx, y - cy
+        out.append((cx + dx * co - dy * si, cy + dx * si + dy * co))
+    return out
+
+
+def superposicion_leida(el, carpeta: str, n: int):
+    """Un GroundOverlay como Lugar «imagen», o por qué no se trae."""
+    href = _texto(_hijo(el, "Icon"), "href")
+    if not href:
+        return "imágenes sin archivo"
+    if re.match(r"[a-z][a-z0-9+.-]*://", href, re.I) and not href.lower().startswith("file:"):
+        return "imágenes de internet"
+    esquinas = []
+    for nodo in el.iter():
+        if _local(nodo.tag) == "LatLonQuad":
+            esquinas = _anillo(nodo)
+            break
+        if _local(nodo.tag) == "LatLonBox":
+            try:
+                lados = [float(_texto(nodo, k)) for k in ("north", "south", "east", "west")]
+            except ValueError:
+                break
+            esquinas = esquinas_caja(*lados, float(_texto(nodo, "rotation") or 0))
+            break
+    if len(esquinas) != 4:
+        return "imágenes sin ubicación"
+    nombre = _texto(el, "name") or Path(href).stem
+    return Lugar("imagen", esquinas, nombre, carpeta, "", [], n, href=href)
+
+
 def leer_texto(texto) -> tuple[list, Counter]:
     """Los Placemark de un KML como [Lugar] y lo que no se lee."""
     raiz = ET.fromstring(texto)
@@ -640,8 +808,16 @@ def leer_texto(texto) -> tuple[list, Counter]:
             if len(out) == antes and sum(salteados.values()) == saltados:
                 salteados["marcadores sin geometría"] += 1
             return
-        if tag in ("GroundOverlay", "ScreenOverlay", "PhotoOverlay"):
-            salteados["imágenes superpuestas"] += 1
+        if tag == "GroundOverlay":
+            n += 1
+            lg = superposicion_leida(el, carpeta, n)
+            if isinstance(lg, str):
+                salteados[lg] += 1
+            else:
+                out.append(lg)
+            return
+        if tag in ("ScreenOverlay", "PhotoOverlay"):
+            salteados["imágenes de pantalla o fotos"] += 1
             return
         if tag == "NetworkLink":
             salteados["vínculos de red"] += 1
@@ -651,6 +827,25 @@ def leer_texto(texto) -> tuple[list, Counter]:
 
     recorrer(raiz, "")
     return out, salteados
+
+
+def datos_imagen(ruta, href: str) -> bytes:
+    """El archivo ``href`` de un GroundOverlay: dentro del KMZ (relativo a
+    su .kml) o en disco, relativo al KML."""
+    from urllib.parse import unquote, urlparse
+    ruta = Path(ruta)
+    if href.lower().startswith("file:"):
+        return Path(unquote(urlparse(href).path)).read_bytes()
+    href = unquote(href).replace("\\", "/")
+    if zipfile.is_zipfile(ruta):
+        with zipfile.ZipFile(ruta) as z:
+            nombres = {n.lower(): n for n in z.namelist()}
+            for prueba in (href, href.lstrip("./")):
+                if prueba.lower() in nombres:
+                    return z.read(nombres[prueba.lower()])
+        return (ruta.parent / href).read_bytes()      # un KMZ que nombra algo de afuera
+    p = Path(href)
+    return (p if p.is_absolute() else ruta.parent / p).read_bytes()
 
 
 def leer(ruta) -> tuple[list, Counter]:
@@ -759,10 +954,53 @@ def nombre_generado(nombre: str, carpeta: str) -> bool:
     return bool(carpeta) and re.fullmatch(re.escape(carpeta) + r" \d+", nombre) is not None
 
 
-def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.PlanImportar":
+def tamano_y_alfa(datos: bytes) -> tuple[int, int, bool]:
+    """Ancho, alto y si trae transparencia. Un PNG se lee de su cabecera
+    (sin Pillow); los demás, con Pillow."""
+    if datos[:8] == b"\x89PNG\r\n\x1a\n" and datos[12:16] == b"IHDR":
+        ancho, alto = int.from_bytes(datos[16:20], "big"), int.from_bytes(datos[20:24], "big")
+        return ancho, alto, datos[25] in (4, 6) or b"tRNS" in datos[:datos.find(b"IDAT")]
+    import io
+    from . import imagengeo
+    with imagengeo._abrir_imagen(io.BytesIO(datos)) as im:
+        return im.size[0], im.size[1], imagengeo.tiene_alfa(im)
+
+
+def guardar_imagen(datos: bytes, carpeta, nombre: str) -> Path:
+    """La imagen del KMZ en ``carpeta``, sin pisar ninguna; si ya está la
+    misma (importar dos veces el mismo KMZ), se usa esa."""
+    carpeta = Path(carpeta)
+    carpeta.mkdir(parents=True, exist_ok=True)
+    p = Path(nombre)
+    base = re.sub(r"[^\w.-]+", "_", p.stem) or "imagen"
+    ext = p.suffix.lower() if re.fullmatch(r"\.\w{1,5}", p.suffix) else ".png"
+    for k in range(1, 1000):
+        destino = carpeta / f"{base}{'' if k == 1 else f'_{k}'}{ext}"
+        if not destino.exists():
+            destino.write_bytes(datos)
+            return destino
+        if destino.stat().st_size == len(datos) and destino.read_bytes() == datos:
+            return destino
+    raise OSError("demasiadas imágenes con el mismo nombre")
+
+
+def coef_de_esquinas(esquinas, ancho: int, alto: int):
+    """Los coeficientes de la imagen (píxel de QGIS -> dibujo) que mejor
+    llevan sus esquinas a ``esquinas`` (abajo izq., abajo der., arriba der.,
+    arriba izq.), y el mayor apartamiento (afín: en el dibujo la imagen es un
+    paralelogramo; las 4 esquinas de Google Earth casi siempre lo son)."""
+    from . import georref as G
+    pixeles = [(0, -alto), (ancho, -alto), (ancho, 0), (0, 0)]
+    coef = G.ajustar("polinomica1", pixeles, esquinas)
+    return coef, max(r[2] for r in G.residuos(coef, pixeles, esquinas))
+
+
+def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None,
+                  ruta_dibujo=None) -> "IX.PlanImportar":
     """Lo que IMPORTARKML agrega, como UN paso de deshacer: de WGS 84 al
-    sistema del dibujo (o al de ``op.sistema``, que queda asignado)."""
-    from . import importados
+    sistema del dibujo (o al de ``op.sistema``, que queda asignado). Las
+    imágenes (3.32.0) se copian a «<dibujo>_imagenes» (como PEGARIMAGEN)."""
+    from . import imagengeo, importados, pegarimagen
     destino = IX.sistema_del_dibujo(doc)
     adoptado = ""
     if not destino:
@@ -791,7 +1029,9 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
     if op.atributos and columnas:
         campos = [IX.shpio.DbfField(n_c, *_tipo_campo(vs), 0) for n_c, vs in columnas.items()]
         tabla = importados.nombre_libre(nombre_a, set(importados.tablas(doc)))
-    fuera = textos_fuera = rotulos = 0
+    fuera = textos_fuera = rotulos = imagenes = 0
+    sin_imagen: Counter = Counter()
+    torcidas = []
     marcadores = set()
     for lg in lugares:
         try:
@@ -799,6 +1039,23 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
                     else [[proy.xy(*p) for p in a] for a in lg.geometria])
         except Exception:  # noqa: BLE001
             fuera += 1
+            continue
+        if lg.tipo == "imagen":
+            try:
+                datos = datos_imagen(ruta, lg.href)
+                ancho, alto, alfa = tamano_y_alfa(datos)
+                coef, apartamiento = coef_de_esquinas(geom, ancho, alto)
+            except Exception:  # noqa: BLE001 -- archivo que falta o que no es una imagen
+                sin_imagen[Path(lg.href).name] += 1
+                continue
+            archivo = guardar_imagen(datos, pegarimagen.carpeta_destino(ruta_dibujo),
+                                     Path(lg.href).name)
+            if apartamiento > max(abs(coef[1]), abs(coef[5]), 0.01):
+                torcidas.append(f"{lg.nombre} ({_num(apartamiento)} m)")
+            capa = capa_para(op.capa_fija if op.capa == "fija" else lg.carpeta)
+            marcadores.add(lg.n)
+            fabricas.append((capa, imagengeo.fabrica(archivo, ancho, alto, coef, alfa)))
+            imagenes += 1
             continue
         if lg.tipo == "punto" and lg.solo_rotulo and not lg.datos and not op.textos:
             textos_fuera += 1           # 3.30.4: los rótulos los hace ROTULOSIG
@@ -831,6 +1088,14 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
                 p = _centro(geom[0]) if lg.tipo == "poligono" else _medio(geom)
                 fabricas.append((capa, _fab_texto(lg.nombre, p, op.altura, "MIDDLE_CENTER", color)))
             rotulos += 1
+    if imagenes:
+        avisos.append(("Con 1 imagen" if imagenes == 1 else f"Con {imagenes} imágenes")
+                      + f" en {pegarimagen.carpeta_destino(ruta_dibujo).name}.")
+    if sin_imagen:
+        avisos.append("No se encontraron las imágenes: " + ", ".join(sorted(sin_imagen)) + ".")
+    if torcidas:
+        avisos.append("Imágenes que no son un paralelogramo en el dibujo (quedan con su forma "
+                      "más parecida): " + ", ".join(torcidas) + ".")
     if rotulos:                         # 3.30.5: aparte de los objetos (antes 3 marcadores daban «5»)
         avisos.append(f"Con {rotulos} rótulo(s) del nombre de cada marcador.")
     if fuera:
@@ -851,7 +1116,10 @@ def plan_importar(doc, ruta, lugares, op: OpcionesKml, salteados=None) -> "IX.Pl
                       "y espesor.")
     comandos += [IX.AddToModelCommand("IMPORTARKML", f, layer=c) for c, f in fabricas]
     conversion = f"de WGS 84 a {IX.nombre(destino)}"
-    return IX.PlanImportar(IX.CompositeCommand("importar KML", comandos), len(fabricas),
+    compuesto = IX.CompositeCommand("importar KML", comandos)
+    if imagenes:
+        compuesto.needs_regen = True    # como IMAGEATTACH: los píxeles piden la regeneración
+    return IX.PlanImportar(compuesto, len(fabricas),
                            [(Path(ruta).name, len(marcadores), len(fabricas) - rotulos, WGS84,
                              conversion)],
                            avisos, adoptado, [tabla] if campos is not None and fabricas else [])

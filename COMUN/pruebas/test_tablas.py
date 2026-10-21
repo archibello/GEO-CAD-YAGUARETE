@@ -3,6 +3,7 @@ dónde viene lo copiado (GenOffice, QGIS, Calc, Excel, texto), pega como
 tabla con el formato de la planilla (anchos, combinadas, letras, colores,
 espesor de los bordes), ubicada con dos puntos que le dan la escala (modelo
 o papel), o como dibujo y textos (la geometría de QGIS en su lugar)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

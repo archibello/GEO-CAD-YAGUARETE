@@ -1,6 +1,7 @@
 """Módulos de GeoCAD: se eligen al instalar (o la primera vez en QGIS), se
 cambian desde el menú y, apagados, no dejan rastro en ninguno de los dos
 programas."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, shutil, json
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 CFG = tempfile.mkdtemp(); os.environ["XDG_CONFIG_HOME"] = CFG
@@ -15,8 +16,8 @@ lp = load_plugin(ROOT / "INGECAD" / "codigo" / "geocad", bundled=False); assert 
 M = import_module("ingecad_plugin_geocad.modulos")
 cfg = import_module("ingecad_plugin_geocad.config")
 assert not M.elegido("ingecad") and not M.elegido("qgis")
-assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "angulos_relativos": True}
-assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True, "tablas": True}
+assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "googleearth": True, "angulos_relativos": True}
+assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True, "tablas": True, "googleearth": True}
 M.guardar("qgis", {"dibujo": False, "capas": False, "inventado": True})          # (Dibujo y Capas: test_submodulos)
 assert M.estado("qgis")["bloques"] is False                                      # Bloques necesita Dibujo
 assert "inventado" not in json.loads(M.archivo().read_text())["qgis"]
@@ -43,6 +44,7 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Tablas: Pegar tabla (PEGARTABLA), "
                                 "Intercambio: sistema de coordenadas, Importar y Exportar SHP, "
                                 "Control de los DWG al guardar, "
+                                "Google Earth: captura georreferenciada y mosaico, "
                                 "Ángulos relativos al tramo anterior")
 print("ok catálogo")
 
@@ -94,7 +96,7 @@ assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec
-assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "ASPECTOIMAGEN"} and "QGISEXPORT" not in items(spec.menu)
+assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "ASPECTOIMAGEN", "GEOEARTHINSERT"} and "QGISEXPORT" not in items(spec.menu)
 assert {"GEOCADMODULES", "QGISUPDATE", "GEOCADABOUT", "ANGREL"} <= set(spec.commands)
 # GEOCADMODULES sin ventana: informa; ACERCAGEOCAD dice la versión y los módulos
 log = []; ctx = types.SimpleNamespace(host=None, echo=log.append)
@@ -170,16 +172,23 @@ QDialog.respuesta = 1
 est = real(sys.modules["qgis.PyQt.QtWidgets"], None, "qgis", False)
 # «tablas» (3.23.0) no estaba en lo guardado: módulo nuevo, se ofrece prendido
 assert est == {"puente": True, "dibujo": False, "bloques": False, "papel": False, "capas": False,
-              "tablas": True}
+              "tablas": True, "googleearth": True}
+# Google Earth (3.33.0): su submenú con las tres entradas, sólo con el módulo
+sub_ge = [i for i in G.menu.items if getattr(i, "title", "") == "Google Earth"]
+assert len(sub_ge) == 1 and [a.text for a in sub_ge[0].items] == [
+    "Abrir Google Earth con GeoCAD", "Capturar vista (Ctrl+Alt+G)", "Configurar captura..."]
+Mq.guardar("qgis", {"googleearth": False}); G.aplicar_modulos()
+assert not [i for i in G.menu.items if getattr(i, "title", "") == "Google Earth"]
+Mq.guardar("qgis", {"googleearth": True}); G.aplicar_modulos()
 print("ok QGIS")
 # ---- 5. módulos que llegan con una versión nueva se ofrecen (caso real de Fernando) ----
 data = json.loads(Mq.archivo().read_text())
 data.pop("_vistos", None)
 data["qgis"] = {"puente": True, "dibujo": False, "capas": False}       # lo que guardó GeoCAD 2.0.0
 Mq.archivo().write_text(json.dumps(data))
-assert Mq.nuevos("qgis") == ["dibujo", "bloques", "papel", "capas", "tablas"]
-assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True, "tablas": True}
-assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "intercambio", "dwg"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1)
+assert Mq.nuevos("qgis") == ["dibujo", "bloques", "papel", "capas", "tablas", "googleearth"]
+assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True, "capas": True, "tablas": True, "googleearth": True}
+assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "intercambio", "dwg", "googleearth"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1), Google Earth (3.33)
 QDialog.abiertos.clear(); QDialog.respuesta = 0                          # Cancelar: quedan sus valores por defecto
 G._primer_inicio()
 assert QDialog.abiertos and Mq.nuevos("qgis") == [] and Mq.activo("qgis", "capas")

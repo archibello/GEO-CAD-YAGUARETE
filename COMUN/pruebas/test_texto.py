@@ -2,6 +2,7 @@
 inicio, 2º la altura, 3º la dirección; mientras se eligen la altura y la
 dirección, una «Ɪ» de muestra dibujada como texto de verdad (preview_command)
 que crece y gira con el cursor, sin tocar el plano ni el historial."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

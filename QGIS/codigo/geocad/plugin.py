@@ -37,7 +37,7 @@ from . import actualizar, bloqueo, buzon, config, desde_ingecad, modulos, nombre
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.31.2"
+VERSION = "3.33.2"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -185,6 +185,24 @@ class GeoCAD:
                 self.tablas.pegar_menu, self.tablas.icono())
             add("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
                 self.tablas.copiar_menu, self.tablas.icono_copiar())
+        if modulos.activo(PROGRAMA, "googleearth"):
+            self.menu.addSeparator()
+            from . import googleearth_qgis as GEQ
+
+            sub = self.menu.addMenu("Google Earth")
+            self._submenus.append(sub)
+            iconos = Path(__file__).parent / "iconos"
+            for clave, texto, slot, icono in (
+                    ("ge_abrir", "Abrir Google Earth con GeoCAD",
+                     lambda: GEQ.abrir(self.iface, abrir_ge=True), "google_earth.png"),
+                    ("ge_capturar", "Capturar vista (Ctrl+Alt+G)",
+                     lambda: GEQ.abrir(self.iface, capturar=True), "capturar_ge.png"),
+                    ("ge_configurar", "Configurar captura...", lambda: GEQ.configurar(self.iface), "")):
+                a = QAction(QIcon(str(iconos / icono)), texto, self.iface.mainWindow()) if icono \
+                    else QAction(texto, self.iface.mainWindow())
+                a.triggered.connect(slot)
+                sub.addAction(a)
+                self.actions[clave] = a
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
         add("config", "Configuración común...", self.open_config)
@@ -286,6 +304,9 @@ class GeoCAD:
             self.subs.descargar()
             self._cargar_subs()
         self._sync_tablas()
+        if not modulos.activo(PROGRAMA, "googleearth"):
+            from . import googleearth_qgis
+            googleearth_qgis.apagar()           # ventanita, servidor, atajo y enlace fuera
         self._build_menu()
         self._sync_toolbar()
         if not self._puente():
@@ -301,6 +322,8 @@ class GeoCAD:
 
     def unload(self) -> None:
         self._quitar_tablas()
+        from . import googleearth_qgis
+        googleearth_qgis.apagar()
         if self.subs is not None:
             self.subs.descargar()
             self.subs = None
@@ -474,6 +497,12 @@ class GeoCAD:
             carpeta = msg.get("carpeta") or config.get("carpeta_actualizaciones")
             QTimer.singleShot(0, lambda: self.update_bridge(carpeta, avisar_ingecad=False,
                                                             silencioso=True))
+            return
+        if msg.get("tipo") == "imagen_google_earth":
+            from . import googleearth_qgis
+            texto = googleearth_qgis.recibir(self.iface, msg)
+            if texto:
+                QTimer.singleShot(0, lambda: self._bar(texto, "ok", 10))
             return
         if msg.get("tipo") == desde_ingecad.TIPO_MENSAJE:
             QTimer.singleShot(0, lambda m=msg: self.receive_new_layers(m))

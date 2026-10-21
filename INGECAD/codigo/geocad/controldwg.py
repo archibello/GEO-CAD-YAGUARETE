@@ -26,6 +26,11 @@ escribe (el DXF de IngeCAD los trae idénticos a los que dio dwg2dxf). Son los
 estilos que AutoCAD 2013+ crea en todo dibujo («Imperial24», «Metric50») para
 las vistas de detalle y de corte de modelos 3D (VIEWBASE); el DWG r2000 no
 los tiene y LibreDWG los descarta siempre: no se pierde nada del dibujo.
+
+3.31.3: IngeCAD 0.6.8 corrigió esas dos falsas alarmas en su LibreDWG (el
+filtro queda para los IngeCAD anteriores) y cambió sus avisos: el de errores
+trae el detalle («...packing the file: «x» (×3)») y los tres salen
+traducidos al idioma de IngeCAD. Se reconocen las dos formas.
 """
 from __future__ import annotations
 
@@ -104,17 +109,51 @@ def detalle(errores) -> str:
     return "; ".join(partes)
 
 
-def traducir(aviso: str, errores) -> str:
-    """El aviso de IngeCAD en español (y con los errores, si los hay)."""
-    if aviso == AVISO_ERRORES:
-        texto = "LibreDWG informó errores al armar el DWG"
-        return f"{texto}: {detalle(errores)}" if errores else texto
-    if aviso == AVISO_REABRIR:
-        return "no se pudo volver a abrir el DWG guardado para controlarlo"
+#: los avisos de IngeCAD 0.6.8 (pasan por su traducción)
+_ERRORES_068 = "the DWG writer reported internal errors while packing the file: {detail}"
+_PERDIDOS_068 = "some drawing objects did not survive the save ({before} → {after})"
+
+
+def _traducido(texto: str, **campos) -> str:
+    """``texto`` en el idioma de IngeCAD (el mismo si no hay traducción)."""
+    try:
+        from core.i18n import tr
+        return tr(texto, **campos)
+    except Exception:  # noqa: BLE001 - IngeCAD sin traducciones
+        return texto.format(**campos) if campos else texto
+
+
+def _es_aviso_errores(aviso: str) -> bool:
+    if aviso == AVISO_ERRORES or aviso.startswith(AVISO_ERRORES + ":"):
+        return True
+    previo = _traducido(_ERRORES_068, detail="\x00").split("\x00")[0]
+    return bool(previo.strip()) and aviso.startswith(previo)
+
+
+def _perdidos(aviso: str):
+    """(antes, después) si es el aviso de objetos perdidos; si no, None."""
     m = _PERDIDOS.fullmatch(aviso)
     if m:
-        return (f"se perdieron objetos del dibujo al guardar ({m.group(1)} → "
-                f"{m.group(2)}); guarde también en DXF")
+        return m.group(1), m.group(2)
+    partes = re.split("\x01|\x02", _traducido(_PERDIDOS_068, before="\x01", after="\x02"))
+    if len(partes) == 3:
+        m = re.fullmatch(r"(\d+)".join(re.escape(p) for p in partes), aviso)
+        if m:
+            return m.group(1), m.group(2)
+    return None
+
+
+def traducir(aviso: str, errores) -> str:
+    """El aviso de IngeCAD en español (y con los errores, si los hay)."""
+    if _es_aviso_errores(aviso):
+        texto = "LibreDWG informó errores al armar el DWG"
+        return f"{texto}: {detalle(errores)}" if errores else texto
+    if aviso in (AVISO_REABRIR, _traducido(AVISO_REABRIR)):
+        return "no se pudo volver a abrir el DWG guardado para controlarlo"
+    m = _perdidos(aviso)
+    if m:
+        return (f"se perdieron objetos del dibujo al guardar ({m[0]} → "
+                f"{m[1]}); guarde también en DXF")
     return aviso
 
 

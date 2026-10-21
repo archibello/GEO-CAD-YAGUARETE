@@ -2,6 +2,7 @@
 captura de pantalla del portapapeles entra con Ctrl+V y dos clics: la esquina
 inferior izquierda y la inferior derecha, que da la escala (y el giro, si no
 es horizontal). Se guarda como PNG junto al dibujo; U la quita."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import math, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

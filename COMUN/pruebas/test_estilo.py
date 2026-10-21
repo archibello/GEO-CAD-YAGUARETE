@@ -1,5 +1,6 @@
 """3.0.0 GIS to CAD / CAD to GIS: capas (LAYER_CODE), colores y rótulos de
 QGIS llegan a IngeCAD; los cambios de capa y color vuelven a QGIS."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 HOME = tempfile.mkdtemp(); os.environ["HOME"] = HOME
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

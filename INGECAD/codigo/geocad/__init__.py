@@ -16,6 +16,8 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Aspecto de imagen (aspecto.py): ASPECTOIMAGEN, fondo transparente, líneas y opacidad
     Intercambio (intercambio.py, kml.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP,
     EXPORTARKML, IMPORTARKML
+    Google Earth (googleearth_cmd.py y googleearth*.py del núcleo): ABRIRGE, CAPTURARGE
+    (Ctrl+Alt+G), CONFIGURARGE; captura georreferenciada y mosaico
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -28,7 +30,7 @@ from pathlib import Path
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, config, dibujo, modulos, nombre, ventanas
-from . import aspecto, barra, bloques, capas, controldwg, intercambio, legibles, pegarimagen, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, pegarimagen, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -40,7 +42,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.31.2"
+VERSION = "3.33.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -220,6 +222,9 @@ def construir_spec() -> PluginSpec:
             ToolbarItem("Import KML / KMZ from Google Earth (IMPORTKML)", "GEOIMPORTKML",
                         _icon("importar_kml")),
         ]
+    if est["googleearth"]:
+        commands.update(googleearth_cmd.COMMANDS)
+        tools["GEOEARTHINSERT"] = googleearth_cmd.InsertarCapturaTool
     if est["orden"]:
         commands.update(orden.COMMANDS)
         toolbar.append(ToolbarItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")))
@@ -296,6 +301,15 @@ def construir_spec() -> PluginSpec:
             )),
             SEPARATOR,
         ]
+    if est["googleearth"]:
+        menu += [
+            Submenu("Google Earth", (
+                MenuItem("Open Google Earth with GeoCAD", "GEOEARTHOPEN", _icon("google_earth")),
+                MenuItem("Capture view (Ctrl+Alt+G)", "GEOEARTHCAPTURE", _icon("capturar_ge")),
+                MenuItem("Capture settings...", "GEOEARTHSETUP"),
+            )),
+            SEPARATOR,
+        ]
     menu += [
         Submenu("Drawing", (
             MenuItem("Relative angles on/off (ANGREL)", "ANGREL"),
@@ -366,7 +380,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.31.2",
+        version="3.33.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -399,6 +413,8 @@ def aplicar_modulos(window) -> None:
     seleccion.aplicar_autocompletar(window)
     propiedades.refrescar(window)
     papel.preparar_combo(window)
+    if not modulos.activo(PROGRAMA, "googleearth"):
+        googleearth_cmd.apagar()            # ventanita, servidor, atajo y enlace fuera
     if modulos.activo(PROGRAMA, "puente"):
         puente.ensure_started(window)
     else:

@@ -2,6 +2,7 @@
 color de impresión, grosor, tramado y grises por color de AutoCAD (1 Rojo,
 2 Amarillo...), guarda con respaldo y la página provisoria de Page Setup se
 deshace exacta. (Las ventanas usan Qt: se prueban aparte, en IngeCAD.)"""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 os.environ["XDG_CONFIG_HOME"] = os.path.join(os.environ["HOME"], ".config")

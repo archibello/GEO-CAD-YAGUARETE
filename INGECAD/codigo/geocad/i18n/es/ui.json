@@ -71,5 +71,9 @@
   "KML / KMZ... (EXPORTKML)": "KML / KMZ... (EXPORTARKML)",
   "Export KML / KMZ for Google Earth (EXPORTKML)": "Exportar KML / KMZ a Google Earth (EXPORTARKML)",
   "KML / KMZ... (IMPORTKML)": "KML / KMZ... (IMPORTARKML)",
-  "Import KML / KMZ from Google Earth (IMPORTKML)": "Importar KML / KMZ de Google Earth (IMPORTARKML)"
+  "Import KML / KMZ from Google Earth (IMPORTKML)": "Importar KML / KMZ de Google Earth (IMPORTARKML)",
+  "Google Earth": "Google Earth",
+  "Open Google Earth with GeoCAD": "Abrir Google Earth con GeoCAD",
+  "Capture view (Ctrl+Alt+G)": "Capturar vista (Ctrl+Alt+G)",
+  "Capture settings...": "Configurar captura..."
 }

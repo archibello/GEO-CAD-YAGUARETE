@@ -4,6 +4,7 @@ espesor): en una capa de rótulos con muchos chicos y algunos grandes, al
 alejarse desaparecían también los grandes. Con el retoque cada escalón de
 tamaño (media octava) decide por sí mismo. Se prueba con la pantalla real
 de IngeCAD (render.backend, sin Qt)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 os.environ["INGECAD_SERIAL_REGEN"] = "1"
@@ -63,27 +64,54 @@ from ingecad_plugin_geocad.dibujo import desenvolver
 for n in ("enter_entity", "exit_entity", "_bucket"):
     desenvolver(B.VertexBackend, n)
 assert not hasattr(B.VertexBackend._bucket, "_puente_original")
-# sin el retoque: un solo balde de texto, promedio chico
-antes = B.build_scene(dibujo())
-assert len(alturas(antes)) == 1, alturas(antes)
-vis, total = texto_visible(antes, 0.2)        # a esta escala 20 m = 4 px; 0,3 m = 0,06 px
-assert vis == 0, "IngeCAD ya agrupa por tamaño: revisar si el retoque sigue haciendo falta"
 
-assert L.instalar() is True
-assert hasattr(B.VertexBackend._bucket, "_puente_original")
-assert L.instalar() is False                   # una sola vez
-assert not hasattr(B.VertexBackend._bucket._puente_original, "_puente_original")
-despues = B.build_scene(dibujo())
-assert len(alturas(despues)) == 2, alturas(despues)              # chicos y grandes, aparte
-vis, total = texto_visible(despues, 0.2)
-assert vis > 0                                                   # los grandes se ven
-vis_cerca, _ = texto_visible(despues, 100.0)                     # de cerca: todos
-vis_lejos, _ = texto_visible(despues, 0.01)                      # muy lejos: ninguno
-assert vis < vis_cerca and vis_lejos == 0
-# lo que no es texto (líneas) no cambia de balde
-d = dibujo(); d.doc.modelspace().add_line((0, 0), (10, 10), dxfattribs={"layer": "ROTULOS"})
-assert B.build_scene(d).lines.vertex_count > 0
-print("ok cada escalón de tamaño se esconde por su propia altura; de cerca todos, de lejos ninguno")
+
+def visibles_por_tamano(escena):
+    vis, total = texto_visible(escena, 0.2)                     # a esta escala 20 m = 4 px; 0,3 m = 0,06 px
+    vis_cerca, _ = texto_visible(escena, 100.0)                  # de cerca: todos
+    vis_lejos, _ = texto_visible(escena, 0.01)                   # muy lejos: ninguno
+    assert vis > 0 and vis < vis_cerca and vis_lejos == 0, (vis, vis_cerca, vis_lejos)
+
+
+if L.ingecad_lo_hace(B):
+    # 3.31.3: IngeCAD 0.6.8 ya separa los textos por tamaño; el retoque se
+    # aparta (no mezcla su escalón con el de IngeCAD) y los grandes se ven
+    assert L.instalar() is False
+    assert not hasattr(B.VertexBackend._bucket, "_puente_original")
+    for n in ("enter_entity", "exit_entity", "_bucket"):        # puesto antes: se saca
+        from ingecad_plugin_geocad.dibujo import envolver
+        envolver(B.VertexBackend, n, {"enter_entity": L._envolver_enter, "exit_entity": L._envolver_exit,
+                                      "_bucket": L._envolver_bucket}[n], reemplazar=True)
+    assert hasattr(B.VertexBackend._bucket, "_puente_original")
+    assert L.instalar() is False and not hasattr(B.VertexBackend._bucket, "_puente_original")
+    despues = B.build_scene(dibujo())
+    assert len(alturas(despues)) == 2, alturas(despues)
+    visibles_por_tamano(despues)
+    d = dibujo(); d.doc.modelspace().add_line((0, 0), (10, 10), dxfattribs={"layer": "ROTULOS"})
+    assert B.build_scene(d).lines.vertex_count > 0
+    print("ok IngeCAD ya separa los textos por tamaño: el retoque se aparta")
+else:
+    # sin el retoque: un solo balde de texto, promedio chico
+    antes = B.build_scene(dibujo())
+    assert len(alturas(antes)) == 1, alturas(antes)
+    vis, total = texto_visible(antes, 0.2)        # a esta escala 20 m = 4 px; 0,3 m = 0,06 px
+    assert vis == 0, "IngeCAD ya agrupa por tamaño: revisar si el retoque sigue haciendo falta"
+
+    assert L.instalar() is True
+    assert hasattr(B.VertexBackend._bucket, "_puente_original")
+    assert L.instalar() is False                   # una sola vez
+    assert not hasattr(B.VertexBackend._bucket._puente_original, "_puente_original")
+    despues = B.build_scene(dibujo())
+    assert len(alturas(despues)) == 2, alturas(despues)              # chicos y grandes, aparte
+    vis, total = texto_visible(despues, 0.2)
+    assert vis > 0                                                   # los grandes se ven
+    vis_cerca, _ = texto_visible(despues, 100.0)                     # de cerca: todos
+    vis_lejos, _ = texto_visible(despues, 0.01)                      # muy lejos: ninguno
+    assert vis < vis_cerca and vis_lejos == 0
+    # lo que no es texto (líneas) no cambia de balde
+    d = dibujo(); d.doc.modelspace().add_line((0, 0), (10, 10), dxfattribs={"layer": "ROTULOS"})
+    assert B.build_scene(d).lines.vertex_count > 0
+    print("ok cada escalón de tamaño se esconde por su propia altura; de cerca todos, de lejos ninguno")
 
 # 3.27.0: tamaño mínimo configurable (MIN_TEXT_PX de views/viewport.py, que
 # IngeCAD lee en cada dibujado). Sin Qt, una pantalla de mentira.

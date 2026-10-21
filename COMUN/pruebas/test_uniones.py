@@ -1,6 +1,7 @@
 """Uniones de los grosores en pantalla (3.20.2): con LWT, las esquinas de
 las polilíneas y las líneas que se tocan quedan unidas en inglete, sin la
 muesca de cada vértice (modelo y papel)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, math, inspect
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -66,14 +67,19 @@ H = 0.5
 ele = lambda m: m.add_lwpolyline([(0, 0), (10, 0), (10, 10)], dxfattribs=GRUESA)
 afuera = (10.4, -0.4)                                              # la esquina de afuera del codo
 
-# -- apagado: la muesca de siempre
+# -- apagado: la muesca de siempre entre dos LÍNEAs (desde IngeCAD 0.6.8 las
+# esquinas de una misma polilínea ya las cierra IngeCAD; entre objetos
+# distintos no)
+dos = lambda m: (m.add_line((0, 0), (10, 0), dxfattribs=GRUESA), m.add_line((10, 0), (10, 10), dxfattribs=GRUESA))
 real = modulos.estado; est = real("ingecad")
 modulos.estado = lambda prog: {**est, "uniones": False}
 try:
-    sc = escena(ele)
+    sc = escena(dos)
+    ingecad_une = cubierto(escena(ele), afuera, H)
 finally:
     modulos.estado = real
-assert not cubierto(sc, afuera, H), "sin el módulo, IngeCAD deja la muesca"
+assert not cubierto(sc, afuera, H), "sin el módulo, IngeCAD deja la muesca entre dos LÍNEAs"
+print("ok apagado; IngeCAD ya une las esquinas de una polilínea:", ingecad_une)
 
 # -- prendido: la esquina queda llena, en inglete, a cualquier zoom
 sc = escena(ele)
@@ -106,6 +112,35 @@ for a, b in ((((0, 0), (10, 0)), ((10, 0), (10, 10))), (((10, 0), (0, 0)), ((10,
              (((0, 0), (10, 0)), ((10, 10), (10, 0)))):
     sc = escena(lambda m: (m.add_line(*a, dxfattribs=GRUESA), m.add_line(*b, dxfattribs=GRUESA)))
     assert cubierto(sc, afuera, H), (a, b)
+
+# -- 3.31.3: dos LÍNEAs junto a una polilínea en la misma tanda (lo de todo
+# plano). Con IngeCAD 0.6.8, que ya pone sus ingletes, el módulo se
+# apartaba de toda la tanda y volvía la muesca entre las LÍNEAs.
+mezcla = lambda m: (dos(m), m.add_lwpolyline([(50, 0), (60, 0), (60, 10)], dxfattribs=GRUESA),
+                    m.add_lwpolyline([(0, 50), (10, 50), (10, 60), (0, 60)], close=True, dxfattribs=GRUESA))
+sc = escena(mezcla)
+assert cubierto(sc, afuera, H), "las LÍNEAs se unen aunque la tanda traiga polilíneas"
+for esquina in ((60.4, -0.4), (10.4, 49.6), (-0.4, 60.4), (-0.4, 49.6)):
+    assert cubierto(sc, esquina, H), esquina
+assert not cubierto(sc, (50.6, -0.6), H)                                         # la punta suelta, como venía
+# un punto de DASHDOT (tramo de largo 0, IngeCAD 0.6.8) no se toca
+def punteada(m):
+    if "PUNTOS" not in m.doc.linetypes:
+        m.doc.linetypes.add("PUNTOS", pattern=[2.0, 1.0, -0.5, 0.0, -0.5])   # raya, punto
+    dos(m)
+    m.add_line((0, 20), (40, 20), dxfattribs={**GRUESA, "linetype": "PUNTOS"})
+sc = escena(punteada)
+assert cubierto(sc, afuera, H)
+v = sc.thick.data.reshape(-1, 6)
+puntos = (v["pos"][:, 0] == v["pos"][:, 2]).all(axis=1)
+assert len(v) > 10, len(v)                                                       # la línea va en rayas
+modulos.estado = lambda prog: {**est, "uniones": False}
+try:
+    sin_p = escena(punteada).thick.data.reshape(-1, 6)
+finally:
+    modulos.estado = real
+assert (v["normal"][puntos] == sin_p["normal"][puntos]).all(), "los puntos quedan como venían"
+print("ok LÍNEAs junto a polilíneas y líneas punteadas (puntos de largo 0:", int(puntos.sum()), ")")
 
 # -- lo que no se une: otro color, tres tramos en un punto, otro grosor
 sc = escena(lambda m: (m.add_line((0, 0), (10, 0), dxfattribs=GRUESA),

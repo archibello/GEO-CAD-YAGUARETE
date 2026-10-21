@@ -146,5 +146,17 @@
   },
   "GEOIMPORTKML": {
     "name": "IMPORTARKML"
+  },
+  "GEOEARTHOPEN": {
+    "name": "ABRIRGE"
+  },
+  "GEOEARTHCAPTURE": {
+    "name": "CAPTURARGE"
+  },
+  "GEOEARTHSETUP": {
+    "name": "CONFIGURARGE"
+  },
+  "GEOEARTHINSERT": {
+    "name": "INSERTARGE"
   }
 }

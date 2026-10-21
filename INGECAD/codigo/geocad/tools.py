@@ -134,9 +134,8 @@ class ConnectTool(Tool):
     # -- leer lo pedido ------------------------------------------------------------
     def _read_gpkg(self, path, table, fids, bbox):
         """(info, features, total, skipped) o None si no se pudo."""
-        import sqlite3
-
         from . import gpkgio as G
+        from .gpkgio import sqlite3
 
         echo = self.ctx.echo
         try:

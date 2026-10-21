@@ -2,6 +2,7 @@
 F, ALL, L, P, R, A, U (y en español V, PV, PC, B, TODO, UL, E, H) escritos en
 cualquier «Select objects»; la orden SEL; la línea de comandos sin
 autocompletar; la vista previa de la ventana, el polígono y el borde."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

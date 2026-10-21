@@ -1,0 +1,29 @@
+GeoCAD - versión 3.33.2
+=======================
+GOOGLE EARTH: CORRECCIONES DE LA PRUEBA DE FERNANDO CON LA 3.33.1 (20/10/2026,
+IngeCAD, 31429-contransparencias).
+
+- IngeCAD: la ventanita no veía el sistema del dibujo. Después de SISTEMAGEO
+  seguía diciendo «Falta el sistema: el dibujo no tiene sistema» y «Llevar
+  Google Earth a lo que veo en IngeCAD» no andaba. Causa: se leía la pestaña
+  en vez del dibujo que hay adentro. Ahora se lee el sistema declarado con
+  SISTEMAGEO, y la lista, el resumen y la zona se ponen al día solos.
+- Si el dibujo no tiene sistema pero se eligió uno en Configurar captura >
+  «Este:», la pantalla de IngeCAD / QGIS se toma en ese sistema («Llevar» y
+  «Lo que veo en IngeCAD» ya no quedan sin salida).
+- La lista «Listo para capturar» ya no queda cortada: la ventanita se
+  acomoda cuando el texto cambia.
+- «Google Earth abre el enlace de GeoCAD...» ya no sale en rojo (no es un
+  error) y lleva la hora.
+- Aclaración (no es un error): Google Earth arranca siempre mostrando el
+  globo; recién va a la zona con «Llevar» o cuando se lo mueve.
+
+Pruebas
+- test_googleearth: el sistema de un dibujo real con SISTEMAGEO (EPSG:22177)
+  a través de la pestaña, como en IngeCAD; la zona con el sistema de la
+  captura cuando el dibujo no tiene.
+- Ventanita con el Qt real de IngeCAD y de QGIS 3.28 LTS, sin pantalla.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+
+Pruebas manuales
+- Siguen GE1-GE13 (02_PRUEBAS_MANUALES.txt): GE12 y GE13 con SISTEMAGEO.

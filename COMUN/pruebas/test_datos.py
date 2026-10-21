@@ -1,3 +1,4 @@
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, datetime as dt
 os.environ["HOME"] = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

@@ -1,6 +1,7 @@
 """3.0.0 GIS to CAD, lado QGIS: lo que se manda con cada capa (presentacion.py).
 Las funciones sueltas se prueban siempre; con QGIS instalado, también contra
 capas de verdad (sin ventanas)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import json, os, sys, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

@@ -1,6 +1,7 @@
 """Barra «Yaguareté Tools» y carteles de los botones (3.13.0): qué
 herramientas pasan a la barra según los módulos (y salen de su barra de
 IngeCAD), y el cartel como el de AutoCAD: nombre, qué hace y la orden."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

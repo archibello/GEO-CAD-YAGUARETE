@@ -114,6 +114,11 @@ def handle(msg: dict) -> None:
         except ImportError:
             actualizacion.desde_qgis(window, msg, _echo)
         return
+    if msg.get("tipo") == "imagen_google_earth" and window is not None:
+        from . import googleearth_cmd
+
+        googleearth_cmd.recibir(window, msg)       # la captura de Google Earth desde QGIS
+        return
     if msg.get("tipo") != "conectar" or window is None:
         return
     capas = [c for c in msg.get("capas", []) if c.get("ruta")]

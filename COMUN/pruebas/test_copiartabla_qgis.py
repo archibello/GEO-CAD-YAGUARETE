@@ -4,6 +4,7 @@ formato (HTML + texto) y PEGARTABLA la reconoce como «QGIS (composición)».
 La escritura del HTML se prueba sin QGIS; si el QGIS de Flatpak está
 instalado, además se copia una tabla manual y una de atributos de una
 composición de verdad (sin ventanas) y se lee lo que quedó en el portapapeles."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, subprocess, shutil, json
 os.environ["HOME"] = HOME = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__))

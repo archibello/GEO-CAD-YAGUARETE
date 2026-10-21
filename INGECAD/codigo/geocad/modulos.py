@@ -142,6 +142,13 @@ CATALOGO = {
                "conocidas de LibreDWG (bordes de sombreados con Y = 0 y estilos de vista "
                "de AutoCAD 2013+, en planos viejos de AutoCAD) sólo cuando el dibujo las explica, y muestra en español los "
                "errores que quedan, con su texto."),
+        Modulo("googleearth", "Google Earth: captura georreferenciada y mosaico",
+               "Captura georreferenciada de lo que se ve en Google Earth Pro, en planas, desde "
+               "el menú GeoCAD > Google Earth: ventanita «GeoCAD Yaguareté» con el botón CAPTURAR "
+               "(Ctrl+Alt+G con Google Earth al frente), calidad Pantalla o Mosaico (una sola "
+               "imagen hecha de varias capturas más cercanas), GeoTIFF, PNG+PGW o JPG+JGW en una "
+               "carpeta común a IngeCAD y QGIS. Apagado no queda rastro: sin enlace en Google "
+               "Earth ni atajo.", requiere="georref"),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),
@@ -164,6 +171,13 @@ CATALOGO = {
                "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "
                "tabla de QGIS con el formato de la planilla (anchos, combinadas, letras, "
                "colores), ubicada con dos puntos: la esquina inferior derecha sigue al cursor."),
+        Modulo("googleearth", "Google Earth: captura georreferenciada y mosaico",
+               "Captura georreferenciada de lo que se ve en Google Earth Pro, en planas, desde "
+               "el menú GeoCAD > Google Earth: ventanita «GeoCAD Yaguareté» con el botón CAPTURAR "
+               "(Ctrl+Alt+G con Google Earth al frente), calidad Pantalla o Mosaico (una sola "
+               "imagen hecha de varias capturas más cercanas), GeoTIFF, PNG+PGW o JPG+JGW en una "
+               "carpeta común a IngeCAD y QGIS. Apagado no queda rastro: sin enlace en Google "
+               "Earth ni atajo."),
     ),
 }
 

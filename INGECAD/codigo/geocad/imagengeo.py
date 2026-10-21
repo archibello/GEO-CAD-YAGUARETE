@@ -184,6 +184,15 @@ def insertar_command(ruta, ancho: int, alto: int, coef, transparente: bool = Fal
     """La IMAGE en su lugar (capa actual, deshacer de IngeCAD): la esquina de
     abajo a la izquierda y los vectores por píxel salen de ``coef``. Con
     ``transparente`` (la imagen trae alfa) lleva «usar transparencia»."""
+    from .modelo import AddToModelCommand
+    cmd = AddToModelCommand("INSERTARGEO", fabrica(ruta, ancho, alto, coef, transparente))
+    cmd.needs_regen = True                     # como IMAGEATTACH: los píxeles piden la regeneración
+    return cmd
+
+
+def fabrica(ruta, ancho: int, alto: int, coef, transparente: bool = False):
+    """La función que crea la IMAGE (para AddToModelCommand; también la usa
+    IMPORTARKML, 3.32.0)."""
     a, b, c, d, e, f = coef
     esquina = G.aplicar(coef, (0.0, -float(alto)))
 
@@ -197,10 +206,7 @@ def insertar_command(ruta, ancho: int, alto: int, coef, transparente: bool = Fal
             img.set_flag_state(img.USE_TRANSPARENCY, state=True)
         return img
 
-    from .modelo import AddToModelCommand
-    cmd = AddToModelCommand("INSERTARGEO", factory)
-    cmd.needs_regen = True                     # como IMAGEATTACH: los píxeles piden la regeneración
-    return cmd
+    return factory
 
 
 # ------------------------------------------------------------- ventanas de archivo

@@ -813,6 +813,11 @@ class ExportarKmlDialog(QDialog):
         lay = QVBoxLayout(self)
         lay.addWidget(QLabel(f"De <b>{IX.nombre(IX.sistema_del_dibujo(doc))}</b> (el sistema del "
                              "dibujo) a <b>WGS 84</b>, el de Google Earth."))
+        nota = QLabel("Las imágenes van como superposiciones, con su aspecto, en PNG: dentro del "
+                      "KMZ, o en la carpeta «<nombre>_imagenes» junto al KML.")
+        nota.setWordWrap(True)
+        nota.setTextFormat(Qt.PlainText)
+        lay.addWidget(nota)
         # qué
         g = QGroupBox("Qué")
         v = QVBoxLayout(g)
@@ -950,11 +955,12 @@ def exportar_kml(ctx) -> None:
         entidades = list(doc.modelspace())
     try:
         plan = KML.plan_kml(entidades, doc, base, dlg.por_capa.isChecked(), dlg.relleno.value(),
-                                dlg.poligonos.isChecked(), dlg.nombre.currentData() or "")
+                                dlg.poligonos.isChecked(), dlg.nombre.currentData() or "",
+                                archivo)
     except Exception as exc:  # noqa: BLE001
         ctx.echo(f"EXPORTARKML: {exc}")
         return
-    if not plan.marcas:
+    if not plan.marcas and not plan.superposiciones:
         ctx.echo("EXPORTARKML: no hay nada que se pueda exportar en lo elegido.")
         return
     destino = dlg.archivo()
@@ -979,12 +985,15 @@ class ImportarKmlDialog(QDialog):
         lay = QVBoxLayout(self)
         lay.addWidget(QLabel(f"De <b>WGS 84</b> (Google Earth) a <b>{IX.nombre(destino)}</b>, "
                              "el sistema del dibujo."))
-        tipos = {k: sum(1 for lg in lugares if lg.tipo == k) for k in ("punto", "linea", "poligono")}
+        tipos = {k: sum(1 for lg in lugares if lg.tipo == k)
+                 for k in ("punto", "linea", "poligono", "imagen")}
         carpetas = sorted({lg.carpeta for lg in lugares if lg.carpeta}, key=str.lower)
         columnas = list(dict.fromkeys(n for lg in lugares for n, _v in lg.datos))
         texto = (f"<b>{nombre_a}</b>: {len({lg.n for lg in lugares})} marcador(es) — "
                  f"{tipos['punto']} punto(s), {tipos['linea']} línea(s), "
-                 f"{tipos['poligono']} polígono(s); {len(carpetas)} carpeta(s).")
+                 f"{tipos['poligono']} polígono(s)"
+                 + (f", {tipos['imagen']} imagen(es)" if tipos["imagen"] else "")
+                 + f"; {len(carpetas)} carpeta(s).")
         if salteados:
             texto += " No se importan: " + ", ".join(f"{k} {v}" for k, v in sorted(salteados.items())) + "."
         info = QLabel(texto)
@@ -1114,7 +1123,7 @@ def importar_kml(ctx) -> None:
         ctx.echo(f"IMPORTARKML: no se puede leer {Path(ruta).name} ({exc}).")
         return
     if not lugares:
-        ctx.echo(f"IMPORTARKML: {Path(ruta).name} no trae puntos, líneas ni polígonos.")
+        ctx.echo(f"IMPORTARKML: {Path(ruta).name} no trae puntos, líneas, polígonos ni imágenes.")
         return
     destino, asignar = _sistema_para_kml(ctx, lugares)
     if not destino:
@@ -1125,7 +1134,8 @@ def importar_kml(ctx) -> None:
         return
     antes = {e.dxf.handle for e in doc.modelspace()}
     try:
-        plan = KML.plan_importar(doc, ruta, lugares, dlg.opciones(asignar), salteados)
+        plan = KML.plan_importar(doc, ruta, lugares, dlg.opciones(asignar), salteados,
+                                 getattr(ctx.document, "path", None))
     except Exception as exc:  # noqa: BLE001
         ctx.echo(f"IMPORTARKML: no se pudo importar ({exc}). No se cambió nada.")
         return

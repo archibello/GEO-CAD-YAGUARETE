@@ -1,4 +1,5 @@
 from pathlib import Path
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import sys, os, tempfile
 sys.path[:0] = [str(Path(__file__).resolve().parents[2] / "INGECAD" / "codigo"), os.path.dirname(__file__)]
 from fixtures import make_parcelas, make_red, make_puntos

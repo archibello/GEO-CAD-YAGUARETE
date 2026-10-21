@@ -5,6 +5,7 @@ polígonos con huecos; una capa por carpeta; el nombre como rótulo
 (opcional); los colores; ExtendedData como atributos (como IMPORTARSHP),
 todo en un solo deshacer. Ida y vuelta con EXPORTARKML: el mismo lugar, al
 milímetro."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import json, math, os, tempfile, zipfile
 os.environ["HOME"] = tempfile.mkdtemp()
 from collections import Counter
@@ -95,7 +96,7 @@ with zipfile.ZipFile(kmz, "w") as z:
     z.writestr("files/leeme.txt", "nada")
     z.writestr("doc.kml", KML_GE)
 lugares, salteados = KML.leer(kmz)
-assert salteados == Counter({"imágenes superpuestas": 1, "marcadores sin geometría": 1}), salteados
+assert salteados == Counter({"imágenes sin ubicación": 1, "marcadores sin geometría": 1}), salteados
 assert [(lg.tipo, lg.nombre, lg.carpeta) for lg in lugares] == [
     ("punto", "Suelto", ""), ("poligono", "Lote 1", "Lotes"), ("poligono", "Lote 2", "Lotes"),
     ("punto", "Lote 2", "Lotes"), ("linea", "Camino", "Relevamiento"),
@@ -186,7 +187,7 @@ assert len(tabla.rows) == 6          # un renglón por marcador con geometría; 
 assert len(tabla.entities_by_fid(doc)[lote2.n]) == 2                     # polígono y punto del lote 2
 r = KML.resumen_importar(plan)
 assert "7 marcador(es), 9 objeto(s), de WGS 84 a Campo Inchauspe" in r, r
-assert "imágenes superpuestas 1" in r and "conservan su color" in r and "TABLASIG" in r and "U lo deshace" in r
+assert "imágenes sin ubicación 1" in r and "conservan su color" in r and "TABLASIG" in r and "U lo deshace" in r
 hist.undo()
 assert not list(msp) and "Relevamiento" not in doc.doc.layers and "Lotes" in doc.doc.layers
 print("ok importar: de WGS 84 a Campo Inchauspe faja 6 como pyproj, capa por carpeta, huecos, colores, "

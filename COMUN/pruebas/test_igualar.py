@@ -4,6 +4,7 @@ más grueso hasta el final;
 los destinos se eligen con todas las opciones de «Designar objetos» (W C WP
 CP F ALL L P R U FI) y cada paso se ve en el momento con las propiedades
 nuevas; R y U los devuelven a como estaban. Apagado, el MATCHPROP de IngeCAD."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

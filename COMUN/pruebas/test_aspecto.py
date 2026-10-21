@@ -3,6 +3,7 @@ por la oscuridad del píxel (cuánto blanco se borra), líneas como están, en
 negativo o de un color, opacidad. El original no se toca: copia PNG junto al
 dibujo, la imagen pasa a usarla con sus valores guardados (XDATA), se puede
 volver al original y U lo deshace."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import json, os, tempfile, types
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

@@ -1,6 +1,7 @@
 """Empalme estilo AutoCAD para IngeCAD (módulo «Empalme»): lo que el FILLET
 nativo no hace (polilíneas, lado elegido en líneas que se cruzan) y lo que sí
 hace bien, que se hereda igual (paralelas, radio 0, Deshacer)."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, types, math
 os.environ["HOME"] = tempfile.mkdtemp()
 from pathlib import Path

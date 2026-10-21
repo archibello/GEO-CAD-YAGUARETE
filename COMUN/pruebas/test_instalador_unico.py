@@ -2,6 +2,7 @@
 QGIS, desde la Consola (con los dos programas cerrados) o con AP en IngeCAD.
 Se arma una carpeta personal falsa con la misma forma que la de Fernando:
 IngeCAD y QGIS 4 en Flatpak, el Puente 1.4.0 instalado y activo."""
+import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, sys, tempfile, subprocess, shutil, glob, types
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
