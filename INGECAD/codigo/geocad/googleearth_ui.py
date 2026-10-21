@@ -75,7 +75,7 @@ VERDE, ROJO = "#2e7d32", "#c62828"
 
 
 def requisitos(enlazado: bool, vista, crs: str, de: str, problema_carpeta: str,
-               programa_nombre: str, zona=None) -> list:
+               programa_nombre: str, zona=None, viejo: bool = False) -> list:
     """[(ok, texto)]: lo que hace falta para capturar, con qué hacer si falta
     (3.33.1, pedido de Fernando: que se vea qué falta antes de apretar)."""
     if vista is not None:
@@ -85,7 +85,10 @@ def requisitos(enlazado: bool, vista, crs: str, de: str, problema_carpeta: str,
     donde = "SISTEMAGEO en el dibujo" if programa_nombre == "ingecad" else \
         "un sistema en planas en el proyecto"
     return [
-        (enlazado, "Google Earth enlazado" if enlazado else
+        (enlazado and not viejo,
+         "Google Earth con el enlace de antes: en Google Earth borrá «GeoCAD Yaguareté» "
+         "(Lugares temporales y Mis lugares) y tocá «Abrir Google Earth con GeoCAD»" if viejo else
+         "Google Earth enlazado" if enlazado else
          "Google Earth sin enlazar: tocá «Abrir Google Earth con GeoCAD»"),
         (vista is not None,
          f"Vista recibida: {vista.rango:,.0f} m de altura".replace(",", ".") if vista is not None else
@@ -525,7 +528,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
 
         # -- Google Earth
         def abrir_google_earth(self):
-            if self.srv.conectado():               # 3.33.3: no duplicar el enlace
+            if self.srv.conectado() and not self.srv.enlace_viejo():   # 3.33.3: no duplicar
                 self.salida.setStyleSheet("")
                 self.salida.setText(con_hora("Google Earth ya está abierto y enlazado con GeoCAD."))
                 return
@@ -639,7 +642,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 self.fotogramas.poner(cap.estados)
             ocupado = self._hilo is not None
             enlazado = self.srv.conectado()
-            self.boton_ge.setVisible(not enlazado)
+            self.boton_ge.setVisible(not enlazado or self.srv.enlace_viejo())
             self.boton_llevar.setEnabled(enlazado and not ocupado)
             self.estado.setText("" if self._atajo_ok else
                                 "Ctrl+Alt+G sólo con esta ventana al frente ("
@@ -687,7 +690,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 zona = (zc is not None, f"Zona de {nombre}: {texto}" if zc is not None
                         else f"Falta la zona de {nombre}: {texto}")
             return requisitos(self.srv.conectado(), self.srv.vista, crs, de, problema,
-                              self.programa.nombre, zona)
+                              self.programa.nombre, zona, viejo=self.srv.enlace_viejo())
 
         def _estimar(self):
             if self.r_pantalla.isChecked():

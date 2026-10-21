@@ -64,13 +64,15 @@ class GEDeMentira:
                 time.sleep(0.3)
                 continue
             texto = self.srv.atender("/camara")[1].decode()
+            assert "<Placemark>" not in texto, "cruces en el enlace con flyToView"
             if "<LookAt>" in texto:
                 self.vuelos += 1
                 self.cam = [float(texto.split("<longitude>")[1].split("<")[0]),
                             float(texto.split("<latitude>")[1].split("<")[0]),
                             float(texto.split("<range>")[1].split("<")[0])]
+            cruces = self.srv.atender("/cruces")[1].decode()
             self.cruces = [(float(a), float(b)) for a, b in
-                           re.findall(r"<coordinates>([-\d.]+),([-\d.]+),0", texto)]
+                           re.findall(r"<coordinates>([-\d.]+),([-\d.]+),0", cruces)]
             time.sleep(0.02)
 
     def foto(self):
@@ -118,14 +120,25 @@ assert b"<Placemark>" not in srv.atender(consulta)[1]
 srv.cruces = GE.marcas_de_bbox(-55, -27.1, -54.9, -27)
 srv.volar(-54.95, -27.05, 200)
 k = srv.atender("/camara")[1].decode()
-assert "<LookAt>" in k and k.count("<Placemark>") == 4 and srv.t_entregado > 0
-k = srv.atender("/camara")[1].decode()
-assert "<LookAt>" not in k and k.count("<Placemark>") == 4          # las cruces siguen, el vuelo no
+assert "<LookAt>" in k and "<Placemark>" not in k and srv.t_entregado > 0
+assert "<LookAt>" not in srv.atender("/camara")[1].decode()        # el vuelo, una vez
+k = srv.atender("/cruces")[1].decode()
+assert k.count("<Placemark>") == 4 and "<LookAt>" not in k             # las cruces, cada vez
+assert srv.atender("/cruces")[1].decode().count("<Placemark>") == 4
 srv.cruces, srv.armado = None, False
-assert "<Placemark>" not in srv.atender("/camara")[1].decode()
+assert "<Placemark>" not in srv.atender("/cruces")[1].decode()
 srv.marcas_siempre = True
-assert srv.atender("/camara")[1].decode().count("<Placemark>") == 4
-print("ok /camara: vuelo una vez y cruces cada vez; /vista sin cruces")
+assert srv.atender("/cruces")[1].decode().count("<Placemark>") == 4
+assert "<Placemark>" not in srv.atender("/camara")[1].decode()      # nunca con flyToView
+enl = GE.kml_enlaces(48765).decode()
+cr = enl.split("<name>Cruces (GeoCAD)</name>")[1].split("</NetworkLink>")[0]
+assert "<flyToView>0</flyToView>" in cr and "/cruces" in cr
+viejo = V.Servidor(puerto=0)
+viejo.atender("/camara")
+assert viejo.enlace_viejo()                    # el enlace de antes (sin /cruces): hay que cambiarlo
+viejo.atender("/cruces")
+assert not viejo.enlace_viejo()
+print("ok enlaces: /camara sólo el vuelo; /cruces sólo las cruces (sin flyToView); enlace viejo avisado")
 
 # --- forma de las cruces: si la cámara no llegó, no coincide
 m = GE.marcas_de_bbox(-55, -27.1, -54.9, -27)
@@ -153,7 +166,7 @@ assert len(fotos) == 1 and ge.vuelos == 0 and c.estados == ["ok"]
 time.sleep(0.1)
 assert ge.cruces == [] and srv.cruces is None                     # las cruces se fueron
 ge.fin()
-print("ok Pantalla: cruces por /camara, sin vuelo, sin esperar /vista")
+print("ok Pantalla: cruces por /cruces, sin vuelo, sin esperar /vista")
 
 # --- Pantalla con la vista inclinada: se endereza volando
 srv = servidor()
@@ -243,7 +256,7 @@ assert UIM.resumen_fotogramas(["ok", "falla", "actual", ""]) == "1 de 4 listos �
 assert UIM.COLOR_FOTOGRAMA["ok"] and UIM.COLOR_FOTOGRAMA["falla"] and UIM.COLOR_FOTOGRAMA[""] is None
 cierre = UI.split("def closeEvent")[1].split("def apagar")[0]
 assert "if self._apagando:" in cierre and "self._detener_previa()" in cierre
-assert "if self.srv.conectado():" in UI.split("def abrir_google_earth")[1].split("def llevar")[0]
+assert "if self.srv.conectado() and not self.srv.enlace_viejo():" in UI.split("def abrir_google_earth")[1].split("def llevar")[0]
 assert hasattr(V.VideoX11, "cuadro") and hasattr(V.VideoX11, "_vista3d")
 print("ok ventanita: video de la vista 3D, barra de fotogramas, parte desplazable")
 

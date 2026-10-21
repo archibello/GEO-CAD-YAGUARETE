@@ -245,12 +245,13 @@ assert b"<Placemark>" not in pedir(consulta), "cruces sin capturar"
 assert srv.vista.rango == 374 and len(srv.marcas) == 4
 srv.armado = True                       # 3.33.4: las cruces van por /camara, nunca por /vista
 assert b"<Placemark>" not in pedir(consulta)
-k = pedir("/camara")
+k = pedir("/cruces")             # su propio enlace: con flyToView Google Earth vuela a encuadrarlas
 assert k.count(b"<Placemark>") == 4 and f"{URL}/marca.png".encode() in k and b"<LookAt>" not in k
-srv.armado = False
 assert b"<Placemark>" not in pedir("/camara")
+srv.armado = False
+assert b"<Placemark>" not in pedir("/cruces")
 srv.cruces = GE.marcas_de_bbox(-55.9, -27.4, -55.8, -27.3)      # las de una pieza
-assert pedir("/camara").count(b"<Placemark>") == 4
+assert pedir("/cruces").count(b"<Placemark>") == 4
 srv.cruces = None
 srv.t_camara = 0.0                      # (lo de abajo prueba el enlace desde cero)
 assert pedir("/marca.png").startswith(b"\x89PNG")
@@ -308,6 +309,8 @@ class EnlaceSimulado(threading.Thread):
             if m:
                 self.sim.cam = [float(m.group(1)), float(m.group(2)), float(m.group(3))]
                 self.vuelos.append(tuple(self.sim.cam))
+            assert b"<Placemark>" not in k, "cruces en el enlace con flyToView"
+            k = pedir("/cruces")
             cruces = [(float(a), float(b)) for a, b in
                       _re.findall(rb"<coordinates>([-\d.]+),([-\d.]+),0", k)]
             claves = ["SO", "SE", "NE", "NO"] if len(cruces) == 4 else [None] * len(cruces)

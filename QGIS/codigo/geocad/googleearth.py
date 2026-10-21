@@ -227,6 +227,13 @@ def kml_enlaces(puerto: int = PUERTO) -> bytes:
         "<NetworkLink><name>Cámara (GeoCAD)</name><flyToView>1</flyToView>"
         f"<Link><href>{url}/camara</href><refreshMode>onInterval</refreshMode>"
         "<refreshInterval>1</refreshInterval><viewRefreshMode>never</viewRefreshMode></Link>"
+        "</NetworkLink>"
+        # 3.33.4: las cruces, en su propio enlace SIN flyToView: con flyToView
+        # Google Earth vuela cada vez a encuadrarlas (inclinado) aunque no
+        # haya LookAt (probado con Fernando, 21/10/2026)
+        "<NetworkLink><name>Cruces (GeoCAD)</name><flyToView>0</flyToView>"
+        f"<Link><href>{url}/cruces</href><refreshMode>onInterval</refreshMode>"
+        "<refreshInterval>1</refreshInterval><viewRefreshMode>never</viewRefreshMode></Link>"
         "</NetworkLink>")
 
 
@@ -244,11 +251,12 @@ def kml_marcas(marcas, url_icono: str) -> bytes:
 
 
 def kml_camara(vuelo, marcas, url_icono: str) -> bytes:
-    """Lo que devuelve /camara (3.33.4): el vuelo, si hay uno pendiente, y las
-    cruces que tienen que verse. Google Earth NO vuelve a pedir /vista después
-    de un vuelo pedido por el enlace (registro del 21/10/2026: 1069 vuelos,
-    ninguna vista nueva), así que las cruces de cada pieza viajan con el vuelo
-    y se renuevan cada segundo por este mismo enlace."""
+    """El vuelo (/camara) o las cruces (/cruces), 3.33.4. Google Earth NO
+    vuelve a pedir /vista después de un vuelo pedido por el enlace (registro
+    del 21/10/2026: 1069 vuelos, ninguna vista nueva), así que las cruces de
+    cada pieza se ponen por /cruces (cada segundo) junto con el vuelo. NUNCA
+    las dos cosas en el mismo enlace: con flyToView, Google Earth vuela a
+    encuadrar las cruces."""
     cuerpo = ""
     if vuelo is not None:
         lon, lat, rango = vuelo

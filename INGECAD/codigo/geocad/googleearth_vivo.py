@@ -73,6 +73,7 @@ class Servidor:
         self.cruces = None           # 3.33.4: las de la captura en curso (van por /camara)
         self.cruces_servidas = []    # las últimas que se mandaron
         self.t_entregado = 0.0       # cuándo Google Earth se llevó el último vuelo
+        self.t_cruces = 0.0          # último pedido de /cruces (el enlace de 3.33.4)
         self.armado = False
         self.marcas_siempre = marcas_siempre
         self._icono = GE.png(GE.imagen_marca())
@@ -152,21 +153,24 @@ class Servidor:
             return KML, GE.kml_vacio()
         if u.path == "/camara":
             with self.cerrojo:
-                ahora = time.time()
-                self.t_camara = ahora
+                self.t_camara = time.time()
                 p, self.pendiente = self.pendiente, None
                 if p is not None and not GE.posicion_valida(*p):
                     p = None
-                marcas = self.cruces_a_mostrar()
                 if p is not None:
-                    self.t_entregado = ahora
+                    self.t_entregado = self.t_camara
+            if p is not None:
+                registrar(f"/camara entrega el vuelo {p[0]:.7f},{p[1]:.7f},{p[2]:.1f}")
+            return KML, GE.kml_camara(p, [], url + "/marca.png")      # nunca cruces acá
+        if u.path == "/cruces":
+            with self.cerrojo:
+                ahora = time.time()
+                self.t_cruces = ahora
+                marcas = self.cruces_a_mostrar()
                 if marcas:
                     self.marcas_servidas = ahora
                     self.cruces_servidas = list(marcas)
-            if p is not None:
-                registrar(f"/camara entrega el vuelo {p[0]:.7f},{p[1]:.7f},{p[2]:.1f}"
-                          + (" con sus cruces" if marcas else ""))
-            return KML, GE.kml_camara(p, marcas, url + "/marca.png")
+            return KML, GE.kml_camara(None, marcas, url + "/marca.png")
         if u.path == "/geocad.kml":
             return KML, GE.kml_enlaces(self.puerto)
         return KML, None
@@ -184,6 +188,11 @@ class Servidor:
     def conectado(self, segundos: float = 4.0) -> bool:
         """¿Google Earth pide /camara (cada 1 s)?"""
         return time.time() - self.t_camara < segundos
+
+    def enlace_viejo(self, segundos: float = 4.0) -> bool:
+        """¿Enlazado con el enlace de antes de la 3.33.4 (sin /cruces)? Hay que
+        borrarlo en Google Earth y abrirlo de nuevo con GeoCAD."""
+        return self.conectado(segundos) and time.time() - self.t_cruces >= segundos
 
     def volar(self, lon: float, lat: float, rango: float) -> None:
         if not GE.posicion_valida(lon, lat, rango):
