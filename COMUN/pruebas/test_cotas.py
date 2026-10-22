@@ -325,4 +325,40 @@ assert texto_cota(doc.modelspace().query("DIMENSION")[-1]) == "16°41'57\""
 M.guardar("ingecad", {"cotas": True})
 print("ok precisión g/m/s")
 
+# ------------------------------------------------------------- 3.33.5 vista previa sin fantasmas
+# IngeCAD armaba la cota de la vista previa EN el plano: los hilos de fondo
+# (índice, regeneración) se quedaban con ella. Ahora va en un borrador.
+msp = doc.modelspace()
+antes = [e.dxf.handle for e in msp]
+bloques = sorted(b.name for b in doc.doc.blocks)
+visto = {}
+def armar(d, ents):
+    visto["cota"] = ents[0]
+    visto["en_plano"] = [e.dxf.handle for e in msp]
+    visto["dueño"] = ents[0].dxf.owner
+    visto["bloque"] = ents[0].dxf.get("geometry")
+    return "escena"
+for orden in (actions.dim_aligned((0, 0), (3.28, 0), (1.6, -2)),
+              actions.dim_angular((0, 0), (10, 0), (10, 3), (8, 1))):
+    visto.clear()
+    assert C.escena_borrador(doc, orden, armar) == "escena"
+    assert visto["cota"].dxftype() == "DIMENSION" and visto["bloque"]
+    assert visto["en_plano"] == antes, "la cota de la vista previa entró al plano"
+    assert visto["dueño"] != msp.layout_key
+    assert [e.dxf.handle for e in msp] == antes
+    assert sorted(b.name for b in doc.doc.blocks) == bloques, "quedaron bloques del borrador"
+def falla(d, ents):
+    raise RuntimeError("dibujo")
+try:
+    C.escena_borrador(doc, actions.dim_aligned((0, 0), (1, 0), (0.5, -1)), falla)
+except RuntimeError:
+    pass
+assert sorted(b.name for b in doc.doc.blocks) == bloques and [e.dxf.handle for e in msp] == antes
+assert C.escena_borrador(doc, actions.add_line((0, 0), (1, 1)), armar) is None   # no es cota
+# apagado: la de IngeCAD, tal cual
+M.guardar("ingecad", {"cotas": False})
+assert C.vista_previa(None, "orden", lambda c, o: ("original", o)) == ("original", "orden")
+M.guardar("ingecad", {"cotas": True})
+print("ok vista previa sin fantasmas")
+
 print("TODO OK COTAS")

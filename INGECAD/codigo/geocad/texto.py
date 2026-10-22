@@ -248,7 +248,8 @@ def _envolver_escena(original):
         if isinstance(command, _Muestra):
             self._geocad_muestra = True
             return command.escena(self)
-        return original(self, command)
+        from . import cotas                 # una cota: fuera del plano (sin fantasmas)
+        return cotas.vista_previa(self, command, original)
     _preview_scene_for._puente_original = original
     _preview_scene_for._puente_fabrica = _envolver_escena
     return _preview_scene_for

@@ -1,0 +1,43 @@
+GeoCAD - versión 3.33.5
+=======================
+COTAS SIN FANTASMAS (22/10/2026, encontrado por Fernando).
+
+Fernando: después de acotar (alineadas y angulares) quedaban «fantasmas
+invisibles»: cosas que se elegían con una ventana pero no se veían, y una
+cota «3,28» que nadie hizo, lejos del dibujo, que se veía pero no se podía
+elegir ni borrar.
+
+La causa (IngeCAD 0.6.8)
+- Mientras se ubica una cota, IngeCAD dibuja la vista previa agregando la
+  cota de verdad al plano y sacándola enseguida, sin avisar del cambio. Al
+  mismo tiempo, en segundo plano, arma la lista de lo que se puede elegir y
+  vuelve a dibujar la pantalla recorriendo el plano. Si pasaba justo en ese
+  instante, se quedaba con la cota de la vista previa:
+  · en la lista de selección: una cota que se elige pero no se ve;
+  · en el dibujo de la pantalla: una cota que se ve pero no se puede elegir
+    (se mueve con PAN y ZOOM, pero no está en el plano ni se guarda).
+  Al borrar o deshacer sobre un fantasma elegido, podía volver al plano como
+  una cota sin dibujo (invisible).
+- Comprobado en un IngeCAD 0.6.8.1 sin ventanas: con un plano de 400
+  entidades, la primera vez que la lista se armó en segundo plano mientras
+  se movía el cursor ya quedó un fantasma.
+
+El arreglo
+- Con el módulo Cotas prendido, la vista previa de la cota se arma en un
+  bloque borrador aparte, nunca en el plano: ningún trabajo de fondo la
+  encuentra. Se ve igual que antes. Apagado, IngeCAD como venía.
+- En la misma prueba: 30 rondas sin ningún fantasma.
+
+Si ya tenés fantasmas en pantalla
+- Se van al cerrar y volver a abrir el plano (no están guardados). Una cota
+  invisible que haya quedado en el plano se elige con una ventana y se borra.
+
+Pruebas
+- test_cotas: la vista previa (alineada y angular) no entra al plano ni deja
+  bloques, aunque el dibujo falle; con el módulo apagado, la de IngeCAD.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8.1 y con la 0.6.7
+  (test_googleearth falló una vez por tiempos con la 0.6.8.1 y pasó las tres
+  veces que se repitió).
+
+Pendiente
+- El mosaico de Google Earth sigue tardando unos 25 min con 25 piezas.

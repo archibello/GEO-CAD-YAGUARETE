@@ -331,6 +331,58 @@ def _envolver_vista(original):
 _vista_angular = _envolver_vista(None)
 
 
+# ---------------------------------------------------------------- vista previa sin fantasmas
+def escena_borrador(document, command, armar):
+    """La escena de la cota que va a dejar el clic, armada en un bloque
+    borrador y no en el plano: ``armar(document, [cota])`` la dibuja.
+
+    IngeCAD 0.6.8 arma la vista previa agregando la cota al plano y
+    sacándola enseguida, sin cambiar la revisión. Los hilos de fondo
+    (índice de selección, regeneración) que recorren el plano en ese
+    instante se quedaban con ella: cotas elegibles que no se ven, o que se
+    ven y no se pueden elegir (Fernando, 22/10/2026). En un bloque aparte
+    ningún hilo la encuentra. Devuelve None si el comando no es una cota."""
+    from core.actions import AddDimensionCommand
+    factory = getattr(command, "_factory", None)
+    if factory is None or not isinstance(command, AddDimensionCommand):
+        return None
+    bloques = document.doc.blocks
+    borrador = bloques.new_anonymous_block("U")
+    geometria = None
+    try:
+        override = factory(borrador, document)
+        override.render()
+        cota = override.dimension
+        geometria = cota.dxf.get("geometry", None)
+        capa = document.doc.header.get("$CLAYER", "0")
+        if capa in document.doc.layers:
+            cota.dxf.layer = capa
+        return armar(document, [cota])
+    finally:
+        for nombre in (geometria, borrador.name):
+            if nombre and nombre in bloques:
+                try:
+                    bloques.delete_block(nombre, safe=False)
+                except Exception:  # noqa: BLE001
+                    pass
+
+
+def vista_previa(controlador, command, original):
+    """ToolController._preview_scene_for (lo envuelve texto.py): con el
+    módulo prendido, la cota se arma en el borrador; apagado, como IngeCAD."""
+    from core.actions import AddDimensionCommand
+    if activo() and isinstance(command, AddDimensionCommand):
+        try:
+            from render.backend import build_scene_for_entities
+            return escena_borrador(
+                controlador.window.document, command,
+                lambda doc, ents: build_scene_for_entities(
+                    doc, ents, controlador._flatten, controlador.canvas_space()))
+        except Exception:  # noqa: BLE001
+            return None
+    return original(controlador, command)
+
+
 def _envolver_segmentos(original):
     def preview_segments(self, cursor):
         if activo() and getattr(self, "_mode", None) == "locate":
