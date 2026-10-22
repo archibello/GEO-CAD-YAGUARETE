@@ -10,6 +10,16 @@ AutoCAD, en los dos programas.
 > Antes se llamaba **GeoCAD**. Desde la 3.8.0, en el programa: menú y
 > barra «GeoCAD Yaguareté» y **Acerca de GEO-CAD-YAGUARETÉ...**
 
+## Imágenes de Google Earth, ya ubicadas
+
+Con **Google Earth Pro**, **IngeCAD** y **QGIS** instalados en la misma
+computadora, GeoCAD captura lo que se ve en Google Earth (de una vez o en un
+mosaico de hasta 25 fotos más cercanas) y la imagen entra **en su lugar y en
+su escala** en el dibujo de IngeCAD y en el proyecto de QGIS, en el sistema
+de coordenadas del trabajo, sin georreferenciar a mano. Mientras trabaja se
+ve Google Earth en video y el avance pieza por pieza.
+**[Cómo se usa](GOOGLE_EARTH.md)** (y por qué hacen falta los tres programas).
+
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera
@@ -18,9 +28,9 @@ cambia nada del programa.
 
 - **IngeCAD:** Puente con QGIS · Datos · Botón derecho = Enter · Empalme y
   Chaflán estilo AutoCAD · Bloques · Partir en punto · Selección estilo
-  AutoCAD · Ángulos relativos al tramo anterior
+  AutoCAD · Ángulos relativos al tramo anterior · Google Earth
 - **QGIS:** Puente con IngeCAD · Dibujo CAD · Bloques CAD · Espacio papel ·
-  Capas CAD (Layer Properties)
+  Capas CAD (Layer Properties) · Google Earth
 
 ## Antes de instalar
 

@@ -103,7 +103,9 @@ Una sola vez, en una terminal:
 ## 6 bis. Google Earth junto a IngeCAD y QGIS (módulo Google Earth)
 
 Para capturar imágenes de Google Earth ya ubicadas en el dibujo
-(**GeoCAD Yaguareté > Google Earth**):
+(**GeoCAD Yaguareté > Google Earth**) hacen falta **los tres programas**
+instalados: Google Earth Pro, IngeCAD y QGIS. Cómo se usa, paso a paso:
+**[GOOGLE_EARTH.md](GOOGLE_EARTH.md)**.
 
 - Hace falta **Google Earth Pro de escritorio** (no la versión web). En
   Linux funciona por X11 (con Wayland, por XWayland: así viene en Ubuntu).
@@ -130,6 +132,8 @@ Para capturar imágenes de Google Earth ya ubicadas en el dibujo
 - La **fecha** de la imagen se elige en Google Earth (imágenes históricas)
   antes de capturar: GeoCAD captura la que esté puesta.
 - Más detalle: ventana de Google Earth grande (Pantalla) o Mosaico.
+- En Google Earth: **Herramientas > Opciones > Navegación > Velocidad de
+  vuelo**, al máximo (si no, cada pieza del mosaico tarda casi un minuto).
 - Las imágenes de Google Earth tienen las condiciones de uso de Google:
   sirven de referencia; respetar su atribución.
 

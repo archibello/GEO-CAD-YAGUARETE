@@ -41,8 +41,10 @@ class GEDeMentira:
     rato); ``malas``: lugares donde las cruces nunca se ven (tapadas);
     ``cortado``: deja de pedir /camara."""
 
-    def __init__(self, srv, rango=828.0, ocupado=0, malas=(), cortado=False, tilt=0.0):
+    def __init__(self, srv, rango=828.0, ocupado=0, malas=(), cortado=False, tilt=0.0, lento=0.0):
         self.srv, self.ocupado, self.malas, self.cortado = srv, ocupado, list(malas), cortado
+        self.lento = lento                        # segundos que tarda en arrancar cada vuelo
+        self.despues = None                       # (cuándo, cámara, cruces) que todavía no aplicó
         self.cam = [LON0, LAT0, rango]
         self.cruces = []
         self.vuelos = 0
@@ -65,20 +67,31 @@ class GEDeMentira:
                 continue
             texto = self.srv.atender("/camara")[1].decode()
             assert "<Placemark>" not in texto, "cruces en el enlace con flyToView"
+            cruces = self.srv.atender("/cruces")[1].decode()
+            cruces = [(float(a), float(b)) for a, b in
+                      re.findall(r"<coordinates>([-\d.]+),([-\d.]+),0", cruces)]
             if "<LookAt>" in texto:
                 self.vuelos += 1
-                self.cam = [float(texto.split("<longitude>")[1].split("<")[0]),
-                            float(texto.split("<latitude>")[1].split("<")[0]),
-                            float(texto.split("<range>")[1].split("<")[0])]
-            cruces = self.srv.atender("/cruces")[1].decode()
-            self.cruces = [(float(a), float(b)) for a, b in
-                           re.findall(r"<coordinates>([-\d.]+),([-\d.]+),0", cruces)]
+                cam = [float(texto.split("<longitude>")[1].split("<")[0]),
+                       float(texto.split("<latitude>")[1].split("<")[0]),
+                       float(texto.split("<range>")[1].split("<")[0])]
+                # el lento sigue mostrando la vista y las cruces de antes un rato
+                self.despues = (time.time() + self.lento, cam, cruces)
+            if self.despues is not None:
+                if time.time() >= self.despues[0]:
+                    self.cam, self.cruces = self.despues[1], cruces
+                    self.despues = None
+            else:
+                self.cruces = cruces
             time.sleep(0.02)
+
+    @staticmethod
+    def valor(cam):
+        return int(abs(cam[0] * 1e5 + cam[1] * 1e4 + cam[2])) % 200
 
     def foto(self):
         """Una imagen que cambia con la cámara y queda quieta al llegar."""
-        v = int(abs(self.cam[0] * 1e5 + self.cam[1] * 1e4 + self.cam[2])) % 200
-        return np.full((8, 8, 3), v, np.uint8)
+        return np.full((8, 8, 3), self.valor(self.cam), np.uint8)
 
     def detectar(self, _a, **_k):
         """Las cruces que se ven: las de /camara, si están en la pantalla."""
@@ -207,6 +220,20 @@ assert len(piezas) == 24 and c.faltan == [(mala[0], mala[1])] and c.estados[7] =
 assert c.estados.count("ok") == 24
 ge.fin()
 print(f"ok Mosaico con una pieza imposible: 24 de 25 y la 8 en rojo ({UIM.resumen_fotogramas(c.estados)})")
+
+# --- Google Earth lento (tarda en arrancar cada vuelo, como el de Fernando): ninguna
+#     pieza sale con la imagen y las cruces de la anterior (barrios repetidos)
+srv = servidor()
+ge = GEDeMentira(srv, lento=0.25)
+c = captura(srv, ge)
+c.tope_quieta = 3.0
+piezas = c.mosaico(a_planas, a_geo, 200.0)
+assert len(piezas) == 25 and not c.faltan
+for (a, m, fila, col), (f2, c2, lon, lat) in zip(piezas, c.plan.centros):
+    assert (fila, col) == (f2, c2)
+    assert a[0, 0, 0] == GEDeMentira.valor([lon, lat, c.plan.rango]), (fila, col)   # su lugar
+ge.fin()
+print("ok Google Earth lento: cada pieza con su propia imagen (se espera a que se mueva)")
 
 # --- enlace cortado: avisa en el acto, sin dar vueltas
 srv = servidor()

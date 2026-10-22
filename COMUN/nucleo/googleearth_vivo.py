@@ -656,6 +656,7 @@ class Reintentable(GE.GoogleEarthError):
 
 
 INTENTOS = 3              # la captura entera; y cada pieza del mosaico
+MOVIO = 2.0               # diferencia media (0-255) que dice que Google Earth se movió
 
 
 def con_reintentos(hacer, aviso=None, cancelar=None, intentos: int = INTENTOS):
@@ -707,6 +708,7 @@ class Captura:
         self.faltan = []              # (fila, col) de las piezas que no salieron
         self.ultimo_error = ""
         self.estados = []             # 3.33.4: la barra de fotogramas
+        self._donde = None            # adónde se pidió volar la última vez
 
     # -- esperas
     def _esperar(self, cond, tope: float, paso: float | None = None) -> bool:
@@ -753,25 +755,35 @@ class Captura:
         raise Reintentable(f"Google Earth no pidió el vuelo en {self.tope_vuelo:.0f} s (está "
                            "ocupado cargando).")
 
-    def _foto_quieta(self, etapa: str = "", resto: str = "", marcas=None):
+    def _foto_quieta(self, etapa: str = "", resto: str = "", marcas=None, antes=None):
         """Fotos cada ``paso`` hasta que ``quietas`` seguidas casi no cambian
         y se ven las cuatro cruces (la imagen termina de cargar sola) con la
-        forma de ``marcas`` (si no, la cámara todavía no llegó)."""
+        forma de ``marcas`` (si no, la cámara todavía no llegó). Con ``antes``
+        (la foto de justo antes del vuelo) además tiene que haberse movido:
+        Google Earth tarda en arrancar y todas las piezas tienen la misma
+        forma; sin esto, una pieza salía con la imagen y las cruces de la
+        anterior (prueba de Fernando, 21/10/2026: barrios repetidos)."""
         import numpy as np
 
         previa, iguales, t0, ultimo = None, 0, time.time(), None
+        movio = antes is None
+        base = antes.astype(np.int16) if antes is not None else None
         while time.time() - t0 < self.tope_quieta:
             if self.cancelar.is_set():
                 raise Cancelado("Cancelado.")
             self.aviso(f"{etapa}esperando que cargue la imagen... {time.time() - t0:.0f} s{resto}")
             a = self.foto()
+            ai = a.astype(np.int16)
+            if not movio and (ai.shape != base.shape or np.abs(ai - base).mean() > MOVIO):
+                movio = True
+                registrar(f"Google Earth se movió a los {time.time() - t0:.1f} s")
             if previa is not None and a.shape == previa.shape \
-                    and np.abs(a.astype(np.int16) - previa).mean() < 0.3:
+                    and np.abs(ai - previa).mean() < 0.3:
                 iguales += 1
             else:
                 iguales = 0
-            previa = a.astype(np.int16)
-            if iguales >= self.quietas:
+            previa = ai
+            if movio and iguales >= self.quietas:
                 try:
                     det = GE.detectar(a)
                     if marcas and not GE.forma_coincide(det, marcas):
@@ -782,15 +794,22 @@ class Captura:
                 except GE.GoogleEarthError as exc:
                     ultimo = exc
             time.sleep(self.paso)
-        registrar(f"foto sin cruces en {self.tope_quieta:.0f} s: {ultimo}")
+        registrar(f"foto sin cruces en {self.tope_quieta:.0f} s: {ultimo}"
+                  + ("" if movio else " (Google Earth no se movió)"))
+        if not movio:
+            raise Reintentable("Google Earth no se movió hacia la pieza (¿está ocupado?).")
         if ultimo is not None:
             raise Reintentable(str(ultimo))
         raise Reintentable("La imagen de Google Earth no se terminó de cargar "
                            f"en {self.tope_quieta:.0f} s.")
 
     def _una(self, lon: float, lat: float, rango: float, marcas, etapa: str = "", resto: str = ""):
+        d = self._donde
+        mueve = d is None or GE.distancia_m(d[0], d[1], lon, lat) > 1.0 or abs(d[2] - rango) > 1.0
+        antes = self.foto() if mueve else None          # para saber que Google Earth se movió
         self._entregar(marcas, (lon, lat, rango))
-        a = self._foto_quieta(etapa, resto, marcas)
+        self._donde = (lon, lat, rango)
+        a = self._foto_quieta(etapa, resto, marcas, antes)
         return a, list(marcas)
 
     # -- las dos calidades
@@ -831,6 +850,7 @@ class Captura:
         self.original = v
         piezas = {}
         self.faltan = []
+        self._donde = (v.lon, v.lat, v.rango)
         total = len(plan.centros)
         self.estados = [""] * total
         self.aviso(f"1/5 Preparando {total} pieza(s) a {plan.rango:g} m...", 0.02)
