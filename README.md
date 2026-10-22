@@ -20,6 +20,12 @@ de coordenadas del trabajo, sin georreferenciar a mano. Mientras trabaja se
 ve Google Earth en video y el avance pieza por pieza.
 **[Cómo se usa](GOOGLE_EARTH.md)** (y por qué hacen falta los tres programas).
 
+![La captura entra en su lugar en IngeCAD, debajo de las parcelas](imagenes/google_earth_2_ingecad.webp)
+
+| Mientras captura: Google Earth en video y la barra de fotogramas | La misma imagen en QGIS, como capa |
+|---|---|
+| ![Ventanita de GeoCAD durante un mosaico](imagenes/google_earth_1_ventanita.webp) | ![La captura en QGIS](imagenes/google_earth_3_qgis.webp) |
+
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera

@@ -5,6 +5,8 @@ queda **ubicada en su lugar** dentro del dibujo de IngeCAD y del proyecto de
 QGIS, ya llevada al sistema de coordenadas del trabajo (por ejemplo, POSGAR
 2007 en su faja). No hace falta georreferenciar a mano.
 
+![La captura entra en su lugar en IngeCAD, debajo de las parcelas](imagenes/google_earth_2_ingecad.webp)
+
 ## Se necesitan los tres programas
 
 La herramienta trabaja con **los tres programas instalados en la misma
@@ -61,6 +63,8 @@ viene en Ubuntu).
    sistema, carpeta). Lo que está en rojo dice qué hacer.
 7. **CAPTURAR** (o **Ctrl+Alt+G**, con la ventanita abierta).
 
+![Mientras captura: Google Earth en video arriba y la barra de fotogramas](imagenes/google_earth_1_ventanita.webp)
+
 Mientras captura:
 
 - **No mover, tapar ni minimizar Google Earth.** La foto es de su ventana.
@@ -86,6 +90,8 @@ Al terminar, Google Earth vuelve a la vista de antes y la imagen:
   .txt con el detalle (tamaño del píxel, control de las cruces, costuras);
 - se **inserta** en el dibujo de IngeCAD (**U** la quita) y se **manda** a
   QGIS como capa, o al revés si se capturó desde QGIS.
+
+![La misma captura en QGIS, como capa](imagenes/google_earth_3_qgis.webp)
 
 ## Configurar captura
 
