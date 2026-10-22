@@ -1,0 +1,69 @@
+GeoCAD - versión 3.33.4
+=======================
+GOOGLE EARTH: VIDEO, BARRA DE FOTOGRAMAS Y MOSAICO SIN PIEZAS CORRIDAS
+(21/10/2026, «la última corrección» pedida por Fernando y probada por él).
+
+Fernando: «es muy importante que el cuadro de seguimiento de la pantalla de
+Google sea un video, no una suma de diapositivas», «una barra de avance con
+la cantidad total de fotogramas, verdes los que van quedando y rojos los que
+hay que repetir», y «la pantalla debe estar enfocada en Google Earth
+solamente, con acercamiento suficiente para abarcar toda el área».
+
+Ventanita
+- Google Earth en VIDEO arriba de la ventanita: sólo la vista del mapa (sin
+  el panel de la izquierda ni las barras), a todo el ancho, unos 25 cuadros
+  por segundo. Se toma por memoria compartida de X (MIT-SHM, unos 70 cuadros
+  por segundo con una pantalla 4K); donde no se puede (un Flatpak sin IPC
+  compartido), de la forma común, unos 18. No traba el programa.
+- BARRA DE FOTOGRAMAS debajo del video: una celda por pieza (Pantalla: una),
+  verde las listas, amarilla la que se está haciendo, roja las que hay que
+  repetir. Al terminar queda a la vista cómo salió.
+- El resto de la ventanita se desplaza si no entra (en pantallas chicas o
+  con la escala al doble se encimaba); CAPTURAR, la barra de avance y el
+  resultado quedan siempre abajo, a la vista.
+- Si Google Earth tiene el enlace de una versión anterior, la ventanita lo
+  dice en rojo: borrar «GeoCAD Yaguareté» en Google Earth y abrirlo de nuevo
+  con GeoCAD.
+
+Mosaico (la causa de la lentitud y de las piezas corridas)
+- El registro de vuelos mostró que Google Earth se lleva cada vuelo pero no
+  avisa cuando llega (1069 vuelos sin aviso). GeoCAD lo esperaba y cada
+  pieza tardaba minutos. Ahora las cruces de cada pieza se ponen junto con
+  el vuelo y la pieza está lista cuando la foto se aquieta con sus cuatro
+  cruces en la forma que deben tener.
+- Las cruces van por un enlace propio («Cruces»): mandadas por el mismo
+  enlace que mueve la cámara, Google Earth volaba solo a encuadrarlas,
+  inclinado («las imágenes no son vistas a plomo, ni con respecto al norte»,
+  Fernando). Ahora la vista queda siempre a plomo y con el norte arriba.
+- Una pieza vale sólo si Google Earth se movió después del vuelo: con
+  Google Earth lento, algunas piezas salían con la imagen y las cruces de la
+  anterior (el mismo barrio aparecía dos veces, costuras de hasta 30 m).
+  Probado por Fernando: 25 piezas, costuras de 1,4 cm, píxel de 9 cm, y las
+  parcelas del dibujo calzan con los caminos y las casas.
+
+Guía y recomendaciones
+- GOOGLE_EARTH.md (nueva): cómo se usa, paso a paso, y por qué hacen falta
+  los tres programas instalados: Google Earth Pro, IngeCAD y QGIS. Con
+  capturas de pantalla; enlazada desde el README y desde INSTALAR.md.
+- En Google Earth: Herramientas > Opciones > Navegación > Velocidad de
+  vuelo, al máximo (con la velocidad baja cada pieza tarda casi un minuto).
+
+Para pasar a esta versión
+- Después de instalarla: en Google Earth borrar todos los «GeoCAD
+  Yaguareté» (Lugares temporales y Mis lugares), salir de IngeCAD / QGIS del
+  todo (File > Exit; cerrar la ventana puede no alcanzar), abrirlo y tocar
+  «Abrir Google Earth con GeoCAD». El enlace nuevo tiene tres partes: Vista,
+  Cámara y Cruces.
+
+Pruebas
+- test_googleearth: el Google Earth simulado se porta como el real (no
+  avisa al llegar; las cruces por su enlace) y nunca recibe cruces por el
+  enlace que mueve la cámara.
+- test_googleearth_vuelo (rehecha): vuelos sin aviso, Google Earth ocupado,
+  lento (cada pieza con su propia imagen), cortado, pieza imposible (en
+  rojo), tope, nombres, enlace viejo, video y barra de fotogramas.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8 y con la 0.6.7.
+
+Pendiente
+- El mosaico de 25 piezas tarda unos 25 min: cada pieza espera que Google
+  Earth termine de volar y de cargar la imagen (43-53 s en la prueba).
