@@ -26,6 +26,16 @@ ve Google Earth en video y el avance pieza por pieza.
 |---|---|
 | ![Ventanita de GeoCAD durante un mosaico](imagenes/google_earth_1_ventanita.webp) | ![La captura en QGIS](imagenes/google_earth_3_qgis.webp) |
 
+## Imágenes que se toman del marco
+
+El marco de cada imagen del dibujo se engancha con las referencias de
+IngeCAD (esquinas, medio, inserción, intersección), como en AutoCAD: una vez
+insertada, la imagen se ubica tomándola de una esquina y se escala desde sus
+extremos, también girada o recortada.
+**[Cómo se usa](IMAGENES.md)**.
+
+![Referencia «Punto medio» sobre el marco de un plano escaneado y girado](imagenes/imagen_marco_referencias.webp)
+
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera
