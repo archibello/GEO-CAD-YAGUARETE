@@ -1,0 +1,48 @@
+GeoCAD - versión 3.33.6
+=======================
+MOSAICO DE GOOGLE EARTH MÁS RÁPIDO (23/10/2026, pedido de Fernando).
+
+Fernando: el mosaico de 25 piezas tardaba unos 25 minutos (cada pieza entre
+43 y 53 s).
+
+La causa
+- El registro de vuelos mostró que cada pieza esperaba unos 40 s a que
+  Google Earth terminara de volar: la foto en sí sale en 3 s. Google Earth
+  tenía la Velocidad de vuelo de fábrica (0,18); el ajuste al máximo del
+  21/10 se había perdido.
+- Con la velocidad en 5 (el máximo): de 9 a 15 s por pieza en vez de 45.
+  Prueba de Fernando: 25 piezas a 230 m en 8 min en total (antes 25),
+  píxel 0,08 m, costuras 2,5 cm, control 0,9 cm, ninguna faltante ni
+  repetida. De esos 8 min, unos 4,5 son las piezas y el resto unir,
+  llevar a planas y guardar la imagen (10302 x 5613 px).
+- GeoCAD no la puede cambiar solo: el Flatpak de Google Earth esconde su
+  configuración a IngeCAD y a QGIS (comprobado).
+
+Lo nuevo
+- Aviso «Google Earth vuela lento»: si las piezas tardan más de 25 s
+  (mediana), la ventanita lo dice durante el mosaico y al terminar, con el
+  camino: Herramientas > Opciones > Navegación > Velocidad de vuelo en 5.
+- Google Earth trabado («Another instance of this application is already
+  running» sin otro abierto): queda así si se cierra de golpe. «Abrir
+  Google Earth con GeoCAD» lo destraba solo, sólo si no hay ninguna ventana
+  de Google Earth (ni minimizada), no está enlazado y la traba tiene más de
+  2 minutos (para no pisar uno que está arrancando).
+- El registro de vuelos guarda lo que mandó Google Earth cuando su vista no
+  sirve («inválida»), para encontrar la causa (ver Pendiente).
+- Guía GOOGLE_EARTH.md e INSTALAR.md: velocidad de vuelo en 5 y los dos
+  casos en «Si algo no anda».
+
+Se mantiene lo de la 3.33.4: costuras de centímetros, vistas a plomo con el
+norte arriba, ninguna pieza con la imagen de la anterior.
+
+Pruebas
+- test_googleearth_vuelo: vuela lento (mediana de las piezas, aviso durante
+  y al final), el de Fernando con 5 no avisa; la traba se borra sólo sin
+  Google Earth abierto y si no es nueva.
+- Todas las pruebas automáticas OK con IngeCAD 0.6.8.1 y con la 0.6.7.
+
+Pendiente
+- Desde el 23/10 a las 07:01 Google Earth manda vistas que GeoCAD descarta
+  («inválida»); a veces el botón Capturar no se habilita («Mosaico: falta
+  la vista de Google Earth»). El enlace de GeoCAD estaba dos veces en
+  Google Earth (Mis lugares y Lugares temporales).

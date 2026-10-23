@@ -533,6 +533,19 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 self.salida.setText(con_hora("Google Earth ya está abierto y enlazado con GeoCAD."))
                 return
             self._escribir_kml()
+            soltado = False
+            if not self.srv.conectado():                # 3.33.6: el candado de un cierre de golpe
+                foto = None
+                try:
+                    foto = V.FotoX11()
+                    soltado = GE.soltar_candado(foto.ventana(visible=False) is not None)
+                except GE.GoogleEarthError:
+                    pass                                # sin X11 no se sabe si está abierto
+                finally:
+                    if foto is not None:
+                        foto.cerrar()
+                if soltado:
+                    V.registrar("candado viejo de Google Earth borrado")
             url = QtCore.QUrl.fromLocalFile(str(GE.archivo_kml()))
             if not QtGui.QDesktopServices.openUrl(url):
                 QtWidgets.QMessageBox.information(
@@ -541,7 +554,9 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 return
             self.salida.setStyleSheet("")             # no es un error (3.33.2)
             self.salida.setText(con_hora("Google Earth abre el enlace de GeoCAD en Lugares "
-                                         "temporales (no se guarda en Mis lugares)."))
+                                         "temporales (no se guarda en Mis lugares)."
+                                         + (" (Había quedado trabado de un cierre de golpe: "
+                                            "destrabado.)" if soltado else "")))
 
         def llevar(self):
             """Google Earth a lo que se ve en el programa (3.33.1, idea de Fernando)."""
@@ -836,7 +851,8 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                 desc = f"Google Earth {d['fecha']}".strip()
                 GE.guardar(im, m, d["crs"], ruta, d["formato"], self.programa.escribir_jpg, desc)
                 GE.informe(ruta, info)
-                av.update(ruta=ruta, info=info, texto="5/5 Insertando...", fraccion=1.0)
+                av.update(ruta=ruta, info=info, texto="5/5 Insertando...", fraccion=1.0,
+                          lento=cap.lento)
             except V.Cancelado:
                 av["error"] = "Captura cancelada; la vista volvió a donde estaba."
             except GE.GoogleEarthError as exc:
@@ -880,6 +896,8 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
                     textos.append(f"{OTRO[self.programa.nombre]} no está abierto con el Puente: "
                                   "la imagen queda en la carpeta.")
             textos.insert(0, f"✔ Captura lista en {time.time() - self._t_captura:.0f} s.")
+            if av.get("lento"):                         # 3.33.6
+                textos.insert(1, V.AVISO_LENTO)
             if info.get("Piezas que faltaron", "-") != "-":
                 textos.insert(1, f"Ojo: faltaron piezas, {info['Piezas que faltaron']}. "
                                  "Podés capturar de nuevo esa parte.")

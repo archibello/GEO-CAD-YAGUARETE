@@ -133,7 +133,7 @@ instalados: Google Earth Pro, IngeCAD y QGIS. Cómo se usa, paso a paso:
   antes de capturar: GeoCAD captura la que esté puesta.
 - Más detalle: ventana de Google Earth grande (Pantalla) o Mosaico.
 - En Google Earth: **Herramientas > Opciones > Navegación > Velocidad de
-  vuelo**, al máximo (si no, cada pieza del mosaico tarda casi un minuto).
+  vuelo**, al máximo (5; si no, cada pieza del mosaico tarda casi un minuto).
 - Las imágenes de Google Earth tienen las condiciones de uso de Google:
   sirven de referencia; respetar su atribución.
 

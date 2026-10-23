@@ -97,6 +97,27 @@ def archivo_ajustes() -> Path:
     return Path.home() / ".config" / "geocad" / "googleearth.json"
 
 
+def candado() -> Path:
+    """El que deja Google Earth mientras está abierto (un enlace a /proc/<pid>
+    de su sandbox). Si se cierra de golpe queda y no vuelve a abrir: «Another
+    instance of this application is already running» (23/10/2026)."""
+    return Path.home() / ".googleearth" / "instance-running-lock"
+
+
+def soltar_candado(abierto: bool, edad_min: float = 120.0, ruta: Path | None = None) -> bool:
+    """Borra el candado si Google Earth no está abierto (3.33.6). Con menos de
+    ``edad_min`` segundos puede ser uno que está arrancando: no se toca.
+    Devuelve True si lo borró."""
+    ruta = ruta or candado()
+    try:
+        if abierto or not os.path.lexists(ruta) or time.time() - os.lstat(ruta).st_mtime < edad_min:
+            return False
+        os.unlink(ruta)
+        return True
+    except OSError:
+        return False
+
+
 def _validar(clave: str, valor):
     d = DEFECTOS[clave]
     if clave == "calidad":

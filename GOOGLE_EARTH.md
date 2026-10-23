@@ -32,8 +32,9 @@ viene en Ubuntu).
 2. Decirle al dibujo en qué sistema está: **SISTEMAGEO** en IngeCAD (en QGIS,
    un proyecto en coordenadas planas).
 3. En Google Earth Pro: **Herramientas > Opciones > Navegación > Velocidad de
-   vuelo**, al máximo. Con la velocidad baja, cada vuelo tarda casi un
-   minuto y el mosaico se hace muy largo.
+   vuelo**, al máximo (**5**; de fábrica viene en 0,18), y **Aceptar**. Con
+   0,18 cada pieza del mosaico tarda unos 45 s; con 5, unos 10 s (25 piezas:
+   4 min en vez de 25). Si vuela lento, GeoCAD lo avisa en la ventanita.
 4. Si Google Earth Pro es Flatpak y da el error del archivo de caché, ver
    [INSTALAR.md, 6 bis](INSTALAR.md).
 
@@ -109,8 +110,15 @@ se muestran siempre.
 - **«Se cortó el enlace»**: Google Earth se cerró o dejó de pedir el enlace.
   Abrirlo de nuevo con GeoCAD.
 - **No se ve una cruz**: algo la tapa (chincheta, brújula, otra ventana).
-- **El mosaico tarda mucho**: subir la velocidad de vuelo de Google Earth
-  (ver arriba).
+- **El mosaico tarda mucho** o la ventanita dice **«Google Earth vuela
+  lento»**: poner la velocidad de vuelo de Google Earth en 5 (ver arriba).
+  GeoCAD no la puede cambiar solo: el Flatpak de Google Earth le esconde su
+  configuración.
+- **«Another instance of this application is already running»** al abrir
+  Google Earth, sin que haya otro abierto: quedó trabado de un cierre de
+  golpe. «Abrir Google Earth con GeoCAD» lo destraba solo (si no hay ninguna
+  ventana de Google Earth, ni minimizada); a mano: borrar
+  `~/.googleearth/instance-running-lock`.
 - Lo que pasa entre GeoCAD y Google Earth queda en
   `~/.config/geocad/googleearth_registro.txt`, útil para reportar un
   problema en [Issues](https://github.com/archibello/GEO-CAD-YAGUARETE/issues).

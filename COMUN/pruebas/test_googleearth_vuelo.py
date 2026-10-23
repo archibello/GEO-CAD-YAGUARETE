@@ -1,4 +1,4 @@
-"""Google Earth: los vuelos de la captura (3.33.3 y 3.33.4).
+"""Google Earth: los vuelos de la captura (3.33.3, 3.33.4 y 3.33.6).
 
 3.33.3 (Fernando, 21/10/2026): «la captura funciona el 50 % de las veces»,
 «Mosaico falló todas las veces», «en vez de dar tantos mensajes de error
@@ -24,6 +24,8 @@ from urllib.parse import urlencode
 import re
 
 import numpy as np
+
+UI_TXT = (Path(__file__).resolve().parents[1] / "nucleo" / "googleearth_ui.py").read_text(encoding="utf-8")
 
 NUCLEO = Path(__file__).resolve().parents[1] / "nucleo"
 paquete = types.ModuleType("nucleo_ge")
@@ -199,6 +201,7 @@ t0 = time.time()
 piezas = c.mosaico(a_planas, a_geo, 200.0)
 dt = time.time() - t0
 assert len(piezas) == len(c.plan.centros) == 25 and not c.faltan and c.estados == ["ok"] * 25
+assert len(c.tiempos) == 25 and not c.lento                         # 3.33.6: vuela rápido
 assert all(len(m) == 4 for _a, m, _f, _c in piezas)
 time.sleep(0.1)
 assert abs(ge.cam[2] - 828) < 0.01 and srv.cruces is None          # la vista volvió, sin cruces
@@ -225,15 +228,53 @@ print(f"ok Mosaico con una pieza imposible: 24 de 25 y la 8 en rojo ({UIM.resume
 #     pieza sale con la imagen y las cruces de la anterior (barrios repetidos)
 srv = servidor()
 ge = GEDeMentira(srv, lento=0.25)
-c = captura(srv, ge)
+avisos = []
+c = captura(srv, ge, aviso=lambda t, _f=None: avisos.append(t))
 c.tope_quieta = 3.0
+LENTO = V.LENTO
+V.LENTO = 0.2                                     # a escala: cada pieza tarda más de 0,25 s
 piezas = c.mosaico(a_planas, a_geo, 200.0)
+lento_mosaico = c.lento
+V.LENTO = LENTO
 assert len(piezas) == 25 and not c.faltan
 for (a, m, fila, col), (f2, c2, lon, lat) in zip(piezas, c.plan.centros):
     assert (fila, col) == (f2, c2)
     assert a[0, 0, 0] == GEDeMentira.valor([lon, lat, c.plan.rango]), (fila, col)   # su lugar
 ge.fin()
 print("ok Google Earth lento: cada pieza con su propia imagen (se espera a que se mueva)")
+
+# --- 3.33.6: Google Earth vuela lento (Velocidad de vuelo de fábrica, 0,18):
+#     se avisa durante el mosaico y al terminar (GeoCAD no la puede cambiar)
+assert lento_mosaico and len(c.tiempos) == 25
+assert any("vuela lento" in t for t in avisos) and not any("vuela lento" in t for t in avisos[:3])
+assert "Velocidad de vuelo en 5" in V.AVISO_LENTO
+c2 = V.Captura(srv, ge.foto)
+c2.tiempos = [9.2, 8.8, 9.1]                      # la prueba de Fernando con 5 (23/10/2026)
+assert not c2.lento
+c2.tiempos = [45.0, 44.1, 9.0]                    # con 0,18
+assert c2.lento
+c2.tiempos = [45.0]                               # una sola pieza no alcanza para decir
+assert not c2.lento
+assert "lento=cap.lento" in UI_TXT and "V.AVISO_LENTO" in UI_TXT
+print("ok vuela lento: aviso con la Velocidad de vuelo (mediana de las piezas)")
+
+# --- 3.33.6: el candado de Google Earth que queda de un cierre de golpe
+#     («Another instance of this application is already running»)
+carpeta = Path(tempfile.mkdtemp())
+cand = carpeta / "instance-running-lock"
+os.symlink("/proc/5", cand)
+viejo = time.time() - 600
+os.utime(cand, (viejo, viejo), follow_symlinks=False)
+assert not GE.soltar_candado(True, ruta=cand) and os.path.lexists(cand)        # abierto: no
+assert GE.soltar_candado(False, ruta=cand) and not os.path.lexists(cand)       # colgado: se borra
+os.symlink("/proc/5", cand)                                                     # recién puesto:
+assert not GE.soltar_candado(False, ruta=cand) and os.path.lexists(cand)       # está arrancando
+assert not GE.soltar_candado(False, ruta=carpeta / "no-hay")
+assert GE.candado() == Path.home() / ".googleearth" / "instance-running-lock"
+abrir = UI_TXT.split("def abrir_google_earth")[1].split("def llevar")[0]
+assert "GE.soltar_candado(foto.ventana(visible=False) is not None)" in abrir
+assert abrir.index("soltar_candado") < abrir.index("openUrl")
+print("ok candado colgado: se borra sólo sin Google Earth abierto y si no es nuevo")
 
 # --- enlace cortado: avisa en el acto, sin dar vueltas
 srv = servidor()

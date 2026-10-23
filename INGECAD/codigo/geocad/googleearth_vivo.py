@@ -140,7 +140,8 @@ class Servidor:
             return "image/png", self._icono
         if u.path == "/vista":
             vista = GE.leer_vista(q)
-            registrar(f"/vista {q.get('cam', '-')}" + ("" if vista is not None else " (inválida)"))
+            registrar(f"/vista {q.get('cam', '-')}" + ("" if vista is not None
+                                                       else f" (inválida: {u.query[:300]})"))
             with self.cerrojo:
                 if vista is not None:
                     self.vista = vista
@@ -333,8 +334,9 @@ class FotoX11:
             self.x.XFree(hijos)
         return out
 
-    def ventana(self):
-        """(id, ancho, alto) de la ventana principal de Google Earth, o None."""
+    def ventana(self, visible: bool = True):
+        """(id, ancho, alto) de la ventana principal de Google Earth, o None.
+        Sin ``visible`` cuenta también las minimizadas (¿está abierto?)."""
         mejor = None
         pila = [self.x.XDefaultRootWindow(self.dpy)]
         while pila:
@@ -351,7 +353,8 @@ class FotoX11:
             if not es_ge:
                 continue
             at = _XWindowAttributes()
-            if not self.x.XGetWindowAttributes(self.dpy, w, ctypes.byref(at)) or at.map_state != 2:
+            if not self.x.XGetWindowAttributes(self.dpy, w, ctypes.byref(at)) \
+                    or (visible and at.map_state != 2):
                 continue
             if mejor is None or at.width * at.height > mejor[1] * mejor[2]:
                 mejor = (w, at.width, at.height)
@@ -657,6 +660,10 @@ class Reintentable(GE.GoogleEarthError):
 
 INTENTOS = 3              # la captura entera; y cada pieza del mosaico
 MOVIO = 2.0               # diferencia media (0-255) que dice que Google Earth se movió
+LENTO = 25.0              # s por pieza (mediana) que dicen que Google Earth vuela lento
+AVISO_LENTO = ("Google Earth vuela lento: en Google Earth, Herramientas > Opciones > "
+               "Navegación, poné la Velocidad de vuelo en 5 (al máximo), Aceptar. Así cada "
+               "pieza tarda unos 10 s en vez de 45.")
 
 
 def con_reintentos(hacer, aviso=None, cancelar=None, intentos: int = INTENTOS):
@@ -708,6 +715,7 @@ class Captura:
         self.faltan = []              # (fila, col) de las piezas que no salieron
         self.ultimo_error = ""
         self.estados = []             # 3.33.4: la barra de fotogramas
+        self.tiempos = []             # 3.33.6: lo que tardó cada pieza del mosaico
         self._donde = None            # adónde se pidió volar la última vez
 
     # -- esperas
@@ -803,13 +811,27 @@ class Captura:
         raise Reintentable("La imagen de Google Earth no se terminó de cargar "
                            f"en {self.tope_quieta:.0f} s.")
 
+    @property
+    def lento(self) -> bool:
+        """¿Google Earth vuela lento? (3.33.6). Con la velocidad de vuelo de
+        fábrica (0,18) cada vuelo dura unos 40 s; al máximo (5), unos 4: el
+        mosaico de 25 piezas pasa de 25 min a 4 (prueba del 23/10/2026).
+        GeoCAD no la puede cambiar: el Flatpak de Google Earth esconde su
+        configuración a IngeCAD y QGIS. Se avisa."""
+        if len(self.tiempos) < 2:
+            return False
+        t = sorted(self.tiempos)
+        return t[len(t) // 2] > LENTO
+
     def _una(self, lon: float, lat: float, rango: float, marcas, etapa: str = "", resto: str = ""):
+        t0 = time.time()
         d = self._donde
         mueve = d is None or GE.distancia_m(d[0], d[1], lon, lat) > 1.0 or abs(d[2] - rango) > 1.0
         antes = self.foto() if mueve else None          # para saber que Google Earth se movió
         self._entregar(marcas, (lon, lat, rango))
         self._donde = (lon, lat, rango)
         a = self._foto_quieta(etapa, resto, marcas, antes)
+        self.tiempos.append(time.time() - t0)
         return a, list(marcas)
 
     # -- las dos calidades
@@ -850,6 +872,7 @@ class Captura:
         self.original = v
         piezas = {}
         self.faltan = []
+        self.tiempos = []
         self._donde = (v.lon, v.lat, v.rango)
         total = len(plan.centros)
         self.estados = [""] * total
@@ -869,6 +892,8 @@ class Captura:
                     if hechas:                          # lo que falta, por lo que vienen tardando
                         falta = (time.time() - t0) / hechas * (len(pendientes) - i)
                         resto = f" · faltan unos {falta:.0f} s"
+                    if self.lento:
+                        resto += " · Google Earth vuela lento: subí su Velocidad de vuelo"
                     etapa = (f"2/5 Pieza {n} de {total}: " if vuelta == 1 else
                              f"2/5 Repitiendo la pieza {n} de {total}: ")
                     self.aviso(f"{etapa}volando...{resto}", 0.05 + 0.75 * hechas / total)
