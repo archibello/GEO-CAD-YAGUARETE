@@ -75,7 +75,9 @@ CATALOGO = {
                "elija, que QGIS abre en su lugar. Ctrl+V (o PEGARIMAGEN) pega la captura de "
                "pantalla del portapapeles con dos clics (esquinas inferior izquierda y derecha). "
                "ASPECTOIMAGEN cambia el aspecto de una imagen (fondo transparente, líneas en "
-               "negativo o de un color, opacidad) en una copia; el original no se toca."),
+               "negativo o de un color, opacidad) en una copia; el original no se toca. "
+               "El marco de las imágenes se engancha con las referencias (esquinas, medio, "
+               "inserción), para ubicarlas y escalarlas desde los extremos."),
         Modulo("orden", "Orden de dibujo (ALFRENTE, ALFONDO)",
                "Dos botones en la barra GeoCAD, como el DRAWORDER de AutoCAD: lo "
                "elegido se dibuja encima o debajo de todo (líneas, sombreados, "

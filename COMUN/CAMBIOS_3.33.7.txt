@@ -1,0 +1,28 @@
+GeoCAD - versión 3.33.7
+=======================
+REFERENCIAS EN EL MARCO DE LAS IMÁGENES (23/10/2026, pedido de Fernando).
+
+Fernando: «los snaps no funcionan con las imágenes»: el marco, que ayuda a
+ubicarlas y a escalarlas desde los extremos una vez insertadas.
+
+La causa
+- El motor de referencias de IngeCAD (0.6.7 y 0.6.8.2) no contempla las
+  imágenes (IMAGE): una imagen insertada no ofrecía ningún punto.
+
+Lo nuevo
+- El marco de la imagen se engancha como en AutoCAD:
+  Final en las cuatro esquinas, Medio de cada lado, Intersección (con
+  líneas u otras imágenes), Cercano y Perpendicular sobre el borde, e
+  Inserción en el punto de inserción.
+- Sirve para MOVER tomándola de una esquina, ESCALAR con referencia desde
+  los extremos y ALINEAR con el dibujo, también girada.
+- Una imagen recortada se engancha por su recorte (el mismo borde con que
+  IngeCAD la elige).
+- Va con el módulo «Imágenes georreferenciadas» (georref): apagado,
+  IngeCAD queda como venía.
+
+Pruebas
+- test_marco_imagen (nueva): esquinas, medio, intersección, inserción,
+  cercano, girada, recortada, recién insertada, módulo apagado, y que se
+  instala una sola vez junto a las referencias de bloques.
+- Todas las pruebas automáticas OK (57) con IngeCAD 0.6.8.2 y con la 0.6.7.
