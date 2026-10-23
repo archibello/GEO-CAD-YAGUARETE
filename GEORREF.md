@@ -7,12 +7,11 @@ dónde está algo en la imagen y dónde tiene que quedar en el dibujo. Funciona
 como el **Georreferenciador de QGIS**, con los mismos métodos y el mismo
 archivo de puntos (`.points`), y como el RUBBERSHEET de AutoCAD Map.
 
-![Cuatro pares: de las esquinas del marco de la imagen a su lugar; punteado, dónde va a quedar](imagenes/georref_1_pares.webp)
+![El plano de mensura escaneado, ya en su lugar sobre las parcelas de la sección](imagenes/georref_4_resultado.webp)
 
-*Un plano de mensura escaneado sobre las parcelas de la sección. Cada flecha
-roja numerada es un par, que va de un punto de la imagen (cruz amarilla) a
-su lugar en el dibujo. El punteado naranja muestra dónde va a quedar la
-imagen antes de transformarla.*
+*Un plano de mensura escaneado, llevado con GEORREF sobre las parcelas de la
+sección (en rojo). Abajo, [la secuencia completa](#cómo-se-usa) que lo dejó
+ahí.*
 
 ## Antes de empezar (una sola vez)
 
@@ -39,8 +38,20 @@ imagen antes de transformarla.*
    el método, se ve punteado dónde va a quedar la imagen. **Deshacer (U)**
    quita el último punto. Los puntos también se pueden escribir como
    coordenadas.
-3. **Enter** abre la **tabla de puntos**.
-4. Elegir el **tipo de transformación** y **Transformar**.
+
+   ![Cuatro pares: del plano escaneado (arriba) a las parcelas del dibujo; punteado, dónde va a quedar](imagenes/georref_1_pares.webp)
+
+   *El plano escaneado está arriba, lejos de su lugar. Cada flecha roja
+   numerada va de un punto del plano (cruz amarilla) al mismo punto en las
+   parcelas del dibujo. El rectángulo punteado naranja muestra dónde va a
+   quedar el plano.*
+3. **Enter** abre la **tabla de puntos** (ver [abajo](#la-tabla-de-puntos)).
+   Elegir el **tipo de transformación** y **Transformar**.
+4. Listo: el plano queda en su lugar, sobre el dibujo. Con un método que
+   rehace la imagen, la copia tiene fondo transparente y las parcelas se
+   siguen viendo a través. Los puntos quedan guardados en un `.points` que
+   abre el Georreferenciador de QGIS, y QGIS abre la copia en su lugar.
+   Es la captura del principio de esta guía.
 
 Un solo **U** después de transformar deja la imagen como estaba.
 

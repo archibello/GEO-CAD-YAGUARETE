@@ -46,7 +46,9 @@ puntos con residuos y error medio, el mismo archivo `.points`, y una copia
 con su archivo de mundo que QGIS abre en su lugar.
 **[Cómo se usa](GEORREF.md)**.
 
-![GEORREF: pares de puntos y, punteado, dónde va a quedar la imagen](imagenes/georref_1_pares.webp)
+| Se marcan los pares: del plano escaneado a su lugar | El plano queda en su lugar, sobre las parcelas |
+|---|---|
+| ![GEORREF: pares de puntos y, punteado, dónde va a quedar la imagen](imagenes/georref_1_pares.webp) | ![El plano ya en su lugar](imagenes/georref_4_resultado.webp) |
 
 ## Módulos (nada invasivo)
 
