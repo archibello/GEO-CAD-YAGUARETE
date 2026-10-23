@@ -75,8 +75,8 @@ algo en el dibujo:
   solo paso.
 
 Para ajustar un plano escaneado **con varios puntos de control** (como el
-Georreferenciador de QGIS) está **GEORREF**: el marco sirve para llevarlo
-cerca primero.
+Georreferenciador de QGIS) está **GEORREF** ([guía](GEORREF.md)): el marco
+sirve para llevarlo cerca primero, y sus esquinas, como puntos de la imagen.
 
 ## Imagen girada o rehecha
 

@@ -36,6 +36,18 @@ extremos, también girada o recortada.
 
 ![Referencia «Punto medio» sobre el marco de un plano escaneado y girado](imagenes/imagen_marco_referencias.webp)
 
+## Georreferenciar planos escaneados (GEORREF)
+
+Un plano escaneado o una foto se lleva a su lugar en el dibujo de IngeCAD
+marcando pares de puntos (dónde está en la imagen, dónde tiene que quedar),
+como el Georreferenciador de QGIS: los mismos siete métodos (Lineal,
+Helmert, Polinómica 1, 2 y 3, Thin Plate Spline y Proyectiva), tabla de
+puntos con residuos y error medio, el mismo archivo `.points`, y una copia
+con su archivo de mundo que QGIS abre en su lugar.
+**[Cómo se usa](GEORREF.md)**.
+
+![GEORREF: pares de puntos y, punteado, dónde va a quedar la imagen](imagenes/georref_1_pares.webp)
+
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera
