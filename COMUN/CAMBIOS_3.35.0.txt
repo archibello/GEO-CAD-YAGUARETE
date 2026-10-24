@@ -1,0 +1,41 @@
+GeoCAD - versión 3.35.0
+=======================
+RECORTAR UNA IMAGEN CON CTRL + AGARRE (24/10/2026, pedido de Fernando).
+
+Fernando: «que con la tecla Ctrl el cuadro de la imagen se achique hasta
+donde nosotros queramos; sería un comportamiento muy útil y muy intuitivo».
+(La 3.34.0 sigue reservada para la visibilidad de rótulos.)
+
+Cómo se usa
+- Elegir la imagen, tomar el agarre de una esquina (clic), llevarlo y
+  soltarlo (clic) CON CTRL APRETADO: la imagen se recorta. La esquina queda
+  donde se suelta y la opuesta no se mueve; lo que queda de la imagen no
+  cambia de lugar ni de escala.
+- Con las referencias activas (y las del marco de la 3.33.7), el borde cae
+  justo en una línea de parcela o en un vértice (al píxel: la copia se corta
+  por píxeles enteros).
+- Con Ctrl hacia afuera se vuelve a abrir, hasta el tamaño de la original y
+  no más: un recorte no pierde nada.
+- U deshace cada recorte (uno por recorte). Sin Ctrl, el agarre escala la
+  imagen como siempre.
+- Sirve también con la imagen girada.
+
+Cómo lo hace
+- IngeCAD no dibuja el recorte que el DWG guarda en la imagen (la muestra
+  entera), así que GeoCAD arma una COPIA con los mismos píxeles, sin
+  remuestrear, en «<dibujo>_imagenes» (como ASPECTOIMAGEN):
+  <original>_recorte_<x>_<y>_<ancho>x<alto>.png. El mismo recorte usa
+  siempre la misma copia. La original no se toca.
+- En la imagen queda anotado (XDATA) cuál es la original y qué parte se
+  recortó: por eso se puede volver a abrir.
+- Mientras se arrastra con Ctrl la imagen queda quieta; el recorte aparece
+  al soltar.
+- Va con el módulo «Imágenes georreferenciadas» (georref): apagado, el
+  agarre escala como venía.
+
+Pruebas
+- test_recorte_imagen (nueva): achicar desde cada esquina y volver a abrir,
+  los mismos píxeles en la copia y la original intacta, U y rehacer, imagen
+  girada, avisos sin recorte, Ctrl contra sin Ctrl y módulo apagado, soltar
+  el agarre en un solo paso de U.
+- Todas las pruebas automáticas OK (58) con IngeCAD 0.6.8.2 y con la 0.6.7.
