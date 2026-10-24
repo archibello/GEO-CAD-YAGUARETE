@@ -22,3 +22,14 @@ Pruebas (COMUN/pruebas)
   ezdxf (github.com/mozman/ezdxf, carpeta src) y pyshp (GeospatialPython/pyshp,
   carpeta src); y GDAL_GPKG apuntando a autotest/ogr/data/gpkg del repositorio
   de GDAL. Correr cada una:  python3 COMUN/pruebas/test_<nombre>.py  -> «TODO OK ...»
+
+Banco con la ventana real de IngeCAD (COMUN/pruebas/ventana, desde 3.36.0)
+  Las pruebas de arriba corren sin Qt y no ven la pantalla. Lo que toca cómo
+  IngeCAD MUESTRA o EDITA (agarres, imágenes, redibujo) se comprueba además
+  con la ventana real, sin pantalla (Qt «offscreen»), como hacen las pruebas
+  del propio IngeCAD. Hace falta un entorno aparte con PySide6:
+    python3 -m venv <venvqt> && <venvqt>/bin/pip install PySide6 ezdxf numpy pillow pyproj
+    QT_QPA_PLATFORM=offscreen <venvqt>/bin/python COMUN/pruebas/ventana/banco_imagenes_ventana.py \
+        <carpeta de IngeCAD> INGECAD/codigo/geocad
+  -> «TODO OK». Un «violación de segmento» DESPUÉS de «TODO OK» es Qt al
+  cerrarse: no cuenta. Correrlo con cada versión de IngeCAD que se pruebe.

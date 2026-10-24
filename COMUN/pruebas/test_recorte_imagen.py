@@ -72,7 +72,7 @@ assert marco(img) == [(100, 50), (100, 65), (130, 50), (130, 65)], marco(img)
 copia = archivo(img)
 assert copia.parent == carpeta / "obra_imagenes" and copia.name == "plano_recorte_0_50_300x150.png", copia
 assert list(Image.open(copia).getdata()) == list(im.crop((0, 50, 300, 200)).getdata())   # los mismos píxeles
-assert RI.leer(img) == (str(original), (0, 50, 300, 200))
+assert RI.leer(img)[:2] == (str(original), (0, 50, 300, 200))
 assert Image.open(original).size == (400, 200)                                         # la original intacta
 print("ok achicar: esquina en su lugar, misma escala, los mismos píxeles")
 
@@ -179,7 +179,7 @@ c.update(30, 115)                                               # con Ctrl: quie
 c.finish_grip_drag(30, 115)                                     # suelta con Ctrl: recorta
 assert marco(img3) == [(0, 100), (0, 115), (30, 100), (30, 115)], marco(img3)
 assert len(h._undo) == pasos + 1                                # un solo paso para U
-assert "recortada" in c.window.command_line.dicho[-1]
+assert "recortada" in c.window.command_line.dicho[-2] and c.window.command_line.dicho[-1] == RI.AVISO
 h.undo(); assert marco(img3) == [(0, 100), (0, 120), (40, 100), (40, 120)]          # U: como estaba
 c.begin(img3, 40, 120); c.finish_grip_drag(0, 100)              # recortar a nada: avisa, no cambia
 assert "no se recorta" in c.window.command_line.dicho[-1] and len(h._undo) == pasos
@@ -197,4 +197,236 @@ while f is not None:
     f = getattr(f, "_puente_original", None)
 assert capas == 1, capas
 print("ok instalado una sola vez")
+
+# ------------------------------------------------ 10. Shift+Ctrl: la esquina sola (3.36.0)
+RI._ctrl = lambda: True
+p4 = m.add_image(defi, insert=(0, 300), size_in_units=(40, 20))      # 400 x 200, 0,1 por píxel
+def esq(e):
+    return [r(q) for q in RI.esquinas(e)]
+assert esq(p4) == [(0, 320), (40, 320), (40, 300), (0, 300)]          # arriba izq., arriba der., abajo der., abajo izq.
+h.execute(RI.preparar(p4, 1, (35, 318), d, libre=True))              # arriba derecha, sola
+assert esq(p4) == [(0, 320), (35, 318), (40, 300), (0, 300)], esq(p4)
+assert RI.leer(p4)[2] == [(0, 0), (350, 20), (400, 200), (0, 200)]
+assert tuple(p4.dxf.image_size)[:2] == (400, 200) and r(p4.dxf.insert)[:2] == (0, 300)   # la caja no cambió
+borde = sorted({r((q.x, q.y)) for q in p4.boundary_path_wcs()})                       # el recorte del DWG
+assert borde == sorted({(0, 320), (35, 318), (40, 300), (0, 300)}), borde
+assert p4.dxf.clipping == 1
+copia4 = Image.open(archivo(p4))
+assert copia4.mode == "RGBA" and copia4.getpixel((390, 5))[3] == 0 and copia4.getpixel((10, 100))[3] == 255
+assert copia4.getpixel((10, 100))[:3] == im.getpixel((10, 100))                    # los mismos píxeles
+print("ok Shift+Ctrl: la esquina sola, polígono, recorte del DWG, afuera transparente")
+
+# ------------------------------------------------ 11. Alt+clic en un lado: una esquina más
+h.execute(RI.preparar(p4, 3, (0, 310), d, rol=RI.ROL_MEDIO))          # lado 3: abajo izq. -> arriba izq.
+assert len(RI.leer(p4)[2]) == 5 and esq(p4)[4] == (0, 310), esq(p4)
+h.execute(RI.preparar(p4, 4, (5, 310), d, libre=True))                # la esquina nueva, hacia adentro
+assert esq(p4)[4] == (5, 310)
+copia5 = Image.open(archivo(p4))
+assert copia5.getpixel((20, 100))[3] == 0 and copia5.getpixel((20, 30))[3] == 255   # cortó sólo la cuña de la izquierda
+assert RI.lado_cercano(p4, (20, 300.05), 0.1)[0] == 2                  # el lado de abajo, cerca
+assert RI.lado_cercano(p4, (20, 305), 0.1) is None                     # lejos de todo lado
+print("ok Alt+clic: esquina nueva en el lado y se mueve sola")
+
+# ------------------------------------------------ 12. borrar una esquina, lados cruzados, U
+h.execute(RI.preparar(p4, 4, (0, 300), d, libre=True))                # sobre la vecina: se borra
+assert len(RI.leer(p4)[2]) == 4
+try:
+    RI.preparar(p4, 3, (30, 320), d, libre=True)                      # abajo izq. arriba: cruza el lado de arriba
+    raise AssertionError("tenía que fallar")
+except RI.RecorteError as exc:
+    assert "cruzan" in str(exc), exc
+for _ in range(4):
+    h.undo()
+assert RI.leer(p4) is None and p4.dxf.clipping == 0 and archivo(p4) == original
+assert esq(p4) == [(0, 320), (40, 320), (40, 300), (0, 300)]
+print("ok borrar esquina, lados cruzados, U hasta la original")
+
+# ------------------------------------------------ 13. agarres y recortes de la 3.35.0
+ag = SEL.entity_grips(p4)                                              # sin recorte: las 4 esquinas de IngeCAD, en su orden, y 4 medios
+assert [r(g[:2]) for g in ag[:4]] == [r((q.x, q.y)) for q in list(p4.boundary_path_wcs())[:4]]
+assert [g[2] for g in ag] == ["corner"] * 4 + [RI.ROL_LADO] * 4 and r(ag[4][:2]) == (20, 320)
+h.execute(RI.preparar(p4, 1, (35, 318), d, libre=True))
+assert [g[:2] for g in SEL.entity_grips(p4)][:4] == [tuple(q) for q in RI.esquinas(p4)]   # en las esquinas reales
+viejo = m.add_image(defi, insert=(0, 400), size_in_units=(40, 20))         # 0,1 por píxel; queda 30 x 15
+viejo.dxf.image_size = (300, 150)
+d.doc.appids.add(RI.APPID)
+viejo.set_xdata(RI.APPID, [(1000, RI.MARCA), (1000, "[0, 50, 300, 200]"), (1000, str(original))])
+assert RI.leer(viejo)[2] == [(0, 50), (300, 50), (300, 200), (0, 200)]           # un recorte de la 3.35.0 se sigue leyendo
+h.execute(RI.preparar(viejo, 0, (5, 412), d, libre=True))
+assert RI.leer(viejo)[2][0] == (50, 80), RI.leer(viejo)
+print("ok agarres en las esquinas reales; recortes de la 3.35.0")
+
+# ------------------------------------------------ 14. Ctrl en el medio de un lado: sólo ese lado
+p5 = m.add_image(defi, insert=(0, 500), size_in_units=(40, 20))
+h.execute(RI.preparar(p5, 5, (31, 510), d, rol=RI.ROL_LADO))          # el medio del lado derecho, hacia adentro
+assert esq(p5) == [(0, 520), (31, 520), (31, 500), (0, 500)], esq(p5)
+assert tuple(p5.dxf.image_size)[:2] == (310, 200) and RI.leer(p5)[2] == [(0, 0), (310, 0), (310, 200), (0, 200)]
+assert p5.dxf.clipping == 0                                            # sigue rectangular: sin recorte del DWG
+h.execute(RI.preparar(p5, 4, (12, 515), d, rol=RI.ROL_LADO))          # el lado de arriba, hacia abajo
+assert esq(p5) == [(0, 515), (31, 515), (31, 500), (0, 500)], esq(p5)
+h.execute(RI.preparar(p5, 4, (12, 900), d, rol=RI.ROL_LADO))          # hacia afuera: hasta la original
+assert esq(p5) == [(0, 520), (31, 520), (31, 500), (0, 500)], esq(p5)
+gl = m.add_image(defi, insert=(300, 500), size_in_units=(40, 20), rotation=90)   # girada: el lado se corre paralelo
+h.execute(RI.preparar(gl, 4, (285, 520), d, rol=RI.ROL_LADO))     # agarre 4: el lado izquierdo (x = 280)
+assert sorted(set(esq(gl))) == [(285, 500), (285, 540), (300, 500), (300, 540)], esq(gl)
+h.undo(); assert sorted(set(esq(gl))) == [(280, 500), (280, 540), (300, 500), (300, 540)]
+print("ok Ctrl en el medio de un lado: sólo ese lado, también girada")
+RI._ctrl = lambda: False
+
+# ------------------------------------------------ 15. el rectángulo de menor área (calibres rotantes)
+import math
+o, a, w, hh = RI.rectangulo_minimo([(10, 20), (110, 20), (110, 70), (10, 70)])
+assert (o, a, round(w, 9), round(hh, 9)) == ((10, 20), 0.0, 100, 50), (o, a, w, hh)
+girado = [(60, 5), (156, 77), (108, 141), (12, 69)]                     # 120 x 80 girado 36,87°
+o, a, w, hh = RI.rectangulo_minimo(girado + [(80, 60), (100, 70)])     # con puntos de adentro
+assert round(math.degrees(a), 4) == 36.8699 and (round(w, 6), round(hh, 6)) == (120, 80), (a, w, hh)
+assert (round(o[0], 6), round(o[1], 6)) == (60, 5), o
+o, a, w, hh = RI.rectangulo_minimo([(0, 0), (60, 80), (-20, 140), (-80, 60)])   # 53,13° -> -36,87°
+assert round(math.degrees(a), 4) == -36.8699 and {round(w, 6), round(hh, 6)} == {100.0}, (a, w, hh)
+print("ok rectángulo mínimo: ángulo entre -45° y 45°, lados y origen")
+
+
+# ------------------------------------------------ 16. Enter: el lienzo gira con el papel (preparar_final)
+def a_pixeles(e, puntos):
+    """Las esquinas, una por una con Shift+Ctrl, hasta el polígono dado (en píxeles de la original)."""
+    for k, q in enumerate(puntos):
+        marca = RI.leer(e)
+        ventana = marca[1] if marca else (0, 0, 400, 200)
+        h.execute(RI.preparar(e, k, RI.a_dibujo(e, ventana, q), d, libre=True))
+    assert RI.leer(e)[2] == puntos, RI.leer(e)
+
+
+def esquinas_imagen(e):
+    w, hh = tuple(e.dxf.image_size)[:2]
+    i, u, v = e.dxf.insert, e.dxf.u_pixel, e.dxf.v_pixel
+    return sorted({r((i.x + a * u.x * w + b * v.x * hh, i.y + a * u.y * w + b * v.y * hh))
+                   for a in (0, 1) for b in (0, 1)})
+
+
+p6 = m.add_image(defi, insert=(0, 700), size_in_units=(40, 20))
+a_pixeles(p6, girado)
+en_dibujo = sorted(r(q) for q in RI.esquinas(p6))
+copia6, pasos = archivo(p6), len(h._undo)
+fin = RI.preparar_final(p6, d); h.execute(fin)
+assert len(h._undo) == pasos + 1                                          # un solo paso
+assert tuple(p6.dxf.image_size)[:2] == (120, 80) and RI.leer(p6) is None   # sin la marca: ya no se reabre
+assert esquinas_imagen(p6) == en_dibujo, (esquinas_imagen(p6), en_dibujo)  # no se movió: el lienzo es el papel
+u = p6.dxf.u_pixel
+assert round(math.hypot(u.x, u.y), 9) == 0.1 and round(math.degrees(math.atan2(u.y, u.x)), 4) == -36.8699
+assert p6.dxf.clipping == 0                                              # rectángulo: sin recorte del DWG
+lienzo = Image.open(archivo(p6))
+assert lienzo.mode == "RGB" and lienzo.size == (120, 80) and archivo(p6).parent == carpeta / "obra_imagenes"
+for i, j in ((10, 10), (60, 40), (100, 70)):                              # los mismos colores, girados
+    x = 60 + (i + .5) * .8 - (j + .5) * .6
+    assert abs(lienzo.getpixel((i, j))[0] - x) <= 2, (i, j, lienzo.getpixel((i, j)), x)
+assert Image.open(original).size == (400, 200)                           # la original intacta
+h.undo()
+assert RI.leer(p6)[2] == girado and archivo(p6) == copia6 and tuple(p6.dxf.image_size)[:2] == (144, 136)
+h.redo(); assert RI.leer(p6) is None and tuple(p6.dxf.image_size)[:2] == (120, 80)
+print("ok Enter: lienzo girado con el papel, sin moverse, un remuestreo, sin marca; U lo deshace")
+
+p7 = m.add_image(defi, insert=(0, 800), size_in_units=(40, 20))
+h.execute(RI.preparar(p7, 1, (35, 818), d, libre=True))                 # no es rectángulo
+fin = RI.preparar_final(p7, d); h.execute(fin)
+assert round(fin.angulo, 6) == 0 and tuple(p7.dxf.image_size)[:2] == (400, 200)
+l7 = Image.open(archivo(p7))
+assert l7.mode == "RGBA" and l7.getpixel((390, 5))[3] == 0 and l7.getpixel((10, 100)) == im.getpixel((10, 100)) + (255,)
+assert p7.dxf.clipping == 1 and RI.leer(p7) is None
+assert sorted({r((q.x, q.y)) for q in p7.boundary_path_wcs()}) == sorted({(0, 820), (35, 818), (40, 800), (0, 800)})
+print("ok Enter con un polígono: afuera transparente, recorte del DWG en el polígono, derecho sin remuestrear")
+
+
+# ------------------------------------------------ 17. la operación: Enter termina, Esc cancela, U de a un paso
+class Dispatcher:
+    """Lo que hace el de IngeCAD con un Enter vacío: repetir el último comando."""
+    def __init__(self): self.last_command, self.pending_prompt, self.corridos, self.cancelados = "LINEA", None, [], 0
+    def submit(self, raw):
+        if not raw.strip() and self.pending_prompt is None:
+            self.corridos.append(self.last_command)
+    def cancel(self): self.cancelados += 1
+
+
+class VentanaOp(Ventana):
+    def __init__(self): super().__init__(); self.dispatcher = Dispatcher()
+
+
+class ControladorOp(Controlador):
+    def __init__(self):
+        super().__init__(); self.window = VentanaOp(); self.tool = None; self._selecting_for = None; self.cancelaciones = 0
+    def cancel(self): self.cancelaciones += 1
+
+
+def enter(c):            # lo que hace IngeCAD con Enter en la línea de comandos, sin comando activo
+    c.window.dispatcher.submit("")
+
+
+def esc(c):              # MainWindow._on_prompt_cancelled
+    c.cancel(); c.window.dispatcher.cancel()
+
+
+c = ControladorOp(); disp = c.window.dispatcher
+p8 = m.add_image(defi, insert=(0, 900), size_in_units=(40, 20))
+RI._ctrl = lambda: True
+c.begin(p8, 40, 920); c.finish_grip_drag(30, 915)                       # el primer recorte abre la operación
+assert "submit" in vars(disp) and "cancel" in vars(c) and RI.AVISO in c.window.command_line.dicho
+c.begin(p8, 0, 900); c.finish_grip_drag(5, 902)                         # otro, dentro de la misma operación
+RI._ctrl = lambda: False
+assert RI.leer(p8)[1] == (50, 50, 300, 180)
+enter(c)
+assert disp.corridos == [] and RI.leer(p8) is None and tuple(p8.dxf.image_size)[:2] == (250, 130)   # no repitió LINEA
+assert "submit" not in vars(disp) and "cancel" not in vars(c)          # cerrada: IngeCAD como venía
+assert "terminado" in c.window.command_line.dicho[-1]
+enter(c); assert disp.corridos == ["LINEA"]                             # ya sin operación: Enter repite
+h.undo()                                                                 # U deshace el Enter y la reabre
+assert RI.leer(p8)[1] == (50, 50, 300, 180) and "submit" in vars(disp)
+h.undo(); assert RI.leer(p8)[1] == (0, 50, 300, 200)                    # U de a un paso, sigue abierta
+enter(c); assert disp.corridos == ["LINEA"] and RI.leer(p8) is None and tuple(p8.dxf.image_size)[:2] == (300, 150)
+h.undo(); h.undo(); assert RI.leer(p8) is None and archivo(p8) == original and "submit" in vars(disp)
+enter(c)                                                                 # abierta pero sin recorte: termina sin cambios
+assert disp.corridos == ["LINEA"] and "submit" not in vars(disp) and "entera" in c.window.command_line.dicho[-1]
+print("ok Enter termina la operación (no repite el último comando); U deshace el Enter y la reabre")
+
+# Esc: la operación entera vuelve atrás
+RI._ctrl = lambda: True
+c.begin(p8, 40, 920); c.finish_grip_drag(30, 915)
+c.begin(p8, 0, 900); c.finish_grip_drag(5, 902)
+RI._shift = lambda: True
+c.begin(p8, 30, 915); c.finish_grip_drag(28, 914)                       # la esquina sola: polígono
+RI._ctrl = RI._shift = lambda: False
+assert len(RI.leer(p8)[2]) == 4 and p8.dxf.clipping == 1
+pasos = len(h._undo)
+c.tool = object(); esc(c)                                               # con un comando activo: Esc es del comando
+assert RI.leer(p8) is not None and "submit" in vars(disp) and c.cancelaciones == 1
+c.tool = None
+disp.pending_prompt = "¿Opción?"; esc(c)                                # con una pregunta pendiente: también
+assert RI.leer(p8) is not None
+disp.pending_prompt = None; esc(c)
+assert RI.leer(p8) is None and archivo(p8) == original and p8.dxf.clipping == 0      # como antes del primer recorte
+assert marco(p8) == [(0, 900), (0, 920), (40, 900), (40, 920)] and len(h._undo) == pasos + 1
+assert "submit" not in vars(disp) and "cancel" not in vars(c) and c.cancelaciones == 3 and disp.cancelados == 3
+h.undo()                                                                 # U deshace el Esc: vuelve el recorte, abierta
+assert len(RI.leer(p8)[2]) == 4 and p8.dxf.clipping == 1 and "submit" in vars(disp)
+esc(c); assert RI.leer(p8) is None and archivo(p8) == original
+print("ok Esc cancela la operación entera (no con un comando o una pregunta en curso); U deshace el Esc")
+
+# apagado el módulo, Enter es de IngeCAD; Alt+clic también abre la operación
+RI._ctrl = lambda: True
+c.begin(p8, 40, 920); c.finish_grip_drag(30, 915)
+RI._ctrl = lambda: False
+modulo(False); enter(c); assert disp.corridos == ["LINEA"] * 2 and RI.leer(p8) is not None
+modulo(True); enter(c); assert RI.leer(p8) is None and disp.corridos == ["LINEA"] * 2
+p9 = m.add_image(defi, insert=(0, 1000), size_in_units=(40, 20))
+assert RI.agregar(c, (20, 1000, RI.ROL_MEDIO, p9.dxf.handle, 2)) and "submit" in vars(disp)
+esc(c); assert RI.leer(p9) is None and "submit" not in vars(disp)
+print("ok apagado: Enter repite como siempre; Alt+clic también abre la operación")
+
+# ------------------------------------------------ 18. dos ventanas: cada una con su Enter
+c2 = ControladorOp(); otro = Document(ezdxf.new("R2018")); otro.path = carpeta / "otra.dwg"
+c2.window.document = otro
+RI._ctrl = lambda: True
+c.begin(p8, 30, 915); c.finish_grip_drag(25, 912)                       # p8 ya es un lienzo terminado: 30 x 15
+RI._ctrl = lambda: False
+enter(c2); assert c2.window.dispatcher.corridos == ["LINEA"] and RI.leer(p8) is not None   # la otra no la termina
+enter(c); assert RI.leer(p8) is None and not RI._abiertas
+print("ok cada dibujo con su operación")
 print("TODO OK")

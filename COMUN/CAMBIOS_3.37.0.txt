@@ -1,0 +1,42 @@
+GeoCAD - versión 3.37.0
+=======================
+RECORTE COMO OPERACIÓN QUE SE CONFIRMA CON ENTER (24/10/2026, decidido por
+Fernando). Trae todo lo de la 3.36.1.
+
+Fernando: «la idea era reducir el lienzo hasta el perímetro de la imagen que
+consideramos útil, no que siga agregando superficies; lo que queda afuera es
+descartado». Después de un GEORREF que rehace la imagen, el papel quedaba
+inclinado dentro de un lienzo derecho grande y el recorte no lo achicaba.
+
+Cómo funciona
+- La operación se abre con el primer recorte con los agarres (Ctrl en una
+  esquina, Shift+Ctrl la esquina sola, Ctrl en el medio de un lado, Alt+clic
+  en un lado). La línea de comandos avisa: «Recortando: Enter termina (...),
+  Esc cancela». Mientras dura, todo se ajusta y se recupera como antes (hacia
+  afuera se vuelve a abrir hasta la original; un U por paso).
+- ENTER termina: el lienzo GIRA CON EL PAPEL (el rectángulo de menor área
+  alrededor del polígono). La imagen se rehace una sola vez desde la
+  original y no se mueve en el dibujo; lo de afuera queda descartado
+  (transparente sólo si el polígono no es un rectángulo, con el recorte del
+  DWG en el polígono). Se borra la memoria de la original: ya no se reabre.
+  La original sigue en su carpeta, intacta. Un U deshace el Enter y vuelve
+  a abrir la operación.
+- ESC cancela la operación entera: la imagen vuelve a como estaba antes del
+  primer recorte (confirmado por Fernando). Un U deshace el Esc. Con un
+  comando o una pregunta en curso, Esc es de ellos.
+- Sin operación abierta, Enter repite el último comando, como siempre. Con
+  el módulo «Imágenes georreferenciadas» apagado, IngeCAD queda como viene.
+
+Cómo se toma el Enter de IngeCAD (0.6.8.2 y 0.6.7)
+- Un Enter sin comando (también Espacio, Ctrl+J y el botón derecho como
+  Enter) llega a dispatcher.submit(""), que repite el último comando. GeoCAD
+  envuelve ese submit y el Esc sólo en la ventana que abrió la operación, y
+  sólo mientras está abierta; al cerrarla, los saca.
+
+Pruebas
+- test_recorte_imagen ampliada (rectángulo mínimo, Enter, Esc, U, módulo
+  apagado, dos dibujos).
+- Banco con la ventana real: Enter y Esc con el teclado de verdad (el Enter
+  no repite el comando; la pantalla coincide con el dibujo después de Enter,
+  U y Esc): TODO OK con IngeCAD 0.6.8.2 y 0.6.7.
+- Todas las pruebas automáticas OK (59) con IngeCAD 0.6.8.2 y con la 0.6.7.

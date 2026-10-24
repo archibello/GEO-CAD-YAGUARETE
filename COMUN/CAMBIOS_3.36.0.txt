@@ -1,0 +1,46 @@
+GeoCAD - versión 3.36.0
+=======================
+RECORTE CON LOS AGARRES: POLÍGONO Y POR LADO (24/10/2026, propuesta
+acordada con Fernando).
+
+Fernando: «estirar individualmente los agarres con Shift+Ctrl para recortar
+el lienzo», y agregar vértices «con Alt + clic sobre el segmento» para que
+el recorte no se coma partes de la imagen. Se miró también la Transformación
+libre de Photoshop: de ahí sale el agarre del medio de cada lado.
+(La 3.34.0 sigue reservada para la visibilidad de rótulos.)
+
+Cómo se usa (elegir la imagen; tomar un agarre con un clic, soltarlo con
+otro, con las teclas apretadas al soltar)
+- Ctrl en una ESQUINA: recorta en rectángulo (como la 3.35.0).
+- Shift+Ctrl en una ESQUINA: se mueve SÓLO esa esquina; el recorte pasa a
+  ser un polígono, para seguir el borde torcido del papel. Soltada sobre la
+  esquina vecina, la borra.
+- Ctrl en el MEDIO DE UN LADO (agarre nuevo): se corre sólo ese lado,
+  paralelo a sí mismo, también con la imagen girada.
+- ALT+CLIC sobre un lado: agrega una esquina ahí, al instante. Con Alt
+  apretado, al pasar sobre el lado se ve el agarre donde caería. Después se
+  mueve con Shift+Ctrl.
+- Hacia afuera se vuelve a abrir, hasta la original. U deshace de a uno.
+  Sin teclas, los agarres escalan como siempre.
+
+Cómo lo hace
+- Fuera del polígono la copia queda transparente (los mismos píxeles, sin
+  remuestrear, en «<dibujo>_imagenes»). La original no se toca.
+- El polígono queda además como recorte del DWG: IngeCAD dibuja el marco
+  con su forma y los agarres caen en las esquinas reales; las referencias
+  del marco (3.33.7) lo siguen, y AutoCAD lo recorta igual.
+- Si los lados se cruzan, avisa y no cambia nada.
+- Con Ctrl apretado, Shift no invierte ORTHO: la esquina va libre adonde se
+  suelta (una referencia cercana sigue ganando).
+- Alt+clic llega a IngeCAD porque GNOME mueve las ventanas con Super. En
+  escritorios que usan Alt para mover ventanas, hay que cambiar esa tecla.
+- Las imágenes recortadas con la 3.35.0 se siguen leyendo y recortando.
+
+Pruebas
+- test_recorte_imagen: suma esquina sola, polígono con recorte del DWG y
+  afuera transparente, Alt+clic en un lado, borrar una esquina, lados
+  cruzados, U hasta la original, agarres en las esquinas reales, recortes de
+  la 3.35.0 y Ctrl en el medio de un lado (recta y girada).
+- Todas las pruebas automáticas OK (58) con IngeCAD 0.6.8.2 y con la 0.6.7
+  (test_googleearth falló una vez con la 0.6.7 y pasó en 3 repeticiones:
+  intermitente, no toca el recorte).

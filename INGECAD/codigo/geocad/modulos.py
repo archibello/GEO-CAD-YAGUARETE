@@ -77,9 +77,10 @@ CATALOGO = {
                "ASPECTOIMAGEN cambia el aspecto de una imagen (fondo transparente, líneas en "
                "negativo o de un color, opacidad) en una copia; el original no se toca. "
                "El marco de las imágenes se engancha con las referencias (esquinas, medio, "
-               "inserción), para ubicarlas y escalarlas desde los extremos. Con Ctrl al "
-               "soltar el agarre de una esquina, la imagen se recorta (en una copia; "
-               "hacia afuera se vuelve a abrir)."),
+               "inserción), para ubicarlas y escalarlas desde los extremos. Recortar con "
+               "los agarres (en una copia; hacia afuera se vuelve a abrir): Ctrl en una "
+               "esquina, en rectángulo; Shift+Ctrl, la esquina sola; Ctrl en el medio de "
+               "un lado, sólo ese lado; Alt+clic en un lado agrega una esquina."),
         Modulo("orden", "Orden de dibujo (ALFRENTE, ALFONDO)",
                "Dos botones en la barra GeoCAD, como el DRAWORDER de AutoCAD: lo "
                "elegido se dibuja encima o debajo de todo (líneas, sombreados, "

@@ -1,0 +1,40 @@
+GeoCAD - versión 3.36.1
+=======================
+IMÁGENES NUEVAS QUE NO SE VEÍAN (24/10/2026, prueba de Fernando a la 3.36.0).
+Corrige la 3.36.0 (que queda como estaba) y trae todo lo suyo: recortar con
+los agarres (Ctrl en una esquina, Shift+Ctrl la esquina sola, Ctrl en el
+medio de un lado, Alt+clic en un lado agrega una esquina).
+
+Fernando: los agarres de la imagen no coincidían con ella (formaban un
+cuadrilátero girado unos 7°) y la copia de la imagen salía vacía.
+
+La causa (reproducida con la ventana real de IngeCAD 0.6.8.2 y 0.6.7)
+- Cuando IngeCAD CREA una imagen (pegar, en el mismo dibujo o desde otro;
+  COPIA; GIRA, ESCALA o SIMETRÍA con copia) la deja en su capa provisoria de
+  dibujo, que no dibuja imágenes, y nunca la vuelve a dibujar: queda vacía o
+  negra hasta un REGEN. Sus agarres sí están, en su lugar.
+- Los agarres «girados» eran los de una copia girada INVISIBLE, encima de la
+  original, que se veía derecha. Es también el «fondo negro» al pegar una
+  imagen en otro dibujo.
+- Girar sin copia, ALINEAR, ESCALA, SIMETRÍA, GEORREF, U y los recortes de
+  GeoCAD sí coinciden siempre.
+
+El arreglo
+- Después de cada comando, de cada U o rehacer y de cada redibujo, si quedó
+  una imagen sin dibujar, GeoCAD la saca de esa capa y pide el redibujo (como
+  ya hacía GEORREF con la imagen rehecha). Va con el módulo «Imágenes
+  georreferenciadas».
+- Es un error de IngeCAD: se le va a reportar.
+
+Método (Fernando: probar sólo sin la ventana fue un error)
+- Banco nuevo con la VENTANA REAL de IngeCAD, sin pantalla:
+  COMUN/pruebas/ventana/banco_imagenes_ventana.py (instrucciones en
+  COMUN/LEEME_DESARROLLO.txt). Compara lo que muestra la pantalla con lo
+  que dice el dibujo. Se corre cuando un cambio toca agarres, imágenes o
+  redibujo (regla nueva en el paso VERIFICAR).
+
+Pruebas
+- Banco con la ventana real: TODO OK con IngeCAD 0.6.8.2 y 0.6.7 (sin el
+  arreglo, las imágenes nuevas no se ven en 4 de 5 casos; con él, en los 5).
+- test_redibujo_imagenes (nueva, sin Qt).
+- Todas las pruebas automáticas OK (59) con IngeCAD 0.6.8.2 y con la 0.6.7.
