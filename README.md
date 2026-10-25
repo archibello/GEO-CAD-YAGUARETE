@@ -50,6 +50,18 @@ con su archivo de mundo que QGIS abre en su lugar.
 |---|---|
 | ![GEORREF: pares de puntos y, punteado, dónde va a quedar la imagen](imagenes/georref_1_pares.webp) | ![El plano ya en su lugar](imagenes/georref_4_resultado.webp) |
 
+## Rótulos desde la tabla del SHP (ROTULOSIG)
+
+Cada parcela se rotula con el valor de un campo de su tabla (la partida, el
+lote, el titular), en el **epicentro** del polígono y según su **eje más
+largo**. Los que no entran se achican en el mismo lugar. Opciones:
+**encerrar el texto en un círculo** (el texto + 10 %, dentro del polígono con
+10 % de aire, al estilo de TCIRCLE de AutoCAD), **todos con la altura del más
+chico** para que el plano quede parejo, y **conservar los rótulos
+anteriores** para sumar otro campo sin borrar lo hecho. Desde la 3.48.1.
+
+![ROTULOSIG: rótulos con círculo en el epicentro de cada parcela, según su eje](imagenes/rotulosig_circulo.webp)
+
 ## Módulos (nada invasivo)
 
 Cada parte es un módulo que se elige al instalar y se cambia cuando se quiera
