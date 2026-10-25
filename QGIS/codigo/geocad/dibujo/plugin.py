@@ -24,9 +24,10 @@ from .commands import CommandManager, CommandSpec
 from .maptool import KeyGuard
 from .edit_commands import EDIT_COMMANDS, oops
 
-from .block_commands import BlockCommand, InsertCommand, purge, wblock
+from .block_commands import BlockCommand, InsertCommand, importar_gms, purge, wblock
 from .curves import ArcCommand, CircleCommand
 from .rectang import RectangCommand
+from .rumbos import RumbosCommand
 from .paper_commands import LayoutCommand, LayoutTabs, MViewCommand, MVLockCommand, PlotCommand
 from .text_select import TextSelectTool
 from .text_tool import SIZES, DTextCommand, EditTextCommand, TextStyle, apply_style_to_selection
@@ -39,8 +40,9 @@ from .units_dialog import UnitsDialog
 EDIT_GRUPOS = (
     ('SELECT',),
     ('MOVE', 'COPY', 'ROTATE', 'ERASE'),
-    ('MIRROR', 'ALIGN', 'STRETCH', 'OFFSET'),
-    ('TRIM', 'EXTEND', 'FILLET'),
+    ('COPYBASE', 'PASTECLIP'),
+    ('MIRROR', 'ALIGN', 'ALIGNCOPY', 'STRETCH', 'OFFSET'),
+    ('TRIM', 'EXTEND', 'FILLET', 'PERPENDICULAR'),
     ('BREAKATPOINT', 'BREAK', 'EXPLODE'),
     ('DIVIDE', 'MEASURE'),
 )
@@ -143,6 +145,11 @@ class DibujoCADPlugin:
                                       'Rectángulo: Chaflán, Empalme, Área, Cotas, Rotación'))
         self._action('rect', 'Rectángulo (RECTANG / REC) — Chaflán, Empalme, Área, Cotas, Rotación',
                      lambda: self.run_command('RECTANG'))
+        self.mgr.register(CommandSpec('RUMBOS', ('RUMBOS', 'RB', 'GMS', 'POLIGONAL'), RumbosCommand,
+                                      'interactive', 'RUMBOS', ('line', 'polygon'), True, 'dibujo',
+                                      'Poligonal por rumbos: tramo base y distancia<ángulo (GMS)'))
+        self._action('rumbos', 'Rumbos (RUMBOS / RB) — tramo base y distancia<ángulo, '
+                     'ángulo interior o deflexión', lambda: self.run_command('RUMBOS'))
         self.toolbar.addSeparator()
         self.a_ortho = self._action('ortho', 'Modo Orto (F8) — Mayús lo invierte temporalmente',
                                     self.mgr.set_ortho, checkable=True)
@@ -334,18 +341,23 @@ class DibujoCADPlugin:
                                       'Crea o redefine un bloque: nombre, punto base y objetos'))
         self.mgr.register(CommandSpec('INSERT', ('INSERTAR', 'I', 'INSERT', 'DDINSERT'), InsertCommand,
                                       'interactive', 'INSERT', None, False, 'bloques',
-                                      'Inserta un bloque (escala, rotación, descomponer, biblioteca)'))
+                                      'Inserta un bloque: P1, P2 da escala y giro, dos simetrías (Bloques GMS)'))
         self.mgr.register(CommandSpec('WBLOCK', ('WBLOQUE', 'W', 'WBLOCK'), lambda: wblock(self.mgr),
                                       title='WBLOQUE', group='bloques',
                                       description='Escribe bloques en una biblioteca .gpkg'))
         self.mgr.register(CommandSpec('PURGE', ('LIMPIA', 'PU', 'PURGE'), lambda: purge(self.mgr),
                                       title='LIMPIA', group='bloques',
                                       description='Elimina las definiciones de bloque sin usar'))
+        self.mgr.register(CommandSpec('GMSBLOCKS', ('BLOQUESGMS', 'IMPORTARGMS'), lambda: importar_gms(self.mgr),
+                                      title='BLOQUESGMS', group='bloques',
+                                      description='Trae los bloques de Bloques GMS (.json del proyecto) con su P2'))
         self._action('block', 'Crear bloque (BLOQUE / B)', lambda: self.run_command('BLOQUE'), toolbar=tb)
         self._action('insert', 'Insertar bloque (INSERT / I)', lambda: self.run_command('INSERT'), toolbar=tb)
         self._action('wblock', 'Escribir bloque en biblioteca (WBLOQUE / W)', lambda: self.run_command('WBLOQUE'),
                      toolbar=tb)
         self._action('purge', 'Limpiar bloques sin usar (LIMPIA / PU)', lambda: self.run_command('LIMPIA'),
+                     toolbar=tb)
+        self._action('gmsblocks', 'Traer bloques de Bloques GMS (BLOQUESGMS)', lambda: self.run_command('BLOQUESGMS'),
                      toolbar=tb)
 
     def _build_paper_toolbar(self):
@@ -423,7 +435,7 @@ class DibujoCADPlugin:
 
     def _sync_text_color(self):
         btn = getattr(self, 'text_color_btn', None)
-        if btn is None or self.mgr.text_style is None:
+        if btn is None or self.mgr is None or self.mgr.text_style is None:
             return
         v = self.mgr.text_style.color or ''
         name = next((l for l, c in self.TEXT_COLORS if c.lower() == v.lower()), v)
@@ -431,6 +443,8 @@ class DibujoCADPlugin:
         btn.setText(name)
 
     def _set_text_color(self, value):
+        if self.mgr is None:
+            return
         self.mgr.text_style.color = value or ''
         self._sync_text_color()
         self._style_changed('color')
@@ -438,6 +452,8 @@ class DibujoCADPlugin:
     def _pick_text_color(self):
         from qgis.PyQt.QtGui import QColor
         from qgis.PyQt.QtWidgets import QColorDialog
+        if self.mgr is None:
+            return
         cur = self.mgr.text_style.color or '#ffffff'
         c = QColorDialog.getColor(QColor(cur), self.iface.mainWindow(), 'Color del texto')
         if c.isValid():
@@ -447,6 +463,8 @@ class DibujoCADPlugin:
         self.iface.mapCanvas().setMapTool(self.text_select_tool)
 
     def _reload_text_style(self):
+        if self.mgr is None:
+            return
         self.mgr.text_style = TextStyle()
         self._sync_text_widgets()
 
@@ -463,17 +481,26 @@ class DibujoCADPlugin:
         self._sync_text_color()
 
     def _style_changed(self, what):
+        if self.mgr is None:
+            return
         st = self.mgr.text_style
         st.save()
         n = apply_style_to_selection(self.iface, st, what)
         if n:
             self.cmdline.echo('Estilo aplicado a %d texto(s) seleccionado(s).' % n)
 
+    # Los combos de la barra Texto CAD pueden avisar después de descargar Dibujo
+    # (al actualizar con QGIS abierto, o si Administrar botones los movió de barra):
+    # sin mgr no hacen nada (Fernando, 24/10/2026: 'NoneType' ... 'text_style').
     def _set_font(self, font):
+        if self.mgr is None:
+            return
         self.mgr.text_style.font = font.family()
         self._style_changed('font')
 
     def _set_size(self):
+        if self.mgr is None:
+            return
         try:
             h = float(self.size_combo.currentText().replace(',', '.'))
         except ValueError:
@@ -484,6 +511,8 @@ class DibujoCADPlugin:
         self._style_changed('height')
 
     def _set_bold(self, on):
+        if self.mgr is None:
+            return
         self.mgr.text_style.bold = bool(on)
         self._style_changed('bold')
 
@@ -506,6 +535,7 @@ class DibujoCADPlugin:
     def _action(self, ico, text, slot, checkable=False, toolbar=None):
         a = QAction(_icon(ico), text, self.iface.mainWindow())
         a.setToolTip(text)
+        a.setProperty('geocad_id', 'dibujo:' + ico)     # Administrar botones (3.38.0)
         a.setCheckable(checkable)
         if checkable:
             a.triggered.connect(lambda checked=False: slot(checked))
@@ -601,6 +631,17 @@ class DibujoCADPlugin:
             except (TypeError, RuntimeError):
                 pass
             self.iface.mainWindow().removeToolBar(self.paper_toolbar)
+        for nombre in ('font_combo', 'size_combo'):      # sin avisos tardíos de los combos
+            w = getattr(self, nombre, None)
+            if w is not None:
+                try:
+                    w.blockSignals(True)
+                    if nombre == 'size_combo' and w.lineEdit() is not None:
+                        w.lineEdit().blockSignals(True)
+                    w.deleteLater()
+                except RuntimeError:
+                    pass
+                setattr(self, nombre, None)
         for tb in ('toolbar', 'edit_toolbar', 'text_toolbar', 'block_toolbar', 'paper_toolbar'):
             if getattr(self, tb, None) is not None:
                 getattr(self, tb).deleteLater()

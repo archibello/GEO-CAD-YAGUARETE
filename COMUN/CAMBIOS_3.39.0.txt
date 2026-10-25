@@ -1,0 +1,44 @@
+GeoCAD - versión 3.39.0
+=======================
+ESTÁNDAR DE FÁBRICA = LA CONFIGURACIÓN DE HOY (24/10/2026, pedido de
+Fernando: «a partir de esta versión las configuraciones estándar de las
+herramientas sean las que están en este momento»). Trae todo lo de la 3.38.0
+(Administrar botones).
+
+Decidido por Fernando
+- Entran las categorías de botones y los módulos. Los demás ajustes (envío,
+  rótulos, chaflán, Google Earth, sistemas favoritos) quedan como estaban.
+- A quien ya eligió algo se le respeta: el estándar vale para instalaciones
+  nuevas, para lo que nunca se eligió y para «Como de fábrica».
+
+Cómo funciona
+- Categorías de fábrica (Administrar botones), las que armó Fernando:
+  IngeCAD: Yaguá GEO, Yaguá Dibujo, Yaguá Imagenes, Yaguá Blocks, Yaguá
+  Cotas, Yaguá Print, Yaguá Select, Yaguá Tablas, Yaguá interacción y Yaguá
+  Edición (todos los botones de la barra GeoCAD y de Yaguareté Tools).
+  QGIS: Yaguá Dibujo, Yaguá Edición, Yaguá Texto, Yaguá Bloques, Yaguá
+  Impresión, Yaguá Capas, Yagureté-IngeCAD y Yaguá Setting.
+  Sin nada guardado, cada categoría es una barra y las barras de siempre que
+  quedan vacías se esconden. Un botón que no figura en ninguna (un módulo o
+  una versión nueva) queda en su barra de siempre.
+- «Como de fábrica» vuelve a esas categorías. Si lo elegido es igual, no se
+  guarda nada.
+- Módulos: todos prendidos al instalar. Ya era así; ahora una prueba lo
+  cuida.
+- Nada invasivo: apagado GeoCAD, no queda ninguna barra suya.
+
+Por dentro
+- botones.py (núcleo): DEFECTO con las categorías de fábrica de cada
+  programa; distribuir, es_fabrica y barras las usan cuando no hay nada
+  guardado. botones_ui.py: «Como de fábrica» vuelve a ellas.
+
+Pruebas
+- test_botones.py ampliada (categorías de fábrica, lo elegido se respeta,
+  «Como de fábrica», módulos prendidos).
+- Banco con la ventana real ampliado (las 10 categorías «Yaguá» en su orden,
+  todos los botones a la vista, las barras vacías escondidas, «Como de
+  fábrica», sin GeoCAD no queda nada): TODO OK con IngeCAD 0.6.8.2 y 0.6.7.
+- Todas las pruebas automáticas (60): OK con IngeCAD 0.6.8.2; con la 0.6.7,
+  59 en la corrida completa (test_googleearth, la falla intermitente ya
+  anotada, que sola pasó 3 de 3; se revisa en una sesión aparte).
+- Falta la prueba real: 02, secciones AB (3.38.0) y EF.

@@ -1,0 +1,37 @@
+GeoCAD - versión 3.42.0
+=======================
+PERPENDICULAR DE FERNANDO EN QGIS (tercer paso de la incorporación de sus
+complementos, propuesta_complementos/INFORME_COMPLEMENTOS.txt). Trae todo lo
+de la 3.41.1.
+
+Orden nueva PERPENDICULAR (PERP, PERPEND), como la Tool Perpendicular de
+Fernando, en el módulo Dibujo
+- Un punto de origen (con las referencias a objetos de Dibujo) y después una
+  línea: se dibuja la perpendicular desde el origen hasta esa línea o hasta
+  su PROLONGACIÓN (si el origen cae fuera del tramo).
+- En polilíneas manda el tramo más cercano al clic.
+- Antes del clic se ve cómo queda.
+- Queda lista para la siguiente. Intro (o clic derecho) con un origen
+  elegido lo suelta; sin origen, sale. Esc sale. desHacer (H).
+- Botón en la barra Edición CAD, después de EMPALME, y en la categoría de
+  fábrica «Yaguá Edición» de Administrar botones. Sin atajo de teclado
+  global: se escribe PERP (o PERPENDICULAR) en la línea de comandos.
+- Diferencia con la suelta: allí Esc con origen lo soltaba; en GeoCAD Esc
+  sale de la orden, como todas las de Dibujo, y suelta el origen Intro.
+
+Retiro del complemento suelto
+- Al cargar Dibujo se retira tool_perpendicular: su carpeta pasa a
+  .anterior-tool_perpendicular, sin borrar nada ni pisar copias.
+
+Por dentro
+- geomops.py: perpendicular_foot. edit_commands.py: PerpendicularCommand
+  y su línea en EDIT_COMMANDS. plugin.py (Dibujo): grupo de la barra.
+  icons/perp.svg. botones.py (núcleo, los dos lados): «dibujo:perp» en
+  Yaguá Edición. submodulos.py: VIEJOS de Dibujo.
+
+Pruebas
+- test_perpendicular.py (sin Qt): pie de la perpendicular, prolongación,
+  polilíneas, botón, ícono, retiro.
+- Banco nuevo con el QGIS real, ventana/banco_perpendicular_qgis.py: TODO OK.
+- banco_botones_qgis.py cuenta los botones de Yaguá Edición desde la fábrica
+  (18): TODO OK. banco_recorta_qgis.py y banco_empalme_eqdist_qgis.py: TODO OK.

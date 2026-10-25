@@ -316,3 +316,29 @@ def parse_point(text, units, last=None, ref=None, relative=False):
 
 def parse_distance(text):
     return _num(text.strip().replace(' ', ''))
+
+
+# ---------------------------------------------------------------- RUMBOS (3.43.0)
+#: Cómo se mide el ángulo de cada tramo en RUMBOS (los dos digitalizadores GMS de
+#: Fernando): 'interior' = en el vértice, desde el tramo anterior (180 = sigue
+#: derecho, Digitalizador de Líneas GMS); 'deflexion' = giro desde la dirección
+#: del tramo anterior (0 = sigue derecho, + izquierda, Digitalizador Continuo).
+RUMBO_MODOS = ('interior', 'deflexion')
+_TRAMO_RE = re.compile(r'^(?P<dist>[^<@]+)<(?P<ang>.+)$')
+
+
+def tramo_rumbo(prev, cur, texto, units, modo='interior'):
+    """'distancia<ángulo' -> (punto siguiente, distancia), o None si el texto no
+    es un tramo. prev y cur: los dos últimos vértices (x, y). Valen también la
+    deflexión con sufijo (30dI / 30dD), los rumbos (N45d30'E) y '<<' absoluto."""
+    m = _TRAMO_RE.match(texto.strip().replace(' ', ''))
+    if not m:
+        return None
+    d = parse_distance(m.group('dist'))
+    if d <= 0:
+        raise InputError('La distancia debe ser mayor que cero.')
+    ref = math.atan2(cur[1] - prev[1], cur[0] - prev[0])
+    u = Units(**units.as_dict())
+    u.relmode = 'interior' if modo == 'interior' else 'direction'
+    a = parse_angle(m.group('ang'), u, ref, relative=True)
+    return (cur[0] + d * math.cos(a), cur[1] + d * math.sin(a)), d

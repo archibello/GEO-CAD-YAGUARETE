@@ -1,0 +1,73 @@
+GeoCAD - versión 3.40.0
+=======================
+RECORTA Y ALARGA DE FERNANDO EN QGIS (primer paso de la incorporación de sus
+complementos anteriores, propuesta_complementos/INFORME_COMPLEMENTOS.txt).
+Trae todo lo de la 3.39.0 y la 3.38.0.
+
+Decidido por Fernando (24/10/2026)
+- Sus complementos entran en el GeoCAD de QGIS, dentro del módulo Dibujo.
+- Su Trim y su Extend REEMPLAZAN el comportamiento de RECORTA y ALARGA; se
+  conserva lo que Dibujo hacía de más.
+- «Todo lo que incorporemos, lo desinstalamos de qgis para que no se pisen.»
+
+RECORTA (TR, RR, TRIM), como el Trim de Fernando
+- Primero se designan las aristas de corte (clic, ventana, captura...);
+  quedan marcadas. Intro o clic derecho para seguir.
+- Cada arista corta también por su PROLONGACIÓN: la tijera corta aunque no
+  llegue a la línea. Opción Arista (A): Prolongación / No prolongación; se
+  recuerda.
+- Vista previa: bajo el cursor se ve el tramo que se va a quitar.
+- Con aristas designadas, una línea que no las cruza no se borra.
+- Se conserva de Dibujo: Intro sin designar = modo rápido (todo lo visible
+  corta, sin prolongar, como AutoCAD), Borde (B), Contornos (C), desHacer
+  (H), Mayús + clic = alargar, los tramos que quedan conservan los datos.
+
+ALARGA (AA, EX, EXTEND), como el Extend de Fernando
+- Primero las líneas de llegada (quedan marcadas), Intro o clic derecho, y
+  después cada clic alarga la línea hasta la llegada más cercana.
+- Vista previa del tramo que se agrega. Las líneas de llegada no se alargan.
+- Se conserva de Dibujo: Intro sin designar = todos los objetos visibles,
+  Contornos (C), desHacer (H), Mayús + clic = recortar.
+
+F3 y F8 (lo de AutoCAD Shortcuts de Fernando)
+- Con el mapa activo, F3 (referencia a objetos = autoensamblado de QGIS) y
+  F8 (ORTO de Dibujo) andan también con cualquier otra herramienta de QGIS,
+  no sólo con las de Dibujo. Sin atajos globales: Ctrl+D (en QGIS, «Quitar
+  capa») y Esc no se toman. Su F8 tocaba la digitalización avanzada de QGIS
+  con funciones que QGIS 4 ya no tiene; el ORTO de GeoCAD es el de Dibujo.
+
+Retiro de los complementos sueltos
+- Al cargar el módulo Dibujo se retiran Trim_Tool, Extend_Tool y
+  autocad_shortcuts si están instalados: se descargan y su carpeta pasa a
+  .anterior-<nombre> en la carpeta de complementos. No se borra nada.
+- Arreglado: si ya había una copia .anterior-<nombre>, antes se borraba; ahora
+  se guarda como .anterior-<nombre>-2, -3... (también al retirar el Puente
+  1.x, Dibujo CAD y Layer Properties).
+
+Arreglo: Administrar botones en QGIS (Fernando: «Ship the button fix in
+3.40.0, together with Trim and Extend»)
+- En QGIS las categorías «Yaguá» se veían vacías (0/0) y los botones de
+  Dibujo y Capas quedaban fuera de toda barra: al aplicar dos veces seguidas
+  la distribución se calculaba con las barras de fábrica ya vaciadas.
+- Ahora botones_barras.aplicar calcula la distribución después de restaurar
+  (QGIS plugin.py _aplicar_botones e IngeCAD categorias.aplicar le pasan esa
+  cuenta). Se prueba con AB8 de 02.
+
+Por dentro
+- geomops.py: prolong_segments y trim_removed (geometría pura).
+- edit_commands.py: ExtendCommand y TrimCommand.
+- maptool.py: KeyGuard atiende F3/F8 con otras herramientas.
+- submodulos.py: lugar_libre, retirar y VIEJOS del módulo Dibujo;
+  plugin.py usa retirar para el Puente 1.x.
+
+Pruebas
+- test_recorta_alarga.py (sin Qt): tijera prolongada, tramo que se quita,
+  retiro sin pisar copias.
+- Banco con el QGIS real (ventana/banco_recorta_qgis.py, QGIS 4.2.2 sin
+  pantalla, carpeta de complementos de prueba): RECORTA con prolongación,
+  desHacer, Arista, modo rápido, Mayús; ALARGA con llegadas, vista previa,
+  contornos quietos; F3/F8 con Desplazar; nada queda al apagar: TODO OK.
+- Banco nuevo con el QGIS real, ventana/banco_botones_qgis.py: falla con la
+  3.39.0 y da TODO OK con el arreglo.
+- Todas las pruebas con el arreglo y RECORTA/ALARGA juntos: 61/61 con
+  IngeCAD 0.6.8.2 y 0.6.7; banco de IngeCAD (botones) TODO OK.

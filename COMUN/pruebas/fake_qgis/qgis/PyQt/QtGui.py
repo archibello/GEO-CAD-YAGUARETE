@@ -23,3 +23,5 @@ class _Sig:
 class QAction:
     def __init__(self, *a): self.text = a[-2] if len(a) > 2 else a[0]; self.triggered = _Sig()
     def setIcon(self, i): pass
+    def setProperty(self, k, v): setattr(self, "_p_" + k, v)
+    def property(self, k): return getattr(self, "_p_" + k, None)

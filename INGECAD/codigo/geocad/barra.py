@@ -60,6 +60,7 @@ def _divisor(bar):
         def __init__(self, barra):
             super().__init__(barra)
             self._barra = barra
+            self.setObjectName("geocad_divisor")     # botones_barras lo reconoce
             ancho = self.style().pixelMetric(QStyle.PM_ToolBarHandleExtent, None, barra)
             self.setFixedWidth(max(ancho, 8) + 6)        # aire a los dos lados
 
@@ -106,15 +107,28 @@ def _envolver_add_toolbar(original):
             except Exception:  # noqa: BLE001
                 pass
             return
+        from . import categorias
+        try:
+            categorias.restaurar(self)      # las categorías de antes, fuera (3.38.0)
+        except Exception:  # noqa: BLE001
+            pass
         try:
             bar = getattr(self, "_plugin_toolbars", {}).get(spec.id)
             if bar is not None:
+                # cada botón con su orden: Administrar botones lo reconoce
+                if len(bar.actions()) == len(spec.toolbar):
+                    for accion, item in zip(bar.actions(), spec.toolbar):
+                        accion.setProperty("geocad_orden", item.command)
                 separar(bar, spec)
         except Exception:  # noqa: BLE001 - la barra queda como la armó IngeCAD
             pass
         try:
             yaguarete.armar(self, _iconos_propios())
         except Exception:  # noqa: BLE001 - sin barra Yaguareté, IngeCAD como venía
+            pass
+        try:
+            categorias.aplicar(self)        # Administrar botones (3.38.0)
+        except Exception:  # noqa: BLE001 - las barras quedan como de fábrica
             pass
     add_toolbar._puente_original = original
     add_toolbar._puente_fabrica = _envolver_add_toolbar
@@ -124,8 +138,9 @@ def _envolver_add_toolbar(original):
 def _envolver_remove_toolbar(original):
     def remove_toolbar(self, plugin_id, *args, **kwargs):
         if plugin_id == "geocad":
-            from . import yaguarete
+            from . import categorias, yaguarete
             try:
+                categorias.restaurar(self)
                 yaguarete.quitar(self)
                 yaguarete.quitar_carteles(self)
             except Exception:  # noqa: BLE001

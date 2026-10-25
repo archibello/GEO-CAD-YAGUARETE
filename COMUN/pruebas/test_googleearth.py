@@ -318,6 +318,22 @@ class EnlaceSimulado(threading.Thread):
             time.sleep(0.05)
 
 
+def hasta(cond, tope=5.0):
+    """El núcleo termina al ENTREGAR el vuelo o quitar las cruces (Google
+    Earth las pide por /camara y /cruces); el simulador mueve la cámara
+    recién al leer la respuesta. Con la máquina cargada (la corrida de todas
+    las pruebas) eso llegaba después de una espera fija: se espera a que pase,
+    con tope (24/10/2026: la falla intermitente de la línea «y la vista volvió»)."""
+    t0 = time.time()
+    while not cond() and time.time() - t0 < tope:
+        time.sleep(0.01)
+    return cond()
+
+
+def en_374():
+    return abs(sim.cam[0] - LON0) < 1e-9 and abs(sim.cam[2] - 374) < 1e-6
+
+
 # ------------------------------------------------------------- 7. captura de pantalla de punta a punta
 sim = GESimulado(LON0, LAT0, 374)
 enlace = EnlaceSimulado(sim)
@@ -330,8 +346,7 @@ while srv.t_vista <= t_enlace or abs(srv.vista.rango - 374) > 1e-6 or srv.vista.
 cap = V.Captura(srv, sim.foto, paso=0.02, quietas=2, tope_quieta=10, tope_vuelo=10)
 fotos = cap.pantalla()
 assert len(fotos) == 1 and not srv.armado
-time.sleep(0.3)
-assert sim.marcas == [], "las cruces quedaron en Google Earth"
+assert hasta(lambda: sim.marcas == []), "las cruces quedaron en Google Earth"
 # 3.33.3: si Google Earth ya muestra las cruces de esta vista no se vuela;
 # si no, un vuelo «quieto» (+5 cm); al final la vista queda como estaba
 assert abs(sim.cam[2] - 374) < 1e-6 and all(abs(vv[2] - 374) < 0.1 for vv in enlace.vuelos), (sim.cam, enlace.vuelos)
@@ -384,10 +399,8 @@ assert any(a.startswith("2/5 Pieza 9 de 9: volando... · faltan unos") for a in 
 assert any(a.startswith("2/5 Pieza 1 de 9: esperando que cargue la imagen... 0 s") for a in avisos)
 assert avisos[-1] == "3/5 Volviendo a la vista de antes..."
 assert all(GE.posicion_valida(*vv) for vv in enlace.vuelos)
-time.sleep(0.2)                          # el simulador mueve la cámara al leer /camara
-assert abs(sim.cam[0] - LON0) < 1e-9 and abs(sim.cam[2] - 374) < 1e-6, "la vista no volvió"
-time.sleep(0.3)
-assert sim.marcas == [] and not srv.armado
+assert hasta(en_374), "la vista no volvió"   # el simulador mueve la cámara al leer /camara
+assert hasta(lambda: sim.marcas == []) and not srv.armado
 fr = []
 im, mc, piezas, cost = V.procesar(fotos, SIS7, progreso=fr.append)
 assert fr[-1] == 1.0 and not GE.mascara(im).any()
@@ -414,8 +427,7 @@ try:
     raise AssertionError("no se canceló")
 except V.Cancelado:
     pass
-time.sleep(0.2)
-assert abs(sim.cam[0] - LON0) < 1e-9 and abs(sim.cam[2] - 374) < 1e-6 and not srv.armado
+assert hasta(en_374) and not srv.armado
 print(f"ok mosaico 3 x 3 a 200 m: UNA imagen de {ancho_m:.0f} x {alto_m:.0f} m con píxel de "
       f"{mc.res:.2f} m, costuras hasta {max(c for *_x, c in cost) * 100:.1f} cm, error "
       f"{math.hypot(dx, dy):.2f} px; la vista vuelve (también al cancelar)")
@@ -617,7 +629,7 @@ except GE.GoogleEarthError as e:
 assert len(GE.plan_mosaico(srv.vista, a_planas, a_geo, 40, zona=Z).centros) <= 25   # 3.33.3: se ajusta
 cap = V.Captura(srv, sim.foto, paso=0.02, quietas=2, tope_quieta=10, tope_vuelo=10)
 fotos = cap.mosaico(a_planas, a_geo, 200, zona=Z)
-assert len(fotos) == 4 and abs(sim.cam[2] - 374) < 1e-6                  # y la vista volvió
+assert len(fotos) == 4 and hasta(en_374), sim.cam                        # y la vista volvió
 im, mc, piezas, cost = V.procesar(fotos, SIS7, zona=Z)
 assert Z[0] <= mc.xmin < Z[0] + mc.res and Z[2] - mc.res < mc.xmax <= Z[2] + 1e-9
 assert Z[1] <= mc.ymin < Z[1] + mc.res and Z[3] - mc.res < mc.ymax <= Z[3] + 1e-9

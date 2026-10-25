@@ -1,0 +1,55 @@
+GeoCAD - versión 3.38.0
+=======================
+ADMINISTRAR BOTONES (24/10/2026, pedido de Fernando): crear categorías y
+agrupar en ellas los botones de GeoCAD de la misma familia, en IngeCAD y en
+QGIS, desde el menú GeoCAD.
+
+Decidido por Fernando
+- Cada categoría es una barra separada (se puede mover como cualquier barra).
+- Los botones se pueden ocultar y reordenar.
+- Cada programa tiene sus categorías (los botones no son los mismos), en un
+  solo archivo: ~/.config/geocad/botones.json.
+- Entran todas las barras de GeoCAD: en IngeCAD la barra GeoCAD y Yaguareté
+  Tools; en QGIS Dibujo CAD, Edición CAD, Texto CAD, Bloques CAD,
+  Presentaciones, Capas CAD y GeoCAD Yaguareté.
+
+Cómo funciona
+- GeoCAD > Administrar botones... (IngeCAD: junto a Módulos; QGIS: igual).
+  Aceptar va arriba. A la izquierda las categorías: Nueva, Renombrar, Borrar
+  (sus botones pasan a la categoría anterior) y flechas para el orden. A la
+  derecha los botones de la categoría: la casilla los muestra u oculta (el
+  oculto sigue en el menú), las flechas los ordenan y «Pasar a» los lleva a
+  otra categoría. «Como de fábrica» vuelve a las barras de siempre.
+- En IngeCAD, «Una por tema»: una barra por tema (Selección, Datos, Edición,
+  Bloques, Cotas, Imágenes...). Resuelve la idea del 08/10/2026: la barra
+  GeoCAD ocupaba mucho a lo ancho.
+- Sin tocar nada (o si lo elegido es igual a la fábrica) no se guarda nada y
+  las barras quedan como siempre.
+- Nada invasivo: las barras de fábrica no se rehacen; sus botones pasan a la
+  barra de su categoría y la que queda vacía se esconde. Lo que no es un
+  botón (en QGIS la fuente, la altura, el color, la capa actual) se queda en
+  su barra. Al apagar GeoCAD, cambiar los módulos o volver a «Como de
+  fábrica», todo queda exactamente como estaba, con sus divisores.
+- Entre botones que en la fábrica estaban en tramos distintos va un divisor.
+- Módulos: lo de un módulo apagado no se pierde; al prenderlo vuelve a su
+  categoría. Un botón nuevo de una versión futura aparece en la categoría
+  con el nombre de su barra de fábrica.
+
+Por dentro
+- Núcleo (los dos programas): botones.py (el modelo y el archivo),
+  botones_barras.py (pone y saca las barras, sin importar Qt) y
+  botones_ui.py (la ventana).
+- IngeCAD: categorias.py (orden GEOBUTTONS); barra.py la aplica cada vez
+  que IngeCAD rearma la barra GeoCAD.
+- QGIS: plugin.py; los botones de Dibujo y Capas llevan un nombre fijo.
+
+Pruebas
+- test_botones.py nueva: modelo, ventana, barras simuladas, menú de los dos.
+- Banco con la ventana real nuevo (ventana/banco_botones_ventana.py): de
+  fábrica, categorías, ocultos, divisores, sacar GeoCAD, la ventana con
+  Nueva / Pasar / destildar / Una por tema / Como de fábrica / Cancelar:
+  TODO OK con IngeCAD 0.6.8.2 y 0.6.7. El banco de imágenes, también.
+- Todas las pruebas automáticas (60): OK con IngeCAD 0.6.7; con la 0.6.8.2,
+  59 en la corrida completa (test_googleearth, la falla intermitente ya
+  anotada, que sola pasó 3 de 3, igual que con el código de la 3.37.0).
+- Falta la prueba real (02, sección AB). QGIS se probó con el QGIS simulado.

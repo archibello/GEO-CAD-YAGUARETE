@@ -1,0 +1,22 @@
+GeoCAD - versión 3.45.1
+=======================
+ARREGLO: ERROR DE LA BARRA TEXTO CAD EN QGIS. Trae todo lo de la 3.45.0
+(Bloques GMS) y las anteriores.
+
+Qué pasaba (Fernando, 24/10/2026, con la 3.45.0)
+- QGIS mostró: «AttributeError: 'NoneType' object has no attribute
+  'text_style'» en dibujo/plugin.py, _set_size.
+- Causa: al descargar Dibujo (GeoCAD > Actualizar con QGIS abierto, o al
+  apagar el módulo) los combos de fuente y altura de la barra Texto CAD
+  seguían vivos un momento (y Administrar botones puede tenerlos en otra
+  barra); al perder el foco avisaban a un Dibujo ya descargado.
+
+Arreglo
+- Al descargar Dibujo, los combos de Texto CAD se callan y se borran.
+- Los manejadores de fuente, altura, negrita y color no hacen nada si Dibujo
+  ya está descargado.
+
+Pruebas
+- banco_recorta_qgis.py (QGIS real) ampliado: descarga Dibujo y hace avisar a
+  los combos de Texto CAD: se cae con la 3.45.0 y da TODO OK con el arreglo.
+- Los otros seis bancos de QGIS: TODO OK. 65/65 con IngeCAD 0.6.8.2 y 0.6.7.

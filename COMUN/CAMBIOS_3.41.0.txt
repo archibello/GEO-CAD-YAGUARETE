@@ -1,0 +1,53 @@
+GeoCAD - versión 3.41.0
+=======================
+EMPALME Y EQDIST DE FERNANDO EN QGIS (segundo paso de la incorporación de sus
+complementos, propuesta_complementos/INFORME_COMPLEMENTOS.txt). Trae todo lo
+de la 3.40.0 y el arreglo preparado como 3.40.1.
+
+Decidido por Fernando (24/10/2026)
+- Su Fillet y su Offset REEMPLAZAN el comportamiento de EMPALME y EQDIST del
+  módulo Dibujo; se conserva lo que Dibujo hacía de más (el radio, entre
+  otras cosas).
+- Lo que se incorpora se retira del QGIS instalado.
+
+EMPALME (F, EMP, FILLET), como el Fillet de Fernando
+- La línea bajo el cursor se resalta antes del clic.
+- Elegida la primera, antes del segundo clic se ve cómo quedan las dos (y el
+  arco, si hay radio).
+- El lado que queda de cada línea es el del clic (ángulo interno); si no se
+  tocan, se alargan hasta la esquina.
+- Se conserva de Dibujo: Radio (R, se recuerda), Múltiple (M), desHacer (H),
+  Mayús + clic = esquina (radio 0), polilíneas (el tramo más cercano al
+  clic) y dos tramos del mismo objeto.
+
+EQDIST (O, EQ, OFFSET), como el Offset de Fernando
+- Queda activa para hacer varias copias seguidas.
+- Resalta la línea bajo el cursor y muestra la copia antes del clic.
+- Clic derecho (o Intro, o D) pide OTRA distancia sin salir de la orden.
+  Se sale con Esc o S (Salir).
+- Se conserva de Dibujo: Punto a atravesar (P), distancia con dos puntos,
+  desHacer (H), polígonos (hacia adentro o afuera), capa y datos del origen.
+
+Retiro de los complementos sueltos
+- Al cargar Dibujo se retiran también Fillet_Tools_Independiente (o
+  Fillet_Tools) y Offset_tool: su carpeta pasa a .anterior-<nombre>, sin
+  borrar nada ni pisar copias anteriores.
+
+Arreglo que trae (preparado como 3.40.1, no armada por separado)
+- GeoCAD > Actualizar con QGIS abierto: Dibujo y Capas seguían con el código
+  de antes hasta reiniciar QGIS (por eso las categorías «Yaguá» se vieron en
+  0/0 con la 3.40.0). Ahora geocad/__init__.py saca de la memoria lo viejo al
+  recargarse. Banco: ventana/banco_botones_qgis.py emula la recarga de QGIS.
+
+Por dentro
+- edit_commands.py: _PickCommand.hover_geoms; FilletCommand.preview_geoms y
+  _fillet_result; OffsetCommand con _otra_distancia y vista previa al
+  designar. submodulos.py: VIEJOS de Dibujo.
+
+Pruebas
+- test_recorta_alarga.py ampliada (retiro de Fillet y Offset).
+- Banco nuevo con el QGIS real, ventana/banco_empalme_eqdist_qgis.py (QGIS
+  4.2.2 sin pantalla, carpeta de complementos de prueba): EMPALME resalta,
+  vista previa, lado del clic, alarga hasta la esquina, radio con arco;
+  EQDIST varias copias, vista previa, clic derecho = otra distancia, desHacer,
+  Salir: TODO OK. banco_recorta_qgis.py sigue TODO OK.

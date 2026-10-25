@@ -1,0 +1,44 @@
+GeoCAD - versión 3.44.0
+=======================
+COPIAR CON PUNTO BASE, PEGAR EN PUNTO Y ALINEAR CON COPIA EN QGIS (quinto
+paso de la incorporación de los complementos de Fernando: CAD Copiar/Mover y
+Alinear y Duplicar). Trae todo lo de la 3.43.0.
+
+Lo que ya estaba en Dibujo y queda como está
+- COPIA (con copia múltiple y matriz) y DESPLAZA ya hacían lo de COPIAR y
+  MOVER del suelto; ALINEAR ya pedía dos pares de puntos y escala.
+
+Órdenes nuevas en el módulo Dibujo
+- COPIABASE (CB, COPIARCONBASE): designar objetos y un punto base; quedan
+  guardados mientras QGIS esté abierto (no usa el portapapeles de QGIS:
+  Ctrl+C / Ctrl+V siguen como siempre).
+- PEGARENPUNTO (PB, PEGARBASE): inserta lo guardado en la capa activa
+  tomando el punto base como ancla, con vista previa; sigue pidiendo puntos
+  (copia múltiple, como el suelto) hasta Intro o Esc; desHacer (H). Puede
+  pegar en otra capa del mismo tipo: los datos pasan por nombre de campo.
+- ALINEAR, opción Copia (C): deja el original y alinea una copia, como
+  Alinear y Duplicar (se recuerda).
+- ALINEARCOPIA (ALC, ALINEARYDUPLICAR): ALINEAR que siempre copia, con su
+  botón (el de Alinear y Duplicar).
+- Botones en Edición CAD y en la categoría de fábrica «Yaguá Edición»
+  (COPIABASE y PEGARENPUNTO después de COPIA; ALINEARCOPIA después de
+  ALINEAR). Sin atajos de teclado globales.
+
+Retiro de los complementos sueltos
+- Al cargar Dibujo se retiran cad_copy_move y align_duplicate_plugin: su
+  carpeta pasa a .anterior-<nombre>, sin borrar nada ni pisar copias.
+
+Por dentro
+- edit_commands.py: AlignCommand (Copia), AlignCopyCommand,
+  CopyBaseCommand, PasteBaseCommand y sus líneas en EDIT_COMMANDS.
+  plugin.py (Dibujo): grupos de la barra. icons/aligncopy, copybase y
+  pastebase.svg. botones.py (núcleo, los dos lados): Yaguá Edición.
+  submodulos.py: VIEJOS.
+
+Pruebas
+- test_copiabase_alinear.py (sin Qt): órdenes, alias sin choques, barra,
+  íconos, botones, retiro.
+- Banco nuevo con el QGIS real, ventana/banco_copiabase_qgis.py: COPIABASE,
+  PEGARENPUNTO múltiple con vista previa y desHacer, a otra capa con los
+  datos por nombre, ALINEAR con Copia y escala, ALINEARCOPIA: TODO OK. Los
+  otros cinco bancos de QGIS: TODO OK.

@@ -1,0 +1,49 @@
+GeoCAD - versión 3.43.0
+=======================
+RUMBOS: LOS DIGITALIZADORES GMS DE FERNANDO EN QGIS (cuarto paso de la
+incorporación de sus complementos, propuesta_complementos/
+INFORME_COMPLEMENTOS.txt). Trae todo lo de la 3.42.0.
+
+Decidido por Fernando (24/10/2026)
+- Ángulo: los dos (interior, como Líneas GMS; deflexión, como el Continuo).
+- Resultado elegible: polilínea / polígono, o un objeto por tramo.
+- No registrar: GeoCAD no agrega campos id / longitud a la tabla de la capa ni
+  la guarda sola (los sueltos sí lo hacían).
+- Orden nueva RUMBOS, con botón en la barra Dibujo CAD («Yaguá Dibujo»).
+
+Orden RUMBOS (RB, GMS, POLIGONAL), en el módulo Dibujo
+- Dos clics (con referencias) para el tramo base A-B, que da la dirección del
+  primer ángulo. Base = No (por defecto, como Líneas GMS): no se dibuja, se ve
+  como guía; Base = Sí (como el Continuo): es el primer tramo.
+- Cada tramo se escribe en la línea de comandos como distancia<ángulo, en
+  grados-minutos-segundos: 25.4<91d30'15".
+  Ángulo = Interior (A): en el vértice, desde el tramo anterior, 180 = sigue
+  derecho; antihorario (Derecha del suelto), negativo = horario (Izquierda).
+  Ángulo = Deflexión (A): giro desde la dirección del tramo anterior, 0 =
+  sigue derecho, positivo a la izquierda, negativo a la derecha.
+  En los dos modos valen 30dI / 30dD (deflexión), los rumbos N45d30'E y
+  '<<' (ángulo absoluto). También se puede hacer clic en el punto.
+  (Los ángulos siguen el sentido elegido en UNIDADES, como todo Dibujo.)
+- Modo (M): Polilínea (un objeto; en capas de polígonos, un polígono) o
+  Tramos (un objeto por tramo, sólo en capas de líneas). Modo y Base se
+  eligen antes del primer tramo; Ángulo en cualquier momento. Los tres se
+  recuerdan.
+- Cada tramo muestra en la línea de comandos su longitud y la acumulada.
+- Cerrar (C), desHacer (H), Intro o Esc terminan y guardan lo dibujado.
+
+Retiro de los complementos sueltos
+- Al cargar Dibujo se retiran lineaGSM y digitalizador_gms si están: su
+  carpeta pasa a .anterior-<nombre>, sin borrar nada ni pisar copias.
+
+Por dentro
+- units.py: tramo_rumbo (cálculo puro). rumbos.py: RumbosCommand.
+  plugin.py (Dibujo): orden y botón. icons/rumbos.svg. botones.py (núcleo,
+  los dos lados): «dibujo:rumbos» en Yaguá Dibujo. submodulos.py: VIEJOS.
+
+Pruebas
+- test_rumbos.py (sin Qt): el cálculo da lo mismo que las fórmulas de los
+  dos sueltos (Interior = Líneas GMS Derecha/Izquierda; Deflexión =
+  Continuo 3.0), 30dI/30dD, rumbos, '<<', botón, retiro.
+- Banco nuevo con el QGIS real, ventana/banco_rumbos_qgis.py: polilínea,
+  tramos con base y desHacer, deflexión, polígono cerrado: TODO OK. Los
+  otros cuatro bancos de QGIS: TODO OK.

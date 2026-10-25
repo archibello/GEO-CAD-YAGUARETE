@@ -5,8 +5,10 @@ DESPLAZA, COPIA, GIRA, ALINEAR, ESTIRA, EQDIST, ALARGA y EMPALME.
 """
 
 import math
+from types import SimpleNamespace
 
-from qgis.core import QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY, QgsRectangle, QgsVectorLayer
+from qgis.core import (QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY, QgsRectangle, QgsVectorLayer,
+                       QgsVectorLayerUtils)
 
 from .commands import _key
 from .compat import geometry_kind
@@ -15,8 +17,10 @@ from .editkit import (EditCommand, GeomIO, affine, block_scale_fn, mirror_geom, 
                       join_miter, nearest_part, pick_feature, query_geom, rebuild, replace_part,
                       search_radius, segments_from_geometry)
 from .geomops import (GeomError, break_at, break_between, divide_distances, explode_segments,
-                      extend_end, fillet_same, fillet_two, measure_distances, point_at, same,
-                      seg_seg, segments_of, split_at_distances, trim_polyline)
+                      extend_end, fillet_same, fillet_two, measure_distances, perpendicular_foot,
+                      point_at, same,
+                      prolong_segments, seg_seg, segments_of, split_at_distances, trim_polyline,
+                      trim_removed)
 from .settings import get_setting, set_setting
 from .units import InputError, format_length, format_point, parse_degrees, parse_distance, parse_point
 
@@ -331,11 +335,15 @@ class RotateCommand(EditCommand):
 
 # ==========================================================================
 class AlignCommand(EditCommand):
+    """ALINEAR (AL). Opción Copia (C): deja el original y alinea una copia, como
+    el Alinear y Duplicar de Fernando (se recuerda)."""
     title = 'ALINEAR'
+    copia_fija = None          # ALINEARCOPIA: siempre copia
 
     def after_selection(self):
         self.state = 's1'
         self.pairs = []
+        self.copia = self.copia_fija if self.copia_fija is not None else get_setting('align_copy', False, bool)
         self.prompt()
 
     def step_prompt(self):
@@ -343,6 +351,8 @@ class AlignCommand(EditCommand):
                  's2': 'Precise segundo punto de origen', 'd2': 'Precise segundo punto de destino'}
         if self.state == 's2':
             self.cl.set_prompt(texts['s2'], None, 'continuar')
+        elif self.state == 's1':
+            self.cl.set_prompt(texts['s1'] + ' o', [('C', 'Copia=' + ('Sí' if self.copia else 'No'))])
         elif self.state == 'scale':
             self.cl.set_prompt('¿Atribuir escala a objetos según puntos de alineación?',
                                [('S', 'Sí'), ('N', 'No')], 'N')
@@ -388,6 +398,13 @@ class AlignCommand(EditCommand):
 
     def step_text(self, text):
         k = _key(text)
+        if self.state == 's1' and k in ('C', 'COPIA', 'COPY'):
+            self.copia = not self.copia
+            if self.copia_fija is None:
+                set_setting('align_copy', self.copia)
+            self.cl.echo('Copia = %s' % ('Sí' if self.copia else 'No'))
+            self.prompt()
+            return
         if self.state == 'scale':
             if k in ('S', 'SI', 'SÍ', 'Y', 'YES'):
                 self.finish(True)
@@ -426,8 +443,8 @@ class AlignCommand(EditCommand):
             if abs(k - 1.0) > 1e-12:
                 attrs.update(text_scale_fn(k))
                 attrs.update(block_scale_fn(k))
-        n = self.apply_geoms(self._transform(scale), 'ALINEAR', attr_fn=attrs)
-        self.cl.echo('%d objeto(s) alineado(s).' % n)
+        n = self.apply_geoms(self._transform(scale), 'ALINEAR', copy=self.copia, attr_fn=attrs)
+        self.cl.echo('%d objeto(s) alineado(s)%s.' % (n, ' (copias)' if self.copia else ''))
         self.end()
 
     def step_preview(self, cur):
@@ -446,6 +463,11 @@ class AlignCommand(EditCommand):
         if self.state == 'scale':
             return self.transformed(self._transform(False))
         return None
+
+
+class AlignCopyCommand(AlignCommand):
+    """ALINEARCOPIA: el Alinear y Duplicar de Fernando (ALINEAR que deja copias)."""
+    copia_fija = True
 
 
 # ==========================================================================
@@ -526,8 +548,132 @@ class _PickCommand(EditCommand):
     def highlight(self, fids):
         self.layer.selectByIds(list(fids))
 
+    def hover_geoms(self, cur, exclude=()):
+        """El objeto bajo el cursor, para resaltarlo antes del clic (Fernando)."""
+        if cur is None:
+            return None
+        fid, f = pick_feature(self.canvas, self.io, self.layer, cur, exclude)
+        if fid is None:
+            return None
+        return [self.io.to_canvas(f.geometry())]
+
+
+# ==========================================================================
+# COPIABASE / PEGARENPUNTO: lo que CAD Copiar/Mover de Fernando agregaba a COPIA
+# y DESPLAZA (COPYBASE y PASTECLIP de AutoCAD). La memoria vive mientras QGIS
+# está abierto y no usa el portapapeles de QGIS (Ctrl+C / Ctrl+V siguen igual).
+_MEMORIA = {}
+
+
+class CopyBaseCommand(EditCommand):
+    title = 'COPIABASE'
+
+    def after_selection(self):
+        self.prompt()
+
+    def step_prompt(self):
+        self.cl.set_prompt('Precise punto base')
+
+    def step_point(self, p):
+        if not self.geoms:
+            self.end()
+            return
+        _MEMORIA.clear()
+        _MEMORIA.update(geoms=[QgsGeometry(g) for g in self.geoms.values()],
+                        feats=[QgsFeature(f) for f in self.feats.values()],
+                        base=QgsPointXY(p), capa=self.layer.name())
+        self.cl.echo('%d objeto(s) de "%s" guardado(s) con su punto base. PEGARENPUNTO los inserta.'
+                     % (len(self.geoms), self.layer.name()))
+        self.end()
+
+    def step_text(self, text):
+        self._resolve_and_apply(text)
+
+    def step_enter(self):
+        self.end()
+
+
+def _por_nombre(layer, feat, geom):
+    """Objeto nuevo en 'layer' con los datos de 'feat' que tengan el mismo nombre
+    de campo (puede venir de otra capa)."""
+    pk = set(layer.primaryKeyAttributes())
+    origen = feat.fields()
+    attrs = {}
+    for i, campo in enumerate(layer.fields()):
+        j = origen.indexOf(campo.name())
+        if i not in pk and j != -1:
+            attrs[i] = feat.attribute(j)
+    return QgsVectorLayerUtils.createFeature(layer, geom, attrs, layer.createExpressionContext())
+
+
+class PasteBaseCommand(_PickCommand):
+    """PEGARENPUNTO: inserta lo guardado con COPIABASE en la capa activa, tomando
+    el punto base como ancla; sigue pidiendo puntos (copia múltiple, como el de
+    Fernando) hasta Intro o Esc."""
+    title = 'PEGARENPUNTO'
+
+    def begin(self):
+        if not _MEMORIA.get('geoms'):
+            self.cl.echo('No hay nada guardado: use primero COPIABASE.')
+            self.end()
+            return
+        self.base_pt = _MEMORIA['base']
+        self.cl.echo('%d objeto(s) de "%s".' % (len(_MEMORIA['geoms']), _MEMORIA['capa']))
+        self.prompt()
+
+    def step_prompt(self):
+        self.cl.set_prompt('Precise punto de inserción o', [('H', 'desHacer')])
+
+    def _movidas(self, p):
+        b = _MEMORIA['base']
+        out = []
+        for g in _MEMORIA['geoms']:
+            ng = QgsGeometry(g)
+            ng.translate(p.x() - b.x(), p.y() - b.y())
+            out.append(ng)
+        return out
+
+    def step_point(self, p):
+        kind = geometry_kind(self.layer)
+        lyr = self.layer
+        lyr.beginEditCommand('PEGARENPUNTO')
+        n = 0
+        for g, f in zip(self._movidas(p), _MEMORIA['feats']):
+            if geometry_kind(SimpleNamespace(geometryType=g.type)) != kind:
+                continue
+            if lyr.addFeature(_por_nombre(lyr, f, conform(self.io.to_layer(g), lyr))):
+                n += 1
+        if not n:
+            lyr.destroyEditCommand()
+            self.cl.echo('Lo guardado no es del tipo de la capa "%s".' % lyr.name())
+            return
+        lyr.endEditCommand()
+        self.marks.append(lyr.undoStack().index())
+        lyr.triggerRepaint()
+        self.cl.echo('%d objeto(s) pegado(s).' % n)
+        self.prompt()
+
+    def step_text(self, text):
+        if _key(text) in OPT_UNDO:
+            self.undo_last()
+            self.prompt()
+            return
+        self._resolve_and_apply(text)
+
+    def step_enter(self):
+        self.end()
+
+    def preview_geoms(self, cur):
+        if cur is None or not _MEMORIA.get('geoms'):
+            return None
+        return self._movidas(cur)
+
 
 class OffsetCommand(_PickCommand):
+    """EQDIST (OFFSET), con el comportamiento del Offset de Fernando: queda
+    activo para hacer varias copias, resalta la línea bajo el cursor, muestra
+    la copia antes del clic, y el clic derecho (o Intro) pide otra distancia
+    sin salir. Se sale con Esc o S (Salir)."""
     title = 'EQDIST'
 
     def begin(self):
@@ -549,10 +695,11 @@ class OffsetCommand(_PickCommand):
         elif st == 'dist2':
             self.cl.set_prompt('Precise segundo punto')
         elif st == 'pick':
-            self.cl.set_prompt('Designe objeto a desplazar o', [('S', 'Salir'), ('H', 'desHacer')], 'Salir')
+            self.cl.set_prompt('Designe objeto a desplazar o',
+                               [('D', 'Distancia'), ('S', 'Salir'), ('H', 'desHacer')], 'Distancia')
         elif st == 'side':
             txt = 'Precise punto a atravesar o' if self.through else 'Precise punto en lado de desfase o'
-            self.cl.set_prompt(txt, [('S', 'Salir'), ('H', 'desHacer')], 'Salir')
+            self.cl.set_prompt(txt, [('D', 'Distancia'), ('S', 'Salir'), ('H', 'desHacer')], 'Distancia')
 
     def base(self):
         return self.d_p1 if self.state == 'dist2' else None
@@ -594,6 +741,9 @@ class OffsetCommand(_PickCommand):
         elif st in ('pick', 'side') and k in OPT_EXIT:
             self.end()
             return
+        elif st in ('pick', 'side') and k in ('D', 'DISTANCIA', 'DISTANCE'):
+            self._otra_distancia()
+            return
         elif st in ('pick', 'side') and k in OPT_UNDO:
             self.undo_last()
             self.layer.removeSelection()
@@ -609,8 +759,17 @@ class OffsetCommand(_PickCommand):
                 self.through = True
             self.state = 'pick'
             self.prompt()
+        elif self.state == 'dist2':
+            self.state = 'dist'
+            self.prompt()
         else:
-            self.end()
+            self._otra_distancia()      # clic derecho = otra distancia, sin salir (Fernando)
+
+    def _otra_distancia(self):
+        self.layer.removeSelection()
+        self.state = 'dist'
+        self.d_p1 = None
+        self.prompt()
 
     def _offset_geom(self, side):
         g = self.io.to_canvas(self.cur_feat.geometry())
@@ -652,17 +811,101 @@ class OffsetCommand(_PickCommand):
                 return [self._offset_geom(cur)]
             except (InputError, GeomError):
                 return None
+        if self.state == 'pick':
+            return self.hover_geoms(cur)
         return None
 
 
 # ==========================================================================
-class ExtendCommand(_PickCommand):
-    title = 'ALARGA'
-    select_prompt = 'Designe objetos de contorno'
+class PerpendicularCommand(_PickCommand):
+    """PERPENDICULAR, la Tool Perpendicular de Fernando: un punto de origen (con
+    las referencias a objetos) y después una línea; se dibuja la perpendicular
+    desde el origen hasta la línea o hasta su prolongación. Antes del clic se
+    ve cómo queda. Sigue con otra; Intro (o clic derecho) con origen lo suelta,
+    sin origen sale; Esc sale."""
+    title = 'PERPENDICULAR'
 
     def begin(self):
-        self.boundary = None   # None = todos los objetos visibles
-        self.cl.echo('Parámetros actuales: Contornos = %s' % 'todos los objetos visibles')
+        self.p0 = None
+        self.prompt()
+
+    def step_prompt(self):
+        if self.p0 is None:
+            self.cl.set_prompt('Precise punto de origen o', [('H', 'desHacer')])
+        else:
+            self.cl.set_prompt('Designe línea (o su prolongación) para la perpendicular')
+
+    def _foot(self, p, quiet=False):
+        fid, f = pick_feature(self.canvas, self.io, self.layer, p) if quiet else self.pick(p)
+        if fid is None:
+            return None
+        kind, _s, flat, _i = explode(self.io.to_canvas(f.geometry()))
+        if kind not in ('line', 'polygon'):
+            return None
+        k = nearest_part(flat, p)
+        if k is None or len(flat[k]) < 2:
+            return None
+        return perpendicular_foot(flat[k], (self.p0.x(), self.p0.y()), (p.x(), p.y()))
+
+    def step_point(self, p):
+        if self.p0 is None:
+            self.p0 = p
+            self.prompt()
+            return
+        foot = self._foot(p)
+        if foot is None:
+            self.cl.echo('El origen ya está sobre esa línea, o no hay una línea ahí.')
+            return
+        if self.mgr.add_feature(self.layer, [self.p0, QgsPointXY(*foot)], title='PERPENDICULAR'):
+            self.marks.append(self.layer.undoStack().index())
+        self.p0 = None                    # como la de Fernando: lista para la siguiente
+        self.prompt()
+
+    def step_text(self, text):
+        if _key(text) in OPT_UNDO and self.p0 is None:
+            self.undo_last()
+            self.prompt()
+            return
+        self._resolve_and_apply(text)
+
+    def step_enter(self):
+        if self.p0 is not None:
+            self.p0 = None
+            self.prompt()
+        else:
+            self.end()
+
+    def preview_geoms(self, cur):
+        if cur is None:
+            return None
+        if self.p0 is None:
+            return None
+        foot = self._foot(cur, quiet=True)
+        if foot is None:
+            return None
+        return [QgsGeometry.fromPolylineXY([self.p0, QgsPointXY(*foot)])]
+
+
+# ==========================================================================
+class ExtendCommand(_PickCommand):
+    """ALARGA (EXTEND), con el comportamiento del Extend de Fernando: primero se
+    designan las líneas de llegada (quedan marcadas), después cada clic alarga
+    hasta la más cercana, con vista previa bajo el cursor; los contornos no se
+    alargan. Intro (o clic derecho) sin designar = todos los objetos visibles."""
+    title = 'ALARGA'
+    select_prompt = 'Designe objetos de contorno o <todos>'
+    all_text = 'Contornos: todos los objetos visibles.'
+    trims = False          # clic: alarga; Mayús + clic: recorta (en RECORTA, al revés)
+
+    def begin(self):
+        self.boundary = None
+        self.cl.echo('Parámetros actuales: Contornos = designar (Intro = todos los objetos visibles)')
+        self._designar_contornos()
+
+    def _designar_contornos(self):
+        self._pv = {}
+        self.selecting = True
+        self.sel = []
         self.prompt()
 
     def step_prompt(self):
@@ -671,9 +914,7 @@ class ExtendCommand(_PickCommand):
     def step_text(self, text):
         k = _key(text)
         if k in ('C', 'CONTORNOS', 'B', 'BOUNDARY'):
-            self.selecting = True
-            self.sel = []
-            self.prompt()
+            self._designar_contornos()
         elif k in OPT_UNDO:
             self.undo_last()
             self.prompt()
@@ -684,16 +925,16 @@ class ExtendCommand(_PickCommand):
         if self.selecting and not self.sel:
             self.selecting = False
             self.boundary = None
-            self.cl.echo('Contornos: todos los objetos visibles.')
+            self.cl.echo(self.all_text)
             self.prompt()
             return
         super().on_enter()
 
     def after_selection(self):
         self.boundary = list(self.sel)
+        self._pv = {}
         self.cl.echo('%d objeto(s) de contorno.' % len(self.boundary))
-        self.layer.removeSelection()
-        self.prompt()
+        self.prompt()               # quedan designados: se ven cuáles son
 
     def _boundaries(self, rect, exclude=None):
         """Segmentos de corte (SRC del mapa). exclude = fid de esta capa que no actúa como contorno."""
@@ -716,35 +957,58 @@ class ExtendCommand(_PickCommand):
                     segs += segments_from_geometry(io.to_canvas(f.geometry()))
         return segs
 
+    def _cut_segments(self, rect, exclude):
+        """Contra qué se recorta (RECORTA prolonga las aristas designadas)."""
+        return self._boundaries(rect, exclude)
+
+    def _far(self):
+        return max(self.canvas.fullExtent().width(), self.canvas.fullExtent().height(),
+                   self.canvas.extent().width()) * 4.0
+
+    def _pick_quiet(self, p, quiet):
+        if quiet:
+            return pick_feature(self.canvas, self.io, self.layer, p)
+        return self.pick(p)
+
     # ------------------------------------------------ recortar (RECORTA, o Mayús en ALARGA)
-    def _trim_at(self, p, title='RECORTA', fid=None, f=None, quiet=False):
-        """Recorta el tramo del objeto designado en p entre los contornos más cercanos."""
+    def _trim_calc(self, p, fid=None, f=None, quiet=False):
+        """Lo que haría RECORTA en p, sin tocar la capa; None si no hay nada que recortar."""
         if fid is None:
-            fid, f = self.pick(p)
+            fid, f = self._pick_quiet(p, quiet)
             if fid is None:
-                return False
+                return None
         g = self.io.to_canvas(f.geometry())
         kind, struct, flat, index = explode(g)
         if kind != 'line':
             if not quiet:
                 self.cl.echo('Solo se pueden recortar objetos lineales.')
-            return False
+            return None
         k = nearest_part(flat, p)
         if k is None:
-            return False
+            return None
         pts = flat[k]
         xs, ys = [c[0] for c in pts], [c[1] for c in pts]
         bb = QgsRectangle(QgsPointXY(min(xs), min(ys)), QgsPointXY(max(xs), max(ys)))
         bb.grow(max(bb.width(), bb.height()) * 0.01 + 1e-6)
-        segs = self._boundaries(bb, exclude=fid)
+        segs = self._cut_segments(bb, fid)
         for j, other in enumerate(flat):            # las otras partes del mismo objeto también cortan
             if j != k:
                 segs += segments_of(other)
         parts = trim_polyline(pts, (p.x(), p.y()), segs)
+        if parts == [] and self.boundary:
+            parts = None        # con aristas designadas, lo que no las cruza no se borra (Fernando)
         if parts is None:
             if not quiet:
                 self.cl.echo('El objeto no corta ningún contorno.')
+            return None
+        return fid, f, kind, struct, flat, index, k, parts, segs
+
+    def _trim_at(self, p, title='RECORTA', fid=None, f=None, quiet=False):
+        """Recorta el tramo del objeto designado en p entre los contornos más cercanos."""
+        r = self._trim_calc(p, fid, f, quiet)
+        if r is None:
             return False
+        fid, f, kind, struct, flat, index, k, parts, _segs = r
         lyr = self.layer
         if not parts:
             rest = [q for j, q in enumerate(flat) if j != k]
@@ -766,26 +1030,37 @@ class ExtendCommand(_PickCommand):
             return
         self._extend_at(p)
 
-    def _extend_at(self, p):
-        fid, f = self.pick(p)
+    # ------------------------------------------------ alargar
+    def _extend_calc(self, p, quiet=False):
+        """(fid, geometría nueva en la capa, tramo agregado) o None."""
+        fid, f = self._pick_quiet(p, quiet)
         if fid is None:
-            return
-        g = self.io.to_canvas(f.geometry())
-        kind, struct, flat, index = explode(g)
+            return None
+        if self.boundary and fid in self.boundary:
+            if not quiet:
+                self.cl.echo('Es un contorno: designe otra línea para alargar.')
+            return None
+        kind, struct, flat, index = explode(self.io.to_canvas(f.geometry()))
         if kind != 'line':
-            self.cl.echo('Solo se pueden alargar objetos lineales.')
-            return
+            if not quiet:
+                self.cl.echo('Solo se pueden alargar objetos lineales.')
+            return None
         k = nearest_part(flat, p)
+        if k is None:
+            return None
         pts = flat[k]
         if same(pts[0], pts[-1]):
-            self.cl.echo('El objeto está cerrado y no se puede alargar.')
-            return
+            if not quiet:
+                self.cl.echo('El objeto está cerrado y no se puede alargar.')
+            return None
         pk = (p.x(), p.y())
         at_start = math.hypot(pk[0] - pts[0][0], pk[1] - pts[0][1]) < \
             math.hypot(pk[0] - pts[-1][0], pk[1] - pts[-1][1])
+        clave = (fid, k, at_start, self.layer.undoStack().index())
+        if clave in self._pv:                     # la vista previa no recalcula en cada movimiento
+            return self._pv[clave]
         e, n = (pts[0], pts[1]) if at_start else (pts[-1], pts[-2])
-        L = max(self.canvas.fullExtent().width(), self.canvas.fullExtent().height(),
-                self.canvas.extent().width()) * 4.0
+        L = self._far()
         dx, dy = e[0] - n[0], e[1] - n[1]
         ln = math.hypot(dx, dy)
         far = (e[0] + dx / ln * L, e[1] + dy / ln * L)
@@ -794,14 +1069,45 @@ class ExtendCommand(_PickCommand):
         rect.grow(max(rect.width(), rect.height()) * 0.01 + 1e-6)
         new = extend_end(pts, pk, self._boundaries(rect))
         if new is None:
-            self.cl.echo('El objeto no corta ningún contorno.')
+            if not quiet:
+                self.cl.echo('El objeto no corta ningún contorno.')
+            res = None
+        else:
+            ng = conform(self.io.to_layer(rebuild('line', replace_part(kind, struct, index, k, new))),
+                         self.layer)
+            res = (fid, ng, [new[0], pts[0]] if at_start else [pts[-1], new[-1]])
+        if len(self._pv) > 200:
+            self._pv = {}
+        self._pv[clave] = res
+        return res
+
+    def _extend_at(self, p):
+        r = self._extend_calc(p)
+        if r is None:
             return
-        ng = conform(self.io.to_layer(rebuild('line', replace_part(kind, struct, index, k, new))), self.layer)
+        fid, ng, _tramo = r
         self.layer.beginEditCommand('ALARGA')
         self.layer.changeGeometry(fid, ng)
         self.layer.endEditCommand()
         self.marks.append(self.layer.undoStack().index())
         self.layer.triggerRepaint()
+
+    def preview_geoms(self, cur):
+        """Bajo el cursor: el tramo que se agrega (alargar) o el que se quita (recortar)."""
+        if self.selecting or getattr(self, 'fence', None) is not None or getattr(self, 'edge_ask', False):
+            return None
+        if self.mgr.shift != self.trims:
+            r = self._trim_calc(cur, quiet=True)
+            if r is None:
+                return None
+            flat, k, segs = r[4], r[6], r[8]
+            tramo = trim_removed(flat[k], (cur.x(), cur.y()), segs)
+        else:
+            r = self._extend_calc(cur, quiet=True)
+            tramo = r[2] if r is not None else None
+        if not tramo or len(tramo) < 2:
+            return None
+        return [QgsGeometry.fromPolylineXY([QgsPointXY(*c) for c in tramo])]
 
     def step_enter(self):
         self.end()
@@ -809,6 +1115,11 @@ class ExtendCommand(_PickCommand):
 
 # ==========================================================================
 class FilletCommand(_PickCommand):
+    """EMPALME (FILLET). Como el Fillet de Fernando: el lado que queda de cada
+    línea es el del clic (ángulo interno), la línea bajo el cursor se resalta
+    y, elegida la primera, antes del segundo clic se ve cómo quedan las dos.
+    Conserva lo de Dibujo: Radio (R), Múltiple (M), desHacer (H), Mayús =
+    esquina (radio 0), polilíneas y dos tramos del mismo objeto."""
     title = 'EMPALME'
 
     def begin(self):
@@ -924,21 +1235,78 @@ class FilletCommand(_PickCommand):
     def preview(self, cur):
         return [], False, [], []
 
+    def preview_geoms(self, cur):
+        if cur is None or self.state not in ('first', 'second'):
+            return None
+        if self.state == 'first' or self.first is None:
+            return self.hover_geoms(cur)
+        fid, f = pick_feature(self.canvas, self.io, self.layer, cur)
+        if fid is None:
+            return None
+        try:
+            return self._fillet_result(self.first, (fid, f, cur), 0.0 if self.mgr.shift else self.radius)
+        except (GeomError, InputError, ValueError, ZeroDivisionError):
+            return None
+
+    def _fillet_result(self, a, b, r):
+        """Cómo quedarían los objetos (SRC del mapa), sin tocar la capa."""
+        fid1, f1, p1 = a
+        fid2, f2, p2 = b
+        kind1, s1, flat1, idx1 = explode(self.io.to_canvas(f1.geometry()))
+        P1, P2 = (p1.x(), p1.y()), (p2.x(), p2.y())
+        k1 = nearest_part(flat1, p1)
+        if fid1 == fid2:
+            if nearest_part(flat1, p2) != k1:
+                return None
+            pts = flat1[k1]
+            closed = kind1 == 'polygon' or same(pts[0], pts[-1])
+            return [rebuild(kind1, replace_part(kind1, s1, idx1, k1, fillet_same(pts, P1, P2, r, closed)))]
+        if kind1 != 'line':
+            return None
+        kind2, s2, flat2, idx2 = explode(self.io.to_canvas(f2.geometry()))
+        if kind2 != 'line':
+            return None
+        n1, n2, arc = fillet_two(flat1[k1], P1, flat2[nearest_part(flat2, p2)], P2, r)
+        out = [QgsGeometry.fromPolylineXY([QgsPointXY(*c) for c in n1]),
+               QgsGeometry.fromPolylineXY([QgsPointXY(*c) for c in n2])]
+        if arc:
+            out.append(QgsGeometry.fromPolylineXY([QgsPointXY(*c) for c in arc]))
+        return out
+
 
 # ==========================================================================
 class TrimCommand(ExtendCommand):
-    """RECORTA (TRIM): modo rápido de AutoCAD — todos los objetos visibles son aristas de corte."""
+    """RECORTA (TRIM), con el comportamiento del Trim de Fernando: primero las
+    aristas de corte (quedan marcadas) y cada una corta también por su
+    prolongación, aunque no llegue a la línea (Arista = Prolongación). Intro
+    sin designar = modo rápido de AutoCAD: todos los objetos visibles cortan,
+    tal como están."""
     title = 'RECORTA'
-    select_prompt = 'Designe aristas de corte'
+    select_prompt = 'Designe aristas de corte o <todos>'
+    all_text = 'Aristas: todos los objetos visibles (modo rápido).'
+    trims = True
+    EDGES = {'E': 'Prolongación', 'N': 'No prolongación'}
 
     def begin(self):
         self.boundary = None
         self.fence = None
+        self.edge_ask = False
         self.mark_steps = {}
-        self.cl.echo('Parámetros actuales: Proyección = SCP  Arista = Ninguno  Modo = Rápido')
-        self.prompt()
+        self.edge = 'N' if str(get_setting('trimedge', 'E', str)).upper() == 'N' else 'E'
+        self.cl.echo('Parámetros actuales: Proyección = SCP  Arista = %s' % self.EDGES[self.edge])
+        self._designar_contornos()
+
+    def _cut_segments(self, rect, exclude):
+        segs = self._boundaries(rect, exclude)
+        if self.boundary and self.edge == 'E':
+            segs = prolong_segments(segs, self._far())
+        return segs
 
     def step_prompt(self):
+        if self.edge_ask:
+            self.cl.set_prompt('Precise modo de prolongación implícito de arista',
+                               [('P', 'Prolongación'), ('N', 'No prolongación')], self.EDGES[self.edge])
+            return
         if self.fence is not None:
             if not self.fence:
                 self.cl.set_prompt('Precise primer punto de borde')
@@ -946,10 +1314,24 @@ class TrimCommand(ExtendCommand):
                 self.cl.set_prompt('Precise punto final de línea o', [('H', 'desHacer')])
             return
         self.cl.set_prompt('Designe objeto que desea recortar o mantenga pulsada Mayús y designe objeto '
-                           'para alargar o', [('C', 'Contornos'), ('B', 'Borde'), ('H', 'desHacer')])
+                           'para alargar o', [('C', 'Contornos'), ('B', 'Borde'), ('A', 'Arista'),
+                                              ('H', 'desHacer')])
 
     def step_text(self, text):
         k = _key(text)
+        if self.edge_ask:
+            if k in ('P', 'PROLONGACION', 'PROLONGACIÓN', 'E', 'EXTEND'):
+                self.edge = 'E'
+            elif k in ('N', 'NO', 'NOPROLONGACION', 'NOPROLONGACIÓN', 'NOEXTEND'):
+                self.edge = 'N'
+            else:
+                raise InputError('Escriba P (Prolongación) o N (No prolongación).')
+            set_setting('trimedge', self.edge)
+            self.edge_ask = False
+            self._pv = {}
+            self.cl.echo('Arista = %s' % self.EDGES[self.edge])
+            self.prompt()
+            return
         if self.fence is not None:
             if k in OPT_UNDO and self.fence:
                 self.fence.pop()
@@ -961,9 +1343,14 @@ class TrimCommand(ExtendCommand):
             self.fence = []
             self.prompt()
             return
+        if k in ('A', 'ARISTA', 'E', 'EDGE'):
+            self.edge_ask = True
+            self.prompt()
+            return
         super().step_text(text)
 
     def step_point(self, p):
+        self.edge_ask = False
         if self.fence is not None:
             self.fence.append(p)
             self.prompt()
@@ -975,6 +1362,10 @@ class TrimCommand(ExtendCommand):
         self.prompt()
 
     def step_enter(self):
+        if self.edge_ask:
+            self.edge_ask = False
+            self.prompt()
+            return
         if self.fence is not None:
             pts, self.fence = self.fence, None
             if len(pts) >= 2:
@@ -1501,7 +1892,14 @@ EDIT_COMMANDS = [
     ('MIRROR', ('SIMETRIA', 'SIMETRÍA', 'SI', 'MI', 'ESPEJO'), MirrorCommand, 'SIMETRÍA',
      ('line', 'polygon', 'point'), 'Copia o refleja objetos respecto de una línea', 'mirror'),
     ('ALIGN', ('ALINEAR', 'AL'), AlignCommand, 'ALINEAR',
-     ('line', 'polygon', 'point'), 'Alinea objetos con 1 o 2 pares de puntos', 'align'),
+     ('line', 'polygon', 'point'), 'Alinea objetos con 1 o 2 pares de puntos (Copia = deja el original)',
+     'align'),
+    ('ALIGNCOPY', ('ALINEARCOPIA', 'ALINEARYDUPLICAR', 'ALC'), AlignCopyCommand, 'ALINEARCOPIA',
+     ('line', 'polygon', 'point'), 'Alinear y duplicar: alinea una copia, el original queda', 'aligncopy'),
+    ('COPYBASE', ('COPIABASE', 'COPIARCONBASE', 'CB'), CopyBaseCommand, 'COPIABASE',
+     ('line', 'polygon', 'point'), 'Guarda los objetos designados con un punto base', 'copybase'),
+    ('PASTECLIP', ('PEGARENPUNTO', 'PEGARBASE', 'PB'), PasteBaseCommand, 'PEGARENPUNTO',
+     ('line', 'polygon', 'point'), 'Pega lo guardado con COPIABASE en un punto (en la capa activa)', 'pastebase'),
     ('STRETCH', ('ESTIRA', 'ESTIRAR', 'EI', 'S'), StretchCommand, 'ESTIRA',
      ('line', 'polygon'), 'Estira vértices dentro de una ventana de captura', 'stretch'),
     ('OFFSET', ('EQDIST', 'DESFASE', 'EQ', 'O'), OffsetCommand, 'EQDIST',
@@ -1512,6 +1910,8 @@ EDIT_COMMANDS = [
      ('line',), 'Alarga líneas hasta los contornos (Mayús = recorta)', 'extend'),
     ('FILLET', ('EMPALME', 'EMPALMAR', 'EMP', 'F'), FilletCommand, 'EMPALME',
      ('line', 'polygon'), 'Empalme con radio (0 = esquina; paralelas = semicírculo)', 'fillet'),
+    ('PERPENDICULAR', ('PERP', 'PERPEND'), PerpendicularCommand, 'PERPENDICULAR',
+     ('line',), 'Línea perpendicular desde un punto a otra línea o a su prolongación', 'perp'),
     ('BREAKATPOINT', ('PARTEENPUNTO', 'PARTEPUNTO', 'BAP', 'PP'), BreakAtPointCommand, 'PARTEENPUNTO',
      ('line',), 'Parte un objeto en un punto', 'breakpt'),
     ('BREAK', ('PARTE', 'PARTIR', 'BR', 'PA'), BreakCommand, 'PARTE',

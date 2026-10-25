@@ -63,3 +63,5 @@ class QDialog(_W):
     def accept(self): pass
     def reject(self): pass
     def exec(self): return QDialog.respuesta
+class QToolBar(_W):
+    pass

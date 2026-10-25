@@ -15,7 +15,6 @@ Cada uno se arranca como siempre (initGui / unload), pero:
 from __future__ import annotations
 
 import importlib
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,7 +33,17 @@ SUBS = (
     Sub("dibujo", "dibujo", "plugin", "DibujoCADPlugin", "Dibujo_CAD", "Dibujo CAD"),
     Sub("capas", "capas", "plugin", "LayerPropertiesPlugin", "Layer_Properties", "Capas CAD"),
 )
-VIEJOS = {"dibujo": ("Dibujo_CAD",), "capas": ("Layer_Properties",)}
+# complementos sueltos que reemplaza cada módulo: el de antes y los de
+# Fernando que fueron entrando en Dibujo (3.40.0: Trim, Extend, F3/F8;
+# 3.41.0: Fillet y Offset; 3.42.0: Perpendicular; 3.43.0: digitalizadores GMS;
+# 3.44.0: CAD Copiar/Mover y Alinear y Duplicar; 3.45.0: Bloques GMS)
+VIEJOS = {
+    "dibujo": ("Dibujo_CAD", "Trim_Tool", "Extend_Tool", "autocad_shortcuts",
+               "Fillet_Tools_Independiente", "Fillet_Tools", "Offset_tool",
+               "tool_perpendicular", "lineaGSM", "digitalizador_gms",
+               "cad_copy_move", "align_duplicate_plugin", "Bloques_GMS"),
+    "capas": ("Layer_Properties",),
+}
 
 
 class IfaceIntermedio:
@@ -81,11 +90,22 @@ def fabricar(paquete_base: str, sub: Sub, iface):
     return getattr(mod, sub.clase)(iface)
 
 
-def retirar_viejos(clave: str, carpeta_plugins: Path) -> list:
-    """Retira el complemento suelto de antes (si está): lo descarga y deja su
-    carpeta como .anterior-<nombre>. Devuelve los nombres retirados."""
+def lugar_libre(carpeta_plugins: Path, viejo: str) -> Path:
+    """Dónde guardar la carpeta de un complemento retirado sin pisar nada:
+    .anterior-<nombre>, y si ya hay una copia, .anterior-<nombre>-2, -3..."""
+    guardado = carpeta_plugins / f".anterior-{viejo}"
+    n = 2
+    while guardado.exists() or guardado.is_symlink():
+        guardado = carpeta_plugins / f".anterior-{viejo}-{n}"
+        n += 1
+    return guardado
+
+
+def retirar(carpeta_plugins: Path, viejos) -> list:
+    """Descarga cada complemento suelto que esté y renombra su carpeta a un
+    .anterior-<nombre> libre (nunca se borra nada). Devuelve los retirados."""
     retirados = []
-    for viejo in VIEJOS.get(clave, ()):
+    for viejo in viejos:
         carpeta = carpeta_plugins / viejo
         if not carpeta.is_dir():
             continue
@@ -94,14 +114,17 @@ def retirar_viejos(clave: str, carpeta_plugins: Path) -> list:
             qgis.utils.unloadPlugin(viejo)
         except Exception:  # noqa: BLE001
             pass
-        guardado = carpeta_plugins / f".anterior-{viejo}"
         try:
-            shutil.rmtree(guardado, ignore_errors=True)
-            carpeta.rename(guardado)
+            carpeta.rename(lugar_libre(carpeta_plugins, viejo))
             retirados.append(viejo)
         except OSError:
             pass
     return retirados
+
+
+def retirar_viejos(clave: str, carpeta_plugins: Path) -> list:
+    """Retira los complementos sueltos que reemplaza el módulo (si están)."""
+    return retirar(carpeta_plugins, VIEJOS.get(clave, ()))
 
 
 class Cargador:
@@ -125,8 +148,8 @@ class Cargador:
             retirados = retirar_viejos(sub.clave, self.carpeta_plugins)
             if retirados:
                 self.avisos.append(f"Se retiró el complemento {', '.join(retirados)} "
-                                   f"(ahora es el módulo {sub.titulo} de GeoCAD Yaguareté; queda una "
-                                   f"copia como .anterior-{retirados[0]}).")
+                                   f"(ahora está en el módulo {sub.titulo} de GeoCAD Yaguareté; queda "
+                                   f"una copia como .anterior-<nombre> en la carpeta de complementos).")
             ifc = IfaceIntermedio(self.iface, self.al_cambiar)
             inst = None
             try:

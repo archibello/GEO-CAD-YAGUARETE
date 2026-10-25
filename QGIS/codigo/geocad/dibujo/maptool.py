@@ -214,6 +214,10 @@ class KeyGuard(QObject):
     herramienta CAD está activa, este filtro reclama las teclas de escritura y
     las envía a la línea de comandos / al texto, sin disparar otros comandos.
     Ctrl/Alt + tecla y las flechas siguen funcionando para QGIS.
+
+    F3 (referencia a objetos = autoensamblado del proyecto) y F8 (ORTO) andan
+    también con cualquier otra herramienta de QGIS mientras el mapa tiene el
+    foco (lo que hacía el AutoCAD Shortcuts de Fernando, sin atajos globales).
     """
 
     SPECIAL = ('Key_Space', 'Key_Return', 'Key_Enter', 'Key_Escape', 'Key_Backspace',
@@ -227,6 +231,7 @@ class KeyGuard(QObject):
         self._special = {qt('Key', k) for k in self.SPECIAL}
         self._ev_press = enum(QEvent, 'Type', 'KeyPress')
         self._ev_override = enum(QEvent, 'Type', 'ShortcutOverride')
+        self._toggles = {qt('Key', 'Key_F3'): 'toggle_osnap', qt('Key', 'Key_F8'): 'toggle_ortho'}
         canvas.installEventFilter(self)
         canvas.viewport().installEventFilter(self)
 
@@ -247,13 +252,27 @@ class KeyGuard(QObject):
         txt = ev.text()
         return bool(txt) and txt.isprintable()
 
+    def _toggle(self, ev):
+        """F3 / F8 sin modificadores con otra herramienta de QGIS."""
+        nombre = self._toggles.get(ev.key())
+        if nombre is None or ev.modifiers() & (qt('KeyboardModifier', 'ControlModifier')
+                                                | qt('KeyboardModifier', 'AltModifier')
+                                                | qt('KeyboardModifier', 'ShiftModifier')):
+            return False
+        fn = getattr(self.mgr, nombre, None)
+        if fn is None:
+            return False
+        fn()
+        ev.accept()
+        return True
+
     def eventFilter(self, obj, ev):
         t = ev.type()
         if t != self._ev_press and t != self._ev_override:
             return False
         tool = self.canvas.mapTool()
         if tool is None or not any(tool is x for x in self.tools):
-            return False
+            return self._toggle(ev) if t == self._ev_press else False
         if not self._wanted(ev):
             return False
         if t == self._ev_override:

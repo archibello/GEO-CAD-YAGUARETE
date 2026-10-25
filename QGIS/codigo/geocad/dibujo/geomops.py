@@ -84,6 +84,24 @@ def closest_segment(coords, p):
     return best
 
 
+def perpendicular_foot(coords, origin, pick):
+    """PERPENDICULAR (Tool Perpendicular de Fernando): el pie de la
+    perpendicular desde 'origin' al tramo de 'coords' más cercano a 'pick',
+    sobre la recta del tramo (vale su prolongación). None si el origen ya
+    está sobre esa recta."""
+    i, _q, _d = closest_segment(coords, pick)
+    a0, a1 = coords[i], coords[i + 1]
+    d = sub(a1, a0)
+    n2 = dot(d, d)
+    if n2 < EPS:
+        return None
+    t = dot(sub(origin, a0), d) / n2
+    foot = add(a0, mul(d, t))
+    if dist(foot, origin) < EPS:
+        return None
+    return foot
+
+
 def line_intersection(a0, a1, b0, b1):
     """Intersección de las rectas infinitas a0-a1 y b0-b1 (None si son paralelas)."""
     r, s = sub(a1, a0), sub(b1, b0)
@@ -500,3 +518,64 @@ def trim_polyline(coords, pick, boundaries):
     if hi:
         parts.append(substring(coords, min(hi), L))
     return [p for p in parts if len(p) >= 2 and length(p) > 1e-9]
+
+
+def trim_removed(coords, pick, boundaries):
+    """El tramo que quitaría RECORTA en 'pick' (para la vista previa), o None."""
+    L = length(coords)
+    if L <= 0:
+        return None
+    sp = locate(coords, pick)
+    closed = is_closed(coords)
+    cuts = [d for d in cut_distances(coords, boundaries)
+            if closed or (1e-7 < d < L - 1e-7)]
+    if closed:
+        if len(cuts) < 2:
+            return None
+        lo = max([d for d in cuts if d < sp] or [cuts[-1]])
+        hi = min([d for d in cuts if d > sp] or [cuts[0]])
+        if lo < hi:
+            return dedupe(substring(coords, lo, hi))
+        return dedupe(substring(coords, lo, L) + substring(coords, 0.0, hi)[1:])
+    lo = max([d for d in cuts if d < sp - 1e-9] or [0.0])
+    hi = min([d for d in cuts if d > sp + 1e-9] or [L])
+    return dedupe(substring(coords, lo, hi))
+
+
+def prolong_segments(segments, dist):
+    """Aristas de corte prolongadas 'dist' por los dos lados (RECORTA de Fernando:
+    la tijera corta aunque no llegue a la línea, como la arista Prolongación de
+    AutoCAD)."""
+    out = []
+    for a, b in segments:
+        d = sub(b, a)
+        n = norm(d)
+        if n < EPS:
+            continue
+        u = mul(d, dist / n)
+        out.append((sub(a, u), add(b, u)))
+    return out
+
+
+# ---------------------------------------------------------------- INSERTAR con P2 (Bloques GMS, 3.45.0)
+def gms_insercion(p1, p2, ref, perp=False, horizonte=False):
+    """Inserción de un bloque como en Bloques GMS de Fernando: P1 = punto base,
+    P2 = escala y giro (contra el vector de referencia 'ref' del bloque, en sus
+    coordenadas locales). perp: simetría respecto de la perpendicular a P1-P2
+    por su punto medio; horizonte: simetría respecto de la recta P1-P2.
+    -> (punto de inserción, escala X, escala Y, giro en radianes), para la
+    transformación de los bloques: mundo = R(giro) · diag(ex, ey) · local + punto."""
+    L = norm(ref)
+    d = dist(p1, p2)
+    if L < EPS or d < EPS:
+        raise GeomError('P2 no puede coincidir con P1.')
+    s = d / L
+    theta = math.atan2(p2[1] - p1[1], p2[0] - p1[0]) - math.atan2(ref[1], ref[0])
+    beta = theta + math.atan2(ref[1], ref[0])
+    if perp and horizonte:
+        return tuple(p2), s, s, theta + math.pi
+    if perp:
+        return tuple(p2), s, -s, 2.0 * beta + math.pi - theta
+    if horizonte:
+        return tuple(p1), s, -s, 2.0 * beta - theta
+    return tuple(p1), s, s, theta

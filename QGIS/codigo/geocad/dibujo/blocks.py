@@ -8,6 +8,9 @@ Bloques CAD al estilo AutoCAD.
   * Inserciones: capa de puntos 'Bloques CAD' con NOMBRE, ESCALA_X, ESCALA_Y, ROTACION.
     Se dibujan con un generador de geometría (affine_transform) a partir de la
     definición: al redefinir un bloque se actualizan todas sus inserciones.
+  * Punto de referencia P2 (3.45.0, Bloques GMS de Fernando): una fila más con
+    KIND = 'ref' y WKT = Point (x y) local, sin LINEAS: no se dibuja ni se
+    descompone; al insertar con P2 da la escala y el giro.
 """
 
 import math
@@ -115,12 +118,17 @@ def refresh_instances():
 
 
 # ---------------------------------------------------------------- definiciones (caché)
+REF_KIND = 'ref'
+
+
 class _Lib:
     def __init__(self):
         self.cache = {}
+        self.refs = {}
 
     def invalidate(self):
         self.cache = {}
+        self.refs = {}
 
     def names(self, defs=None):
         defs = defs or defs_layer()
@@ -137,12 +145,36 @@ class _Lib:
             return self.cache[name]
         defs = defs or defs_layer()
         out = []
+        ref = None
         if defs is not None:
             req = QgsFeatureRequest().setFilterExpression('"NOMBRE" = %s' % _quote(name))
             for f in defs.getFeatures(req):
-                out.append(_row(f))
+                r = _row(f)
+                if r['kind'] == REF_KIND:
+                    if r['geom'] is not None and not r['geom'].isEmpty():
+                        p = r['geom'].asPoint()
+                        ref = (p.x(), p.y())
+                else:
+                    out.append(r)
         self.cache[name] = out
+        self.refs[name] = ref
         return out
+
+    def reference(self, name, defs=None):
+        """Vector P1->P2 del bloque (coordenadas locales). Sin P2 guardado: su
+        ancho sobre el eje X (como Fernando eligió, 24/10/2026)."""
+        rows = self.rows(name, defs)
+        ref = self.refs.get(name)
+        if ref is not None:
+            return ref
+        xs = []
+        for r in rows:
+            g = r['lgeom'] if r['lgeom'] is not None else r['geom']
+            if g is not None and not g.isEmpty():
+                bb = g.boundingBox()
+                xs += [bb.xMinimum(), bb.xMaximum()]
+        w = (max(xs) - min(xs)) if xs else 0.0
+        return (w if w > 1e-12 else 1.0, 0.0)
 
 
 LIB = _Lib()
@@ -221,8 +253,9 @@ def geometry_for_pick(layer, f):
 
 
 # ---------------------------------------------------------------- escritura
-def write_definition(defs, name, entities):
-    """entities: lista de dict(geom local, layer_code, src_layer, src_name)."""
+def write_definition(defs, name, entities, ref=None):
+    """entities: lista de dict(geom local, layer_code, src_layer, src_name).
+    ref: (x, y) local del punto de referencia P2, o None."""
     prov = defs.dataProvider()
     old = [f.id() for f in defs.getFeatures(QgsFeatureRequest().setFilterExpression(
         '"NOMBRE" = %s' % _quote(name)))]
@@ -237,6 +270,14 @@ def write_definition(defs, name, entities):
                 'KIND': kind_of(g), 'LAYER_CODE': e.get('layer_code', '') or '',
                 'SRC_LAYER': e.get('src_layer', '') or '', 'SRC_NAME': e.get('src_name', '') or ''}
         for k, v in vals.items():
+            idx = defs.fields().indexOf(k)
+            if idx != -1:
+                f.setAttribute(idx, v)
+        feats.append(f)
+    if ref is not None:
+        f = QgsFeature(defs.fields())
+        for k, v in (('NOMBRE', name), ('WKT', 'Point (%r %r)' % (float(ref[0]), float(ref[1]))),
+                     ('LINEAS', ''), ('KIND', REF_KIND)):
             idx = defs.fields().indexOf(k)
             if idx != -1:
                 f.setAttribute(idx, v)

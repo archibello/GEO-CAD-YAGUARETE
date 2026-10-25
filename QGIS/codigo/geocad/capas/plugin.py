@@ -103,6 +103,7 @@ class LayerPropertiesPlugin:
     def _action(self, ico, text, slot, checkable=False, menu=False):
         a = QAction(icon(ico), text, self.iface.mainWindow())
         a.setToolTip(text)
+        a.setProperty('geocad_id', 'capas:' + ico)      # Administrar botones (3.38.0)
         a.setStatusTip(text)
         a.setCheckable(checkable)
         if checkable:

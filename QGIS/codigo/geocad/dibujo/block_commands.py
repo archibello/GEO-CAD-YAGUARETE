@@ -15,6 +15,7 @@ from . import blocks as B
 from .commands import _DrawCommand, _key
 from .compat import accepted_code, enum, exec_dialog, qt
 from .editkit import EditCommand
+from .geomops import GeomError, gms_insercion
 from .units import InputError, parse_degrees, parse_distance
 
 STYLE = """
@@ -132,7 +133,11 @@ class InsertDialog(QDialog):
         self.rot.setToolTip("Admite 45, 45d30'15\", 50g, 0.78r")
         f3.addRow('Ángulo:', self.rot)
         right.addWidget(g3)
+        # Fernando, 24/10/2026: en QGIS un bloque son copias de sus elementos en
+        # las mismas capas, sin capas nuevas: INSERTAR siempre lo deja así.
         self.explode = QCheckBox('Descomponer')
+        self.explode.setChecked(True)
+        self.explode.setVisible(False)
         right.addWidget(self.explode)
         right.addStretch()
         mid.addLayout(right)
@@ -226,9 +231,11 @@ class BlockCommand(EditCommand):
                                [('S', 'Sí'), ('N', 'No')], 'No')
         elif st == 'base':
             self.cl.set_prompt('Precise punto base de inserción')
+        elif st == 'ref':
+            self.cl.set_prompt('Precise punto de referencia P2 (escala y giro al insertar) o', None,
+                               'ninguno')
         elif st == 'mode':
-            self.cl.set_prompt('Objetos de origen', [('R', 'Retener'), ('C', 'Convertir en bloque'),
-                                                     ('S', 'Suprimir')], 'Convertir en bloque')
+            self.cl.set_prompt('Objetos de origen', [('R', 'Retener'), ('S', 'Suprimir')], 'Retener')
 
     def base(self):
         return None
@@ -258,7 +265,7 @@ class BlockCommand(EditCommand):
             if k in ('R', 'RETENER', 'RETAIN'):
                 self.finish('retain')
             elif k in ('C', 'CONVERTIR', 'CONVERT'):
-                self.finish('convert')
+                self.finish('retain')       # en QGIS el bloque son sus elementos en sus capas
             elif k in ('S', 'SUPRIMIR', 'D', 'DELETE'):
                 self.finish('delete')
             else:
@@ -270,11 +277,24 @@ class BlockCommand(EditCommand):
         self.prompt()
 
     def step_point(self, p):
-        if self.state != 'base':
+        if self.state == 'base':
+            self.base_pt = p
+            self.ref_pt = None
+            self._set_last(p)
+            self.cl.raw_mode = False
+            self.state = 'ref'          # P2 como en Bloques GMS de Fernando (3.45.0)
+            self.prompt()
             return
-        self.base_pt = p
-        self._set_last(p)
-        self.cl.raw_mode = False
+        if self.state != 'ref':
+            return
+        if abs(p.x() - self.base_pt.x()) < 1e-12 and abs(p.y() - self.base_pt.y()) < 1e-12:
+            self.cl.echo('P2 no puede coincidir con el punto base.')
+            return
+        self.ref_pt = p
+        self._designar()
+
+    def _designar(self):
+        self.state = 'objs'
         if self.pre:
             self.sel = self.pre
             self.cl.echo('%d objeto(s) preseleccionado(s).' % len(self.sel))
@@ -289,8 +309,10 @@ class BlockCommand(EditCommand):
         if st == 'redef':
             self.state = 'name'
             self.prompt()
+        elif st == 'ref':
+            self._designar()            # sin P2: al insertar se usa el ancho del bloque
         elif st == 'mode':
-            self.finish('convert')
+            self.finish('retain')
         else:
             self.end()
 
@@ -316,18 +338,17 @@ class BlockCommand(EditCommand):
             entities.append({'geom': lg, 'layer_code': code, 'src_layer': self.layer.id(),
                              'src_name': self.layer.name()})
         defs = B.defs_layer(self.mgr.iface, self.cl.echo, create=True)
-        n = B.write_definition(defs, self.name, entities)
-        msg = 'Bloque "%s" definido con %d entidad(es).' % (self.name, n)
-        if mode in ('convert', 'delete'):
+        ref = None
+        if getattr(self, 'ref_pt', None) is not None:
+            ref = (self.ref_pt.x() - bx, self.ref_pt.y() - by)
+        n = B.write_definition(defs, self.name, entities, ref=ref)
+        msg = 'Bloque "%s" definido con %d entidad(es)%s.' % (self.name, n, ' y punto P2' if ref else '')
+        if mode == 'delete':
             self.layer.beginEditCommand('BLOQUE')
             for fid in self.geoms:
                 self.layer.deleteFeature(fid)
             self.layer.endEditCommand()
             self.layer.triggerRepaint()
-        if mode == 'convert':
-            B.add_instance(self.mgr, self.name, self.base_pt, 1.0, 1.0, 0.0, self.cl.echo)
-            msg += ' Objetos convertidos en una inserción.'
-        elif mode == 'delete':
             msg += ' Objetos de origen suprimidos.'
         self.cl.echo(msg)
         self.end()
@@ -367,14 +388,28 @@ class InsertCommand(_DrawCommand):
                                                      for r in v['rows'] if r['geom'] is not None])
         self.name, self.sx, self.sy, self.rot, self.explode = v['name'], v['sx'], v['sy'], v['rot'], v['explode']
         self.rows = B.LIB.rows(self.name)
+        self.ref = B.LIB.reference(self.name)
+        self.p1 = self.p2 = None
+        self.perp = self.horiz = False
+        self.etapa = 1
         self.state = 'pt'
         self.prompt()
 
     def prompt(self):
         st = self.state
         if st == 'pt':
-            self.cl.set_prompt('Precise punto de inserción o', [('E', 'Escala'), ('X', 'X'), ('Y', 'Y'),
-                                                                ('R', 'Rotar')])
+            self.cl.set_prompt('Precise punto de inserción P1 o', [('E', 'Escala'), ('X', 'X'), ('Y', 'Y'),
+                                                                   ('R', 'Rotar')])
+        elif st == 'p2':
+            self.cl.set_prompt('Precise P2 (escala y giro) o', None, 'escala y giro elegidos')
+        elif st == 'sim':
+            estado = '%s, %s' % ('perpendicular SÍ' if self.perp else 'perpendicular no',
+                                 'horizonte SÍ' if self.horiz else 'horizonte no')
+            if self.etapa == 1:
+                txt = 'Simetría perpendicular (%s): clic alterna; Intro = siguiente' % estado
+            else:
+                txt = 'Simetría horizonte P1-P2 (%s): clic alterna; Intro = insertar' % estado
+            self.cl.set_prompt(txt + ' o', [('S', 'Perpendicular'), ('H', 'Horizonte'), ('A', 'Aceptar')])
         elif st == 'scale':
             self.cl.set_prompt('Precise factor de escala XYZ', None, '%g' % self.sx)
         elif st == 'sx':
@@ -391,19 +426,48 @@ class InsertCommand(_DrawCommand):
         return []
 
     def on_point(self, p):
-        if self.state != 'pt':
+        if self.state == 'pt':
+            self.p1 = p                       # Bloques GMS: P1, después P2
+            self._set_last(p)
+            self.state = 'p2'
+            self.prompt()
             return
-        if self.explode:
-            made, skipped = B.explode_rows(self.rows, p.x(), p.y(), self.sx, self.sy, self.rot,
-                                           self.mgr.canvas.mapSettings().destinationCrs(),
-                                           fallback=self.mgr.iface.activeLayer())
-            msg = 'Bloque "%s" insertado descompuesto: %d objeto(s).' % (self.name, made)
-            if skipped:
-                msg += ' %d sin capa de destino compatible.' % skipped
-            self.cl.echo(msg)
-        else:
-            B.add_instance(self.mgr, self.name, p, self.sx, self.sy, math.degrees(self.rot), self.cl.echo)
-        self._set_last(p)
+        if self.state == 'p2':
+            if abs(p.x() - self.p1.x()) < 1e-12 and abs(p.y() - self.p1.y()) < 1e-12:
+                self.cl.echo('P2 no puede coincidir con P1.')
+                return
+            self.p2 = p
+            self.perp = self.horiz = False
+            self.etapa = 1
+            self.state = 'sim'
+            self.prompt()
+            return
+        if self.state == 'sim':               # el clic alterna la simetría de la etapa
+            if self.etapa == 1:
+                self.perp = not self.perp
+            else:
+                self.horiz = not self.horiz
+            self.prompt()
+
+    def _colocacion(self, p2=None):
+        """(x, y, escala X, escala Y, giro en radianes) de la inserción."""
+        if p2 is None:
+            return self.p1.x(), self.p1.y(), self.sx, self.sy, self.rot
+        (x, y), ex, ey, rot = gms_insercion((self.p1.x(), self.p1.y()), (p2.x(), p2.y()), self.ref,
+                                            self.perp, self.horiz)
+        return x, y, ex, ey, rot
+
+    def _insertar(self, p2=None):
+        """Copias de los elementos del bloque en sus capas de origen (como Bloques
+        GMS de Fernando): nunca se crea la capa «Bloques CAD» (3.45.0)."""
+        x, y, sx, sy, rot = self._colocacion(p2)
+        made, skipped = B.explode_rows(self.rows, x, y, sx, sy, rot,
+                                       self.mgr.canvas.mapSettings().destinationCrs(),
+                                       fallback=self.mgr.iface.activeLayer())
+        msg = 'Bloque "%s" insertado: %d objeto(s) en sus capas.' % (self.name, made)
+        if skipped:
+            msg += ' %d sin capa de destino compatible.' % skipped
+        self.cl.echo(msg)
         self.end()
 
     def on_text(self, text):
@@ -430,12 +494,29 @@ class InsertCommand(_DrawCommand):
             v = parse_degrees(text, u)
             self.rot = math.radians(-v if u.angdir_cw else v)
             self.state = 'pt'
+        elif st == 'sim' and k in ('S', 'PERPENDICULAR', 'P'):
+            self.perp = not self.perp
+        elif st == 'sim' and k in ('H', 'HORIZONTE'):
+            self.horiz = not self.horiz
+        elif st == 'sim' and k in ('A', 'ACEPTAR', 'I', 'INSERTAR'):
+            self._insertar(self.p2)
+            return
         else:
             self._resolve_and_apply(text)
             return
         self.prompt()
 
     def on_enter(self):
+        if self.state == 'p2':
+            self._insertar()                  # sin P2: escala y giro elegidos (como antes)
+            return
+        if self.state == 'sim':
+            if self.etapa == 1:
+                self.etapa = 2
+                self.prompt()
+            else:
+                self._insertar(self.p2)
+            return
         if self.state != 'pt':
             self.state = 'pt'
             self.prompt()
@@ -446,16 +527,31 @@ class InsertCommand(_DrawCommand):
         self.end()
 
     def preview(self, cur):
+        if self.state == 'p2' and cur is not None:
+            return [], False, [self.p1, cur], []
+        if self.state == 'sim':
+            return [], False, [], [self.p1, self.p2]
         return [], False, [], []
 
     def preview_geoms(self, cur):
-        if self.state != 'pt' or cur is None:
+        if cur is None:
+            return None
+        try:
+            if self.state == 'pt':
+                x, y, sx, sy, rot = cur.x(), cur.y(), self.sx, self.sy, self.rot
+            elif self.state == 'p2':
+                x, y, sx, sy, rot = self._colocacion(cur)
+            elif self.state == 'sim':
+                x, y, sx, sy, rot = self._colocacion(self.p2)
+            else:
+                return None
+        except GeomError:
             return None
         out = []
         for r in self.rows[:500]:
             g = r['lgeom'] if r['lgeom'] is not None else r['geom']
             if g is not None:
-                out.append(B.place(g, cur.x(), cur.y(), self.sx, self.sy, self.rot))
+                out.append(B.place(g, x, y, sx, sy, rot))
         return out
 
 
@@ -526,3 +622,56 @@ def purge(mgr):
 
 
 __all__ = ['BlockCommand', 'InsertCommand', 'wblock', 'purge', 'QgsFeatureRequest', 'QgsPointXY']
+
+
+# ---------------------------------------------------------------- BLOQUESGMS
+def importar_gms(mgr, carpeta=None):
+    """Trae como bloques de GeoCAD los bloques de Bloques GMS (.json) de la
+    carpeta 'bloques' del proyecto, con su P2. No pisa bloques que ya existan
+    ni toca los archivos. Devuelve la cantidad de bloques creados."""
+    from . import gms_json
+    if carpeta is None:
+        fn = QgsProject.instance().fileName()
+        inicio = os.path.join(os.path.dirname(fn), 'bloques') if fn else ''
+        if not inicio or not os.path.isdir(inicio):
+            inicio = QFileDialog.getExistingDirectory(mgr.iface.mainWindow(),
+                                                      'Carpeta con los bloques de Bloques GMS', inicio or '')
+        carpeta = inicio
+    if not carpeta:
+        return 0
+    rutas = gms_json.archivos(carpeta)
+    if not rutas:
+        mgr.cmdline.echo('No hay bloques de Bloques GMS (.json) en %s.' % carpeta)
+        return 0
+    crs = mgr.canvas.mapSettings().destinationCrs().authid()
+    existentes = set(B.LIB.names())
+    defs = None
+    hechos, avisos = 0, []
+    for ruta in rutas:
+        b = gms_json.leer(ruta)
+        if b is None:
+            avisos.append('%s: no es un bloque de Bloques GMS' % os.path.basename(ruta))
+            continue
+        if b['nombre'] in existentes:
+            avisos.append('"%s" ya existe en el proyecto: no se pisa' % b['nombre'])
+            continue
+        if b['crs'] and crs and b['crs'] != crs:
+            avisos.append('"%s" está en %s y el mapa en %s: no se trae' % (b['nombre'], b['crs'], crs))
+            continue
+        ents = []
+        for w in b['wkts']:
+            g = QgsGeometry.fromWkt(w)
+            if g is not None and not g.isEmpty():
+                ents.append({'geom': g, 'layer_code': '', 'src_layer': '', 'src_name': b['capa']})
+        if not ents:
+            avisos.append('"%s" no tiene geometrías' % b['nombre'])
+            continue
+        if defs is None:
+            defs = B.defs_layer(mgr.iface, mgr.cmdline.echo, create=True)
+        B.write_definition(defs, b['nombre'], ents, ref=b['p2'])
+        existentes.add(b['nombre'])
+        hechos += 1
+    for a in avisos:
+        mgr.cmdline.echo(a)
+    mgr.cmdline.echo('%d bloque(s) de Bloques GMS traído(s) con su P2. Los archivos quedan como estaban.' % hechos)
+    return hechos

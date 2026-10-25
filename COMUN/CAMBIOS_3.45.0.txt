@@ -1,0 +1,68 @@
+GeoCAD - versión 3.45.0
+=======================
+BLOQUES GMS DE FERNANDO EN QGIS (último paso de la incorporación de sus
+complementos, propuesta_complementos/INFORME_COMPLEMENTOS.txt). Trae todo lo
+de la 3.44.0.
+
+Decidido por Fernando (24/10/2026)
+- P2 de referencia al crear el bloque; los bloques sin P2 usan su ancho.
+- Simetrías con clics (como GMS) y además escritas.
+- Fernando, después: «en qgis los bloques hacen copias de sí mismos en las
+  mismas capas, no generan nuevas capas, solo duplican los elementos que
+  contienen». Elegido: INSERTAR siempre deja copias en sus capas.
+- Traer los bloques ya creados con Bloques GMS (.json), sin tocar los archivos.
+
+BLOQUE (B)
+- Después del punto base pide, opcional, el punto de referencia P2 (escala y
+  giro al insertar). Intro = ninguno. El P2 se guarda en la definición del
+  bloque y no se dibuja ni se descompone.
+- Objetos de origen: Retener (por defecto) o Suprimir. Ya no los convierte en
+  una inserción (eso creaba la capa «Bloques CAD»); escribir C retiene.
+
+INSERTAR (I), como Bloques GMS
+- P1 = punto de inserción; P2 = escala y giro: escala = distancia P1-P2 ÷
+  la del bloque (su P2, o su ancho si no tiene), giro = dirección P1-P2. Se
+  ve antes del clic.
+- Después, las dos simetrías de Bloques GMS: primero la perpendicular a
+  P1-P2 por su punto medio (clic alterna, Intro o clic derecho = siguiente),
+  después la del horizonte P1-P2 (clic alterna, Intro o clic derecho =
+  insertar). Escritas: S (perpendicular), H (horizonte), A (Aceptar).
+- Cada punto del bloque queda exactamente donde lo deja Bloques GMS
+  (probado con sus fórmulas, con y sin simetrías).
+- Lo insertado son COPIAS DE LOS ELEMENTOS EN SUS MISMAS CAPAS (o en la capa
+  activa si la de origen no está), como Bloques GMS: no se crea la capa
+  «Bloques CAD». Las definiciones siguen en la tabla «Bloques CAD def»,
+  que no se ve en el mapa. La ventana ya no muestra «Descomponer».
+- Intro en P2 = la escala y el giro elegidos en la ventana.
+- Las inserciones «Bloques CAD» que ya haya en proyectos viejos siguen
+  como estaban (doble clic, PUNTOBASEBLOQUE, LIMPIA).
+
+BLOQUESGMS (IMPORTARGMS), con botón en «Yaguá Bloques»
+- Trae como bloques de GeoCAD los .json de Bloques GMS de la carpeta
+  «bloques» del proyecto (o la que se elija), con su P2. No pisa un bloque
+  que ya exista, no trae los de otro sistema de coordenadas y no toca los
+  archivos.
+
+Retiro del complemento suelto
+- Al cargar Dibujo se retira Bloques_GMS: su carpeta pasa a
+  .anterior-Bloques_GMS, sin borrar nada ni pisar copias.
+
+Límite
+- WBLOQUE (biblioteca .gpkg) no lleva el P2: un bloque traído de una
+  biblioteca usa su ancho.
+
+Por dentro
+- geomops.py: gms_insercion. gms_json.py: lectura de los .json. blocks.py:
+  fila de referencia (KIND = 'ref'), LIB.reference, write_definition(ref).
+  block_commands.py: BLOQUE (P2), INSERTAR (P2 y simetrías), importar_gms.
+  plugin.py (Dibujo): BLOQUESGMS y su botón. icons/gmsblocks.svg.
+  botones.py (núcleo, los dos lados): Yaguá Bloques. submodulos.py: VIEJOS.
+
+Pruebas
+- test_bloques_gms.py (sin Qt): inserción = Bloques GMS punto por punto (sin
+  y con cada simetría), lectura de .json sin tocarlos, botón, retiro.
+  test_recorta_alarga y test_copiabase_alinear ajustadas (Bloques_GMS ya se
+  retira).
+- Banco nuevo con el QGIS real, ventana/banco_bloques_gms_qgis.py: BLOQUE con
+  y sin P2, INSERTAR con P2 y simetrías (clic y escritas) dejando copias en
+  la misma capa y sin crear «Bloques CAD», sin P2, BLOQUESGMS: TODO OK. Los otros seis bancos de QGIS: TODO OK.

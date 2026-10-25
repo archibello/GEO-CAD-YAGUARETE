@@ -1,0 +1,25 @@
+GeoCAD - versión 3.41.1
+=======================
+ARREGLO: ADMINISTRAR BOTONES EN QGIS. Trae todo lo de la 3.41.0 (EMPALME y
+EQDIST de Fernando) y de las anteriores.
+
+Qué pasaba (Fernando, 24/10/2026, con la 3.41.0)
+- En QGIS, GeoCAD > Administrar botones decía «No hay barras de GeoCAD:
+  prendé Dibujo, Capas o Puente en Módulos», aunque las categorías «Yaguá»
+  estaban a la vista con sus botones.
+- Causa: lo que Administrar botones movió de cada barra se guardaba como
+  atributo de la ventana principal de QGIS. Esa ventana es de C++ y su
+  envoltorio de Python se rehace entre llamadas: el dato se perdía y, al
+  restaurar para abrir la ventana, las barras de fábrica quedaban vacías.
+
+Arreglo
+- botones_barras (núcleo, los dos programas) guarda ese estado en un
+  diccionario propio, por la dirección C++ de la ventana, no como atributo.
+- Dibujo CAD y Edición CAD siguen sin aparecer en Ver > Barras mientras sus
+  botones estén en las «Yaguá» (es así a propósito: barra vacía, escondida).
+
+Pruebas
+- ventana/banco_botones_qgis.py con una ventana de C++ sin referencia de
+  Python: falla con la 3.41.0 y da TODO OK con el arreglo (QGIS real).
+- 61/61 con IngeCAD 0.6.8.2 y 0.6.7; bancos de IngeCAD (botones e imágenes)
+  TODO OK con las dos.

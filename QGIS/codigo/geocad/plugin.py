@@ -32,12 +32,15 @@ try:                                    # Qt6 (QGIS 4)
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, buzon, config, desde_ingecad, modulos, nombre, submodulos
+from . import actualizar, bloqueo, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos
 
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
-VERSION = "3.37.0"
+#: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
+BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
+                 "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
+VERSION = "3.45.1"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -205,31 +208,14 @@ class GeoCAD:
                 self.actions[clave] = a
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
+        add("botones", "Administrar botones...", self.administrar_botones)
         add("config", "Configuración común...", self.open_config)
         add("update", "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...", self.update_bridge)
         add("about", f"Acerca de {nombre.NOMBRE} (versión {VERSION})...", self.about)
 
     # primera vez: retirar el Puente 1.x y elegir los módulos
     def _retirar_viejos(self) -> list:
-        aqui = Path(__file__).resolve().parent
-        retirados = []
-        for viejo in VIEJOS:
-            carpeta = aqui.parent / viejo
-            if not carpeta.is_dir():
-                continue
-            try:
-                import qgis.utils
-                qgis.utils.unloadPlugin(viejo)
-            except Exception:
-                pass
-            guardado = aqui.parent / f".anterior-{viejo}"
-            try:
-                shutil.rmtree(guardado, ignore_errors=True)
-                carpeta.rename(guardado)
-                retirados.append(viejo)
-            except OSError:
-                pass
-        return retirados
+        return submodulos.retirar(Path(__file__).resolve().parent.parent, VIEJOS)
 
     def _subs_cambiaron(self) -> None:
         if not self._cargando and self.menu is not None:
@@ -245,6 +231,7 @@ class GeoCAD:
             self._cargando = False
         self._sync_tablas()
         self._build_menu()
+        self._aplicar_botones()
         for aviso in self.subs.tomar_avisos():
             self._bar(aviso, "ok" if aviso.startswith("Se retiró") else "warn", 10)
 
@@ -298,6 +285,7 @@ class GeoCAD:
             self.tablas = None
 
     def aplicar_modulos(self) -> None:
+        self._restaurar_botones()
         if self.subs is not None:
             # Dibujo (con Bloques y Papel) y Capas se vuelven a arrancar con la
             # elección nueva; lo apagado se descarga sin dejar rastro
@@ -309,6 +297,7 @@ class GeoCAD:
             googleearth_qgis.apagar()           # ventanita, servidor, atajo y enlace fuera
         self._build_menu()
         self._sync_toolbar()
+        self._aplicar_botones()
         if not self._puente():
             self._liberar_capas()
             buzon.clear_heartbeat("qgis")
@@ -321,6 +310,7 @@ class GeoCAD:
         self.readonly_by_us.clear()
 
     def unload(self) -> None:
+        self._restaurar_botones()
         self._quitar_tablas()
         from . import googleearth_qgis
         googleearth_qgis.apagar()
@@ -355,11 +345,80 @@ class GeoCAD:
         if want and self.toolbar is None:
             self.toolbar = self.iface.addToolBar("GeoCAD Yaguareté")
             self.toolbar.setObjectName("GeoCADToolbar")
+            self.actions["send"].setProperty("geocad_id", "puente:send")
             self.toolbar.addAction(self.actions["send"])
+            self._aplicar_botones()
         elif not want and self.toolbar is not None:
+            self._restaurar_botones()
             self.iface.mainWindow().removeToolBar(self.toolbar)
             self.toolbar.deleteLater()
             self.toolbar = None
+            self._aplicar_botones()
+
+    # Administrar botones (3.38.0): categorías propias, cada una una barra
+    def _fabricas(self) -> list:
+        """[(título, barra)] de las barras de GeoCAD que hay a la vista."""
+        buscar = getattr(self.iface.mainWindow(), "findChild", None)
+        if buscar is None:
+            return []
+        from qgis.PyQt.QtWidgets import QToolBar
+        salida = []
+        for objeto in BARRAS_GEOCAD:
+            bar = buscar(QToolBar, objeto)
+            if bar is not None:
+                salida.append((bar.windowTitle(), bar))
+        return salida
+
+    @staticmethod
+    def _id_boton(accion):
+        try:
+            return accion.property("geocad_id") or None
+        except RuntimeError:
+            return None
+
+    def _nueva_barra(self, nombre):
+        bar = self.iface.addToolBar(nombre)
+        bar.setObjectName(botones.objeto_barra(nombre))
+        return bar
+
+    def _aplicar_botones(self) -> None:
+        try:
+            fab = self._fabricas()
+            if not fab:
+                return
+            botones_barras.aplicar(self.iface.mainWindow(), fab, self._id_boton,
+                                   lambda fabrica: botones.barras(PROGRAMA, fabrica),
+                                   self._nueva_barra)
+        except Exception as exc:  # noqa: BLE001 - las barras quedan como de fábrica
+            self._bar(f"Administrar botones: {type(exc).__name__}: {exc}", "warn")
+
+    def _restaurar_botones(self) -> None:
+        try:
+            botones_barras.restaurar(self.iface.mainWindow())
+        except Exception:  # noqa: BLE001
+            pass
+
+    def administrar_botones(self) -> None:
+        from qgis.PyQt import QtWidgets
+        from . import botones_ui
+
+        self._restaurar_botones()           # la fábrica, para leer los botones
+        try:
+            elems = botones_barras.elementos(self._fabricas(), self._id_boton)
+            fabrica = [(n, [b for b, _a in fila]) for n, fila in elems]
+            if not any(fila for _n, fila in fabrica):
+                self._bar("No hay barras de GeoCAD: prendé Dibujo, Capas o Puente en Módulos.", "warn")
+                return
+            etiquetas, iconos = {}, {}
+            for _n, fila in elems:
+                for b, a in fila:
+                    etiquetas[b] = a.text().split(" — ")[0].replace("&", "")
+                    iconos[b] = a.icon()
+            if botones_ui.administrar(QtWidgets, self.iface.mainWindow(), PROGRAMA, fabrica,
+                                      etiquetas, iconos):
+                self._bar("Botones de GeoCAD: categorías guardadas.", "ok")
+        finally:
+            self._aplicar_botones()
 
     # íconos
     def _ingecad_icon(self) -> QIcon:
