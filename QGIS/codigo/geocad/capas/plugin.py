@@ -39,7 +39,10 @@ class LayerPropertiesPlugin:
         self.a_props = self._action('layprops', 'Administrador de propiedades de capas (LAYER)',
                                     self.toggle_manager, checkable=True, menu=True)
         self.combo = LayerCombo(self.ctrl, self.toolbar)
-        self.toolbar.addWidget(self.combo)
+        wa = self.toolbar.addWidget(self.combo)
+        wa.setProperty('geocad_id', 'capas:capa')        # también en Administrar botones (3.46.0)
+        wa.setText('Capa CAD actual')
+        wa.setIcon(icon('layprops'))
         self._action('laymcur', 'Establecer como actual la capa del objeto (LAYMCUR)', self.cmd_laymcur)
         self.a_prev = self._action('layerp', 'Capa previa (LAYERP)', self.ctrl.layer_previous)
         self.toolbar.addSeparator()

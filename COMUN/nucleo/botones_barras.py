@@ -100,6 +100,15 @@ def restaurar(window) -> None:
             bar.removeAction(accion)
         except RuntimeError:
             pass
+    # las barras de las categorías se vacían ANTES de devolver nada: una lista
+    # (fuente, capa actual) sólo puede estar en una barra; si la vieja todavía
+    # la tiene, la de fábrica recibe un botón vacío en su lugar (3.46.0)
+    for bar in est["nuevas"]:
+        try:
+            for accion in list(bar.actions()):
+                bar.removeAction(accion)
+        except RuntimeError:
+            pass
     movidas = [a for _bar, _foto, quitadas in est["fotos"] for a in quitadas]
     for bar, _foto, _q in est["fotos"]:
         try:                          # un botón pudo ir a otra barra de fábrica

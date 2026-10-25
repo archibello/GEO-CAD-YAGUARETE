@@ -1,0 +1,43 @@
+GeoCAD - versión 3.46.0
+=======================
+LAS LISTAS DE TEXTO CAD Y CAPAS CAD EN ADMINISTRAR BOTONES (QGIS). Trae todo
+lo de la 3.45.1.
+
+Pedido de Fernando (24/10/2026)
+- «¿Puedes hacer que aparezcan en el administrador de botones así las puedo
+  editar y distribuir entre las YAGUÁ que ya tenemos?»
+
+Qué cambia
+- La fuente, la altura y el color del texto (barra Texto CAD) y la capa CAD
+  actual (barra Capas CAD) aparecen en GeoCAD > Administrar botones con su
+  nombre: «Fuente del texto», «Altura del texto», «Color del texto», «Capa
+  CAD actual». Se pueden pasar a cualquier categoría, ordenar u ocultar,
+  como un botón más.
+- De fábrica van a «Yaguá Texto» (después de Seleccionar texto, en el orden
+  de siempre) y a «Yaguá Capas» (después del administrador de capas). Así
+  Texto CAD y Capas CAD quedan vacías y se esconden.
+- Quien ya guardó sus categorías: las cuatro listas aparecen en el
+  administrador en la categoría de su barra de siempre («Texto CAD»,
+  «Capas CAD»), listas para pasarlas a una «Yaguá».
+- Siguen andando igual desde la barra donde estén.
+
+Arreglo de paso (Administrar botones)
+- Al volver a armar las barras, las de las categorías se vacían antes de
+  devolver nada a las de fábrica. Una lista sólo puede estar en una barra:
+  sin esto, en la barra nueva quedaba un botón vacío en lugar de la lista.
+
+Por dentro
+- dibujo/plugin.py: _lista (id, nombre e ícono de las listas de Texto CAD).
+  capas/plugin.py: id de la capa actual. botones.py (núcleo, los dos lados):
+  Yaguá Texto y Yaguá Capas. botones_barras.py (núcleo, los dos lados):
+  restaurar vacía primero las barras de las categorías.
+
+Pruebas
+- Banco nuevo con el QGIS real, ventana/banco_listas_qgis.py: las cuatro
+  listas en Yaguá Texto / Yaguá Capas y a la vista, Texto CAD y Capas CAD
+  escondidas, siguen andando, la ventana las muestra con su nombre, se
+  pasan a otra categoría, vuelven a su barra al restaurar, sin errores al
+  descargar. Falla con el botones_barras de la 3.45.1 y pasa con el arreglo.
+- Los otros siete bancos de QGIS: TODO OK. 65/65 pruebas con IngeCAD 0.6.8.2
+  y 0.6.7; bancos con la ventana real de IngeCAD (botones e imágenes,
+  por el cambio en botones_barras): TODO OK con las dos.

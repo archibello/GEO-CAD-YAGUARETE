@@ -314,7 +314,7 @@ class DibujoCADPlugin:
         self.font_combo = QFontComboBox()
         self.font_combo.setToolTip('Fuente del texto (se aplica también a los textos seleccionados)')
         self.font_combo.setMaximumWidth(190)
-        tb.addWidget(self.font_combo)
+        self._lista(tb.addWidget(self.font_combo), 'font', 'Fuente del texto', 'dtext')
         self.size_combo = QComboBox()
         self.size_combo.setEditable(True)
         self.size_combo.addItems(SIZES)
@@ -322,7 +322,7 @@ class DibujoCADPlugin:
         self.size_combo.setMinimumWidth(80)
         v = QDoubleValidator(0.0001, 1e7, 4)
         self.size_combo.setValidator(v)
-        tb.addWidget(self.size_combo)
+        self._lista(tb.addWidget(self.size_combo), 'size', 'Altura del texto', 'edittext')
         self.a_bold = self._action('bold', 'Negrita (se aplica también a los textos seleccionados)',
                                    self._set_bold, checkable=True, toolbar=tb)
         self._build_text_color(tb)
@@ -412,7 +412,7 @@ class DibujoCADPlugin:
         a = m.addAction('Otro color...')
         a.triggered.connect(lambda *_: self._pick_text_color())
         btn.setMenu(m)
-        tb.addWidget(btn)
+        self._lista(tb.addWidget(btn), 'textcolor', 'Color del texto', 'bold')
         self._sync_text_color()
 
     def _color_icon(self, value):
@@ -531,6 +531,15 @@ class DibujoCADPlugin:
                     fn(self)
                 except Exception as e:  # noqa: BLE001
                     self.cmdline.echo('No se pudieron registrar los comandos de %s: %s' % (name, e))
+
+    @staticmethod
+    def _lista(accion, clave, texto, ico):
+        """Las listas de Texto CAD también van en Administrar botones (3.46.0,
+        Fernando: «así las puedo editar y distribuir entre las Yaguá»)."""
+        accion.setProperty('geocad_id', 'dibujo:' + clave)
+        accion.setText(texto)
+        accion.setIcon(_icon(ico))
+        return accion
 
     def _action(self, ico, text, slot, checkable=False, toolbar=None):
         a = QAction(_icon(ico), text, self.iface.mainWindow())
