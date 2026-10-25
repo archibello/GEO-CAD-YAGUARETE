@@ -89,6 +89,25 @@ P._primer_inicio()                        # carga Dibujo y Capas: aplica las cat
 for _ in range(3):                        # y otra vez, como al cambiar módulos o el puente
     P._aplicar_botones()
 QApplication.processEvents()
+# 3.47.0, primera instalación (nada guardado): todas las barras apagadas; sólo
+# la línea de comandos a la vista (Fernando, 25/10/2026)
+from qgis.PyQt.QtWidgets import QDockWidget
+from geocad import botones_barras
+b = barras()
+comprobar(not any(ids(x) for n, x in b.items() if n.startswith("GeoCADCategoria_")),
+          "primera instalación: ninguna barra de categorías con botones")
+comprobar(all(b[n].isHidden() for n in ("DibujoCADToolbar", "EdicionCADToolbar", "CadLayersToolbar")),
+          "primera instalación: las barras de siempre escondidas")
+docks = {d.objectName(): d for d in ventana().findChildren(QDockWidget)}
+comprobar("DibujoCADCommandLine" in docks and not docks["DibujoCADCommandLine"].isHidden(),
+          "primera instalación: la línea de comandos a la vista")
+# el resto del banco, con todas las barras prendidas (como las tiene Fernando)
+P._restaurar_botones()
+fab = [(n, [x for x, _a in f]) for n, f in botones_barras.elementos(P._fabricas(), P._id_boton)]
+botones.guardar("qgis", botones.distribuir(fab, None, "qgis"), fab)
+for _ in range(2):
+    P._aplicar_botones()
+QApplication.processEvents()
 b = barras()
 cats = {n: x for n, x in b.items() if n.startswith("GeoCADCategoria_")}
 esperadas = [botones.objeto_barra(n) for n, _i in botones.DEFECTO["qgis"]]
@@ -97,8 +116,10 @@ total = sum(len(ids(x)) for x in cats.values())
 n_edicion = len(dict(botones.DEFECTO["qgis"])["Yaguá Edición"])     # 18 desde 3.42.0 (PERPENDICULAR)
 comprobar(len(ids(cats[botones.objeto_barra("Yaguá Edición")])) == n_edicion,
           "Yaguá Edición con sus %d botones" % n_edicion)
-comprobar(ids(cats[botones.objeto_barra("Yagureté-IngeCAD")]) == ["puente:send", "dibujo:cmdline"],
-          "Yagureté-IngeCAD con Enviar y la línea de comandos")
+comprobar(ids(cats[botones.objeto_barra("Yaguá-IngeCAD")]) == ["puente:send"],
+          "Yaguá-IngeCAD con Enviar")
+comprobar(ids(cats[botones.objeto_barra("Yaguá Setting")])[-1] == "dibujo:cmdline",
+          "la línea de comandos en Yaguá Setting")
 comprobar(all(not ids(b[n]) for n in ("DibujoCADToolbar", "EdicionCADToolbar", "CadLayersToolbar")),
           "las barras de siempre sin botones (están en las categorías)")
 comprobar(not avisos, "sin avisos de error " + str(avisos))

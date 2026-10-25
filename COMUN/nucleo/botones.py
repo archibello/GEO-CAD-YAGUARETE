@@ -28,58 +28,83 @@ from pathlib import Path
 
 VERSION = 1
 
-#: las categorías de fábrica (Fernando, 24/10/2026: «a partir de esta versión las
-#: configuraciones estándar son las que están en este momento»). Los botones que
-#: no figuran quedan en su barra de siempre.
+#: las categorías de fábrica: el último estado de Fernando (25/10/2026: «la
+#: configuración por defecto, para versiones futuras, siempre va a ser el último
+#: estado»; al armar cada versión se copia de nuevo). Los botones que no figuran
+#: quedan en su barra de siempre. De fábrica todas las barras están APAGADAS
+#: (3.47.0: «el estado inicial por defecto es de todas las barras apagadas»).
 DEFECTO = {
     "ingecad": (
         ("Yaguá GEO", ("GEOCRS", "GEOREPROJECT")),
         ("Yaguá Dibujo", ("RECTANG", "TEXT", "SHPNEW", "SHPLABEL", "SHPTHEME")),
         ("Yaguá Imagenes", (
-            "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "GEOPASTEIMAGE")),
+            "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "GEOPASTEIMAGE",)),
         ("Yaguá Blocks", ("BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE")),
         ("Yaguá Cotas", ("GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR")),
         ("Yaguá Print", ("GEOPREVIEW", "GEOPLOTSTYLES")),
         ("Yaguá Select", ("SELECT", "GEOFILTER")),
         ("Yaguá Tablas", ("SHPTABLE", "SHPQUERY", "SHPSPATIAL", "GEOPASTETABLE")),
         ("Yaguá interacción", (
-            "GEOIMPORTSHP", "GEOEXPORTSHP", "GEOEXPORTKML", "GEOIMPORTKML", "QGISEXPORT")),
+            "GEOIMPORTSHP", "GEOEXPORTSHP", "GEOEXPORTKML", "GEOIMPORTKML", "QGISEXPORT",)),
         ("Yaguá Edición", (
             "GEODRAWFRONT", "GEODRAWBACK", "STRETCH", "BREAKATPOINT", "CHAMFER", "FILLET",
-            "MATCHPROP")),
+            "MATCHPROP",)),
     ),
     "qgis": (
         ("Yaguá Dibujo", (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
-            "dibujo:rumbos", "dibujo:relangle")),
+            "dibujo:rumbos", "dibujo:relangle", "dibujo:gmsblocks", "capas:capa",)),
         ("Yaguá Edición", (
-            "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:copybase", "dibujo:pastebase",
-            "dibujo:rotate", "dibujo:erase", "dibujo:mirror", "dibujo:align", "dibujo:aligncopy",
-            "dibujo:stretch", "dibujo:offset", "dibujo:trim",
+            "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
+            "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
             "dibujo:extend", "dibujo:fillet", "dibujo:perp", "dibujo:breakpt", "dibujo:break",
-            "dibujo:explode", "dibujo:divide", "dibujo:measure")),
-        ("Yaguá Texto", ("dibujo:dtext", "dibujo:edittext", "dibujo:seltext", "dibujo:font",
-                         "dibujo:size", "dibujo:bold", "dibujo:textcolor")),
-        ("Yaguá Bloques", ("dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:purge",
-                           "dibujo:gmsblocks")),
+            "dibujo:explode", "dibujo:divide", "dibujo:measure", "dibujo:copybase",
+            "dibujo:pastebase", "dibujo:aligncopy",)),
+        ("Yaguá Texto", (
+            "dibujo:dtext", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font",
+            "dibujo:size", "dibujo:textcolor",)),
+        ("Yaguá Bloques", ("dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:purge")),
         ("Yaguá Impresión", ("dibujo:plot", "dibujo:layout", "dibujo:mview")),
         ("Yaguá Capas", (
-            "capas:layprops", "capas:capa", "capas:laymcur", "capas:layerp", "capas:laymch", "capas:layiso",
+            "capas:layprops", "capas:laymcur", "capas:layerp", "capas:laymch", "capas:layiso",
             "capas:layuniso", "capas:layoff", "capas:layfrz", "capas:laylck", "capas:layulk",
-            "capas:layon", "capas:laythw", "capas:lwdisplay")),
-        ("Yagureté-IngeCAD", ("puente:send", "dibujo:cmdline")),
-        ("Yaguá Setting", ("dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:properties")),
+            "capas:layon", "capas:laythw", "capas:lwdisplay",)),
+        ("Yaguá-IngeCAD", ("puente:send",)),
+        ("Yaguá Setting", (
+            "dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:properties", "dibujo:cmdline",)),
     ),
+}
+
+#: los botones ocultos de fábrica (el último estado de Fernando, 25/10/2026)
+OCULTOS = {
+    "ingecad": ("SHPTHEME", "GEOPREVIEW", "GEOPLOTSTYLES", "SHPQUERY", "SHPSPATIAL"),
+}
+
+#: lo único a la vista desde el primer momento: los botones de IngeCAD que GeoCAD
+#: reconfiguró y sacó de sus barras (yaguarete.HERRAMIENTAS con barra de origen).
+#: Fernando, 25/10/2026: «solo los botones que geocad reconfiguró de ingecad deben
+#: permanecer por defecto desde el primer momento, para que otros usuarios no se
+#: confundan». Sus categorías arrancan prendidas con sólo ellos tildados.
+PRENDIDOS = {
+    "ingecad": ("RECTANG", "TEXT", "STRETCH", "CHAMFER", "FILLET", "MATCHPROP"),
 }
 
 
 def de_fabrica(programa: str):
     """Las categorías de fábrica de ``programa`` como si estuvieran guardadas
-    (o None: sin categorías de fábrica, las barras de siempre)."""
+    (o None: sin categorías de fábrica, las barras de siempre). Todas
+    apagadas, también las de los botones que no figuran (``"todas"``),
+    menos las que tienen botones de ``PRENDIDOS``: prendidas con sólo ésos."""
     cats = DEFECTO.get(programa)
     if not cats:
         return None
-    return {"categorias": [{"nombre": n, "botones": list(b)} for n, b in cats], "ocultos": []}
+    prendidos = set(PRENDIDOS.get(programa, ()))
+    prendidas = [n for n, b in cats if prendidos & set(b)]
+    ocultos = list(OCULTOS.get(programa, ()))
+    ocultos += [x for n, b in cats if n in prendidas for x in b
+                if x not in prendidos and x not in ocultos]
+    return {"categorias": [{"nombre": n, "botones": list(b)} for n, b in cats],
+            "ocultos": ocultos, "apagadas": [], "todas": True, "prendidas": prendidas}
 
 
 def archivo() -> Path:
@@ -111,7 +136,9 @@ def leer(programa: str):
         botones = [str(b) for b in cat.get("botones") or () if isinstance(b, str)]
         categorias.append({"nombre": nombre, "botones": botones})
     ocultos = [str(b) for b in crudo.get("ocultos") or () if isinstance(b, str)]
-    return {"categorias": categorias, "ocultos": ocultos}
+    # sin «apagadas» (guardado antes de la 3.47.0): todas prendidas, como estaban
+    apagadas = [str(n) for n in crudo.get("apagadas") or () if isinstance(n, str)]
+    return {"categorias": categorias, "ocultos": ocultos, "apagadas": apagadas}
 
 
 def _escribir(data: dict) -> None:
@@ -162,23 +189,45 @@ def distribuir(fabrica, guardado=None, programa=None) -> list:
     return modelo
 
 
-def config_de(modelo) -> dict:
+def apagadas_de(modelo, guardado) -> set:
+    """Las categorías apagadas de ``modelo`` (todas, si ``guardado`` es la fábrica)."""
+    if not guardado:
+        return set()
+    if guardado.get("todas"):
+        return {n for n, _f in modelo} - set(guardado.get("prendidas") or ())
+    return {n for n, _f in modelo} & set(guardado.get("apagadas") or ())
+
+
+def apagadas(programa: str, modelo) -> set:
+    """Las categorías apagadas de ``modelo``, según lo guardado o la fábrica."""
+    return apagadas_de(modelo, leer(programa) or de_fabrica(programa))
+
+
+def config_de(modelo, apagadas=()) -> dict:
     return {"categorias": [{"nombre": n, "botones": [b for b, _v in fila]} for n, fila in modelo],
-            "ocultos": [b for _n, fila in modelo for b, v in fila if not v]}
+            "ocultos": [b for _n, fila in modelo for b, v in fila if not v],
+            "apagadas": [n for n, _f in modelo if n in set(apagadas)]}
 
 
-def es_fabrica(modelo, fabrica, programa=None) -> bool:
-    return [(n, list(fila)) for n, fila in modelo] == distribuir(fabrica, None, programa)
+def es_fabrica(modelo, fabrica, programa=None, apagadas=None) -> bool:
+    """¿Igual a la fábrica? ``apagadas`` None: no se mira (sin barras apagadas
+    en la fábrica se pide que no haya ninguna)."""
+    if [(n, list(fila)) for n, fila in modelo] != distribuir(fabrica, None, programa):
+        return False
+    if apagadas is None:
+        return True
+    return set(apagadas) == apagadas_de(modelo, de_fabrica(programa) if programa else None)
 
 
-def guardar(programa: str, modelo, fabrica) -> None:
+def guardar(programa: str, modelo, fabrica, apagadas=()) -> None:
     """Guarda el modelo de ``programa`` (sin tocar el del otro). Si es igual a
-    la fábrica, borra lo guardado: las barras vuelven a ser las de siempre."""
+    la fábrica (también en lo apagado), borra lo guardado: las barras vuelven
+    a ser las de fábrica. ``apagadas``: las categorías sin barra."""
     data = _leer_todo()
-    if es_fabrica(modelo, fabrica, programa):
+    if es_fabrica(modelo, fabrica, programa, apagadas):
         data.pop(programa, None)
     else:
-        nuevo = config_de(modelo)
+        nuevo = config_de(modelo, apagadas)
         # los botones de un módulo apagado no están hoy: siguen en su
         # categoría para cuando el módulo se vuelva a prender
         existen = {b for _barra, botones in fabrica for b in botones}
@@ -201,12 +250,14 @@ def restablecer(programa: str) -> None:
 
 
 def barras(programa: str, fabrica):
-    """[(categoría, [botones visibles])] para armar las barras, o None si
-    quedan las barras de siempre (nada que cambiar)."""
+    """[(categoría, [botones visibles])] de las categorías prendidas, para
+    armar las barras ([] = todas apagadas: ninguna barra), o None si quedan
+    las barras de siempre (nada que cambiar)."""
     modelo = distribuir(fabrica, leer(programa), programa)
-    if [(n, list(fila)) for n, fila in modelo] == distribuir(fabrica):
+    fuera = apagadas(programa, modelo)
+    if not fuera and [(n, list(fila)) for n, fila in modelo] == distribuir(fabrica):
         return None
-    return [(n, [b for b, v in fila if v]) for n, fila in modelo]
+    return [(n, [b for b, v in fila if v]) for n, fila in modelo if n not in fuera]
 
 
 def por_temas(modelo, tema_de, nombres=None) -> list:

@@ -70,14 +70,15 @@ def _divisor(bar):
     return bar.addWidget(divisor(bar))
 
 
-def aplicar(window) -> None:
+def aplicar(window, mostrar=False) -> None:
     """Pone las categorías guardadas (o deja la fábrica). Se llama cada vez
-    que IngeCAD rearma la barra GeoCAD (al arrancar, al cambiar los módulos)."""
+    que IngeCAD rearma la barra GeoCAD (al arrancar, al cambiar los módulos).
+    Las barras que el usuario escondió siguen escondidas, salvo ``mostrar``."""
     fab = fabricas(window)
     if not fab:
         return
     botones_barras.aplicar(window, fab, id_de, lambda fabrica: botones.barras(PROGRAMA, fabrica),
-                           _nueva_barra(window), _divisor)
+                           _nueva_barra(window), _divisor, mostrar)
 
 
 def restaurar(window) -> None:
@@ -93,21 +94,20 @@ def cmd_administrar(ctx, *args) -> None:
     if window is None or QtWidgets is None:
         ctx.echo("Administrar botones necesita la ventana de IngeCAD.")
         return
-    botones_barras.restaurar(window)            # la fábrica, para leer los botones
-    try:
-        elems = botones_barras.elementos(fabricas(window), id_de)
-        fab = [(n, [b for b, _a in fila]) for n, fila in elems]
-        etiquetas, iconos = {}, {}
-        for _n, fila in elems:
-            for b, a in fila:
-                texto, _o = yaguarete.separar_orden(a.text().replace("&", ""))
-                etiquetas[b] = f"{texto or b}  ({b})"
-                iconos[b] = a.icon()
-        if not fab:
-            ctx.echo("No hay barras de GeoCAD a la vista (Herramientas > Complementos).")
-            return
-        if botones_ui.administrar(QtWidgets, window, PROGRAMA, fab, etiquetas, iconos,
-                                  tema_de, NOMBRES_TEMA):
-            ctx.echo("Botones de GeoCAD: categorías guardadas.")
-    finally:
-        aplicar(window)
+    # los botones de la foto de fábrica, sin tocar las barras: mirar no prende
+    # nada (Fernando, 25/10/2026); con Cancelar todo queda como estaba
+    elems = botones_barras.elementos(fabricas(window), id_de, window)
+    fab = [(n, [b for b, _a in fila]) for n, fila in elems]
+    etiquetas, iconos = {}, {}
+    for _n, fila in elems:
+        for b, a in fila:
+            texto, _o = yaguarete.separar_orden(a.text().replace("&", ""))
+            etiquetas[b] = f"{texto or b}  ({b})"
+            iconos[b] = a.icon()
+    if not fab:
+        ctx.echo("No hay barras de GeoCAD a la vista (Herramientas > Complementos).")
+        return
+    if botones_ui.administrar(QtWidgets, window, PROGRAMA, fab, etiquetas, iconos,
+                              tema_de, NOMBRES_TEMA, botones_barras.escondidas(window)):
+        aplicar(window, mostrar=True)
+        ctx.echo("Botones de GeoCAD: categorías guardadas.")

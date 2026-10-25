@@ -40,7 +40,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.46.0"
+VERSION = "3.47.0"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -381,14 +381,15 @@ class GeoCAD:
         bar.setObjectName(botones.objeto_barra(nombre))
         return bar
 
-    def _aplicar_botones(self) -> None:
+    def _aplicar_botones(self, mostrar=False) -> None:
+        """Las barras que el usuario escondió siguen escondidas, salvo ``mostrar``."""
         try:
             fab = self._fabricas()
             if not fab:
                 return
             botones_barras.aplicar(self.iface.mainWindow(), fab, self._id_boton,
                                    lambda fabrica: botones.barras(PROGRAMA, fabrica),
-                                   self._nueva_barra)
+                                   self._nueva_barra, mostrar=mostrar)
         except Exception as exc:  # noqa: BLE001 - las barras quedan como de fábrica
             self._bar(f"Administrar botones: {type(exc).__name__}: {exc}", "warn")
 
@@ -402,23 +403,23 @@ class GeoCAD:
         from qgis.PyQt import QtWidgets
         from . import botones_ui
 
-        self._restaurar_botones()           # la fábrica, para leer los botones
-        try:
-            elems = botones_barras.elementos(self._fabricas(), self._id_boton)
-            fabrica = [(n, [b for b, _a in fila]) for n, fila in elems]
-            if not any(fila for _n, fila in fabrica):
-                self._bar("No hay barras de GeoCAD: prendé Dibujo, Capas o Puente en Módulos.", "warn")
-                return
-            etiquetas, iconos = {}, {}
-            for _n, fila in elems:
-                for b, a in fila:
-                    etiquetas[b] = a.text().split(" — ")[0].replace("&", "")
-                    iconos[b] = a.icon()
-            if botones_ui.administrar(QtWidgets, self.iface.mainWindow(), PROGRAMA, fabrica,
-                                      etiquetas, iconos):
-                self._bar("Botones de GeoCAD: categorías guardadas.", "ok")
-        finally:
-            self._aplicar_botones()
+        # los botones de la foto de fábrica, sin tocar las barras: mirar no
+        # prende nada (Fernando, 25/10/2026); con Cancelar todo queda como estaba
+        win = self.iface.mainWindow()
+        elems = botones_barras.elementos(self._fabricas(), self._id_boton, win)
+        fabrica = [(n, [b for b, _a in fila]) for n, fila in elems]
+        if not any(fila for _n, fila in fabrica):
+            self._bar("No hay barras de GeoCAD: prendé Dibujo, Capas o Puente en Módulos.", "warn")
+            return
+        etiquetas, iconos = {}, {}
+        for _n, fila in elems:
+            for b, a in fila:
+                etiquetas[b] = a.text().split(" — ")[0].replace("&", "")
+                iconos[b] = a.icon()
+        if botones_ui.administrar(QtWidgets, win, PROGRAMA, fabrica, etiquetas, iconos,
+                                  escondidas=botones_barras.escondidas(win)):
+            self._aplicar_botones(mostrar=True)
+            self._bar("Botones de GeoCAD: categorías guardadas.", "ok")
 
     # íconos
     def _ingecad_icon(self) -> QIcon:

@@ -28,7 +28,7 @@ modelo = [("Edición", [("FILLET", True), ("RECTANG", False)]),
 BT.guardar("ingecad", modelo, FAB)
 assert BT.leer("ingecad") == {"categorias": [{"nombre": "Edición", "botones": ["FILLET", "RECTANG"]},
                                               {"nombre": "Datos y selección", "botones": ["SHPTABLE", "SELECT"]}],
-                              "ocultos": ["RECTANG"]}
+                              "ocultos": ["RECTANG"], "apagadas": []}
 # BLOCK no estaba en ninguna: vuelve a su barra de fábrica (creada al final)
 assert BT.barras("ingecad", FAB) == [("Edición", ["FILLET"]), ("Datos y selección", ["SHPTABLE", "SELECT"]),
                                      ("GeoCAD", ["BLOCK"])]
@@ -59,7 +59,8 @@ BT.archivo().write_text("{no es json", encoding="utf-8")
 assert BT.leer("ingecad") is None and BT.barras("ingecad", FAB) is None
 BT.archivo().write_text(json.dumps({"ingecad": {"categorias": [{"nombre": "A", "botones": ["FILLET", 3]},
                                                                {"nombre": "A"}, "x", {"nombre": ""}]}}))
-assert BT.leer("ingecad") == {"categorias": [{"nombre": "A", "botones": ["FILLET"]}], "ocultos": []}
+assert BT.leer("ingecad") == {"categorias": [{"nombre": "A", "botones": ["FILLET"]}], "ocultos": [],
+                              "apagadas": []}
 BT.restablecer("ingecad")
 # una por tema y el nombre de la barra
 temas = {"SELECT": "seleccion", "SHPTABLE": "datos", "BLOCK": "bloques", "RECTANG": "dibujo", "FILLET": "edicion"}
@@ -78,16 +79,59 @@ for p_ in ("ingecad", "qgis"):
     assert len(ids) == len(set(ids)), p_                    # ningún botón dos veces
 BT.restablecer("ingecad")
 FAB3 = [("GeoCAD", ["SELECT", "GEOFILTER", "SHPTABLE", "OTRO"]), ("Yaguareté Tools", ["RECTANG", "FILLET"])]
-d = BT.barras("ingecad", FAB3)                # sin nada guardado: las de fábrica
-assert ("Yaguá Select", ["SELECT", "GEOFILTER"]) in d and ("Yaguá Edición", ["FILLET"]) in d
-assert d[-1] == ("GeoCAD", ["OTRO"])          # lo que no figura, en su barra de siempre
+# sin nada guardado: las de fábrica, APAGADAS (3.47.0), también la de lo que no
+# figura (su barra de siempre); a la vista sólo los botones de IngeCAD que GeoCAD
+# reconfiguró, en sus categorías (Fernando, 25/10/2026)
+FAB3 = [FAB3[0], ("Yaguareté Tools", ["RECTANG", "FILLET", "BREAKATPOINT"])]
+assert BT.barras("ingecad", FAB3) == [("Yaguá Dibujo", ["RECTANG"]), ("Yaguá Edición", ["FILLET"])]
 modelo_f = BT.distribuir(FAB3, None, "ingecad")
-BT.guardar("ingecad", modelo_f, FAB3)          # igual a la fábrica: no se guarda
+assert ("Yaguá Select", [("SELECT", True), ("GEOFILTER", True)]) in modelo_f
+assert ("Yaguá Edición", [("BREAKATPOINT", False), ("FILLET", True)]) in modelo_f
+assert modelo_f[-1] == ("GeoCAD", [("OTRO", True)])
+todas = {n for n, _f in modelo_f}
+assert BT.apagadas("ingecad", modelo_f) == todas - {"Yaguá Dibujo", "Yaguá Edición"}
+BT.guardar("ingecad", modelo_f, FAB3, todas - {"Yaguá Dibujo", "Yaguá Edición"})
+assert BT.leer("ingecad") is None              # igual a la fábrica: no se guarda
+# PRENDIDOS = las herramientas de IngeCAD que Yaguareté Tools saca de su barra
+import re as _re
+yag = (RAIZ / "INGECAD/codigo/geocad/yaguarete.py").read_text(encoding="utf-8")
+assert tuple(_re.findall(r'\("([A-Z]+)", "[a-z]*", "[a-z_]+"\)', yag)) == BT.PRENDIDOS["ingecad"]
+assert "qgis" not in BT.PRENDIDOS              # en QGIS sólo la línea de comandos (un panel)
 assert BT.leer("ingecad") is None
+# prender una barra: se guarda, y sólo esa aparece
+BT.guardar("ingecad", modelo_f, FAB3, todas - {"Yaguá Select", "Yaguá Edición"})
+assert BT.leer("ingecad")["apagadas"] == [n for n, _f in modelo_f
+                                          if n not in ("Yaguá Select", "Yaguá Edición")]
+assert BT.barras("ingecad", FAB3) == [("Yaguá Select", ["SELECT", "GEOFILTER"]), ("Yaguá Edición", ["FILLET"])]
+BT.guardar("ingecad", modelo_f, FAB3, todas)    # todas apagadas: ninguna barra
+assert BT.barras("ingecad", FAB3) == []
+# todas prendidas (como guardaban las versiones de antes, sin «apagadas»)
+BT.guardar("ingecad", modelo_f, FAB3)
+d = BT.barras("ingecad", FAB3)
+assert ("Yaguá Select", ["SELECT", "GEOFILTER"]) in d and d[-1] == ("GeoCAD", ["OTRO"])
+# botones ocultos de fábrica: el último estado de Fernando (25/10/2026)
+assert "SHPTHEME" in BT.OCULTOS["ingecad"]
+assert ("SHPTHEME", False) in dict(BT.distribuir([("GeoCAD", ["SHPTHEME"])], None, "ingecad"))["Yaguá Dibujo"]
+assert dict(DEFECTO["qgis"])["Yaguá-IngeCAD"] == ("puente:send",)
+BT.restablecer("ingecad")
 BT.guardar("ingecad", [("Mía", [(b, True) for _n, f in modelo_f for b, _v in f])], FAB3)
-assert BT.barras("ingecad", FAB3) == [("Mía", ["RECTANG", "SELECT", "GEOFILTER", "SHPTABLE", "FILLET", "OTRO"])]
+assert BT.barras("ingecad", FAB3) == [("Mía", ["RECTANG", "SELECT", "GEOFILTER", "SHPTABLE", "BREAKATPOINT",
+                                              "FILLET", "OTRO"])]
 # lo elegido por cada uno se respeta; «Como de fábrica» vuelve a las de Fernando
 assert BU.Ventana(BT.distribuir(FAB3, programa="ingecad")).resultado() == modelo_f
+BT.restablecer("ingecad")
+# la casilla de la categoría prende o apaga la barra entera (3.47.0)
+V = BU.Ventana(modelo_f, BT.apagadas("ingecad", modelo_f))
+i = V.nombres().index("Yaguá Select")
+assert not V.prendida(i)
+V.prender(i, True)
+assert V.prendida(i) and V.renombrar(i, "Selección") is None and V.prendida(i)
+assert V.prendida(V.nombres().index("Yaguá Edición"))
+j = V.nombres().index("Yaguá Tablas")
+assert not V.prendida(j) and V.renombrar(j, "Ed") is None and "Ed" in V.apagadas
+assert V.borrar(j) is None and "Ed" not in V.apagadas
+BT.guardar("ingecad", V.resultado(), FAB3, V.apagadas)
+assert [n for n, _b in BT.barras("ingecad", FAB3)] == ["Yaguá Dibujo", "Selección", "Yaguá Edición"]
 BT.restablecer("ingecad")
 # los módulos: todos prendidos de fábrica (también un estándar desde 3.39.0)
 from nucleo import modulos as MO
@@ -209,6 +253,29 @@ BB.aplicar(win, fabs, idb, [("Dibujo CAD", ["line"])], nueva_barra)
 assert [a.nombre for a in dibujo.actions()] == ["line"] and texto.actions() == [fuente]
 BB.restaurar(win)
 assert {b.titulo: b.actions() for _n, b in fabs} == antes
+# 3.47.0: mirar no cambia nada (Fernando, 25/10/2026): con las categorías puestas,
+# la ventana lee la fábrica de la foto sin tocar las barras
+fab_antes = [(n, [x for x, _a in f]) for n, f in BB.elementos(fabs, idb)]
+puestas = BB.aplicar(win, fabs, idb, dist, nueva_barra)
+ahora = {id(b): b.actions() for b in puestas}
+assert [(n, [x for x, _a in f]) for n, f in BB.elementos(fabs, idb, win)] == fab_antes
+assert {id(b): b.actions() for b in puestas} == ahora
+# la barra que el usuario escondió sigue escondida al rearmar; al aceptar, no
+puestas[-1].setVisible(False)
+assert BB.escondidas(win) == {"Mía"}
+puestas = BB.aplicar(win, fabs, idb, dist, nueva_barra)
+assert puestas[-1].isHidden() and BB.escondidas(win) == {"Mía"}
+puestas = BB.aplicar(win, fabs, idb, dist, nueva_barra, mostrar=True)
+assert not puestas[-1].isHidden() and BB.escondidas(win) == set()
+BB.restaurar(win)
+assert {b.titulo: b.actions() for _n, b in fabs} == antes
+# 3.47.0: todas las categorías apagadas ([] no es None): ninguna barra de botones
+n_antes = len(nuevas)
+assert BB.aplicar(win, fabs, idb, [], nueva_barra) == [] and len(nuevas) == n_antes
+assert not [a for _n, b in fabs for a in b.actions() if idb(a)]
+assert dibujo.oculta and capas.oculta
+BB.restaurar(win)
+assert {b.titulo: b.actions() for _n, b in fabs} == antes and not dibujo.oculta
 print("ok barras")
 
 # ---- 4. IngeCAD: en el menú GeoCAD, con los temas de la barra -------------------------

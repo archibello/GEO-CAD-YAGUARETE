@@ -3,8 +3,9 @@
 
 Sirve a los dos programas: IngeCAD le pasa PySide6.QtWidgets y QGIS
 qgis.PyQt.QtWidgets (misma forma de uso). A la izquierda las categorías
-(cada una, una barra); a la derecha sus botones: la casilla los muestra u
-oculta, las flechas los ordenan y «Pasar a» los lleva a otra categoría.
+(cada una, una barra): su casilla prende o apaga la barra entera (3.47.0);
+a la derecha sus botones: la casilla los muestra u oculta, las flechas los
+ordenan y «Pasar a» los lleva a otra categoría.
 Aceptar va arriba, como en Módulos.
 """
 from __future__ import annotations
@@ -20,8 +21,9 @@ def _exec(dialog):
 class Ventana:
     """El estado de la ventana, aparte de los widgets (se prueba sin Qt)."""
 
-    def __init__(self, modelo):
+    def __init__(self, modelo, apagadas=()):
         self.modelo = [[n, [list(x) for x in fila]] for n, fila in modelo]
+        self.apagadas = set(apagadas) & set(self.nombres())
 
     def nombres(self) -> list:
         return [n for n, _f in self.modelo]
@@ -39,6 +41,9 @@ class Ventana:
             return "Falta el nombre."
         if nombre != self.modelo[i][0] and nombre in self.nombres():
             return "Ya hay una categoría con ese nombre."
+        if self.modelo[i][0] in self.apagadas:
+            self.apagadas.discard(self.modelo[i][0])
+            self.apagadas.add(nombre)
         self.modelo[i][0] = nombre
         return None
 
@@ -46,7 +51,8 @@ class Ventana:
         """Sus botones pasan a la categoría anterior (o a la siguiente)."""
         if len(self.modelo) < 2:
             return "Tiene que quedar al menos una categoría."
-        _n, fila = self.modelo.pop(i)
+        n, fila = self.modelo.pop(i)
+        self.apagadas.discard(n)
         self.modelo[max(i - 1, 0)][1].extend(fila)
         return None
 
@@ -72,26 +78,38 @@ class Ventana:
     def mostrar(self, i: int, k: int, visible: bool) -> None:
         self.modelo[i][1][k][1] = bool(visible)
 
+    def prendida(self, i: int) -> bool:
+        return self.modelo[i][0] not in self.apagadas
+
+    def prender(self, i: int, si: bool) -> None:
+        """Prende o apaga la barra entera de la categoría ``i`` (sus botones
+        conservan cada uno su casilla)."""
+        (self.apagadas.discard if si else self.apagadas.add)(self.modelo[i][0])
+
     def resultado(self) -> list:
         return [(n, [tuple(x) for x in fila]) for n, fila in self.modelo]
 
 
 def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=None,
-                tema_de=None, nombres_tema=None) -> bool:
+                tema_de=None, nombres_tema=None, escondidas=()) -> bool:
     """Muestra la ventana. ``fabrica``: [(barra, [botones])]; ``etiquetas`` e
     ``iconos``: {botón: texto / QIcon}. Con ``tema_de`` aparece «Una
-    categoría por tema». True si se aceptó (lo elegido ya quedó guardado)."""
+    categoría por tema». ``escondidas``: las categorías cuya barra escondió
+    el usuario (aparecen apagadas). True si se aceptó (lo elegido ya quedó
+    guardado)."""
     iconos = iconos or {}
     nombre_prog = "IngeCAD" if programa == "ingecad" else "QGIS"
-    estado = Ventana(botones.distribuir(fabrica, botones.leer(programa), programa))
+    modelo = botones.distribuir(fabrica, botones.leer(programa), programa)
+    estado = Ventana(modelo, botones.apagadas(programa, modelo) | set(escondidas))
 
     dlg = QtWidgets.QDialog(parent)
     dlg.setWindowTitle(f"Administrar botones de GeoCAD Yaguareté en {nombre_prog}")
     lay = QtWidgets.QVBoxLayout(dlg)
     intro = QtWidgets.QLabel(
-        "Cada categoría es una barra. Agrupá los botones de la misma familia, "
-        "ordenalos con las flechas y destildá los que no uses (siguen en el menú). "
-        "«Como de fábrica» vuelve a las categorías con que viene GeoCAD.", dlg)
+        "Cada categoría es una barra: su casilla prende o apaga la barra entera. "
+        "Agrupá los botones de la misma familia, ordenalos con las flechas y destildá "
+        "los que no uses (siguen en el menú). «Como de fábrica» vuelve a las categorías "
+        "con que viene GeoCAD, con todas las barras apagadas.", dlg)
     intro.setWordWrap(True)
     lay.addWidget(intro)
     caja = QtWidgets.QDialogButtonBox(dlg)
@@ -147,9 +165,12 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
         armando[0] = True
         lista_cat.clear()
         combo.clear()
-        for n, fila in estado.modelo:
+        for i, (n, fila) in enumerate(estado.modelo):
             vis = sum(1 for _b, v in fila if v)
-            lista_cat.addItem(f"{n}  ({vis}/{len(fila)})")
+            item = QtWidgets.QListWidgetItem(f"{n}  ({vis}/{len(fila)})")
+            item.setFlags(item.flags() | usuario)
+            item.setCheckState(marcado if estado.prendida(i) else sin_marcar)
+            lista_cat.addItem(item)
             combo.addItem(n)
         armando[0] = False
         lista_cat.setCurrentRow(max(0, min(sel, len(estado.modelo) - 1)))
@@ -229,13 +250,23 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
         pintar_categorias(i)
         lista_bot.setCurrentRow(k)
 
+    def barra_tildada(item):
+        if armando[0]:
+            return
+        i = lista_cat.row(item)
+        estado.prender(i, item.checkState() == marcado)
+        pintar_categorias(i)
+
     def por_temas():
-        estado.modelo = Ventana(botones.por_temas(estado.resultado(), tema_de, nombres_tema)).modelo
+        nuevo = Ventana(botones.por_temas(estado.resultado(), tema_de, nombres_tema))
+        estado.modelo, estado.apagadas = nuevo.modelo, set()
         pintar_categorias(0)
 
     def de_fabrica():
-        estado.modelo = Ventana(botones.distribuir(fabrica, programa=programa)).modelo
-        avisar("Como de fábrica: al aceptar quedan las categorías de fábrica.")
+        modelo = botones.distribuir(fabrica, programa=programa)
+        nuevo = Ventana(modelo, botones.apagadas_de(modelo, botones.de_fabrica(programa)))
+        estado.modelo, estado.apagadas = nuevo.modelo, nuevo.apagadas
+        avisar("Como de fábrica: al aceptar quedan las categorías de fábrica, todas apagadas.")
         pintar_categorias(0)
 
     b_nueva.clicked.connect(nueva)
@@ -251,10 +282,11 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
         b_temas.clicked.connect(por_temas)
     lista_cat.currentRowChanged.connect(lambda _r: None if armando[0] else pintar_botones())
     lista_bot.itemChanged.connect(tildado)
+    lista_cat.itemChanged.connect(barra_tildada)
     pintar_categorias(0)
     dlg.resize(820, 560)
 
     if not _exec(dlg):
         return False
-    botones.guardar(programa, estado.resultado(), fabrica)
+    botones.guardar(programa, estado.resultado(), fabrica, estado.apagadas)
     return True

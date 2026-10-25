@@ -1,0 +1,65 @@
+GeoCAD - versión 3.47.0
+=======================
+ADMINISTRAR BOTONES: BARRAS QUE SE PRENDEN Y APAGAN ENTERAS, DE FÁBRICA
+APAGADAS, Y MIRAR SIN CAMBIAR NADA (IngeCAD y QGIS). Trae todo lo de la 3.46.0.
+
+Pedidos de Fernando (25/10/2026)
+- «La configuración por defecto, para versiones futuras, siempre va a ser el
+  último estado.»
+- «El estado inicial por defecto es de todas las barras de herramientas
+  apagadas.»
+- «En el administrador de barras de herramientas debemos colocar una casilla
+  de confirmación para prender o apagar toda la herramienta seleccionada,
+  estos controles no solo deben apagar botones individualmente.»
+- «En QGIS solo la barra de comandos tiene que arrancar con la primera
+  instalación de GeoCAD Yaguareté.»
+- «Cada vez que uno entra a ver la configuración de botones, se encienden
+  todos los botones, eso no debe pasar nunca.»
+- «Solo los botones que GeoCAD reconfiguró de IngeCAD deben permanecer por
+  defecto desde el primer momento, para que otros usuarios no se confundan.»
+
+Qué cambia
+- Cada categoría tiene su casilla en GeoCAD > Administrar botones: destildada,
+  su barra entera desaparece (los botones siguen en el menú y cada uno
+  conserva su casilla); tildada, vuelve. Queda guardado.
+- La fábrica es el último estado de Fernando (sus categorías de hoy, con
+  «Yaguá-IngeCAD» y sus botones ocultos en IngeCAD). En cada versión nueva se
+  vuelve a copiar su último estado.
+- Primera instalación (nada guardado) y «Como de fábrica»:
+  · IngeCAD: a la vista sólo los botones de IngeCAD que GeoCAD reconfiguró
+    y sacó de sus barras (Rectángulo y Texto en Yaguá Dibujo; Estirar,
+    Chaflán, Empalme e Igualar propiedades en Yaguá Edición). Todo lo demás,
+    apagado.
+  · QGIS: ninguna barra de GeoCAD; sólo la línea de comandos (el panel).
+- Quien ya tiene sus categorías guardadas no ve ningún cambio: sus barras
+  quedan prendidas, como las tenía.
+- Abrir Administrar botones no toca ninguna barra: antes las devolvía a
+  fábrica mientras la ventana estaba abierta (se veían todos los botones) y
+  las rearmaba al cerrar. Con Cancelar todo queda exactamente igual.
+- Una barra escondida a mano (botón derecho sobre las barras) sigue
+  escondida al rearmar (módulos, arranque) y aparece destildada en la
+  ventana; tildarla y Aceptar la vuelve a mostrar.
+
+Por dentro
+- botones.py (núcleo, los dos lados): DEFECTO y OCULTOS = el último estado
+  de Fernando; PRENDIDOS (lo que se ve de entrada); categorías «apagadas» en
+  botones.json (sin esa clave, lo guardado antes queda todo prendido);
+  barras() deja fuera las apagadas ([] = ninguna barra, no None).
+- botones_barras.py: aplicar con [] vacía igual las barras de fábrica;
+  elementos(..., window) lee la foto de fábrica sin restaurar; escondidas()
+  y aplicar(mostrar=...) respetan las barras escondidas a mano.
+- botones_ui.py: la casilla de cada categoría; «Como de fábrica» y «Una por
+  tema» con las barras apagadas/prendidas.
+- IngeCAD categorias.py y QGIS plugin.py: Administrar botones ya no
+  restaura antes de abrir ni rearma al cancelar.
+
+Pruebas
+- test_botones.py: fábrica apagada salvo los reconfigurados (y que sean
+  los de yaguarete.HERRAMIENTAS), casilla por categoría (renombrar, borrar),
+  guardar/leer «apagadas», [] contra None, mirar sin tocar las barras, la
+  escondida a mano. test_bloques_gms y test_copiabase_alinear, a la fábrica
+  nueva.
+- Bancos con la ventana real de IngeCAD (botones e imágenes) con 0.6.8.2 y
+  0.6.7: TODO OK. Los ocho bancos con el QGIS real (4.2.2): TODO OK
+  (banco_botones_qgis comprueba la primera instalación: ninguna barra, la
+  línea de comandos a la vista).

@@ -95,8 +95,16 @@ ventana().resize(6000, 1000)              # que entren todas las barras (si no, 
 P.initGui()
 P._primer_inicio()
 QApplication.processEvents()
+# 3.47.0: de fábrica las barras arrancan apagadas; acá, todas prendidas (como Fernando)
+from geocad import botones_barras
+P._restaurar_botones()
+_fab = [(n, [x for x, _a in f]) for n, f in botones_barras.elementos(P._fabricas(), P._id_boton)]
+botones.guardar("qgis", botones.distribuir(_fab, None, "qgis"), _fab)
+P._aplicar_botones()
+QApplication.processEvents()
+# 3.47.0: la capa CAD actual, en Yaguá Dibujo (el último estado de Fernando)
 LISTAS = {"dibujo:font": "Yaguá Texto", "dibujo:size": "Yaguá Texto", "dibujo:textcolor": "Yaguá Texto",
-          "capas:capa": "Yaguá Capas"}
+          "capas:capa": "Yaguá Dibujo"}
 
 
 def accion(bar, clave):

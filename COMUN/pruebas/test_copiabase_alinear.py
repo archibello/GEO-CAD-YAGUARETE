@@ -29,8 +29,9 @@ print("ok órdenes, alias sin choques, barra e íconos")
 sys.path[:0] = [os.path.join(HERE, "fake_qgis"), str(GEOCAD.parent)]
 from geocad import botones, submodulos
 ed = list(dict(botones.DEFECTO["qgis"])["Yaguá Edición"])
-assert ed[ed.index("dibujo:copy") + 1:ed.index("dibujo:copy") + 3] == ["dibujo:copybase", "dibujo:pastebase"]
-assert ed[ed.index("dibujo:align") + 1] == "dibujo:aligncopy"
+# 3.47.0: la fábrica es el último estado de Fernando (las tres al final de Yaguá Edición)
+assert ed[-3:] == ["dibujo:copybase", "dibujo:pastebase", "dibujo:aligncopy"]
+assert "dibujo:align" in ed and "dibujo:aligncopy" in ed
 assert len(ed) == len(set(ed))
 assert {"cad_copy_move", "align_duplicate_plugin"} <= set(submodulos.VIEJOS["dibujo"])
 plugins = Path(tempfile.mkdtemp()) / "plugins"; plugins.mkdir()

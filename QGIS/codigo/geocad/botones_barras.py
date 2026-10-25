@@ -10,6 +10,12 @@ divisores), que pasan a la barra de su categoría; lo que no es un botón
 con el nombre de una barra de fábrica usa esa misma barra. La barra de
 fábrica que queda vacía se esconde. ``restaurar`` deja todo como estaba,
 en el mismo orden: apagado, no queda rastro.
+
+Mirar no cambia nada (Fernando, 25/10/2026: «cada vez que uno entra a ver
+la configuración de botones, se encienden todos los botones, eso no debe
+pasar nunca»): la ventana lee los botones de la foto de fábrica
+(``elementos`` con la ventana) sin restaurar, y al rearmar las barras la
+que el usuario escondió sigue escondida.
 """
 from __future__ import annotations
 
@@ -57,13 +63,18 @@ def _escondida_a_proposito(bar) -> bool:
         return bar.isHidden()
 
 
-def elementos(fabricas, id_de) -> list:
+def elementos(fabricas, id_de, window=None) -> list:
     """[(título de la barra, [(botón, acción), ...])] de las barras de fábrica
-    (la primera vez que aparece cada botón)."""
+    (la primera vez que aparece cada botón). Con ``window``: como estaban de
+    fábrica aunque las categorías estén puestas (sin tocar las barras)."""
+    fotos = {}
+    est = _ESTADOS.get(_clave(window)) if window is not None else None
+    for bar, foto, _q in (est or {}).get("fotos", ()):
+        fotos[_clave(bar)] = foto
     salida, vistos = [], set()
     for nombre, bar in fabricas:
         fila = []
-        for a in bar.actions():
+        for a in fotos.get(_clave(bar)) or bar.actions():
             b = id_de(a)
             if b and b not in vistos:
                 vistos.add(b)
@@ -86,6 +97,19 @@ def temas(fabricas, id_de) -> dict:
             b = id_de(a)
             if b:
                 salida.setdefault(b, (i, tramo))
+    return salida
+
+
+def escondidas(window) -> set:
+    """Las categorías cuya barra escondió el usuario (menú de barras de Qt)."""
+    est = _ESTADOS.get(_clave(window)) or {}
+    salida = set()
+    for nombre, bar in est.get("puestas", ()):
+        try:
+            if _escondida_a_proposito(bar):
+                salida.add(nombre)
+        except RuntimeError:
+            pass
     return salida
 
 
@@ -143,7 +167,8 @@ def restaurar(window) -> None:
             pass
 
 
-def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None) -> list:
+def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None,
+            mostrar=False) -> list:
     """Arma las barras de ``distribucion`` ([(categoría, [botones])], o None =
     de fábrica; o una función que la calcula con la fábrica [(barra, [botones])]
     DESPUÉS de restaurar: con las categorías puestas, las barras de fábrica
@@ -151,17 +176,20 @@ def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None) ->
     [(título, barra)]; ``id_de(acción)``: el botón
     o None; ``nueva_barra(nombre)``: una barra nueva ya puesta en la ventana;
     ``divisor(barra)``: agrega un divisor (por defecto, un separador).
-    Devuelve las barras de las categorías."""
+    La barra que el usuario había escondido vuelve escondida, salvo con
+    ``mostrar`` (al aceptar Administrar botones, que ya las contó como
+    apagadas). Devuelve las barras de las categorías."""
+    antes = set() if mostrar else escondidas(window)
     restaurar(window)
     if callable(distribucion):
         distribucion = distribucion([(n, [b for b, _a in fila])
                                      for n, fila in elementos(fabricas, id_de)])
-    if not distribucion:
+    if distribucion is None:          # [] = todas apagadas: se vacían igual (3.47.0)
         return []
     divisor = divisor or (lambda bar: bar.addSeparator())
     acciones = {b: a for _n, fila in elementos(fabricas, id_de) for b, a in fila}
     tema = temas(fabricas, id_de)
-    est = {"fotos": [], "agregados": [], "nuevas": [], "escondidas": []}
+    est = {"fotos": [], "agregados": [], "nuevas": [], "escondidas": [], "puestas": []}
     _ESTADOS[_clave(window)] = est
     por_titulo = {}
     for nombre, bar in fabricas:
@@ -201,6 +229,9 @@ def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None) ->
             poner(sep)
             est["agregados"].append((bar, sep))
         salida.append(bar)
+        est["puestas"].append((nombre, bar))
+        if nombre in antes:
+            bar.setVisible(False)
     usadas = {id(b) for b in salida}
     for _nombre, bar in fabricas:
         if id(bar) not in usadas and not bar.actions() and not _escondida_a_proposito(bar):

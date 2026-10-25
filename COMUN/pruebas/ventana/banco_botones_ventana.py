@@ -1,5 +1,5 @@
 """Banco con la VENTANA REAL de IngeCAD (sin pantalla, Qt «offscreen»):
-Administrar botones (3.38.0).
+Administrar botones (3.38.0; 3.47.0: barras apagadas, mirar no cambia nada).
 
 Comprueba con las barras de verdad (PySide6) lo que test_botones.py ve con
 barras simuladas: de fábrica nada cambia; con categorías guardadas cada una
@@ -194,6 +194,51 @@ BU._exec = por_tema
 C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
 b = barras(win)
 comprobar(BT.objeto_barra("Datos") in b and BT.objeto_barra("Imagenes") in b, "barras por tema armadas")
+
+
+# 3.47.0: mirar no prende nada (Fernando, 25/10/2026); Cancelar no toca las barras
+def foto_barras():
+    app.processEvents()
+    return {n: (ordenes(x), x.isHidden()) for n, x in barras(win).items()}
+
+
+b[BT.objeto_barra("Datos")].setVisible(False)              # escondida a mano
+antes_v, durante = foto_barras(), {}
+
+
+def mirar(dlg):
+    durante.update(foto_barras())
+    cats = dlg.findChildren(QListWidget)[0]
+    nombres = [cats.item(i).text().split("  (")[0] for i in range(cats.count())]
+    i = nombres.index("Datos")
+    comprobar(cats.item(i).checkState() == Qt.Unchecked, "la barra escondida a mano aparece apagada")
+    return 0
+
+
+BU._exec = mirar
+C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
+comprobar(durante == antes_v, "con la ventana abierta las barras no cambian")
+comprobar(foto_barras() == antes_v, "Cancelar: las barras quedan como estaban")
+C.aplicar(win); app.processEvents()                          # rearmar (módulos, arranque)
+comprobar(barras(win)[BT.objeto_barra("Datos")].isHidden(), "al rearmar, la escondida sigue escondida")
+
+
+def apagar(dlg):
+    cats = dlg.findChildren(QListWidget)[0]
+    nombres = [cats.item(i).text().split("  (")[0] for i in range(cats.count())]
+    cats.item(nombres.index("Datos")).setCheckState(Qt.Checked)         # la vuelve a prender
+    cats.item(nombres.index("Edición")).setCheckState(Qt.Unchecked)     # la barra entera
+    return 1
+
+
+BU._exec = apagar
+C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
+app.processEvents()                       # Qt muestra las barras nuevas en la vuelta siguiente
+b = barras(win)
+comprobar(BT.objeto_barra("Edición") not in b or not ordenes(b[BT.objeto_barra("Edición")]),
+          "la casilla de la categoría apaga la barra entera")
+comprobar("Edición" in BT.leer("ingecad")["apagadas"], "la barra apagada queda guardada")
+comprobar(not b[BT.objeto_barra("Datos")].isHidden(), "tildada en la ventana, la barra vuelve a la vista")
 comprobar(b["plugin_geocad_toolbar"].isHidden() and b["geocad_yaguarete_toolbar"].isHidden(), "las de fábrica escondidas")
 comprobar("TEXT" not in sum((ordenes(x) for n, x in b.items() if n.startswith("GeoCADCategoria_")), []),
           "lo oculto sigue oculto")
@@ -221,27 +266,35 @@ BT.restablecer("ingecad")
 sacar_geocad(win); poner_geocad(win)
 b = barras(win)
 existen = set(fab_geo) | set(fab_yag)
-bien, vistos = True, 0
+
+
+def a_la_vista(b):
+    """{categoría: botones} de las barras de categorías a la vista."""
+    app.processEvents()
+    return {x.windowTitle(): ordenes(x) for n, x in b.items()
+            if n.startswith("GeoCADCategoria_") and ordenes(x) and not x.isHidden()}
+
+
+# 3.47.0, primera instalación: sólo los botones de IngeCAD que GeoCAD reconfiguró,
+# en sus categorías; el resto apagado (Fernando, 25/10/2026)
+esperado = {}
 for nombre, ids in DEFECTO["ingecad"]:
-    esperado = [o for o in ids if o in existen]
-    bar = b.get(BT.objeto_barra(nombre))
-    vistos += len(ordenes(bar)) if bar is not None else 0
-    if esperado and (bar is None or ordenes(bar) != esperado or bar.windowTitle() != nombre):
-        bien = False
-        print("     ", nombre, None if bar is None else ordenes(bar), esperado)
-comprobar(bien, f"sin nada guardado: las {len(DEFECTO['ingecad'])} categorías «Yaguá» en su orden")
-sobran = [o for o in fab_geo + fab_yag if o not in {x for _n, i in DEFECTO['ingecad'] for x in i}]
+    fila = [o for o in ids if o in existen and o in BT.PRENDIDOS["ingecad"]]
+    if fila:
+        esperado[nombre] = fila
+vista = a_la_vista(b)
+comprobar(vista == esperado and set(sum(vista.values(), [])) == set(BT.PRENDIDOS["ingecad"]) & existen,
+          "sin nada guardado: a la vista sólo " + str(vista))
 geo, yag = b["plugin_geocad_toolbar"], b["geocad_yaguarete_toolbar"]
-comprobar(vistos + len(sobran) == len(existen) and ordenes(geo) + ordenes(yag) == sobran,
-          f"todos los botones a la vista ({len(sobran)} fuera de las categorías, en su barra)")
-comprobar(yag.isHidden() and (geo.isHidden() == (not ordenes(geo))), "las barras vacías escondidas")
+comprobar(not ordenes(geo) and not ordenes(yag) and geo.isHidden() and yag.isHidden(),
+          "la barra GeoCAD y Yaguareté Tools vacías y escondidas")
 BT.guardar("ingecad", [("Todo", [(o, True) for o in fab_yag + fab_geo])], C.fabrica(win))
 C.aplicar(win); app.processEvents()
 BU._exec = fabrica_dlg
 C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
 b = barras(win)
 comprobar(BT.leer("ingecad") is None and BT.objeto_barra("Todo") not in b
-          and BT.objeto_barra("Yaguá Edición") in b, "Como de fábrica: vuelven las «Yaguá»")
+          and a_la_vista(b) == esperado, "Como de fábrica: vuelve la primera instalación")
 sacar_geocad(win)
 comprobar(not [n for n in barras(win) if n.startswith("GeoCADCategoria_") or "geocad" in n.lower()],
           "sin GeoCAD no queda ninguna barra suya")

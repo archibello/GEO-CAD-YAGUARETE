@@ -87,10 +87,11 @@ print("ok lectura de los .json de Bloques GMS, sin tocarlos")
 # ---- botón y retiro ------------------------------------------------------------------------
 sys.path[:0] = [os.path.join(HERE, "fake_qgis"), str(GEOCAD.parent)]
 from geocad import botones, submodulos
-assert list(dict(botones.DEFECTO["qgis"])["Yaguá Bloques"])[-1] == "dibujo:gmsblocks"
+# 3.47.0: la fábrica es el último estado de Fernando, que lo puso en Yaguá Dibujo
+assert "dibujo:gmsblocks" in dict(botones.DEFECTO["qgis"])["Yaguá Dibujo"]
 assert "Bloques_GMS" in submodulos.VIEJOS["dibujo"]
 plugins = Path(tempfile.mkdtemp()) / "plugins"; plugins.mkdir(); (plugins / "Bloques_GMS").mkdir()
 assert submodulos.retirar_viejos("dibujo", plugins) == ["Bloques_GMS"]
 assert (GEOCAD / "dibujo" / "icons" / "gmsblocks.svg").is_file()
-print("ok botón en Yaguá Bloques, ícono y retiro de Bloques_GMS")
+print("ok botón en Yaguá Dibujo, ícono y retiro de Bloques_GMS")
 print("TODO OK")
