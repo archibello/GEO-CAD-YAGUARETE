@@ -1,0 +1,55 @@
+GeoCAD - versión 3.48.0
+=======================
+ROTULOSIG: RÓTULOS CON CÍRCULO EN LOS POLÍGONOS (IngeCAD). Trae todo lo de la
+3.47.0.
+
+Pedido de Fernando (25/10/2026)
+- Antecedente: la orden TCIRCLE de AutoCAD (Express Tools, «Encerrar texto
+  con objeto»), investigada en propuesta_ctext/INFORME_CTEXT.txt.
+- «Mi idea es agregar una opción de etiquetas con círculo en la misma
+  herramienta», con dos condiciones:
+  1. El círculo inscripto siempre dentro del polígono, con tolerancia de 10 %
+     de cada lado, y los textos dentro de los círculos con tolerancia de 10 %
+     de los bordes.
+  2. Sólo se modifican los textos que tienen que reducirse para entrar en
+     los polígonos; en los polígonos mayores, lo de siempre, y el círculo
+     rodea el número aumentando su diámetro un 10 %.
+
+Qué cambia
+- En la ventana de ROTULOSIG (SHPLABEL), dentro de «Polígonos cerrados», la
+  casilla «Encerrar en un círculo». Se recuerda como las demás opciones.
+- Con la casilla tildada, en cada polígono:
+  · El círculo tiene de diámetro la diagonal del texto + 10 %: el texto
+    queda adentro con aire.
+  · El círculo usa como mucho el 90 % del lugar hasta el borde más cercano
+    del polígono (o de sus huecos).
+  · Si entra con la altura pedida, todo como siempre: en el centroide o, si
+    ahí no entra, en el centro visual; horizontal, o según el eje más largo
+    con C y E.
+  · Si no entra, va al centro visual (el lugar más amplio), con el círculo
+    más grande que entra ahí, y el texto se achica dentro de él hasta quedar
+    con su 10 % de aire, horizontal. Con círculo no se omite ninguno (aunque
+    esté elegida D o E), salvo los que quedarían ilegibles (menos de 1/20 de
+    la altura pedida), como siempre.
+- Líneas y puntos se rotulan como siempre, sin círculo.
+- El círculo va en la misma capa <capa>-ROTULOS, marcado como parte de su
+  rótulo: rotular otra vez, rotular sin círculo o SHPLABELOFF lo borran
+  junto con el texto, y un U deshace todo. Los avisos cuentan rótulos, no
+  círculos.
+
+Por dentro
+- rotulos.py: OpcionesRotulo.circulo ("no"/"si"), Ubicacion.circulo (el
+  radio), en_circulo (AIRE_CIRCULO = 1,10, USO_CIRCULO = 0,90).
+- herramientas_datos.py: label_commands dibuja el CIRCLE con el XDATA del
+  rótulo; _textos cuenta sólo los textos.
+- rotulos_ui.py: la casilla.
+
+Pruebas
+- test_rotulos.py: diámetro = diagonal + 10 %; en un polígono chico el
+  círculo usa el 90 % del lugar y el texto se achica adentro (también con
+  D); C según el eje; con hueco, lejos del hueco; demasiado chico se omite;
+  líneas y puntos sin círculo; en un dibujo: los círculos en la capa de
+  rótulos con su XDATA, reemplazados y deshechos con su texto, y borrados al
+  rotular sin círculo; la opción recordada.
+- La ventana de ROTULOSIG con PySide6 (sin pantalla): la casilla y lo que
+  devuelve. Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

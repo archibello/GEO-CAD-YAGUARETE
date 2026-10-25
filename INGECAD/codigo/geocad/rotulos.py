@@ -2,20 +2,23 @@
 """Dónde va cada rótulo (3.26.0): reglas estandarizadas de Fernando
 (16/10/2026) para ROTULOSIG / SHPLABEL.
 
-POLÍGONOS CERRADOS: el rótulo siempre dentro, con su centro en el
-CENTROIDE del polígono (el epicentro) y la altura sugerida como prioridad;
-si ahí no entra entero, en el centro visual (el punto más alejado de los
-bordes, como QGIS), entero (3.26.2). Los que igual no entran:
-  A  se achican hasta que entran, siempre horizontales;
-  B  se rotan según el eje más largo del polígono y, si igual no entran,
-     se achican con esa orientación;
-  C  todos según el eje más largo; los que no entran, achicados;
-  D  se omiten.
-  E  según el eje más largo como prioridad; si así no entran, horizontales;
-     si tampoco, se omiten. Nunca se achican (3.26.5, Fernando).
+POLÍGONOS CERRADOS (3.48.1, Fernando, 25/10/2026: «que la prioridad de las
+etiquetas sea en el epicentro del polígono» y «que siempre se respete la
+orientación del texto en función del eje más largo»): el rótulo siempre
+dentro, con su centro en el CENTROIDE (el epicentro) y según el EJE MÁS
+LARGO del polígono. Si con la altura pedida no entra, se achica ahí mismo.
+Sólo si el centroide cae afuera (polígonos en U, en L) o en un hueco, va
+al centro visual (el punto más alejado de los bordes, como QGIS). Ya no hay
+opciones A-E (3.26.0 a 3.48.0).
+CÍRCULO (3.48.0), sólo en polígonos: el rótulo dentro de un círculo de
+diámetro = la diagonal del texto + 10 %, y el círculo dentro del polígono
+usando como mucho el 90 % del lugar hasta el borde; si no entra, el
+círculo más grande que entra ahí y el texto achicado adentro.
 LÍNEAS: según el eje de la línea (el tramo donde cae la mitad del largo),
 nunca cabeza abajo; en la mitad, sobre la línea o por arriba / por debajo.
 PUNTOS: centrado en el punto, o empezando en el punto a media altura.
+ALTURA (3.48.1): la pedida, o todos con la del más chico de esa vez.
+ANTERIORES (3.48.1): reemplazar los rótulos de esos objetos, o conservarlos.
 
 Todo es geometría plana, sin Qt; se prueba sin IngeCAD abierto."""
 from __future__ import annotations
@@ -29,28 +32,36 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
-POLIGONO = {"A": "Achicar (horizontal)", "B": "Rotar al eje más largo y, si no entra, achicar",
-            "C": "Todos según el eje más largo, achicando los grandes", "D": "Omitir los que no entran",
-            "E": "Según el eje más largo (si no, horizontal); omitir los que no entran"}
 LINEA = {"sobre": "Sobre la línea", "arriba": "Por arriba de la línea",
          "abajo": "Por debajo de la línea"}
 PUNTO = {"centro": "Centrado en el punto", "desde": "Empezando en el punto, a media altura"}
+CIRCULO = {"no": "Sin círculo", "si": "Con círculo (sólo polígonos)"}
+ALTURA = {"propia": "La altura pedida (los que no entran, achicados)",
+          "menor": "Todos con la altura del más chico"}
+ANTERIORES = {"reemplazar": "Reemplazar los rótulos anteriores de esos objetos",
+              "conservar": "Conservar los anteriores y sumar los nuevos"}
 
 MARGEN = 0.15           # aire alrededor del texto, en alturas de texto
 ESCALA_MINIMA = 0.05    # más chico que 1/20 de la altura pedida no se lee: se omite
 LLENADO = 0.80          # un rótulo achicado ocupa el 80 % del lugar donde entra (3.26.3, Fernando)
+AIRE_CIRCULO = 1.10     # el círculo: la diagonal del texto + 10 % (3.48.0, Fernando)
+USO_CIRCULO = 0.90      # el círculo usa como mucho el 90 % del lugar hasta el borde
 
 
 @dataclass
 class OpcionesRotulo:
-    poligono: str = "A"
     linea: str = "sobre"
     punto: str = "centro"
+    circulo: str = "no"
+    altura: str = "propia"
+    anteriores: str = "reemplazar"
 
     def validas(self) -> "OpcionesRotulo":
-        return OpcionesRotulo(self.poligono if self.poligono in POLIGONO else "A",
-                              self.linea if self.linea in LINEA else "sobre",
-                              self.punto if self.punto in PUNTO else "centro")
+        def una(valor, permitidas, defecto):
+            return valor if valor in permitidas else defecto
+        return OpcionesRotulo(una(self.linea, LINEA, "sobre"), una(self.punto, PUNTO, "centro"),
+                              una(self.circulo, CIRCULO, "no"), una(self.altura, ALTURA, "propia"),
+                              una(self.anteriores, ANTERIORES, "reemplazar"))
 
 
 @dataclass
@@ -60,6 +71,7 @@ class Ubicacion:
     altura: float
     giro: float              # grados, antihorario
     alineacion: str          # "MIDDLE_CENTER" | "MIDDLE_LEFT"
+    circulo: Optional[float] = None    # radio del círculo alrededor (centro = punto), 3.48.0
 
 
 # ------------------------------------------------------------------ lo último elegido
@@ -330,51 +342,54 @@ def centroide(anillo):
     return (x0 + cx / (6 * a), y0 + cy / (6 * a))
 
 
-def en_poligono(texto: str, altura: float, externo, huecos, modo: str,
-                medir) -> Optional[Ubicacion]:
-    """3.26.2 (Fernando): el centro del texto en el CENTROIDE de la parcela,
-    con la altura sugerida como prioridad. Si ahí no entra entero, en el
-    centro visual (donde hay más lugar), también entero. Recién si tampoco
-    entra, la opción: A achicar, B rotar al eje y achicar, C todo al eje
-    (achicando), D omitir."""
-    externo = [tuple(p) for p in externo]
-    huecos = [[tuple(p) for p in h] for h in huecos]
-    puntos = []
+def epicentro(externo, huecos=()) -> tuple:
+    """El centroide si cae dentro (y fuera de los huecos); si no, el centro
+    visual. Devuelve (x, y)."""
     c = centroide(externo)
     if c is not None and _dentro(c, externo) and not any(_dentro(c, h) for h in huecos):
-        puntos.append(c)
+        return c
     cx, cy, _r = centro_visual(externo, huecos)
-    puntos.append((cx, cy))
-    ancho = medir(texto, altura) + 2 * MARGEN * altura
-    alto = altura * (1 + 2 * MARGEN)
-    eje = eje_mas_largo(externo)
+    return (cx, cy)
 
-    def entero(giro):
-        for p in puntos:
-            if entra(_caja(p, ancho, alto, giro), externo, huecos):
-                return Ubicacion(p, altura, giro, "MIDDLE_CENTER")
+
+def en_poligono(texto: str, altura: float, externo, huecos, medir,
+                circulo: bool = False) -> Optional[Ubicacion]:
+    """3.48.1 (Fernando): en el epicentro, según el eje más largo; si con la
+    altura pedida no entra, achicado ahí (el texto, al LLENADO del lugar; con
+    círculo, el círculo al USO_CIRCULO del lugar y el texto con su 10 % de
+    aire adentro). Si en el epicentro quedaría ilegible (ESCALA_MINIMA: p. ej.
+    cae justo sobre el borde de un hueco), en el centro visual; si ahí
+    también, None."""
+    externo = [tuple(p) for p in externo]
+    huecos = [[tuple(p) for p in h] for h in huecos]
+    giro = eje_mas_largo(externo)
+
+    def en(p):
+        if circulo:
+            radio = math.hypot(medir(texto, altura), altura) * AIRE_CIRCULO / 2
+            lugar = USO_CIRCULO * _dist_borde(p, [externo] + huecos)
+            if radio <= 0 or lugar <= 0:
+                return None
+            if radio <= lugar:
+                return Ubicacion(p, altura, giro, "MIDDLE_CENTER", radio)
+            s = lugar / radio
+            return Ubicacion(p, altura * s, giro, "MIDDLE_CENTER", lugar) if s >= ESCALA_MINIMA else None
+        ancho = medir(texto, altura) + 2 * MARGEN * altura
+        alto = altura * (1 + 2 * MARGEN)
+        s = _escala(p, ancho, alto, giro, externo, huecos)
+        if s >= 1.0:
+            return Ubicacion(p, altura, giro, "MIDDLE_CENTER")
+        if s > 0:                         # con aire: no toca los bordes
+            return Ubicacion(p, altura * s * LLENADO, giro, "MIDDLE_CENTER")
         return None
 
-    def achicado(giro):
-        # si igual hay que achicar, en el centroide (el corrimiento sólo vale
-        # para conservar la altura entera); el centro visual, si el
-        # centroide cae afuera o ni achicado entra ahí
-        for p in puntos:
-            s = _escala(p, ancho, alto, giro, externo, huecos)
-            if s > 0:                     # con aire: no toca los bordes
-                return Ubicacion(p, altura * s * LLENADO, giro, "MIDDLE_CENTER")
-        return None
-
-    if modo == "C":
-        return entero(eje) or achicado(eje)
-    if modo == "E":
-        return entero(eje) or (entero(0.0) if eje != 0.0 else None)
-    u = entero(0.0)
-    if u is not None or modo == "D":
-        return u
-    if modo == "B" and eje != 0.0:
-        return entero(eje) or achicado(eje)
-    return achicado(0.0)
+    p = epicentro(externo, huecos)
+    u = en(p)
+    if u is None:
+        cx, cy, _r = centro_visual(externo, huecos)
+        if (cx, cy) != p:
+            u = en((cx, cy))
+    return u
 
 
 def en_linea(altura: float, puntos, modo: str) -> Optional[Ubicacion]:
@@ -410,7 +425,7 @@ def ubicar(texto: str, altura: float, anillos, op: OpcionesRotulo, medir) -> Opt
     if cerrados:
         externo = max(cerrados, key=lambda r: abs(_area(r)))
         huecos = [r for r in cerrados if r is not externo and _dentro(r[0], externo)]
-        return en_poligono(texto, altura, externo, huecos, op.poligono, medir)
+        return en_poligono(texto, altura, externo, huecos, medir, op.circulo == "si")
     lineas = [list(p) for p, _c in anillos if len(p) >= 2]
     if lineas:
         return en_linea(altura, max(lineas, key=lambda r: sum(

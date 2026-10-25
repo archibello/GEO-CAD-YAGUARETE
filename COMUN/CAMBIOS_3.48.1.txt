@@ -1,0 +1,57 @@
+GeoCAD - versión 3.48.1
+=======================
+ROTULOSIG: EN EL EPICENTRO Y SEGÚN EL EJE, ALTURA DEL MÁS CHICO Y CONSERVAR
+LOS ANTERIORES (IngeCAD). Correcciones de Fernando a la 3.48.0, que trae.
+
+Pedido de Fernando (25/10/2026)
+- «Está buena la herramienta pero me gustaría hacerle algunas correcciones:
+  1- que la prioridad de las etiquetas sea en el epicentro del polígono;
+  2- que se adopte como altura general de las etiquetas la más pequeña de la
+  selección; 3- que de hacer otras operaciones con etiquetas no se borren
+  las que ya hicimos (como una opción más de procedimiento a seguir);
+  4- que siempre se respete la orientación del texto en función del eje
+  más largo.» Decidido: 1 y 4 siempre, con o sin círculo; 2 y 3 opciones.
+
+Qué cambia
+- Polígonos, siempre (con o sin círculo): el rótulo en el EPICENTRO (el
+  centroide) y según el EJE MÁS LARGO del polígono. Si con la altura pedida
+  no entra, se achica ahí mismo (antes se corría al centro visual). Sólo
+  va al centro visual si el centroide cae afuera (polígonos en U o en L) o
+  en un hueco, o si ahí ni achicado se podría leer.
+- Ya no están las opciones A-E de polígonos: ninguno se omite por no
+  entrar; sólo los que quedarían ilegibles (menos de 1/20 de la altura
+  pedida), y el aviso lo dice así.
+- Con círculo, lo mismo: en el epicentro, según el eje; si no entra, el
+  círculo más grande que entra ahí (90 % del lugar) y el texto achicado
+  adentro con su 10 % de aire.
+- Opción nueva «Altura de los rótulos»: la pedida (los que no entran,
+  achicados), o «Todos con la altura del más chico»: todos los rótulos de
+  esa vez quedan con la altura del más achicado, y sus círculos se rehacen
+  con ella.
+- Opción nueva «Si esos objetos ya tienen rótulos»: «Reemplazar los
+  rótulos anteriores de esos objetos» (como hasta ahora) o «Conservar los
+  anteriores y sumar los nuevos»: no se borra nada (por ejemplo, para
+  rotular la partida y después el titular). El aviso dice a cuántos se
+  suman.
+- Las dos opciones se recuerdan como las demás. Lo guardado con la 3.48.0
+  o antes sigue sirviendo (la opción A-E se ignora).
+
+Por dentro
+- rotulos.py: OpcionesRotulo sin «poligono», con «altura» y «anteriores»;
+  epicentro(); en_poligono único (con o sin círculo) en el epicentro,
+  según el eje; en_circulo se fue (es en_poligono con circulo=True).
+- herramientas_datos.py: label_commands en dos pasadas para «el más
+  chico»; con «conservar» no borra; resumen_rotulos dice «se suman a N
+  anteriores» y «demasiado chicos para leerse».
+- rotulos_ui.py: sin A-E; grupos Altura y Anteriores.
+
+Pruebas
+- test_rotulos.py, reescrita la parte de polígonos: epicentro y eje (también
+  si horizontal entraba), achicado en el epicentro al 80 % de lo justo, U y
+  hueco al centro visual, centroide sobre el borde de un hueco, ilegible
+  omitido; con círculo, achicado en el epicentro y según el eje; en un
+  dibujo: parcelas verticales con el texto a 90°, la del hueco achicada en
+  su epicentro, altura del más chico (también con círculos), conservar
+  (10 rótulos y 10 círculos), lo guardado antes de la 3.48.1.
+- La ventana de ROTULOSIG con PySide6 (sin pantalla): las opciones nuevas
+  y lo que devuelve. Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

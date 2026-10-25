@@ -379,7 +379,11 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
 
     ``fids`` (3.26.1): sólo esos registros (los objetos seleccionados). Sus
     rótulos anteriores se reemplazan y los de los demás quedan: cada
-    selección SUMA a la composición. None = toda la capa, reemplazando todo."""
+    selección SUMA a la composición. None = toda la capa, reemplazando todo.
+
+    3.48.1: con ``anteriores == "conservar"`` no se borra ningún rótulo (los
+    nuevos se suman); con ``altura == "menor"`` todos quedan con la altura
+    del más chico de esa vez (cada uno se vuelve a ubicar con ella)."""
     from . import rotulos
     op = opciones or rotulos.OpcionesRotulo()
     medir = rotulos.medidor(document.doc)
@@ -394,10 +398,15 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
     if fids is not None:
         fids = set(fids)
         by_fid = {k: v for k, v in by_fid.items() if k in fids}
-    old = existing_labels(document, key, fids)
-    quedan = len(existing_labels(document, key)) - len(old)
-    commands += erase_labels(document, key, fids)
+    if op.anteriores == "conservar":
+        old = []
+        quedan = _textos(existing_labels(document, key))
+    else:
+        old = existing_labels(document, key, fids)
+        quedan = _textos(existing_labels(document, key)) - _textos(old)
+        commands += erase_labels(document, key, fids)
     n = omitted = 0
+    ubicados = []
     for fid, ents in sorted(by_fid.items()):
         text = values.get(fid, "")
         if not text:
@@ -407,7 +416,13 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
         if u is None:
             omitted += 1 if rings else 0
             continue
-
+        ubicados.append((fid, text, rings, u))
+    if op.altura == "menor" and ubicados:
+        menor = min(u.altura for _f, _t, _r, u in ubicados)
+        ubicados = [(fid, text, rings, u if u.altura <= menor
+                     else rotulos.ubicar(text, menor, rings, op, medir) or u)
+                    for fid, text, rings, u in ubicados]
+    for fid, text, rings, u in ubicados:
         def make(msp, text=text, u=u, fid=fid):
             from ezdxf.enums import TextEntityAlignment
 
@@ -418,11 +433,27 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
             return entity
 
         commands.append(AddToModelCommand("SHP label", make, layer=layer))
+        if u.circulo:
+            # 3.48.0: el círculo alrededor, con el XDATA de su rótulo (se borra
+            # y se reemplaza con él, como los fondos que llegan de QGIS)
+            def circulo(msp, u=u, fid=fid):
+                ensure_appid(msp.doc)
+                entity = msp.add_circle(u.punto, radius=u.circulo)
+                entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, f.name)])
+                return entity
+
+            commands.append(AddToModelCommand("SHP label circle", circulo, layer=layer))
         n += 1
     command = CompositeCommand("SHP labels", commands)
-    command.omitidos = omitted          # polígonos donde el rótulo no entra (opción D)
-    command.quedan = quedan             # rótulos de otros objetos, que siguen
-    return command, n, len(old)
+    command.omitidos = omitted          # polígonos donde el rótulo quedaría ilegible
+    command.quedan = quedan             # rótulos anteriores que siguen
+    command.conserva = op.anteriores == "conservar"
+    return command, n, _textos(old)
+
+
+def _textos(entidades) -> int:
+    """Cuántos rótulos son (sin contar sus círculos ni fondos)."""
+    return sum(1 for e in entidades if e.dxftype() in ("TEXT", "MTEXT"))
 
 
 class LabelTool(Tool):
@@ -524,10 +555,12 @@ def resumen_rotulos(command, n: int, replaced: int, field: str, key: str, fids=N
         texto += f" ({len(fids)} objeto(s) elegidos)"
     if replaced:
         texto += f"; reemplazan a {replaced} anteriores"
-    if quedan:
+    if quedan and getattr(command, "conserva", False):
+        texto += f"; se suman a {quedan} anteriores"
+    elif quedan:
         texto += f"; quedan {quedan} de otros objetos"
     if omitidos:
-        texto += f"; {omitidos} no entraban en su polígono y se omitieron"
+        texto += f"; {omitidos} quedaban demasiado chicos para leerse en su polígono y se omitieron"
     return texto + "."
 
 

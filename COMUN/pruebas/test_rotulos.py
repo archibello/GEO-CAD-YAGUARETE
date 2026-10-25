@@ -1,7 +1,7 @@
 """Rótulos estandarizados (3.26.0, reglas de Fernando del 16/10/2026).
-Polígonos cerrados: dentro, centrados en el centro visual; los que no
-entran: A achicar horizontal, B rotar al eje más largo y achicar, C todos
-según el eje, D omitir. Líneas: según el eje, en la mitad, sobre / arriba /
+Polígonos cerrados (3.48.1): en el epicentro y según el eje más largo,
+achicando ahí los que no entran (sin opciones A-E); con círculo (3.48.0);
+altura del más chico y conservar los anteriores (3.48.1). Líneas: según el eje, en la mitad, sobre / arriba /
 abajo, nunca cabeza abajo. Puntos: centrado o desde el punto a media
 altura. ROTULOSIG los dibuja así y recuerda lo último elegido."""
 import tmp_pruebas  # lo temporal de la prueba se borra al salir
@@ -57,58 +57,51 @@ q = [(7431484.3, 7011496.3), (7431464.3, 7011489.8), (7431461.0, 7011499.4), (74
 cq = R.centroide(q)
 assert R._dentro(cq, q) and cerca(cq, (sum(p[0] for p in q) / 4, sum(p[1] for p in q) / 4), 0.5), cq
 assert abs(abs(R._area(q)) - abs(R._area([(x - 7431000, y - 7011000) for x, y in q]))) < 1e-6
-u = R.en_poligono("0228005000001020003", 0.5, q, [], "A", med)
+u = R.en_poligono("0228005000001020003", 0.5, q, [], med)
 assert cerca(u.punto, cq, 1e-6) and u.altura == 0.5                   # en el centroide, entero
 print("ok geometría: centro visual (también en L y con hueco), eje más largo, legible")
 
 # ------------------------------------------------------------- 2. polígonos
+# 3.48.1 (Fernando, 25/10/2026): en el epicentro y según el eje más largo, siempre;
+# los que no entran se achican ahí mismo
 grande = rect(100, 50, 40, 20, 5)
-angosta = rect(0, 0, 40, 6, 80)                  # 6 de ancho: «0016» a 2,5 no entra horizontal
-# centroide primero; si ahí no entra entero pero en el centro visual sí, ahí (la
-# altura sugerida es la prioridad); si hay que achicar, en el centroide
+angosta = rect(0, 0, 40, 6, 80)
+u = R.en_poligono("0016", 2.5, grande, [], med)
+assert cerca(u.punto, (100, 50), 1e-6) and u.altura == 2.5 and abs(u.giro - 5) < 1e-6
+assert u.alineacion == "MIDDLE_CENTER" and u.circulo is None
+u = R.en_poligono("0016", 2.5, angosta, [], med)
+assert cerca(u.punto, (0, 0), 1e-6) and abs(u.giro - 80) < 1e-6 and u.altura == 2.5
+uC = R.en_poligono("1", 1.0, rect(0, 0, 40, 30, 20), [], med)               # aunque horizontal entraba
+assert abs(uC.giro - 20) < 1e-6 and uC.altura == 1.0
+# no entra: achicado EN EL EPICENTRO (antes se corría al centro visual), según el eje
 tee = [(0, 0), (20, 0), (20, 6), (11, 6), (11, 40), (9, 40), (9, 6), (0, 6)]   # ┴: el centroide en el palo
 ct = R.centroide(tee)
 assert R._dentro(ct, tee) and 9 < ct[0] < 11 and ct[1] > 6
-u = R.en_poligono("00001234", 2.0, tee, [], "A", med)
-assert u.altura == 2.0 and u.punto[1] < 6                             # se corre a la base, entero
-u = R.en_poligono("0" * 16, 2.0, tee, [], "A", med)
-assert u.altura < 2.0 and cerca(u.punto, ct, 1e-6)                    # achicado: en el centroide
-for modo in "ABCD":
-    u = R.en_poligono("0016", 2.5, grande, [], modo, med)
-    assert cerca(u.punto, (100, 50), 0.05) and u.altura == 2.5 and u.alineacion == "MIDDLE_CENTER"
-    assert u.giro == (5.0 if modo == "C" else 0.0), (modo, u.giro)
-uA = R.en_poligono("0016", 2.5, angosta, [], "A", med)
-assert uA.giro == 0 and 0.5 < uA.altura < 2.5
+u = R.en_poligono("00001234", 2.0, tee, [], med)
+assert cerca(u.punto, ct, 1e-6) and u.altura < 2.0 and abs(u.giro - R.eje_mas_largo(tee)) < 1e-6
 # 3.26.3: el achicado ocupa el 80 % de lo que entraría justo
-justo = R._escala(uA.punto, med("0016", 2.5) + 2 * R.MARGEN * 2.5, 2.5 * (1 + 2 * R.MARGEN), 0, angosta, [])
-assert abs(uA.altura - 2.5 * justo * R.LLENADO) < 1e-9 and R.LLENADO == 0.8
-assert R.entra(R._caja(uA.punto, med("0016", uA.altura) + 2 * R.MARGEN * uA.altura,
-                       uA.altura * (1 + 2 * R.MARGEN), 0), angosta)
-uB = R.en_poligono("0016", 2.5, angosta, [], "B", med)
-assert abs(uB.giro - 80) < 1e-6 and uB.altura == 2.5                    # rotado, entra entero
-uC = R.en_poligono("0016", 2.5, angosta, [], "C", med)
-assert abs(uC.giro - 80) < 1e-6 and uC.altura == 2.5
-assert R.en_poligono("0016", 2.5, angosta, [], "D", med) is None        # se omite
-# 3.26.5, E: según el eje como prioridad, entero; si no, horizontal entero; si no, se omite
-uE = R.en_poligono("0016", 2.5, angosta, [], "E", med)
-assert abs(uE.giro - 80) < 1e-6 and uE.altura == 2.5
-uE = R.en_poligono("0016", 2.5, grande, [], "E", med)
-assert abs(uE.giro - 5) < 1e-6 and uE.altura == 2.5                   # aunque horizontal entraba
-assert R.en_poligono("0016" * 6, 2.5, angosta, [], "E", med) is None   # nunca se achica
-cruz = rect(0, 0, 12, 10, 30)                   # casi cuadrada: entra girado u horizontal
-uE = R.en_poligono("00001", 1.6, cruz, [], "E", med)
-assert uE is not None and uE.altura == 1.6
-# B: rotado tampoco entra entero -> se achica con la nueva orientación
-uB2 = R.en_poligono("0016" * 6, 2.5, angosta, [], "B", med)
-assert abs(uB2.giro - 80) < 1e-6 and uB2.altura < 2.5
-# C: todos con el eje, aunque horizontal entraran
-uC2 = R.en_poligono("1", 1.0, rect(0, 0, 40, 30, 20), [], "C", med)
-assert abs(uC2.giro - 20) < 1e-6 and uC2.altura == 1.0
-# con un hueco en el medio, el texto no lo pisa
-u = R.en_poligono("0001", 2.0, c, [hueco], "A", med)
-caja = R._caja(u.punto, med("0001", u.altura), u.altura, 0)
-assert R.entra(caja, c, [hueco])
-print("ok polígonos: A achica horizontal, B rota y achica, C según el eje, D omite; huecos")
+u = R.en_poligono("0016" * 6, 2.5, angosta, [], med)
+justo = R._escala(u.punto, med("0016" * 6, 2.5) + 2 * R.MARGEN * 2.5, 2.5 * (1 + 2 * R.MARGEN), u.giro, angosta, [])
+assert u.altura < 2.5 and abs(u.altura - 2.5 * justo * R.LLENADO) < 1e-9 and R.LLENADO == 0.8
+assert R.entra(R._caja(u.punto, med("0016" * 6, u.altura) + 2 * R.MARGEN * u.altura,
+                       u.altura * (1 + 2 * R.MARGEN), u.giro), angosta)
+# centroide afuera (U): en el centro visual
+U = [(0, 0), (30, 0), (30, 20), (24, 20), (24, 6), (6, 6), (6, 20), (0, 20)]
+assert not R._dentro(R.centroide(U), U)
+u = R.en_poligono("1", 1.0, U, [], med)
+assert R._dentro(u.punto, U) and cerca(u.punto, R.centro_visual(U)[:2], 1e-6)
+# centroide en un hueco: el centro visual, y el texto no pisa el hueco
+u = R.en_poligono("0001", 2.0, c, [hueco], med)
+assert not R._dentro(u.punto, hueco)
+assert R.entra(R._caja(u.punto, med("0001", u.altura), u.altura, u.giro), c, [hueco])
+# centroide justo en el borde de un hueco (ni achicado entra): el centro visual
+cuad = rect(0, 0, 20, 30, 0)
+hb = [(0, -3), (5, -3), (5, 3), (0, 3)]             # el borde x=0 pasa por el centroide
+u = R.en_poligono("0001", 1.0, cuad, [hb], med)
+assert u is not None and not cerca(u.punto, (0, 0), 0.5)
+# ilegible en todos lados: se omite
+assert R.en_poligono("0016", 2.5, rect(0, 0, 0.01, 0.01, 0), [], med) is None
+print("ok polígonos: epicentro y eje más largo; achica ahí; U y huecos al centro visual")
 
 # ------------------------------------------------------------- 3. líneas y puntos
 u = R.en_linea(2.0, [(0, 0), (10, 0), (20, 0)], "sobre")
@@ -126,7 +119,7 @@ assert cerca(u.punto, (6, 4)) and u.giro == 0
 u = R.en_punto(2.0, (5, 5), "centro")
 assert u.punto == (5, 5) and u.alineacion == "MIDDLE_CENTER" and u.giro == 0
 assert R.en_punto(2.0, (5, 5), "desde").alineacion == "MIDDLE_LEFT"
-op = R.OpcionesRotulo("B", "abajo", "desde")
+op = R.OpcionesRotulo("abajo", "desde")
 assert R.ubicar("x", 1, [([(0, 0), (4, 0), (4, 4), (0, 4)], True)], op, med).alineacion == "MIDDLE_CENTER"
 assert cerca(R.ubicar("x", 1, [([(0, 0), (4, 0)], False)], op, med).punto, (2, -1))
 assert R.ubicar("x", 1, [([(3, 3)], False)], op, med).alineacion == "MIDDLE_LEFT"
@@ -137,10 +130,14 @@ print("ok líneas (según el eje, nunca cabeza abajo, sobre/arriba/abajo) y punt
 
 # ------------------------------------------------------------- 4. lo último elegido
 assert R.leer_opciones() == R.OpcionesRotulo()
-R.guardar_opciones(R.OpcionesRotulo("C", "arriba", "desde"))
-assert R.leer_opciones() == R.OpcionesRotulo("C", "arriba", "desde")
-R._archivo().write_text('{"poligono": "Z", "linea": 3}', encoding="utf-8")
-assert R.leer_opciones() == R.OpcionesRotulo("A", "sobre", "centro")
+R.guardar_opciones(R.OpcionesRotulo("arriba", "desde"))
+assert R.leer_opciones() == R.OpcionesRotulo("arriba", "desde")
+todo = R.OpcionesRotulo("arriba", "desde", circulo="si", altura="menor", anteriores="conservar")
+R.guardar_opciones(todo)                                        # 3.48.0 y 3.48.1
+assert R.leer_opciones() == todo
+# lo guardado antes de la 3.48.1 (con «poligono» A-E): se ignora, sin romper nada
+R._archivo().write_text('{"poligono": "D", "linea": "abajo", "punto": 3}', encoding="utf-8")
+assert R.leer_opciones() == R.OpcionesRotulo("abajo", "centro")
 R._archivo().write_text("dañado", encoding="utf-8")
 assert R.leer_opciones() == R.OpcionesRotulo()
 assert R.medidor(None)("0001", 2.0) > 0
@@ -158,23 +155,36 @@ def rotulos(capa):
                   key=lambda t: t.dxf.text)
 
 
-cmd, n, _o = HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, R.OpcionesRotulo("A"))
+cmd, n, _o = HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, R.OpcionesRotulo())
 hist.execute(cmd)
 rot = rotulos("parcelas")
 assert n == 5 and len(rot) == 5 and cmd.omitidos == 0
-for i, t in enumerate(rot):                     # parcelas de 20 x 25: el centro, sin achicar
-    assert t.dxf.halign == 1 and t.dxf.valign == 2 and t.dxf.rotation == 0
-    if i != 2:                                  # la 2 tiene un hueco: se corre lejos de él
-        assert cerca(tuple(t.dxf.align_point)[:2], (5_430_000 + i * 30 + 10, 6_300_012.5), 0.05)
-    assert t.dxf.height == 2.0
-# altura enorme: A achica, D omite (y lo dice)
-hist.execute(HD.label_commands(doc, "parcelas", "PARTIDA", 30.0, R.OpcionesRotulo("A"))[0])
-assert all(t.dxf.height < 30 and t.dxf.rotation == 0 for t in rotulos("parcelas"))
-cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 30.0, R.OpcionesRotulo("D"))
+alturas = []
+for i, t in enumerate(rot):     # parcelas de 20 x 25: en el epicentro, según el eje (vertical)
+    assert t.dxf.halign == 1 and t.dxf.valign == 2 and t.dxf.rotation == 90
+    assert cerca(tuple(t.dxf.align_point)[:2], (5_430_000 + i * 30 + 10, 6_300_012.5), 1e-6)
+    alturas.append(t.dxf.height)
+# la 2 tiene un hueco al lado del epicentro: se achica ahí, no se corre (3.48.1)
+assert alturas[2] < 2.0 and all(h == 2.0 for i, h in enumerate(alturas) if i != 2)
+# altura enorme: todos achicados en su epicentro, ninguno omitido
+cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 30.0, R.OpcionesRotulo())
 hist.execute(cmd)
-assert n == 0 and cmd.omitidos == 5 and old == 5 and not rotulos("parcelas")
+assert n == 5 and old == 5 and cmd.omitidos == 0
+assert all(t.dxf.height < 30 and t.dxf.rotation == 90 for t in rotulos("parcelas"))
 hist.undo()
-assert len(rotulos("parcelas")) == 5                                   # un deshacer
+assert [t.dxf.height for t in rotulos("parcelas")] == alturas                # un deshacer
+# 3.48.1: todos con la altura del más chico
+cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, R.OpcionesRotulo(altura="menor"))
+hist.execute(cmd)
+assert n == 5 and {t.dxf.height for t in rotulos("parcelas")} == {alturas[2]}
+hist.undo()
+# 3.48.1: conservar los anteriores, sumando los nuevos
+cmd, n, old = HD.label_commands(doc, "parcelas", "TITULAR", 2.0, R.OpcionesRotulo(anteriores="conservar"))
+hist.execute(cmd)
+assert n == 5 and old == 0 and cmd.quedan == 5 and len(rotulos("parcelas")) == 10
+assert "se suman a 5 anteriores" in HD.resumen_rotulos(cmd, n, old, "TITULAR", "parcelas")
+hist.undo()
+assert len(rotulos("parcelas")) == 5
 # líneas: T1 (0,0)-(10,0)-(20,5): la mitad cae en el 2.º tramo, con su ángulo, por arriba
 hist.execute(HD.label_commands(doc, "red", "TRAMO", 1.0, R.OpcionesRotulo(linea="arriba"))[0])
 t1 = rotulos("red")[0]
@@ -184,15 +194,92 @@ assert t1.dxf.text == "T1" and abs(t1.dxf.rotation - g) < 1e-6
 hist.execute(HD.label_commands(doc, "pozos", "NOMBRE", 1.0, R.OpcionesRotulo(punto="desde"))[0])
 p1 = rotulos("pozos")[0]
 assert p1.dxf.halign == 0 and p1.dxf.valign == 2 and cerca(tuple(p1.dxf.align_point)[:2], (100, 200))
-print("ok ROTULOSIG: centrados en las parcelas, A achica, D omite y avisa, líneas y puntos")
+print("ok ROTULOSIG: en el epicentro según el eje, achica ahí, altura del más chico, conservar; líneas y puntos")
 
 # 3.26.1: sólo los objetos elegidos, sumando a lo que ya hay
 elegidos = HD.objetos_por_capa(doc, [e for e in msp if e.dxf.layer == "parcelas"][:2] + rotulos("red"))
 assert list(elegidos) == ["parcelas"] and len(elegidos["parcelas"]) == 2
-cmd, n, old = HD.label_commands(doc, "parcelas", "TITULAR", 2.0, R.OpcionesRotulo("A"), elegidos["parcelas"])
+cmd, n, old = HD.label_commands(doc, "parcelas", "TITULAR", 2.0, R.OpcionesRotulo(), elegidos["parcelas"])
 hist.execute(cmd)
 assert n == 2 and old == 2 and cmd.quedan == 3 and len(rotulos("parcelas")) == 5
 assert "quedan 3 de otros objetos" in HD.resumen_rotulos(cmd, n, old, "TITULAR", "parcelas", elegidos["parcelas"])
 hist.undo(); assert {t.dxf.text for t in rotulos("parcelas")} == {f"01-{i:04d}" for i in range(5)}
 print("ok ROTULOSIG con selección: rotula sólo esos y suma a los demás")
+
+# ------------------------------------------------------------- 6. con círculo (3.48.0)
+# Fernando, 25/10/2026: el círculo = diagonal del texto + 10 %, dentro del polígono
+# con el 90 % del lugar; los que no entran, achicados dentro de su círculo
+
+
+def diag(t, h):
+    return math.hypot(med(t, h), h)
+
+
+def borde(p, anillo):
+    return min(R._dist_seg(p, anillo[i], anillo[(i + 1) % len(anillo)]) for i in range(len(anillo)))
+
+
+op_c = R.OpcionesRotulo(circulo="si")
+grande = rect(0, 0, 40, 40, 0)
+u = R.ubicar("0002", 2.0, [(grande, True)], op_c, med)
+assert cerca(u.punto, (0, 0)) and u.altura == 2.0 and u.giro == R.eje_mas_largo(grande)
+assert abs(u.circulo - diag("0002", 2.0) * 1.10 / 2) < 1e-9          # el texto + 10 %
+assert R.ubicar("0002", 2.0, [(grande, True)], R.OpcionesRotulo(), med).circulo is None
+# chico: el círculo usa el 90 % del lugar y el texto se achica adentro, con su 10 %
+chico = rect(100, 0, 6, 6, 0)
+u = R.ubicar("0002", 2.0, [(chico, True)], op_c, med)
+assert u is not None and cerca(u.punto, (100, 0), 1e-6)                    # en el epicentro
+assert abs(u.circulo - 0.9 * 3) < 1e-9 and u.circulo <= 0.9 * borde(u.punto, chico) + 1e-9
+assert u.altura < 2.0 and abs(diag("0002", u.altura) * 1.10 / 2 - u.circulo) < 1e-9
+# siempre según el eje, también los achicados (3.48.1)
+largo = rect(0, 0, 60, 12, 30)
+u = R.ubicar("0002", 2.0, [(largo, True)], op_c, med)
+assert u.altura == 2.0 and abs(u.giro - 30) < 1e-6 and u.circulo <= 0.9 * borde(u.punto, largo)
+u = R.ubicar("0002" * 4, 2.0, [(largo, True)], op_c, med)
+assert u.altura < 2.0 and abs(u.giro - 30) < 1e-6
+# con hueco en el centroide: va al centro visual, lejos del hueco
+anillo = rect(0, 0, 40, 40, 0)
+hueco = rect(0, 0, 10, 10, 0)
+u = R.ubicar("0002", 2.0, [(anillo, True), (hueco, True)], op_c, med)
+assert u.altura == 2.0 and u.circulo <= 0.9 * min(borde(u.punto, anillo), borde(u.punto, hueco)) + 1e-9
+# demasiado chico para leerse: se omite; líneas y puntos, sin círculo
+assert R.ubicar("0002", 2.0, [(rect(0, 0, 0.1, 0.1, 0), True)], op_c, med) is None
+assert R.ubicar("T1", 1.0, [([(0, 0), (10, 0)], False)], op_c, med).circulo is None
+assert R.ubicar("P1", 1.0, [([(5, 5)], False)], op_c, med).circulo is None
+print("ok círculo: texto + 10 %, 90 % del lugar, achica en el epicentro, según el eje")
+
+
+def circulos(capa):
+    return [c for c in msp.query("CIRCLE") if c.dxf.layer == f"{capa}-ROTULOS"]
+
+
+cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, op_c)
+hist.execute(cmd)
+rot, cir = rotulos("parcelas"), circulos("parcelas")
+assert n == 5 and old == 5 and len(rot) == 5 and len(cir) == 5          # old: textos, sin círculos
+for t in rot:
+    c = min(cir, key=lambda c: math.dist(tuple(c.dxf.center)[:2], tuple(t.dxf.align_point)[:2]))
+    assert cerca(tuple(c.dxf.center)[:2], tuple(t.dxf.align_point)[:2])
+    assert t.dxf.height <= 2.0 and c.get_xdata(HD.APPID)[0][1] == HD.LABEL_TAG
+    assert c.dxf.radius >= math.hypot(R.medidor(doc.doc)(t.dxf.text, t.dxf.height), t.dxf.height) * 1.1 / 2 - 1e-9
+# volver a rotular reemplaza textos y círculos; con altura enorme, todos achicados adentro
+cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 30.0, op_c)
+hist.execute(cmd)
+assert n == 5 and old == 5 and len(circulos("parcelas")) == 5 and cmd.omitidos == 0
+assert all(t.dxf.height < 30 for t in rotulos("parcelas"))
+assert all(c.dxf.radius <= 0.9 * 10 + 0.05 for c in circulos("parcelas"))    # parcelas de 20 de ancho
+hist.undo(); hist.undo()
+assert not circulos("parcelas") and len(rotulos("parcelas")) == 5           # un deshacer cada vez
+# sin círculo, los círculos anteriores también se van
+hist.execute(HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, op_c)[0])
+hist.execute(HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, R.OpcionesRotulo())[0])
+assert not circulos("parcelas") and len(rotulos("parcelas")) == 5
+# conservar: los círculos de antes también se quedan; altura del más chico, con círculos
+hist.execute(HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, op_c)[0])
+op_cc = R.OpcionesRotulo(circulo="si", altura="menor", anteriores="conservar")
+hist.execute(HD.label_commands(doc, "parcelas", "TITULAR", 2.0, op_cc)[0])
+assert len(circulos("parcelas")) == 10 and len(rotulos("parcelas")) == 10
+nuevos = [t for t in rotulos("parcelas") if not t.dxf.text.startswith("01-")]
+assert len({t.dxf.height for t in nuevos}) == 1
+print("ok ROTULOSIG con círculo: en la capa de rótulos, se reemplazan y deshacen con su texto")
 print("TODO OK test_rotulos")
