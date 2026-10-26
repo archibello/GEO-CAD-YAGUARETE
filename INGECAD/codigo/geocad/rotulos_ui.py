@@ -3,7 +3,8 @@
 rótulos en polígonos, líneas y puntos (reglas en rotulos.py). Recuerda lo
 último elegido. 3.48.0: la casilla «Encerrar en un círculo» (polígonos).
 3.48.1: polígonos siempre en el epicentro y según el eje (sin A-E); la
-altura (la pedida o la del más chico) y qué pasa con los rótulos anteriores."""
+altura (la pedida o la del más chico) y qué pasa con los rótulos anteriores.
+3.53.0: la altura, siempre como Enviar a IngeCAD (una nota lo explica)."""
 from __future__ import annotations
 
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
@@ -33,21 +34,31 @@ class RotulosDialog(QDialog):
         g = QGroupBox("Polígonos cerrados")
         v = QVBoxLayout(g)
         nota = QLabel("En el epicentro (el centroide) y según el eje más largo del polígono. "
-                      "Los que no entran se achican ahí mismo.")
+                      "Si ahí no entran, en el lugar más holgado del polígono (si entran "
+                      "bastante más grandes); si no, achicados en el epicentro.")
         nota.setWordWrap(True)
         v.addWidget(nota)
         self.circulo = QCheckBox(
             "Encerrar en un círculo: el texto + 10 %, dentro del polígono con 10 % de aire.\n"
-            "Si no entra, el círculo más grande que entra y el texto achicado adentro.")
+            "Si no entra, el círculo y el texto se achican juntos (ver la altura).")
         self.circulo.setChecked(op.circulo == "si")
         v.addWidget(self.circulo)
+        lay.addWidget(g)
+
+        g = QGroupBox("Altura de los rótulos (como Enviar a IngeCAD)")
+        v = QVBoxLayout(g)
+        nota = QLabel("Los que entran, con la altura pedida; los que casi entran (75 % o más), "
+                      "con el 75 %. Las parcelas urbanas (hasta 2 ha, agrupadas), todas con una "
+                      "misma altura. Las demás, en categorías iguales entre sí; las muy chicas, "
+                      "sin rótulo.")
+        nota.setWordWrap(True)
+        v.addWidget(nota)
         lay.addWidget(g)
 
         self.grupos = {}
         for clave, titulo, opciones, actual in (
                 ("linea", "Líneas: según el eje, en la mitad", R.LINEA, op.linea),
                 ("punto", "Puntos", R.PUNTO, op.punto),
-                ("altura", "Altura de los rótulos", R.ALTURA, op.altura),
                 ("anteriores", "Si esos objetos ya tienen rótulos", R.ANTERIORES, op.anteriores)):
             g = QGroupBox(titulo)
             v = QVBoxLayout(g)

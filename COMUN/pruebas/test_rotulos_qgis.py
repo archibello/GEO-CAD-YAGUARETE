@@ -74,8 +74,8 @@ def rotulosig(key, field, height, op):
     return labels(key)
 
 
-# las últimas opciones de ROTULOSIG: con círculo y todos con la altura del más chico
-op = rotulos.OpcionesRotulo(circulo="si", altura="menor")
+# las últimas opciones de ROTULOSIG: con círculo (3.53.0: la altura, como Enviar a IngeCAD)
+op = rotulos.OpcionesRotulo(circulo="si")       # 3.53.0: la altura, siempre como Enviar a IngeCAD
 rotulos.guardar_opciones(op)
 
 # polígonos: una parcela grande, una angosta (el rótulo se achica) y una sin nombre
@@ -97,7 +97,7 @@ got = labels(key); print(got)
 texts = [g for g in got if g[0] == "T"]
 assert sorted(t[1] for t in texts) == ["Parcela 1", "Parcela angosta 2"], texts
 assert sum(1 for g in got if g[0] == "C") == 2, got                         # con círculo, como ROTULOSIG
-assert len({t[3] for t in texts}) == 1 and texts[0][3] < 5.0, texts          # todos con la altura del más chico
+assert texts[0][3] == 5.0 and texts[1][3] < 5.0, texts                         # entra / achicada
 assert all(t[6][-1] == "NOMBRE" for t in texts), texts
 assert not any(g[1] == "no" for g in texts)
 assert any("2 rótulo(s) de QGIS" in l and "ubicados como ROTULOSIG" in l and "2 con círculo" in l for l in log), log
@@ -191,4 +191,49 @@ t, c = manzana("lotes2", (8, 7.6, 7.2, 6.8, 6.4, 6, 0.6, 0.5))
 assert "L8" not in t and "L9" not in t and 7 not in c and 8 not in c, t
 assert all(t[x][3] == t["L2"][3] for x in lotes) and len(t) == 7, t
 assert any("2 parcela(s) muy chicas van sin rótulo" in l for l in log), log
+# 3.51.1 las que CASI entran (admiten al menos el 75 % de la elegida) quedan con el 75 %,
+# cada una con su círculo, cerca de las de la altura elegida; las demás, como en la 3.51.0
+t, c = manzana("lotes3", (8, 7.6, 7.2, 6.8, 6.4, 6, 2, 1.8, 12.5, 12))
+admite = {x: 0.9 * w / 2 / k(x) for x, w in (("L10", 12.5), ("L11", 12))}
+assert all(3.75 <= a < 5.0 for a in admite.values()), admite                    # casi entran
+assert t["L10"][3] == t["L11"][3] == 3.75, (t["L10"], t["L11"])
+assert abs(c[9][2] - 3.75 * k("L10")) < 1e-6 and abs(c[10][2] - 3.75 * k("L11")) < 1e-6, c
+assert rotulos.CASI_ENTERA == 0.75
+assert t["L2"][3] == t["L7"][3] < 3.75 and t["L9"][3] < t["L2"][3], t
+# 3.52.0 las URBANAS (hasta 2 ha y concentradas: al menos 5 así a menos de 150 m) son una
+# familia aparte: una sola altura de texto (la que entra en el 95 % de ellas), cada una con el
+# círculo de su texto; las que no entran ni así, sin rótulo si no se leería. Una chica SUELTA
+# (sin vecinas chicas) y las chacras se rotulan como rurales.
+X0, Y0 = 5_430_000.0, 6_300_000.0
+base = os.path.join(tmp, "pueblo")
+w = shapefile.Writer(base, shapeType=shapefile.POLYGON); w.field("N", "C", size=5)
+nombres = []
+def lote(x, y, ancho, alto, nombre):
+    w.poly([[(x, y), (x, y + alto), (x + ancho, y + alto), (x + ancho, y), (x, y)]]); w.record(nombre)
+    nombres.append(nombre)
+for i in range(40):                                   # 40 lotes de 30 x 40 (1200 m²)
+    lote(X0 + (i % 8) * 32, Y0 + (i // 8) * 42, 30, 40, f"U{i:02d}")
+for i, ancho in enumerate((12, 12, 12, 11.5)):        # 3 angostos (marcan la del 95 %) y uno apenas
+    lote(X0 + 8 * 32 + i * 14, Y0, ancho, 40, f"U{40 + i:02d}")   # más angosto (3.52.1)
+lote(X0 + 8 * 32 + 4 * 14, Y0, 1.5, 40, "U44")        # una lonja: no entra ni así
+lote(X0 + 2000, Y0, 400, 300, "C01")                  # chacra de 12 ha
+lote(X0 + 2000, Y0 + 1000, 50, 60, "S01")             # chica (3000 m²) pero suelta: rural
+w.close()
+send(base, {"rotulos_sig": {str(i): [x, 20.0] for i, x in enumerate(nombres)}, "campo_rotulo": "N",
+            "rotulos_opciones": {"circulo": "si", "altura": "achicados"}})
+got = labels("SHP-pueblo"); print(got)
+t = {g[1]: g for g in got if g[0] == "T"}; c = {g[3][2]: g for g in got if g[0] == "C"}
+alturas = {t[f"U{i:02d}"][3] for i in range(44)}
+assert len(alturas) == 1 and (urbana := alturas.pop()) < 15, t                       # todas iguales
+# 3.52.1: la del 95 % es la de los de 12; el de 11,5 no entra por poco: la altura urbana baja
+# apenas para que entre (antes quedaba con la de la lonja, o sin rótulo)
+assert abs(urbana - 0.9 * 5.75 / k("U43")) < 1e-6, urbana
+assert all(abs(c[i][2] - urbana * k(f"U{i:02d}")) < 1e-6 for i in range(44)), c      # su círculo
+assert "U44" not in t and any("1 parcela(s) muy chicas van sin rótulo" in l for l in log), log
+assert t["C01"][3] == 20.0 and t["S01"][3] >= 15.0, (t["C01"], t["S01"])            # rurales
+assert rotulos.urbanas({0: [([(0, 0), (0, 1), (1, 1)], True)]}) == set()             # en grados: no
+# 3.53.0 ROTULOSIG al día: con círculo y la misma altura, IGUAL que Enviar a IngeCAD (también
+# las urbanas, la lonja sin rótulo, la chacra y la chica suelta)
+assert rotulos.OpcionesRotulo().altura == "achicados"
+assert rotulosig("SHP-pueblo", "N", 20.0, rotulos.OpcionesRotulo(circulo="si")) == got
 print("TODO OK ROTULOS QGIS")

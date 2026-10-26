@@ -1,0 +1,50 @@
+GeoCAD - versión 3.51.0
+=======================
+RÓTULOS: EL CENTRO VISUAL COMO POSICIÓN ALTERNATIVA (ROTULOSIG y Enviar a
+IngeCAD). Hay que actualizar IngeCAD (QGIS sólo cambia de número).
+
+Pedido de Fernando (26/10/2026, con una captura de la 3.50.3)
+- La 001, una parcela en L que rodea la esquina de la 002, quedó con el
+  rótulo diminuto en el rincón interior, distinto de sus vecinas: «¿tiene
+  que ver que prevaleció el criterio de pegarse al epicentro? ¿no habría una
+  posibilidad de ubicación que analice todo el polígono y centrarla en el
+  espacio más holgado disponible?». Y después: «está bien el criterio
+  general; en este caso las etiquetas deberían haber sido iguales, al ser
+  distintas queda como un error [...] me parece bien lo del centro visual
+  como mecanismo alternativo de posición, siempre que se le asigne el mismo
+  tamaño que a las más cercanas».
+
+Qué cambia
+- Los rótulos de los polígonos siguen yendo primero al epicentro (el
+  centroide), según el eje más largo. Si ahí NO entran con la altura pedida,
+  se prueba el CENTRO VISUAL (el punto más alejado de los bordes, el lugar
+  más holgado del polígono) y el rótulo va ahí cuando entra con la altura
+  pedida o al menos un 20 % más grande que en el epicentro. Si no, se queda
+  achicado en el epicentro, como antes.
+- Así, una parcela en L, con un apéndice o con un hueco al lado del
+  centroide lleva el rótulo del mismo tamaño que sus vecinas, en su parte
+  amplia, en lugar de uno diminuto en el rincón.
+- En las parcelas regulares no cambia nada: el centro visual casi coincide
+  con el epicentro.
+- El giro sigue siendo el del eje más largo: si con ese giro el centro
+  visual no da más lugar (una ┴ con el texto a lo largo del palo), se queda
+  en el epicentro.
+- Con «Enviar a IngeCAD», lo que siga sin entrar ni así va a las categorías
+  de la 3.50.3 (intermedia y mínima), con sus vecinas.
+- La ventana de ROTULOSIG lo explica en «Polígonos cerrados».
+- Cambia una decisión de la 3.48.1 («achicado ahí mismo, no se corre»): ahora
+  se corre cuando el centro visual es claramente mejor.
+
+Por dentro
+- rotulos.py: en_poligono prueba el centro visual cuando el epicentro
+  achica; MEJORA_VISUAL = 1,20.
+- rotulos_ui.py: la nota de «Polígonos cerrados» lo dice.
+
+Pruebas
+- test_rotulos.py: una L con brazos de 25 y el centroide pegado al rincón:
+  con y sin círculo, en el centro visual con la altura pedida. La ┴ se queda
+  en el epicentro (según su eje no hay más lugar en la base). En el dibujo
+  de parcelas, la del hueco al lado del epicentro ahora va al centro visual
+  con la misma altura que las otras cuatro, sin pisar el hueco; «todos con
+  la altura del más chico» sigue igual.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

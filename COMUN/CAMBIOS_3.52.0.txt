@@ -1,0 +1,56 @@
+GeoCAD - versión 3.52.0
+=======================
+ENVIAR A INGECAD: LAS PARCELAS URBANAS, CON UNA SOLA ALTURA. Trae la 3.51.0
+(centro visual como posición alternativa) y la 3.51.1 (las que casi entran,
+con el 75 %): ver sus CAMBIOS. Hay que actualizar IngeCAD (QGIS sólo cambia
+de número).
+
+Pedido de Fernando (26/10/2026, con una captura del ejido de Corpus)
+- «Las parcelas urbanas se consideran de la misma categoría y generalmente
+  se imprimen a otra escala, por ello los números de las etiquetas y sus
+  círculos deben ser similares. Generalmente están situadas en
+  concentraciones homogéneas, no existen casos de parcelas urbanas aisladas.
+  La superficie máxima de una parcela de estas características es de 2 has.
+  Con estos datos, ¿es posible que hagas una caracterización que nos permita
+  homogeneizar las etiquetas de parcelas urbanas?»
+- Con la 3.51.1, en el ejido de Corpus los cuartos de manzana quedaban con
+  15 y los lotes angostos con 2,12.
+
+Qué cambia (sólo los rótulos que llegan con «Enviar a IngeCAD»)
+- PARCELA URBANA: un polígono de hasta 2 ha que tiene al menos 5 polígonos
+  de hasta 2 ha a menos de 150 m (está en una concentración). Una parcela
+  chica suelta, entre chacras, no es urbana.
+- Las urbanas de la capa llevan UNA sola altura de texto: la más grande que
+  entra en el 95 % de ellas (nunca más que la elegida). Cada una con el
+  círculo de su texto + 10 %, como las de la altura elegida.
+- El 5 % que no entra (lotes muy angostos) va con lo que entra en el más
+  chico de ellos, todos iguales, o sin rótulo si eso no llega a un tercio de
+  la altura urbana (el mensaje dice cuántas).
+- Las rurales siguen como en la 3.51.1: la altura elegida, el 75 % para las
+  que casi entran y la intermedia y la mínima para las demás, calculadas
+  sólo entre las rurales.
+- Hace falta un sistema de coordenadas en metros (como POSGAR o Campo
+  Inchauspe por fajas). Con coordenadas en grados no se puede medir la
+  superficie y no hay familia urbana.
+
+En Corpus (altura 20, campo PARC)
+- 848 urbanas: 806 con 3,29 (todas iguales) y 42 lotes muy angostos con 1,10.
+- 525 rurales: 479 con 20, 23 con 15 (entre ellas la 151 y la 153, chicas
+  pero sueltas), 18 con 8,97 y 5 con 6,05.
+
+Por dentro
+- rotulos.py: area_parcela(), urbanas() (superficie y concentración, con una
+  grilla de 150 m para no comparar todas con todas), altura_urbana();
+  URBANA_M2 = 20000, URBANA_RADIO = 150, URBANA_VECINAS = 5,
+  URBANA_CUBRE = 0,95.
+- herramientas_datos.place_labels: con «achicados», las urbanas por
+  altura_urbana y las demás por grupos_achicados.
+
+Pruebas
+- test_rotulos_qgis.py: un pueblo de 20 lotes chicos (18 de 30 x 40, uno de
+  12 x 40 y una lonja de 1,5 x 40), una chacra de 12 ha y una parcela de
+  3000 m² suelta: los 19 lotes con la misma altura (la del de 12 de ancho) y
+  su círculo; la lonja sin rótulo; la chacra con 20 y la chica suelta como
+  rural (15 o más); en grados, ninguna urbana.
+- Probado además sobre Corpus.shp (sólo lectura), con los números de arriba.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

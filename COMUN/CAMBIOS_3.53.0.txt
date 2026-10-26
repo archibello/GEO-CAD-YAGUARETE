@@ -1,0 +1,48 @@
+GeoCAD - versión 3.53.0
+=======================
+ROTULOSIG AL DÍA CON ENVIAR A INGECAD (IngeCAD). Trae la 3.51.0 a la 3.52.1
+(centro visual, casi enteras al 75 %, parcelas urbanas con una sola altura:
+ver sus CAMBIOS). Hay que actualizar IngeCAD (QGIS sólo cambia de número).
+
+Pedido de Fernando (26/10/2026)
+- Con la 3.52.1 probada («perfecto»): «antes de que hagas el respaldo,
+  ¿podrías trasladar toda esta programación de etiquetado a la herramienta
+  de etiquetado en IngeCAD? Estaríamos al día en los dos programas.»
+- Decidido: el reparto de tamaños de Enviar a IngeCAD reemplaza las dos
+  opciones de altura de ROTULOSIG; el círculo sigue con su casilla.
+
+Qué cambia (ROTULOSIG / SHPLABEL en IngeCAD)
+- Ya usaba el mismo motor (epicentro, centro visual, eje más largo, círculo
+  con su 10 %). Ahora también reparte los tamaños como Enviar a IngeCAD:
+  · los que entran, con la altura pedida;
+  · los que casi entran (75 % o más de la pedida), con el 75 %;
+  · las parcelas urbanas (hasta 2 ha, agrupadas), todas con una misma
+    altura, cada una con el círculo de su texto;
+  · las demás, en categorías iguales entre sí (intermedia y mínima);
+  · las muy chicas, sin rótulo (el aviso dice cuántas).
+- Se van las opciones «La altura pedida (los que no entran, achicados)» y
+  «Todos con la altura del más chico». En su lugar, el grupo «Altura de los
+  rótulos (como Enviar a IngeCAD)» con una nota que lo explica.
+- La casilla «Encerrar en un círculo» sigue: el reparto funciona con o sin
+  círculo. Líneas, puntos y «Si esos objetos ya tienen rótulos», igual.
+- Lo guardado con versiones anteriores sigue sirviendo («la pedida» o «la
+  del más chico» pasan a «como Enviar a IngeCAD»).
+- Con la misma capa, el mismo campo, la misma altura y el círculo, ROTULOSIG
+  y Enviar a IngeCAD dan exactamente los mismos rótulos.
+
+Por dentro
+- rotulos.py: ALTURA = {"achicados"}; OpcionesRotulo.altura = "achicados"
+  por defecto. El motor conserva «propia» y «menor» (las usan las pruebas).
+- rotulos_ui.py: sin el grupo de altura de antes; nota nueva; el texto de
+  la casilla del círculo.
+
+Pruebas
+- test_rotulos_qgis.py: sobre el pueblo de prueba, ROTULOSIG con círculo da
+  los mismos rótulos que Enviar a IngeCAD (urbanas, la lonja sin rótulo, la
+  chacra, la chica suelta); la primera sección, sin «la del más chico».
+- test_rotulos.py: lo guardado con «propia» o «menor» vuelve como «como
+  Enviar a IngeCAD».
+- La ventana de ROTULOSIG con PySide6 6.12, sin pantalla, con IngeCAD
+  0.6.8.2 y 0.6.7: sus grupos, sin las opciones viejas, con la nota, y lo
+  que devuelve.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

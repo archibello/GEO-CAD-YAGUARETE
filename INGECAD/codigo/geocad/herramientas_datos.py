@@ -404,7 +404,8 @@ def place_labels(document, key, tag: str, items, height, opciones=None, fids=Non
 
     3.50.1: con ``altura == "achicados"`` (Enviar a IngeCAD) los que entran
     quedan con su altura; los achicados, en categorías iguales entre sí
-    (rotulos.grupos_achicados: 3.50.2 media y mínima, 3.50.3 intermedia)."""
+    (rotulos.grupos_achicados: 3.50.2 media y mínima, 3.50.3 intermedia);
+    3.52.0: las urbanas (hasta 2 ha), con una sola altura (altura_urbana)."""
     from . import rotulos
     op = opciones or rotulos.OpcionesRotulo()
     medir = rotulos.medidor(document.doc)
@@ -434,7 +435,12 @@ def place_labels(document, key, tag: str, items, height, opciones=None, fids=Non
         ubicados.append((fid, text, rings, u))
         pedidas[fid] = h
     if op.altura == "achicados":
-        nuevos = rotulos.grupos_achicados([(fid, t, u) for fid, t, _r, u in ubicados], pedidas, medir)
+        # 3.52.0: las urbanas (hasta 2 ha, concentradas), una familia aparte con una sola altura
+        urbanas = rotulos.urbanas({fid: rings for fid, _t, rings, _u in ubicados})
+        nuevos = rotulos.grupos_achicados([(fid, t, u) for fid, t, _r, u in ubicados
+                                           if fid not in urbanas], pedidas, medir)
+        nuevos.update(rotulos.altura_urbana([(fid, t, u) for fid, t, _r, u in ubicados
+                                             if fid in urbanas], pedidas))
         omitted += sum(1 for v in nuevos.values() if v is None)      # 3.50.3: no se leerían
         ubicados = [(fid, text, rings, nuevos.get(fid, u)) for fid, text, rings, u in ubicados
                     if nuevos.get(fid, u) is not None]

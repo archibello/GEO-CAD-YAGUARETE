@@ -77,8 +77,22 @@ assert abs(uC.giro - 20) < 1e-6 and uC.altura == 1.0
 tee = [(0, 0), (20, 0), (20, 6), (11, 6), (11, 40), (9, 40), (9, 6), (0, 6)]   # ┴: el centroide en el palo
 ct = R.centroide(tee)
 assert R._dentro(ct, tee) and 9 < ct[0] < 11 and ct[1] > 6
+# 3.51.0: el centro visual (en la base) no sirve: según el eje (vertical) ahí entra más chico
+# que en el palo; se queda en el epicentro
 u = R.en_poligono("00001234", 2.0, tee, [], med)
 assert cerca(u.punto, ct, 1e-6) and u.altura < 2.0 and abs(u.giro - R.eje_mas_largo(tee)) < 1e-6
+# 3.51.0 (Fernando, la 001): parcela en L con el centroide en el rincón interior. Antes
+# quedaba diminuta en el rincón; ahora, en el lugar más holgado y con la altura pedida
+# (igual que sus vecinas); con círculo, igual
+ele = [(0, 0), (60, 0), (60, 60), (35, 60), (35, 25), (0, 25)]               # brazos de 25
+ce = R.centroide(ele)
+assert R._dentro(ce, ele) and R._dist_borde(ce, [ele]) < 3, ce          # el centroide, pegado al rincón
+for circ in (False, True):
+    u = R.en_poligono("001", 5.0, ele, [], med, circ)
+    assert u.altura == 5.0 and not cerca(u.punto, ce, 1.0), (circ, u)
+    assert cerca(u.punto, R.centro_visual(ele)[:2], 1e-6), (circ, u.punto)
+# una mejora chica (menos del 20 %) no lo mueve del epicentro
+assert R.MEJORA_VISUAL == 1.20
 # 3.26.3: el achicado ocupa el 80 % de lo que entraría justo
 u = R.en_poligono("0016" * 6, 2.5, angosta, [], med)
 justo = R._escala(u.punto, med("0016" * 6, 2.5) + 2 * R.MARGEN * 2.5, 2.5 * (1 + 2 * R.MARGEN), u.giro, angosta, [])
@@ -132,9 +146,14 @@ print("ok líneas (según el eje, nunca cabeza abajo, sobre/arriba/abajo) y punt
 assert R.leer_opciones() == R.OpcionesRotulo()
 R.guardar_opciones(R.OpcionesRotulo("arriba", "desde"))
 assert R.leer_opciones() == R.OpcionesRotulo("arriba", "desde")
-todo = R.OpcionesRotulo("arriba", "desde", circulo="si", altura="menor", anteriores="conservar")
+todo = R.OpcionesRotulo("arriba", "desde", circulo="si", anteriores="conservar")
 R.guardar_opciones(todo)                                        # 3.48.0 y 3.48.1
-assert R.leer_opciones() == todo
+assert R.leer_opciones() == todo and todo.altura == "achicados"
+# 3.53.0: la altura es siempre como Enviar a IngeCAD; lo guardado antes («propia», «menor»)
+# vuelve así, sin romper nada
+for vieja in ("propia", "menor"):
+    R.guardar_opciones(R.OpcionesRotulo("arriba", "desde", circulo="si", altura=vieja))
+    assert R.leer_opciones().altura == "achicados", vieja
 # lo guardado antes de la 3.48.1 (con «poligono» A-E): se ignora, sin romper nada
 R._archivo().write_text('{"poligono": "D", "linea": "abajo", "punto": 3}', encoding="utf-8")
 assert R.leer_opciones() == R.OpcionesRotulo("abajo", "centro")
@@ -162,10 +181,15 @@ assert n == 5 and len(rot) == 5 and cmd.omitidos == 0
 alturas = []
 for i, t in enumerate(rot):     # parcelas de 20 x 25: en el epicentro, según el eje (vertical)
     assert t.dxf.halign == 1 and t.dxf.valign == 2 and t.dxf.rotation == 90
-    assert cerca(tuple(t.dxf.align_point)[:2], (5_430_000 + i * 30 + 10, 6_300_012.5), 1e-6)
+    epi = (5_430_000 + i * 30 + 10, 6_300_012.5)
+    assert cerca(tuple(t.dxf.align_point)[:2], epi, 1e-6) == (i != 2), (i, t.dxf.align_point)
     alturas.append(t.dxf.height)
-# la 2 tiene un hueco al lado del epicentro: se achica ahí, no se corre (3.48.1)
-assert alturas[2] < 2.0 and all(h == 2.0 for i, h in enumerate(alturas) if i != 2)
+# la 2 tiene un hueco al lado del epicentro: en la 3.48.1 se achicaba ahí; desde la 3.51.0
+# va al centro visual, con la misma altura que sus vecinas y sin pisar el hueco
+assert all(h == 2.0 for h in alturas), alturas
+t2 = rot[2]; hueco2 = [(5_430_065, 6_300_005), (5_430_070, 6_300_005), (5_430_070, 6_300_010), (5_430_065, 6_300_010)]
+assert R.entra(R._caja(tuple(t2.dxf.align_point)[:2], med(t2.dxf.text, 2.0), 2.0, 90),
+               rect(5_430_070, 6_300_012.5, 20, 25, 0), [hueco2])
 # altura enorme: todos achicados en su epicentro, ninguno omitido
 cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 30.0, R.OpcionesRotulo())
 hist.execute(cmd)
@@ -176,7 +200,7 @@ assert [t.dxf.height for t in rotulos("parcelas")] == alturas                # u
 # 3.48.1: todos con la altura del más chico
 cmd, n, old = HD.label_commands(doc, "parcelas", "PARTIDA", 2.0, R.OpcionesRotulo(altura="menor"))
 hist.execute(cmd)
-assert n == 5 and {t.dxf.height for t in rotulos("parcelas")} == {alturas[2]}
+assert n == 5 and {t.dxf.height for t in rotulos("parcelas")} == {min(alturas)}
 hist.undo()
 # 3.48.1: conservar los anteriores, sumando los nuevos
 cmd, n, old = HD.label_commands(doc, "parcelas", "TITULAR", 2.0, R.OpcionesRotulo(anteriores="conservar"))

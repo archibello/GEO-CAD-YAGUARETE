@@ -1,0 +1,37 @@
+GeoCAD - versión 3.52.1
+=======================
+ENVIAR A INGECAD: UNA SOLA ALTURA URBANA, CON UNA REDUCCIÓN MÍNIMA.
+Corrección de Fernando a la 3.52.0, que trae (y con ella la 3.51.0 y la
+3.51.1: ver sus CAMBIOS). Hay que actualizar IngeCAD (QGIS sólo cambia de
+número).
+
+Pedido de Fernando (26/10/2026, con una captura de la manzana 074 de Corpus)
+- Lotes de unos 300 m² con 1,10 al lado de otros con 3,29; la 015 y la 017,
+  agregadas a mano con 3,29, entraban: «en esta manzana se optó por una
+  disminución del tamaño de las etiquetas, sin embargo las mismas 015 y 017
+  entran perfectamente dentro del polígono; en casos como estos deberíamos
+  adoptar un criterio especial: si hay una reducción, debería ser mínima para
+  que la etiqueta sea similar a las más cercanas».
+- Medido: de las 42 urbanas que no entraban con 3,29, 38 admitían entre
+  3,16 y 3,29, y quedaban con 1,10 por un solo retazo.
+
+Qué cambia (sólo las parcelas urbanas que llegan con «Enviar a IngeCAD»)
+- La altura urbana ya no deja afuera a los lotes que no entran por poco:
+  es la que entra en TODAS las urbanas salvo las de verdad chicas (las que
+  no llegan al 75 % de la altura que entra en el 95 % de ellas). Todas las
+  urbanas quedan con el mismo número, cada una con el círculo de su texto.
+- Las de verdad chicas van con lo que entra en la más chica de ellas, o sin
+  rótulo si no se leería (la regla del tercio), como antes.
+- En Corpus: 844 urbanas con 3,16 (en la 3.52.0, 806 con 3,29 y 42 con
+  1,10) y 4 con 1,10. Las rurales no cambian.
+
+Por dentro
+- rotulos.py: altura_urbana: la del 95 % como referencia y la altura urbana
+  = la menor de las que admiten al menos el 75 % (CASI_ENTERA) de ella.
+
+Pruebas
+- test_rotulos_qgis.py: un pueblo de 40 lotes de 30 x 40, tres de 12 de
+  ancho, uno de 11,5 y una lonja de 1,5: los 44 lotes con la misma altura (la
+  del de 11,5, que no entra por poco) y su círculo; la lonja sin rótulo.
+- Probado además sobre Corpus.shp (sólo lectura).
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

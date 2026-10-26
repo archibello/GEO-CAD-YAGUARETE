@@ -10,6 +10,9 @@ LARGO del polígono. Si con la altura pedida no entra, se achica ahí mismo.
 Sólo si el centroide cae afuera (polígonos en U, en L) o en un hueco, va
 al centro visual (el punto más alejado de los bordes, como QGIS). Ya no hay
 opciones A-E (3.26.0 a 3.48.0).
+3.51.0 (Fernando, una parcela en L con el centroide en el rincón): si en el
+epicentro se achica, va al centro visual cuando ahí entra con la altura
+pedida o al menos un 20 % más grande (MEJORA_VISUAL).
 CÍRCULO (3.48.0), sólo en polígonos: el rótulo dentro de un círculo de
 diámetro = la diagonal del texto + 10 %, y el círculo dentro del polígono
 usando como mucho el 90 % del lugar hasta el borde; si no entra, el
@@ -17,7 +20,11 @@ círculo más grande que entra ahí y el texto achicado adentro.
 LÍNEAS: según el eje de la línea (el tramo donde cae la mitad del largo),
 nunca cabeza abajo; en la mitad, sobre la línea o por arriba / por debajo.
 PUNTOS: centrado en el punto, o empezando en el punto a media altura.
-ALTURA (3.48.1): la pedida, o todos con la del más chico de esa vez.
+ALTURA (3.53.0, Fernando: «trasladar toda esta programación de etiquetado a
+la herramienta de etiquetado en IngeCAD»): siempre como Enviar a IngeCAD
+(«achicados»: casi enteras al 75 %, urbanas con una sola altura, intermedia
+y mínima). «La pedida» y «todos con la del más chico» (3.48.1) ya no se
+eligen; el motor las conserva (pruebas).
 ANTERIORES (3.48.1): reemplazar los rótulos de esos objetos, o conservarlos.
 
 Todo es geometría plana, sin Qt; se prueba sin IngeCAD abierto."""
@@ -36,8 +43,7 @@ LINEA = {"sobre": "Sobre la línea", "arriba": "Por arriba de la línea",
          "abajo": "Por debajo de la línea"}
 PUNTO = {"centro": "Centrado en el punto", "desde": "Empezando en el punto, a media altura"}
 CIRCULO = {"no": "Sin círculo", "si": "Con círculo (sólo polígonos)"}
-ALTURA = {"propia": "La altura pedida (los que no entran, achicados)",
-          "menor": "Todos con la altura del más chico"}
+ALTURA = {"achicados": "Como Enviar a IngeCAD"}     # 3.53.0: la única que se elige
 ANTERIORES = {"reemplazar": "Reemplazar los rótulos anteriores de esos objetos",
               "conservar": "Conservar los anteriores y sumar los nuevos"}
 
@@ -46,6 +52,12 @@ ESCALA_MINIMA = 0.05    # más chico que 1/20 de la altura pedida no se lee: se 
 LLENADO = 0.80          # un rótulo achicado ocupa el 80 % del lugar donde entra (3.26.3, Fernando)
 AIRE_CIRCULO = 1.10     # el círculo: la diagonal del texto + 10 % (3.48.0, Fernando)
 USO_CIRCULO = 0.90      # el círculo usa como mucho el 90 % del lugar hasta el borde
+URBANA_M2 = 20000.0     # 3.52.0: hasta 2 ha es una parcela urbana (Fernando)
+URBANA_CUBRE = 0.95     # 3.52.0: la altura urbana entra en el 95 % de las urbanas
+URBANA_RADIO = 150.0    # 3.52.0: «no existen parcelas urbanas aisladas»: a menos de 150 m...
+URBANA_VECINAS = 5      # ... tiene al menos 5 parcelas de hasta 2 ha
+CASI_ENTERA = 0.75      # 3.51.1: las que admiten el 75 % de la pedida quedan con el 75 %
+MEJORA_VISUAL = 1.20    # 3.51.0: el centro visual, si ahí entra al menos un 20 % más grande
 ILEGIBLE_INTERMEDIA = 1 / 3   # 3.50.3: más chico que 1/3 de la intermedia, sin rótulo
 
 
@@ -54,14 +66,14 @@ class OpcionesRotulo:
     linea: str = "sobre"
     punto: str = "centro"
     circulo: str = "no"
-    altura: str = "propia"
+    altura: str = "achicados"
     anteriores: str = "reemplazar"
 
     def validas(self) -> "OpcionesRotulo":
         def una(valor, permitidas, defecto):
             return valor if valor in permitidas else defecto
         return OpcionesRotulo(una(self.linea, LINEA, "sobre"), una(self.punto, PUNTO, "centro"),
-                              una(self.circulo, CIRCULO, "no"), una(self.altura, ALTURA, "propia"),
+                              una(self.circulo, CIRCULO, "no"), una(self.altura, ALTURA, "achicados"),
                               una(self.anteriores, ANTERIORES, "reemplazar"))
 
 
@@ -386,10 +398,15 @@ def en_poligono(texto: str, altura: float, externo, huecos, medir,
 
     p = epicentro(externo, huecos)
     u = en(p)
-    if u is None:
+    if u is None or u.altura < altura * (1 - 1e-9):
+        # 3.51.0: si en el epicentro se achica, el centro visual (lo más holgado
+        # del polígono) cuando ahí entra entero o al menos MEJORA_VISUAL más grande
         cx, cy, _r = centro_visual(externo, huecos)
         if (cx, cy) != p:
-            u = en((cx, cy))
+            v = en((cx, cy))
+            if v is not None and (u is None or v.altura >= altura * (1 - 1e-9)
+                                  or v.altura >= u.altura * MEJORA_VISUAL):
+                u = v
     return u
 
 
@@ -434,18 +451,31 @@ def grupos_achicados(items, pedidas: dict, medir) -> dict:
     (en la más holgada); la INTERMEDIA queda a mitad de camino entre las dos
     (media geométrica) y la toman todos donde entra. Los demás van con lo que
     entra en el más chico de ellos, y sin rótulo si eso no llega a
-    ILEGIBLE_INTERMEDIA de la intermedia."""
-    chicos = [(fid, t, u) for fid, t, u in items if u.altura < pedidas[fid] * (1 - 1e-9)]
-    if not chicos:
-        return {}
-    circulo = all(u.circulo for _f, _t, u in chicos)
+    ILEGIBLE_INTERMEDIA de la intermedia.
+    3.51.1 (Fernando: «una reducción no tan extrema» al lado de las de la
+    altura pedida): las que admiten al menos CASI_ENTERA de la pedida quedan
+    con ese porcentaje justo, cada una con su círculo (como las que entran);
+    las categorías de arriba son para las demás."""
+    out = {}
+    todos = [(fid, t, u) for fid, t, u in items if u.altura < pedidas[fid] * (1 - 1e-9)]
+    if not todos:
+        return out
+    circulo = all(u.circulo for _f, _t, u in todos)
     # lugar: el radio que admite la parcela (con círculo) o la altura que entró;
     # k: lo que ocupa (radio o altura) por unidad de altura del texto
-    lugar = {fid: u.circulo if circulo else u.altura for fid, _t, u in chicos}
+    lugar = {fid: u.circulo if circulo else u.altura for fid, _t, u in todos}
     k = {fid: math.hypot(medir(t, 1.0), 1.0) * AIRE_CIRCULO / 2 if circulo else 1.0
-         for fid, t, _u in chicos}
-    chicos.sort(key=lambda x: lugar[x[0]])
-    out = {}
+         for fid, t, _u in todos}
+    todos.sort(key=lambda x: lugar[x[0]])
+    chicos = []
+    for fid, t, u in todos:
+        casi = pedidas[fid] * CASI_ENTERA
+        if u.altura >= casi * (1 - 1e-9):
+            out[fid] = replace(u, altura=casi, circulo=u.circulo * casi / u.altura if u.circulo else None)
+        else:
+            chicos.append((fid, t, u))
+    if not chicos:
+        return out
 
     def alto(grupo):
         return min(lugar[f] for f, _t, _u in grupo) / max(k[f] for f, _t, _u in grupo)
@@ -455,11 +485,11 @@ def grupos_achicados(items, pedidas: dict, medir) -> dict:
         for fid, _t, u in grupo:
             out[fid] = replace(u, altura=altura, circulo=altura * kg if circulo else u.circulo)
 
-    n = len(chicos)
+    n = len(todos)            # la intermedia, con todos los achicados (como en la 3.51.0)
     if n == 1:
         poner(chicos, alto(chicos))
         return out
-    intermedia = math.sqrt(alto(chicos[:n // 2]) * alto(chicos[n // 2:]))
+    intermedia = math.sqrt(alto(todos[:n // 2]) * alto(todos[n // 2:]))
     kmax = max(k.values())
     entran = [x for x in chicos if lugar[x[0]] >= intermedia * kmax * (1 - 1e-9)]
     resto = [x for x in chicos if lugar[x[0]] < intermedia * kmax * (1 - 1e-9)]
@@ -471,6 +501,80 @@ def grupos_achicados(items, pedidas: dict, medir) -> dict:
             out.update({fid: None for fid, _t, _u in resto})
         else:
             poner(resto, minima)
+    return out
+
+
+def area_parcela(anillos) -> float:
+    """La superficie del polígono: el anillo cerrado más grande menos sus huecos
+    (en las unidades del dibujo al cuadrado). 0 si no es un polígono."""
+    cerrados = [list(p) for p, c in anillos if c and len(p) >= 3 and abs(_area(p)) > 0]
+    if not cerrados:
+        return 0.0
+    externo = max(cerrados, key=lambda r: abs(_area(r)))
+    return abs(_area(externo)) - sum(abs(_area(r)) for r in cerrados
+                                     if r is not externo and _dentro(r[0], externo))
+
+
+def urbanas(anillos_por_fid: dict) -> set:
+    """3.52.0 (Fernando: «la superficie máxima de una parcela de estas
+    características es de 2 has» y «generalmente están situadas en
+    concentraciones homogéneas, no existen casos de parcelas urbanas
+    aisladas»): los fids de los polígonos de hasta URBANA_M2 que tienen al
+    menos URBANA_VECINAS polígonos así a menos de URBANA_RADIO (entre los
+    centros de sus rectángulos). Con coordenadas geográficas (grados) no se
+    puede medir: ninguno."""
+    centros = {}
+    for fid, anillos in anillos_por_fid.items():
+        puntos = [q for p, _c in anillos for q in p]
+        if not puntos or all(abs(x) <= 180 and abs(y) <= 90 for x, y in puntos):
+            continue
+        if 0 < area_parcela(anillos) <= URBANA_M2:
+            xs, ys = [q[0] for q in puntos], [q[1] for q in puntos]
+            centros[fid] = ((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2)
+    celdas: dict = {}
+    for fid, (x, y) in centros.items():
+        celdas.setdefault((int(x // URBANA_RADIO), int(y // URBANA_RADIO)), []).append(fid)
+    out = set()
+    for fid, (x, y) in centros.items():
+        cx, cy = int(x // URBANA_RADIO), int(y // URBANA_RADIO)
+        cerca = sum(1 for i in (-1, 0, 1) for j in (-1, 0, 1) for otro in celdas.get((cx + i, cy + j), ())
+                    if otro != fid and math.hypot(centros[otro][0] - x, centros[otro][1] - y) <= URBANA_RADIO)
+        if cerca >= URBANA_VECINAS:
+            out.add(fid)
+    return out
+
+
+def altura_urbana(items, pedidas: dict) -> dict:
+    """3.52.0 (Fernando: «las parcelas urbanas se consideran de la misma
+    categoría [...] los números de las etiquetas y sus círculos deben ser
+    similares»). ``items``: [(fid, texto, Ubicacion)] de las urbanas, ya
+    ubicadas con la altura pedida. Todas con UNA altura de texto, cada una
+    con el círculo de su texto. Las que no entran, con lo que entra en la más
+    chica de ellas, o sin rótulo (None) si eso no llega a ILEGIBLE_INTERMEDIA
+    de la altura urbana. Devuelve {fid: Ubicacion o None}.
+    3.52.0: la altura urbana, la más grande que entra en URBANA_CUBRE de
+    ellas (nunca más que la pedida).
+    3.52.1 (Fernando: «si hay una reducción, debería ser mínima para que la
+    etiqueta sea similar a las más cercanas»): la que entra en TODAS las que
+    admiten al menos CASI_ENTERA de esa; sólo las de verdad chicas quedan
+    afuera (antes, lotes casi enteros quedaban con la del retazo más chico)."""
+    if not items:
+        return {}
+    # lo que admite cada una (la pedida, si entró entera: no hace falta más)
+    admite = {fid: min(u.altura, pedidas[fid]) for fid, _t, u in items}
+    orden = sorted(admite.values())
+    tipica = orden[min(len(orden) - 1, int(len(orden) * (1 - URBANA_CUBRE)))]
+    urbana = min(a for a in orden if a >= tipica * CASI_ENTERA * (1 - 1e-9))
+
+    def con(u, altura):
+        return replace(u, altura=altura, circulo=u.circulo * altura / u.altura if u.circulo else None)
+
+    out = {fid: con(u, urbana) for fid, _t, u in items if admite[fid] >= urbana * (1 - 1e-9)}
+    resto = [(fid, u) for fid, _t, u in items if fid not in out]
+    if resto:
+        minima = min(admite[fid] for fid, _u in resto)
+        for fid, u in resto:
+            out[fid] = None if minima < urbana * ILEGIBLE_INTERMEDIA else con(u, minima)
     return out
 
 
