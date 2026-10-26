@@ -1,0 +1,73 @@
+GeoCAD - versión 3.50.1
+=======================
+ENVIAR A INGECAD SIMPLE (QGIS -> IngeCAD). Correcciones de Fernando a la
+3.50.0, que trae (rótulos y simbología de QGIS como en IngeCAD: ver
+CAMBIOS_3.50.0.txt). Hay que actualizar los DOS lados a la 3.50.1.
+
+Pedido de Fernando (26/10/2026)
+- «1- me gustaría que dejes dos opciones, exportar lo seleccionado y
+  exportar la capa entera; 2- que nos permita elegir la altura de los textos
+  y adaptar el círculo a los mismos con un 10% de separación en diagonal;
+  3- que los textos que haya que achicar para que entren en las parcelas más
+  pequeñas tomen la altura del texto más chico dentro de su círculo
+  correspondiente, que a su vez será un 10% menor que el espacio dentro del
+  polígono; 4- todas las demás opciones de enviar se supriman; 5- que sólo
+  quede enviar a IngeCAD; 6- que el resto de las opciones, que son sólo dos,
+  se desplieguen en el cuadro de diálogo, no en el menú.» Y: «sacar modo de
+  configuración común», «sólo dejar enviar a IngeCAD».
+- Decidido: capa entera = la capa activa; sólo los achicados toman la altura
+  del más chico; capas, colores y temático van siempre; rótulos todos.
+
+Qué cambia
+- Menú GeoCAD de QGIS: en «Puente con IngeCAD» queda sólo «Enviar a
+  IngeCAD...». Se fueron «(modo de la configuración común)» y «los objetos
+  seleccionados», «lo que está en pantalla», «las capas visibles
+  completas» y «la capa activa completa».
+- La ventana «Enviar a IngeCAD» tiene sólo:
+  · Lo seleccionado / La capa activa entera;
+  · Altura de los textos (en unidades del dibujo).
+  Recuerda lo elegido la última vez. Se fueron la escala, «capas y
+  colores», «qué rótulos», «no volver a preguntar».
+- Siempre: capas (LAYER_CODE), colores y temático (como SHPTHEME); todos los
+  rótulos, con el texto de la etiqueta de QGIS de la capa.
+- Rótulos en IngeCAD, con el motor de ROTULOSIG:
+  · polígonos: siempre con círculo; el círculo = la diagonal del texto
+    + 10 %; los que entran, con la altura elegida;
+  · los que no entran: el círculo al 90 % del lugar dentro de su parcela, y
+    TODOS los achicados con la altura del más chico de ellos, cada uno
+    dentro de su círculo (los que entraban no cambian);
+  · líneas y puntos, como ROTULOSIG (sin círculo), con la altura elegida.
+  No hace falta tocar antes las opciones de ROTULOSIG: lo que pide la
+  ventana de envío manda (líneas y puntos sí siguen su elección guardada).
+- Configuración común: ya no muestra las opciones de envío (qué manda el
+  botón, capas y colores, rótulos, cuáles, símbolos, achicar, preguntar).
+  «Escala para pegar tablas en IngeCAD» sigue (la usa PEGARTABLA), con su
+  nombre de verdad.
+- Lo guardado con versiones anteriores sigue sirviendo: «pantalla» o
+  «completa» vuelven a «Lo seleccionado».
+
+Por dentro
+- QGIS envio_ui.py reescrita (MODOS, from_config, remember, EnvioDialog,
+  ask). plugin.py: un solo «send»; send_default arma el envío;
+  send_selected/screen/visible/active y _send_mode se fueron.
+  presentacion.of_layer(altura=...) manda esa altura en cada rótulo y
+  «rotulos_opciones» {"circulo": "si", "altura": "achicados"}.
+- Núcleo config.py: OCULTOS (envio_predeterminado = seleccion|capa,
+  envio_altura), fuera de Configuración común; las demás opciones de envío
+  se fueron.
+- IngeCAD herramientas_datos.place_labels: altura "achicados" (sólo los
+  achicados, con la del más chico, con su lugar y su círculo); estilo.py
+  usa «rotulos_opciones» sobre las opciones guardadas de ROTULOSIG.
+
+Pruebas
+- test_rotulos_qgis.py: lotes grande / angosto / más angosto con la altura
+  elegida: el grande con 5 y su círculo = diagonal + 10 %; los dos achicados
+  con la misma altura (la del más chico), cada círculo al 90 % de su lugar y
+  en su epicentro.
+- test_presentacion.py: la altura elegida y «rotulos_opciones»; la ventana
+  con sólo sus dos opciones y la altura, recordadas; nada de envío en
+  Configuración común; lo guardado antes vuelve a «Lo seleccionado».
+- test_qgis_lado.py: un solo «Enviar a IngeCAD» en el menú; lo seleccionado
+  y la capa activa entera (sin capa activa, avisa).
+- test_modulos.py: el menú con «Enviar a IngeCAD...».
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

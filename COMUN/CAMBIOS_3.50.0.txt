@@ -1,0 +1,65 @@
+GeoCAD - versión 3.50.0
+=======================
+RÓTULOS Y SIMBOLOGÍA DE QGIS COMO EN INGECAD (QGIS -> IngeCAD). Los rótulos
+que llegan de QGIS se ubican con el motor de ROTULOSIG: sin disparidades.
+Hay que actualizar los DOS lados (QGIS e IngeCAD) a la 3.50.0.
+
+Pedido de Fernando (26/10/2026)
+- «Cuando enviamos desde QGIS a IngeCAD me gustaría aplicar el mismo método
+  que usamos en IngeCAD para agregar etiquetas y la simbología para que no
+  haya disparidades.» Decidido: motor de ROTULOSIG con sus últimas opciones;
+  igualar puntos y colores, el círculo y el mapa temático (SHPTHEME). «No
+  olvidar que las etiquetas sobre líneas están centradas sobre la línea a
+  mitad del texto.» Categorizada/graduada -> como SHPTHEME; puntos sin el
+  símbolo de QGIS.
+
+Qué cambia
+- Enviar a IngeCAD: QGIS ya no ubica los rótulos. Manda el texto de cada
+  etiqueta (el campo o la expresión) y su altura a la escala elegida, e
+  IngeCAD los ubica con el mismo motor de ROTULOSIG y las últimas opciones
+  elegidas en su ventana:
+  · polígonos en el epicentro y según el eje más largo, achicados ahí si no
+    entran; con «Encerrar en un círculo», el círculo de ROTULOSIG (no el
+    fondo de la etiqueta de QGIS);
+  · líneas centradas sobre la línea, en la mitad, a media altura del texto
+    (o por arriba / por debajo, si así está elegido);
+  · puntos centrados en el punto o empezando en el punto;
+  · «Todos con la altura del más chico», si está elegida.
+  Quedan iguales a un ROTULOSIG corrido en IngeCAD con la misma altura, en
+  la capa <conexión>-ROTULOS; QUITARROTULOS y ROTULOSIG los tratan igual.
+  Siguen valiendo «cuáles rótulos» (los que QGIS muestra, toda la zona,
+  todos, ninguno) y la escala.
+- Mapa temático: una capa categorizada o graduada en QGIS llega como
+  SHPTHEME: cada objeto con el color de su clase en QGIS, la leyenda (color
+  -> valor) en la línea de comandos, y SHPTHEMEOFF la quita.
+- Puntos: llegan como en IngeCAD (POINT), sin el bloque del símbolo de QGIS.
+- La ventana «Enviar a IngeCAD» ya no tiene «Puntos con su símbolo de QGIS»
+  ni «Rótulos y símbolos: tamaño real / achicarlos hasta su parcela» (el
+  achicado lo hace ROTULOSIG). Una nota dice que IngeCAD los ubica como
+  ROTULOSIG.
+- Con un QGIS anterior a la 3.50.0, IngeCAD sigue recibiendo los rótulos ya
+  ubicados como antes.
+
+Por dentro
+- QGIS presentacion.py: of_layer(sig=True) manda «rotulos_sig» {fid: [texto,
+  altura]}, «campo_rotulo» y «tematico» (tematico(): categorías o rangos
+  con su color y texto); sin símbolos ni parcelas. plugin.py lo usa siempre;
+  envio_ui.py sin «simbolos» ni «ajustar».
+- IngeCAD herramientas_datos.py: place_labels(), el motor de ROTULOSIG sobre
+  (fid, texto, anillos) ya armados y con altura por objeto; label_commands
+  (ROTULOSIG) lo usa.
+- IngeCAD estilo.py: presentacion(..., features) y sig_label_commands()
+  arman los anillos desde la geometría que llega y llaman a place_labels
+  con rotulos.leer_opciones(). tools.py: el mensaje de conexión (y al
+  ampliar) con el temático y los rótulos ubicados como ROTULOSIG.
+
+Pruebas
+- test_rotulos_qgis.py (nueva): parcelas con círculo y altura del más chico,
+  calles y postes mandados desde QGIS quedan IGUALES a ROTULOSIG corrido en
+  IngeCAD (texto, punto, altura, giro, alineación, círculo, XDATA); el
+  temático con su leyenda y SHPTHEMEOFF; puntos sin símbolo; ampliar la
+  conexión; un QGIS anterior sigue igual.
+- test_presentacion.py: rotulos_sig (campo y expresión, sólo los que QGIS
+  muestra), sin símbolos, temático categorizado y graduado (con QGIS 3.40),
+  la ventana de envío sin las opciones que se fueron.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

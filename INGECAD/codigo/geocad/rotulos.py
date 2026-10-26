@@ -28,7 +28,7 @@ import json
 import math
 import os
 import tempfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -46,6 +46,7 @@ ESCALA_MINIMA = 0.05    # más chico que 1/20 de la altura pedida no se lee: se 
 LLENADO = 0.80          # un rótulo achicado ocupa el 80 % del lugar donde entra (3.26.3, Fernando)
 AIRE_CIRCULO = 1.10     # el círculo: la diagonal del texto + 10 % (3.48.0, Fernando)
 USO_CIRCULO = 0.90      # el círculo usa como mucho el 90 % del lugar hasta el borde
+ILEGIBLE_INTERMEDIA = 1 / 3   # 3.50.3: más chico que 1/3 de la intermedia, sin rótulo
 
 
 @dataclass
@@ -415,6 +416,62 @@ def en_linea(altura: float, puntos, modo: str) -> Optional[Ubicacion]:
 
 def en_punto(altura: float, punto, modo: str) -> Ubicacion:
     return Ubicacion(tuple(punto), altura, 0.0, "MIDDLE_LEFT" if modo == "desde" else "MIDDLE_CENTER")
+
+
+def grupos_achicados(items, pedidas: dict, medir) -> dict:
+    """Los rótulos que no entraron con la altura pedida, en categorías iguales
+    entre sí (Enviar a IngeCAD). ``items``: [(fid, texto, Ubicacion)];
+    ``pedidas``: {fid: altura pedida}. Devuelve {fid: Ubicacion nueva, o None
+    = sin rótulo}.
+
+    3.50.2 (Fernando: «todas las etiquetas y sus círculos, reducidos, deben
+    ser iguales»): en cada categoría el mismo texto y el mismo círculo (la
+    diagonal del texto más ancho + 10 %), el que entra en la parcela más
+    chica de la categoría.
+    3.50.3 (Fernando: «una categoría intermedia que se distribuya por esta
+    familia de polígonos semejantes»): ordenados por su lugar y partidos por
+    la mediana, la «mínima» (lo que entra en la mitad más chica) y la «media»
+    (en la más holgada); la INTERMEDIA queda a mitad de camino entre las dos
+    (media geométrica) y la toman todos donde entra. Los demás van con lo que
+    entra en el más chico de ellos, y sin rótulo si eso no llega a
+    ILEGIBLE_INTERMEDIA de la intermedia."""
+    chicos = [(fid, t, u) for fid, t, u in items if u.altura < pedidas[fid] * (1 - 1e-9)]
+    if not chicos:
+        return {}
+    circulo = all(u.circulo for _f, _t, u in chicos)
+    # lugar: el radio que admite la parcela (con círculo) o la altura que entró;
+    # k: lo que ocupa (radio o altura) por unidad de altura del texto
+    lugar = {fid: u.circulo if circulo else u.altura for fid, _t, u in chicos}
+    k = {fid: math.hypot(medir(t, 1.0), 1.0) * AIRE_CIRCULO / 2 if circulo else 1.0
+         for fid, t, _u in chicos}
+    chicos.sort(key=lambda x: lugar[x[0]])
+    out = {}
+
+    def alto(grupo):
+        return min(lugar[f] for f, _t, _u in grupo) / max(k[f] for f, _t, _u in grupo)
+
+    def poner(grupo, altura):
+        kg = max(k[f] for f, _t, _u in grupo)
+        for fid, _t, u in grupo:
+            out[fid] = replace(u, altura=altura, circulo=altura * kg if circulo else u.circulo)
+
+    n = len(chicos)
+    if n == 1:
+        poner(chicos, alto(chicos))
+        return out
+    intermedia = math.sqrt(alto(chicos[:n // 2]) * alto(chicos[n // 2:]))
+    kmax = max(k.values())
+    entran = [x for x in chicos if lugar[x[0]] >= intermedia * kmax * (1 - 1e-9)]
+    resto = [x for x in chicos if lugar[x[0]] < intermedia * kmax * (1 - 1e-9)]
+    if entran:
+        poner(entran, intermedia)
+    if resto:
+        minima = alto(resto)
+        if entran and minima < intermedia * ILEGIBLE_INTERMEDIA:
+            out.update({fid: None for fid, _t, _u in resto})
+        else:
+            poner(resto, minima)
+    return out
 
 
 def ubicar(texto: str, altura: float, anillos, op: OpcionesRotulo, medir) -> Optional[Ubicacion]:

@@ -260,7 +260,7 @@ class ConnectTool(Tool):
                                name=info["key_name"])
         link = enlace.Link(key, info["path"], info["kind_code"], info["schema"], total,
                            fmt=info["fmt"], table=info["table"])
-        pres = estilo.presentacion(document, link, pres_qgis, [f[0] for f in features])
+        pres = estilo.presentacion(document, link, pres_qgis, [f[0] for f in features], features)
         command, n, _ = enlace.build_connect(link, features, skipped, pres)
         partial = len(features) < total - skipped
         lines = [f"Conectada {info['name']} -> capa {key}: {len(features)} de {total} "
@@ -286,8 +286,8 @@ class ConnectTool(Tool):
         import copy
 
         link = copy.deepcopy(link)
-        pres = estilo.presentacion(document, link, pres_qgis,
-                                   [f[0] for f in features if f[0] not in link.hashes])
+        fresh = [f for f in features if f[0] not in link.hashes]
+        pres = estilo.presentacion(document, link, pres_qgis, [f[0] for f in fresh], fresh)
         command, n_rec, n_ent = enlace.extend_connect(link, features, pres)
         if not n_rec:
             echo(f"{link.key} ya tenía conectado todo lo de {scope}.")
@@ -297,6 +297,9 @@ class ConnectTool(Tool):
         puente.table_refresh()
         echo(f"{link.key}: se sumaron {n_rec} registro(s) ({scope}), {n_ent} entidades. "
              f"Ahora hay {len(link.hashes) + n_rec} conectados.")
+        if pres.get("rotulos_sig") or pres.get("tematico"):     # 3.50.0
+            for line in _pres_lines(link, pres):
+                echo(line)
 
     def _finish_connect(self, document, command, layer, target, key, lines, x_range, zoom=True):
         """Georreferencia, bloqueo y ejecución, comunes a los dos formatos."""
@@ -385,11 +388,32 @@ def _pres_lines(link, pres) -> list:
     if capas:
         lines.append(f"Capas por {link.campo_capa}: " + ", ".join(capas[:12])
                      + (f" y {len(capas) - 12} más" if len(capas) > 12 else ""))
-    if any(c is not None for _l, c in pres["objetos"].values()):
+    theme = pres.get("tematico")
+    if theme:                                     # 3.50.0: como SHPTHEME
+        lines.append(f"Temático de {link.key} por {theme['campo']} "
+                     f"({'rangos' if theme['metodo'] == 'rangos' else 'categorías'}), "
+                     "con los colores de QGIS:")
+        for color, text in theme["leyenda"][:30]:
+            aci = estilo.color_of_hex(color)
+            lines.append(f"  color {aci[0] if aci else 256:>3}: {text}")
+        if len(theme["leyenda"]) > 30:
+            lines.append(f"  ... y {len(theme['leyenda']) - 30} valores más")
+        lines.append("Sólo cambia el dibujo; los datos no se tocan. Para quitarlo: SHPTHEMEOFF.")
+    elif any(c is not None for _l, c in pres["objetos"].values()):
         lines.append("Con los colores de QGIS.")
     if pres.get("simbolos"):
         lines.append(f"{len(pres['simbolos'])} punto(s) con su símbolo de QGIS (bloques "
                      f"{estilo.SYMBOL_BLOCK}...).")
+    sig = pres.get("rotulos_sig")
+    if sig is not None:                           # 3.50.0: ubicados como ROTULOSIG
+        if sig["n"]:
+            lines.append(f"{sig['n']} rótulo(s) de QGIS en la capa {link.key}-ROTULOS, "
+                         "ubicados como ROTULOSIG"
+                         + (f", {sig['circulos']} con círculo" if sig["circulos"] else "") + ".")
+        if sig["omitidos"]:
+            lines.append(f"{sig['omitidos']} parcela(s) muy chicas van sin rótulo "
+                         "(no se leería).")
+        return lines
     n = sum(1 for c in pres["despues"] if getattr(c, "name", "") == "SHP label")
     if n:
         nb = sum(1 for c in pres["despues"] if getattr(c, "name", "") == "SHP label background")

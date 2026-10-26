@@ -178,31 +178,62 @@ zone = P.visible_labels_zone(ms, (-5, -5, 15, 15)); print("zona:", zone)
 assert zone.get(pol.id()) == {int(fid)}, zone
 assert P.visible_labels_zone(ms, (-1e7, -1e7, 1e7, 1e7)) is None             # demasiado grande
 
-# la ventana «Enviar a IngeCAD»
+# 3.50.0 para ROTULOSIG: sólo texto y altura (IngeCAD los ubica); sin símbolos ni parcelas
+pol.setLabelsEnabled(True); labels(pol, "N", 10, Qgis.RenderUnit.Millimeters)
+sig = P.of_layer(pol, None, 1000, sig=True, parcels=P.Parcels([pol]))
+fid = next(iter(sig["rotulos_sig"]))
+assert sig["rotulos_sig"][fid] == ["X", 10.0] and sig["campo_rotulo"] == "N" and "rotulos" not in sig, sig
+assert not P.of_layer(pol, None, 1000, sig=True, shown=set(), screen=(-5, -5, 15, 15))["rotulos_sig"]
+labels(pol, "'Parcela ' || \"N\"", 10, Qgis.RenderUnit.Millimeters, expr=True)
+sig = P.of_layer(pol, None, 1000, sig=True)
+assert sig["rotulos_sig"][fid] == ["Parcela X", 10.0] and sig["campo_rotulo"] == "", sig
+assert "simbolos" not in P.of_layer(pts, None, 1000, with_symbols=True, sig=True)
+# 3.50.0 temático: categorizada o graduada -> como SHPTHEME; símbolo único -> sin temático
+from qgis.core import (QgsCategorizedSymbolRenderer, QgsRendererCategory, QgsFillSymbol,
+                       QgsGraduatedSymbolRenderer, QgsRendererRange)
+pol.setRenderer(QgsCategorizedSymbolRenderer("N", [
+    QgsRendererCategory("X", QgsFillSymbol.createSimple({"color": "#ff0000"}), "Equis"),
+    QgsRendererCategory("Y", QgsFillSymbol.createSimple({"color": "#0000ff"}), "")]))
+sig = P.of_layer(pol, None, 1000, sig=True)
+assert sig["tematico"] == {"campo": "N", "metodo": "categorias",
+                           "leyenda": [["#ff0000", "Equis"], ["#0000ff", "Y"]]}, sig["tematico"]
+assert sig["objetos"][fid] == ["", "#ff0000"] and "tematico" not in P.of_layer(pol, None, 1000), sig
+pts.setRenderer(QgsGraduatedSymbolRenderer("ID", [
+    QgsRendererRange(0, 5, QgsMarkerSymbol.createSimple({"color": "#00ff00"}), "0 - 5"),
+    QgsRendererRange(5, 10, QgsMarkerSymbol.createSimple({"color": "#ffff00"}), "5 - 10")]))
+th = P.of_layer(pts, None, 1000, sig=True)["tematico"]
+assert th == {"campo": "ID", "metodo": "rangos", "leyenda": [["#00ff00", "0 - 5"], ["#ffff00", "5 - 10"]]}, th
+pts.setRenderer(QgsSingleSymbolRenderer(QgsMarkerSymbol.createSimple({"color": "#123456"})))
+assert "tematico" not in P.of_layer(pts, None, 1000, sig=True)
+assert "tematico" not in P.of_layer(lin, None, 1000, sig=True)       # con CAD_COLOR manda la tabla
+
+# 3.50.1 la altura elegida al enviar: todos con ella, con círculo y achicados al más chico
+pol.setRenderer(QgsSingleSymbolRenderer(QgsFillSymbol.createSimple({"color": "#123456"})))
+sig = P.of_layer(pol, None, 1000, sig=True, altura=3.5)
+assert sig["rotulos_sig"][fid] == ["Parcela X", 3.5], sig
+assert sig["rotulos_opciones"] == {"circulo": "si", "altura": "achicados"}, sig
+assert "rotulos_opciones" not in P.of_layer(pol, None, 1000, sig=True)
+
+# 3.50.1 la ventana «Enviar a IngeCAD»: lo seleccionado o la capa activa, y la altura; nada más
 from geocad import envio_ui, config
-o = envio_ui.from_config("pantalla")
-assert o == {"modo": "pantalla", "escala": 0, "capas_colores": True, "rotulos": "visibles_resto",
-             "simbolos": True, "ajustar": False, "preguntar": True}, o
-dlg = envio_ui.EnvioDialog(None, o, 2500)
-assert dlg.values() == o and not dlg.escala.isEnabled()
-o2 = dict(o, modo="seleccion", escala=500, rotulos="visibles", ajustar=True, capas_colores=False, preguntar=False)
+assert envio_ui.MODOS == (("seleccion", "Lo seleccionado"), ("capa", "La capa activa entera"))
+o = envio_ui.from_config(); assert o == {"modo": "seleccion", "altura": 2.5}, o
+dlg = envio_ui.EnvioDialog(None, o)
+assert dlg.values() == o and dlg.botones["seleccion"].isChecked()
+for attr in ("escala", "capas", "rotulos", "simbolos", "ajustar", "no_preguntar", "modo"):
+    assert not hasattr(dlg, attr), attr                                      # las demás opciones se fueron
+o2 = {"modo": "capa", "altura": 4.25}
 dlg.set_values(o2); assert dlg.values() == o2, dlg.values()
-envio_ui.remember(o2)
-assert envio_ui.from_config("seleccion") == o2 and config.get("envio_predeterminado") == "seleccion"
-assert envio_ui.ask(None, "completa", 1000) == dict(o2, modo="completa")   # no pregunta más: lo guardado
-dlg.set_values(dict(o2, rotulos="ninguno")); assert dlg.values()["rotulos"] == "ninguno"
-# 3.4.0 las opciones nuevas se eligen, se guardan y vuelven; lo guardado antes sigue valiendo
-for rot in ("visibles_resto", "visibles_zona", "todos", "visibles"):
-    o3 = dict(o2, rotulos=rot); dlg.set_values(o3); assert dlg.values() == o3, dlg.values()
-    envio_ui.remember(o3); assert envio_ui.from_config("seleccion")["rotulos"] == rot, rot
-    assert config.get("rotulos_visibles") == (rot != "todos")
-# lo guardado con 3.3.x: «todos» sigue en todos; «sólo los que QGIS muestra» pasa a A
-config.save({"rotulos_cuales": "visibles_resto", "rotulos_visibles": False}, "qgis")
-assert envio_ui.from_config("seleccion")["rotulos"] == "todos"
-config.save({"rotulos_cuales": "todos", "rotulos_visibles": True}, "qgis")
-assert envio_ui.from_config("seleccion")["rotulos"] == "visibles_resto"
-assert envio_ui.ROTULOS[0][0] == "visibles_resto"                          # A, primera
-envio_ui.remember(dict(o2, rotulos="ninguno"))
-assert envio_ui.from_config("seleccion")["rotulos"] == "ninguno"
+envio_ui.remember(o2); assert envio_ui.from_config() == o2
+assert config.get("envio_predeterminado") == "capa" and config.get("envio_altura") == 4.25
+# no aparecen en Configuración común (lo recuerda la ventana)
+keys = [x.key for x in config.SETTINGS]
+for k in ("envio_predeterminado", "envio_altura", "preguntar_al_enviar", "rotulos_cuales", "envio_simbolos",
+          "ajustar_a_parcela", "envio_capas_colores", "envio_rotulos", "rotulos_visibles"):
+    assert k not in keys, k
+# lo guardado con versiones anteriores («pantalla», «completa») vuelve a «Lo seleccionado»
+cfg = json.loads(config.config_path().read_text(encoding="utf-8")); cfg["envio_predeterminado"] = "pantalla"
+config.config_path().write_text(json.dumps(cfg), encoding="utf-8")
+assert envio_ui.from_config()["modo"] == "seleccion"
 app.exitQgis()
 print("TODO OK PRESENTACION")

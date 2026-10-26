@@ -1,0 +1,43 @@
+GeoCAD - versión 3.50.2
+=======================
+ENVIAR A INGECAD: CÍRCULOS IGUALES, EN DOS GRUPOS (MEDIA Y MÍNIMA). Corrección
+de Fernando a la 3.50.1, que trae (y con ella la 3.50.0: ver
+CAMBIOS_3.50.0.txt y CAMBIOS_3.50.1.txt). Hay que actualizar los DOS lados.
+
+Pedido de Fernando (26/10/2026, con una captura de la 3.50.1)
+- «Los círculos deben guardar siempre una relación con el tamaño de la
+  etiqueta; la única condicionante que tienen las etiquetas junto con sus
+  círculos es que ambas entren dentro del polígono más chico guardando una
+  distancia mínima de un 10%. Todas las etiquetas y sus círculos, reducidos,
+  deben ser iguales. Si se pudieran armar dos categorías sería mucho mejor:
+  habría etiquetas que se adaptarían a la mínima y otro grupo que se
+  adaptaría a la media.»
+- Decidido: tres tamaños (la altura elegida, «media» y «mínima»); la media
+  por la mediana.
+
+Qué cambia (sólo los rótulos que llegan con «Enviar a IngeCAD»)
+- El círculo es SIEMPRE la diagonal del texto + 10 %: ya no se estira al
+  90 % del lugar de cada parcela (en la 3.50.1 salían círculos de distinto
+  tamaño con el mismo texto adentro).
+- Las parcelas donde entra la altura elegida la conservan, con su círculo.
+- Las que hay que achicar se ordenan por su lugar y se parten en dos grupos:
+  la mitad más holgada es «media» y la otra mitad «mínima». En cada grupo
+  todos los textos tienen la MISMA altura y todos los círculos el MISMO
+  tamaño: el más grande que entra en la parcela más chica del grupo, con un
+  10 % de distancia al borde (el círculo usa como mucho el 90 % del lugar).
+- Con un solo achicado, queda un solo grupo.
+- ROTULOSIG en IngeCAD no cambia.
+
+Por dentro
+- rotulos.py: grupos_achicados() (ordena por el radio que admite cada
+  parcela, parte por la mediana; en cada grupo la altura = el radio más
+  chico / el radio por unidad de altura del texto más ancho).
+- herramientas_datos.place_labels: altura "achicados" usa grupos_achicados.
+
+Pruebas
+- test_rotulos_qgis.py: una parcela grande y cuatro angostas (8, 7, 4 y
+  3,5 de ancho): la grande con la altura elegida y su círculo = diagonal
+  + 10 %; las de 8 y 7 («media») y las de 4 y 3,5 («mínima») con el mismo
+  texto y el mismo círculo en cada grupo, cada círculo al 90 % de la más
+  chica de su grupo, en su epicentro.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

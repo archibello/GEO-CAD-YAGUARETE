@@ -9,7 +9,18 @@ Con cada capa, QGIS manda su «presentación» (QGIS/.../presentacion.py):
                         "tipo": "Continuous", "grosor": mm o -1}},
      "objetos": {"fid": [código, "#rrggbb" o "" (= PorCapa)]},
      "rotulos": {"fid": [texto, x, y, altura, giro, "c"|"i", "#rrggbb"]},
-     "simbolos": {"fid": [forma, tamaño, giro]}}          # sólo puntos (3.1.0)
+     "simbolos": {"fid": [forma, tamaño, giro]},          # sólo puntos (3.1.0)
+     "rotulos_sig": {"fid": [texto, altura]},              # 3.50.0, en lugar de «rotulos»
+     "campo_rotulo": campo de la etiqueta o "",
+     "rotulos_opciones": {"circulo": "si", "altura": "achicados"},   # 3.50.1
+     "tematico": {"campo": ..., "metodo": "categorias"|"rangos",
+                  "leyenda": [["#rrggbb", texto], ...]}}   # 3.50.0
+
+3.50.0 (Fernando: «que no haya disparidades»): con «rotulos_sig» QGIS ya no
+ubica los rótulos; IngeCAD los ubica con el motor de ROTULOSIG y sus últimas
+opciones (círculo, líneas, puntos, altura del más chico), sobre la geometría
+que llega. Una capa categorizada o graduada llega como SHPTHEME (leyenda en
+la línea de comandos; SHPTHEMEOFF la quita). Los puntos van sin símbolo.
 
 * QGIS -> IngeCAD: cada código de LAYER_CODE es una capa CAD con el color,
   tipo de línea y grosor del administrador de Capas; cada objeto lleva su
@@ -223,11 +234,13 @@ def _new_layer(doc, name, props) -> NewLayerCommand:
     return NewLayerCommand(name, color=color, linetype=ltype, lineweight=lw)
 
 
-def presentacion(document, link, data, fids) -> dict:
+def presentacion(document, link, data, fids, features=None) -> dict:
     """Prepara lo que manda QGIS para los registros ``fids`` que se van a
     dibujar. Completa ``link`` (campos, capas propias, valores originales) y
     devuelve {"capas": [comandos], "objetos": {fid: (capa, color)},
-    "despues": [comandos de rótulos]} para enlace.build/extend_connect."""
+    "despues": [comandos de rótulos]} para enlace.build/extend_connect.
+    ``features``: [(fid, huella, partes, z)] de esos registros, para ubicar
+    los «rotulos_sig» (3.50.0)."""
     out = {"capas": [], "objetos": {}, "simbolos": {}, "despues": []}
     if not isinstance(data, dict):
         return out
@@ -267,8 +280,73 @@ def presentacion(document, link, data, fids) -> dict:
                 shapes.add(shape if symbol_shape(shape) is not None else "circle")
         out["capas"] += [SymbolBlockCommand(sh) for sh in sorted(shapes)
                          if symbol_block(sh) not in doc.blocks]
-    out["despues"] = label_commands(document, link.key, data.get("rotulos") or {}, set(fids))
+    sig = data.get("rotulos_sig")
+    if isinstance(sig, dict):
+        out["despues"], out["rotulos_sig"] = sig_label_commands(
+            document, link, sig, str(data.get("campo_rotulo") or "QGIS"), features or [], set(fids),
+            data.get("rotulos_opciones"))
+    else:                                 # QGIS anterior a 3.50.0: rótulos ya ubicados
+        out["despues"] = label_commands(document, link.key, data.get("rotulos") or {}, set(fids))
+    theme = data.get("tematico")
+    if isinstance(theme, dict) and theme.get("campo") and isinstance(theme.get("leyenda"), list):
+        out["tematico"] = {"campo": str(theme["campo"]),
+                           "metodo": "rangos" if theme.get("metodo") == "rangos" else "categorias",
+                           "leyenda": [(norm_hex(c), str(t)) for c, t in
+                                       (x for x in theme["leyenda"]
+                                        if isinstance(x, (list, tuple)) and len(x) == 2)]}
     return out
+
+
+def _rings(kind: str, parts) -> list:
+    """Los anillos de un registro como los de datos.entity_rings (lo que
+    ROTULOSIG lee de las entidades ya dibujadas)."""
+    if kind == "polygon":
+        return [(list(enlace._ring_open([tuple(p[:2]) for p in part])), True) for part in parts]
+    if kind == "line":
+        return [([tuple(p[:2]) for p in part], False) for part in parts]
+    return [([tuple(part[0][:2])], False) for part in parts[:1] if part]
+
+
+def _options(pedidas):
+    """Las últimas opciones de ROTULOSIG; 3.50.1: lo que pide «Enviar a
+    IngeCAD» (círculo; sólo los achicados con la altura del más chico) manda."""
+    from dataclasses import replace
+    from . import rotulos as motor
+
+    op = motor.leer_opciones()
+    if isinstance(pedidas, dict):
+        if pedidas.get("circulo") in motor.CIRCULO:
+            op = replace(op, circulo=pedidas["circulo"])
+        if pedidas.get("altura") in tuple(motor.ALTURA) + ("achicados",):
+            op = replace(op, altura=pedidas["altura"])
+    return op
+
+
+def sig_label_commands(document, link, rotulos: dict, campo: str, features, fids, pedidas=None):
+    """3.50.0: los rótulos de QGIS ({fid: [texto, altura]}) ubicados con el
+    motor de ROTULOSIG. Devuelve ([comando] o [], {"n", "circulos", "omitidos"})."""
+    from .herramientas_datos import place_labels
+
+    items, heights = [], {}
+    for fid, _h, parts, _z in features:
+        raw = rotulos.get(str(fid))
+        if fid not in fids or not isinstance(raw, (list, tuple)) or len(raw) < 2:
+            continue
+        try:
+            text, height = str(raw[0]), float(raw[1])
+        except (TypeError, ValueError):
+            continue
+        if text.strip() and height > 0:
+            items.append((fid, text, _rings(link.kind, parts)))
+            heights[fid] = height
+    info = {"n": 0, "circulos": 0, "omitidos": 0}
+    if not items:
+        return [], info
+    command, n, _old = place_labels(document, link.key, campo, items, heights,
+                                    _options(pedidas), {f for f, _t, _r in items})
+    info.update(n=n, omitidos=command.omitidos,
+                circulos=sum(1 for c in command.commands if getattr(c, "name", "") == "SHP label circle"))
+    return ([command] if n else []), info
 
 
 def label_commands(document, key, rotulos: dict, fids) -> list:

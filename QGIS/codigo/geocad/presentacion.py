@@ -510,9 +510,34 @@ def visible_labels_zone(map_settings, extent, scale: float = 0.0, limit: int = 4
     return out
 
 
+def tematico(renderer):
+    """3.50.0: {"campo", "metodo", "leyenda": [["#rrggbb", texto]]} de una
+    simbología categorizada o graduada (como SHPTHEME en IngeCAD); None si no."""
+    kind = renderer.type() if hasattr(renderer, "type") else ""
+    try:
+        if kind == "categorizedSymbol":
+            classes, method = renderer.categories(), "categorias"
+        elif kind == "graduatedSymbol":
+            classes, method = renderer.ranges(), "rangos"
+        else:
+            return None
+        field = renderer.classAttribute()
+        legend = []
+        for c in classes:            # el símbolo vive mientras viva ``classes``
+            sym = c.symbol()
+            if sym is None or not getattr(c, "renderState", lambda: True)():
+                continue
+            text = c.label() or (_text(c.value()) if method == "categorias" else "")
+            legend.append([_hex(sym.color()), str(text)])
+    except Exception:
+        return None
+    return {"campo": str(field), "metodo": method, "leyenda": legend} if field and legend else None
+
+
 def of_layer(layer, map_settings=None, scale: float = 0.0, fids=None, bbox=None,
              with_style: bool = True, with_labels: bool = True, with_symbols: bool = False,
-             shown=None, parcels=None, screen=None) -> dict:
+             shown=None, parcels=None, screen=None, sig: bool = False,
+             altura: float = 0.0) -> dict:
     """La presentación de ``layer`` para los objetos que se mandan.
 
     ``with_symbols``: los puntos van con su símbolo (forma, tamaño, giro).
@@ -520,7 +545,12 @@ def of_layer(layer, map_settings=None, scale: float = 0.0, fids=None, bbox=None,
     ``screen``: (xmin, ymin, xmax, ymax) en coordenadas de la capa; con ``shown``,
     los rótulos que caen fuera de ese rectángulo van siempre (3.4.0).
     ``parcels``: un Parcels para achicar rótulos y símbolos hasta que entren
-    en su parcela; None = tamaño real aunque la superen."""
+    en su parcela; None = tamaño real aunque la superen.
+    ``sig`` (3.50.0): los rótulos van como «rotulos_sig» {fid: [texto, altura]}
+    (IngeCAD los ubica con el motor de ROTULOSIG), sin símbolos ni parcelas,
+    y una capa categorizada o graduada manda su «tematico» (como SHPTHEME).
+    ``altura`` (3.50.1, con ``sig``): todos los rótulos con esa altura, con
+    círculo y los achicados con la del más chico («rotulos_opciones»)."""
     from qgis.core import QgsExpressionContext, QgsExpressionContextUtils, QgsRenderContext
 
     out: dict = {}
@@ -531,7 +561,9 @@ def of_layer(layer, map_settings=None, scale: float = 0.0, fids=None, bbox=None,
     kind = _kind(layer)
     if layer.customProperty(TEXT_FLAG) == "1":
         with_style = with_labels = with_symbols = False  # capa de textos de Dibujo CAD
-    with_symbols = with_symbols and kind == "point"
+    with_symbols = with_symbols and kind == "point" and not sig
+    if sig:
+        parcels = None
     if with_style:
         out["campo_capa"] = LAYER_FIELD if has(LAYER_FIELD) else ""
         out["campo_color"] = COLOR_FIELD if has(COLOR_FIELD) else ""
@@ -551,11 +583,19 @@ def of_layer(layer, map_settings=None, scale: float = 0.0, fids=None, bbox=None,
     if (color_from_renderer or with_symbols) and layer.renderer() is not None:
         renderer = layer.renderer().clone()
         renderer.startRender(ctx, fields)
+        if sig and color_from_renderer:
+            theme = tematico(renderer)
+            if theme:
+                out["tematico"] = theme
     labels = None
     if settings is not None:
         try:
             labels = _Labels(layer, settings, scale, kind)
-            out["rotulos"] = {}
+            out["rotulos_sig" if sig else "rotulos"] = {}
+            if sig:
+                out["campo_rotulo"] = "" if settings.isExpression else str(settings.fieldName or "")
+                if altura and altura > 0:
+                    out["rotulos_opciones"] = {"circulo": "si", "altura": "achicados"}
         except Exception:
             labels = None
     if with_symbols:
@@ -600,7 +640,10 @@ def of_layer(layer, map_settings=None, scale: float = 0.0, fids=None, bbox=None,
                 if got is not None and shown is not None and f.id() not in shown and \
                         (screen is None or _inside_rect(screen, got[1], got[2])):
                     got = None                            # QGIS no lo muestra en pantalla
-                if got is not None:
+                if got is not None and sig:
+                    out["rotulos_sig"][fid] = [got[0], round(float(altura), 6) if altura and altura > 0
+                                               else got[3]]
+                elif got is not None:
                     bg = got[7] if len(got) > 7 else None
                     if sym is not None and got[5] == "i":      # al costado del símbolo
                         got[1] = round(got[1] + sym[1] / 2.0, 6)

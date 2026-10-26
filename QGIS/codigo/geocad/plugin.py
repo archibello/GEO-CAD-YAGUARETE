@@ -40,7 +40,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.48.1"
+VERSION = "3.50.3"
 INGECAD_FLATPAK = "org.ingecad.IngeCAD"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
@@ -162,13 +162,8 @@ class GeoCAD:
         add = self._add_action
         if self._puente():
             self.menu.addSection("Puente con IngeCAD")
-            add("send", "Enviar a IngeCAD (modo de la configuración común)", self.send_default,
-                self._ingecad_icon())
-            self.menu.addSeparator()
-            add("send_sel", "Enviar a IngeCAD los objetos seleccionados", self.send_selected)
-            add("send_screen", "Enviar a IngeCAD lo que está en pantalla", self.send_screen)
-            add("send_full", "Enviar a IngeCAD las capas visibles completas", self.send_visible)
-            add("send_active", "Enviar a IngeCAD la capa activa completa", self.send_active)
+            # 3.50.1 (Fernando): sólo «Enviar a IngeCAD»; lo demás, en su ventana
+            add("send", "Enviar a IngeCAD...", self.send_default, self._ingecad_icon())
             self.menu.addSeparator()
             add("reload", "Recargar las capas que editó IngeCAD", self.reload_all)
             add("status", "Estado del puente...", self.show_status)
@@ -609,56 +604,37 @@ class GeoCAD:
         return [lyr for lyr in layers if isinstance(lyr, QgsVectorLayer)]
 
     def send_default(self) -> None:
-        mode = config.get("envio_predeterminado")
-        self._send_mode(mode if mode in ("pantalla", "completa") else "seleccion")
-
-    def send_selected(self) -> None:
-        self._send_mode("seleccion")
-
-    def send_screen(self) -> None:
-        self._send_mode("pantalla")
-
-    def send_visible(self) -> None:
-        self._send_mode("completa")
-
-    def send_active(self) -> None:
-        layer = self.iface.activeLayer()
-        if not isinstance(layer, QgsVectorLayer):
-            self._bar("Elija una capa vectorial (GeoPackage o shapefile).", "warn")
+        """«Enviar a IngeCAD» (3.50.1): la ventana pide lo seleccionado o la
+        capa activa entera y la altura de los textos."""
+        opts = self._options()
+        if opts is None:
             return
-        self._send_mode("completa", [layer])
+        full = {"capas_colores": True, "rotulos": "todos", "altura": opts["altura"]}
+        if opts["modo"] == "capa":
+            layer = self.iface.activeLayer()
+            if not isinstance(layer, QgsVectorLayer):
+                self._bar("Elija una capa vectorial (GeoPackage o shapefile).", "warn")
+                return
+            self.send([layer], "completa", full)
+            return
+        layers = self._selected_layers()
+        if not layers:
+            self._bar("No hay objetos seleccionados. Seleccione en el mapa o elija "
+                      "«La capa activa entera».", "warn", 8)
+            return
+        self.send(layers, "seleccion", full)
 
     def _selected_layers(self):
         return [lyr for lyr in QgsProject.instance().mapLayers().values()
                 if isinstance(lyr, QgsVectorLayer) and lyr.selectedFeatureCount() > 0]
 
-    def _send_mode(self, mode: str, layers=None) -> None:
-        """Pide las opciones del envío (ventana «Enviar a IngeCAD») y envía."""
-        if mode == "seleccion" and layers is None and not self._selected_layers():
-            self._bar("No hay objetos seleccionados. Seleccione en el mapa o use "
-                      "«Enviar lo que está en pantalla».", "warn", 8)
-            return
-        opts = self._options(mode, show_mode=layers is None)
-        if opts is None:
-            return
-        mode = opts["modo"]
-        if layers is None:
-            layers = self._selected_layers() if mode == "seleccion" else self._visible_layers()
-        if mode == "seleccion" and not layers:
-            self._bar("No hay objetos seleccionados.", "warn", 8)
-            return
-        self.send(layers, mode, opts)
+    def _options(self):
+        from . import envio_ui
 
-    def _options(self, mode: str, show_mode: bool = True):
         try:
-            from . import envio_ui
-
-            if not config.get("preguntar_al_enviar"):
-                return envio_ui.from_config(mode)
-            scale = self.iface.mapCanvas().scale()
-            return envio_ui.ask(self.iface.mainWindow(), mode, scale, show_mode)
-        except Exception:                          # sin ventana: lo guardado
-            return self._options_saved(mode)
+            return envio_ui.ask(self.iface.mainWindow())
+        except Exception:                          # sin ventana: lo elegido la última vez
+            return envio_ui.from_config()
 
     def _extent_in(self, layer):
         extent = self.iface.mapCanvas().extent()
@@ -748,10 +724,10 @@ class GeoCAD:
         try:
             from . import envio_ui
 
-            return envio_ui.from_config(mode)
+            altura = envio_ui.from_config()["altura"]
         except Exception:
-            return {"modo": mode, "escala": 0, "capas_colores": False, "rotulos": "ninguno",
-                    "simbolos": False, "ajustar": False, "preguntar": True}
+            altura = 0
+        return {"modo": mode, "capas_colores": True, "rotulos": "todos", "altura": altura}
 
     def _send_zone(self, layers, mode):
         """La zona que se manda, en coordenadas del mapa (xmin, ymin, xmax, ymax)."""
@@ -776,8 +752,8 @@ class GeoCAD:
         return zone
 
     def _send_context(self, opts, layers=(), mode: str = "seleccion") -> dict:
-        """Lo que se calcula una vez por envío: las etiquetas que QGIS muestra
-        y las parcelas para achicar rótulos y símbolos."""
+        """Lo que se calcula una vez por envío: las etiquetas que QGIS muestra.
+        3.50.0: sin parcelas (IngeCAD achica los rótulos como ROTULOSIG)."""
         extra = {"shown": None, "parcels": None, "screen": False}
         rot = opts.get("rotulos")
         try:
@@ -802,8 +778,6 @@ class GeoCAD:
             if rot in ("visibles", "visibles_resto"):
                 extra["shown"] = presentacion.visible_labels(canvas, canvas.mapSettings()) or {}
                 extra["screen"] = rot == "visibles_resto"
-            if opts.get("ajustar"):
-                extra["parcels"] = presentacion.Parcels(self._visible_layers())
         except Exception:
             pass
         return extra
@@ -813,9 +787,9 @@ class GeoCAD:
         las opciones del envío (vacío si algo falla: el envío sigue igual)."""
         opts = opts or self._options_saved("completa")
         extra = extra or {}
-        style, symbols = opts.get("capas_colores"), opts.get("simbolos")
+        style = opts.get("capas_colores")
         labels = opts.get("rotulos", "ninguno") != "ninguno"
-        if not (style or labels or symbols):
+        if not (style or labels):
             return {}
         try:
             from . import presentacion
@@ -825,10 +799,10 @@ class GeoCAD:
             shown = extra.get("shown")
             return presentacion.of_layer(
                 layer, canvas.mapSettings(), scale, fids=ref.get("fids"), bbox=ref.get("bbox"),
-                with_style=style, with_labels=labels, with_symbols=symbols,
+                with_style=style, with_labels=labels, with_symbols=False,
                 shown=None if shown is None else shown.get(layer.id(), set()),
-                parcels=extra.get("parcels"),
-                screen=self._extent_in(layer) if extra.get("screen") else None)
+                screen=self._extent_in(layer) if extra.get("screen") else None, sig=True,
+                altura=opts.get("altura") or 0)
         except Exception as exc:                  # nunca frena el envío
             self._bar(f"«{layer.name()}» va sin capas, colores ni rótulos: {exc}", "warn", 8)
             return {}

@@ -1,0 +1,43 @@
+GeoCAD - versión 3.50.3
+=======================
+ENVIAR A INGECAD: CATEGORÍA INTERMEDIA PARA LAS PARCELAS SEMEJANTES.
+Corrección de Fernando a la 3.50.2, que trae (y con ella la 3.50.0 y la
+3.50.1: ver sus CAMBIOS). Hay que actualizar los DOS lados.
+
+Pedido de Fernando (26/10/2026, con capturas de manzanas urbanas)
+- «En el caso de parcelas urbanas de dimensiones semejantes las etiquetas
+  deberían ser iguales, siempre que haya espacio suficiente. Hay dos
+  medidas: las muy pequeñas y las de la categoría intermedia, que quedaron
+  muy grandes. Lo ideal sería una categoría intermedia a estas dos que se
+  distribuya por esta familia de polígonos semejantes, que sean iguales
+  entre sí.»
+- Decidido: la intermedia a mitad de camino; las parcelas muy chicas, sin
+  rótulo si no se leería (menos de 1/3 de la intermedia).
+
+Qué cambia (sólo los rótulos que llegan con «Enviar a IngeCAD»)
+- Como en la 3.50.2: el círculo es siempre la diagonal del texto + 10 %; las
+  parcelas donde entra la altura elegida la conservan.
+- Las que hay que achicar ya no se parten en «media» y «mínima»: se calcula
+  una altura INTERMEDIA, a mitad de camino (en proporción: la media
+  geométrica) entre lo que entraba en la mitad más chica y en la más
+  holgada. Todas las parcelas donde entra la toman, con el mismo texto y el
+  mismo círculo: en una manzana de lotes parecidos, todos iguales y con
+  aire (en la 3.50.2 el círculo llenaba el lote más chico del grupo).
+- Las que no entran ni con la intermedia (pasillos, retazos) van con lo que
+  entra en la más chica de ellas, todas iguales. Si eso no llega a un
+  tercio de la intermedia, no se leería: esas parcelas van sin rótulo y el
+  mensaje de la conexión dice «N parcela(s) muy chicas van sin rótulo».
+- ROTULOSIG en IngeCAD no cambia.
+
+Por dentro
+- rotulos.py: grupos_achicados() con la intermedia y ILEGIBLE_INTERMEDIA =
+  1/3; devuelve None para los que van sin rótulo.
+- herramientas_datos.place_labels los cuenta como omitidos; tools.py, el
+  mensaje nuevo.
+
+Pruebas
+- test_rotulos_qgis.py: una manzana con seis lotes parecidos (8 a 6 de
+  ancho) y dos pasillos (2 y 1,8): los seis lotes con la intermedia, iguales
+  y con círculos iguales que entran en el más chico; los pasillos con su
+  mínima. Con pasillos de 0,6 y 0,5: van sin rótulo y el mensaje lo dice.
+- Todas las pruebas con IngeCAD 0.6.8.2 y 0.6.7.

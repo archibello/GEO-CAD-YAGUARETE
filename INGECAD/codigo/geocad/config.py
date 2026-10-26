@@ -74,32 +74,9 @@ SETTINGS = (
     Setting("formato_trabajo", "Formato de trabajo", "choice", "gpkg",
             "En qué formato se mandan los datos de QGIS a IngeCAD.",
             (("gpkg", "GeoPackage (recomendado)"), ("shp", "Shapefile"))),
-    Setting("envio_predeterminado", "Qué manda el botón «Enviar a IngeCAD» de QGIS", "choice",
-            "seleccion", "Los otros modos siguen en el menú.",
-            (("seleccion", "Los objetos seleccionados"),
-             ("pantalla", "Lo que está en pantalla"),
-             ("completa", "Las capas visibles completas"))),
-    Setting("envio_capas_colores", "Mandar a IngeCAD las capas (LAYER_CODE) y los colores de QGIS",
-            "bool", True, "Al guardar, los cambios de capa y color vuelven a LAYER_CODE y "
-            "CAD_COLOR si la tabla tiene esos campos."),
-    Setting("envio_rotulos", "Mandar los rótulos de QGIS como textos", "bool", True,
-            "Texto, altura y giro como están en Propiedades de la capa > Etiquetas."),
-    Setting("rotulos_visibles", "Rótulos: sólo los que QGIS muestra (si no, todos)", "bool", True,
-            "QGIS esconde los que no entran o chocan con otros."),
-    Setting("rotulos_cuales", "Qué rótulos mandar a IngeCAD", "choice", "visibles_resto",
-            "Con «sólo los que QGIS muestra en pantalla» quedan afuera los de fuera de la pantalla.",
-            (("visibles_resto", "Los que QGIS muestra en pantalla y todos los de fuera"),
-             ("visibles_zona", "Los que QGIS mostraría en toda la zona enviada"),
-             ("todos", "Todos (también los que QGIS no muestra)"),
-             ("visibles", "Sólo los que QGIS muestra ahora en pantalla"))),
-    Setting("envio_simbolos", "Mandar los puntos con su símbolo (forma, tamaño y giro de QGIS)",
-            "bool", True),
-    Setting("ajustar_a_parcela", "Achicar rótulos y símbolos que superan su parcela "
-            "(si no, tamaño real)", "bool", False),
-    Setting("preguntar_al_enviar", "Preguntar estas opciones cada vez que se envía a IngeCAD",
-            "bool", True, "Las opciones de envío se eligen en una ventana al enviar."),
-    Setting("escala_rotulos", "Escala para la altura de los rótulos (0 = la del mapa al enviar)",
-            "int", 0, "Un rótulo de 2,5 mm a escala 1:1000 llega con 2,5 m de alto.", (), 0, 100000000),
+    Setting("escala_rotulos", "Escala para pegar tablas en IngeCAD (0 = 1:100)",
+            "int", 0, "La escala con la que PEGARTABLA arranca si el dibujo no tiene otra.",
+            (), 0, 100000000),
     Setting("crs_proyecto", "Sistema de coordenadas del proyecto", "choice", "",
             "Si se fija, no se conecta ninguna capa en otro sistema.", _crs_choices()),
     Setting("confirmar_guardado", "Pedir confirmación antes de guardar", "bool", True),
@@ -125,7 +102,16 @@ SETTINGS = (
             "La carpeta del proyecto (o donde se copian las entregas). "
             "Se busca ahí la versión más nueva."),
 )
-BY_KEY = {s.key: s for s in SETTINGS}
+# 3.50.1: lo que recuerda la ventana «Enviar a IngeCAD» de QGIS; no se muestra
+# en Configuración común (Fernando: «sacar modo de configuración común»)
+OCULTOS = (
+    Setting("envio_predeterminado", "Qué manda «Enviar a IngeCAD»", "choice", "seleccion", "",
+            (("seleccion", "Lo seleccionado"), ("capa", "La capa activa entera"))),
+    Setting("envio_altura", "Altura de los textos al enviar a IngeCAD", "float", 2.5, "",
+            (), 0.01, 100000),
+)
+
+BY_KEY = {s.key: s for s in SETTINGS + OCULTOS}
 
 #: funciones que se llaman con todos los valores después de cada ``save``
 #: (IngeCAD aplica así lo que se ve en pantalla, sin reiniciar; 3.27.0)
@@ -175,7 +161,7 @@ def validate(key: str, value):
 def load() -> dict:
     """Todos los ajustes (los que falten, con su valor por defecto). Un
     archivo dañado no rompe nada: se usan los valores por defecto."""
-    values = {s.key: s.default for s in SETTINGS}
+    values = {s.key: s.default for s in SETTINGS + OCULTOS}
     path = config_path()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))

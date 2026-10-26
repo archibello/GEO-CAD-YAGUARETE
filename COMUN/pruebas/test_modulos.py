@@ -142,7 +142,7 @@ iface = types.SimpleNamespace(mainWindow=lambda: types.SimpleNamespace(menuBar=l
 textos = lambda: [getattr(i, "text", i) for i in G.menu.items]
 QDialog.respuesta = 0                      # la primera vez, Cancelar = valores por defecto
 G = geocad.classFactory(iface); G.initGui()
-assert "Enviar a IngeCAD los objetos seleccionados" in textos() and "Módulos..." in textos()
+assert "Enviar a IngeCAD..." in textos() and "Módulos..." in textos()
 for f in QTimer.shots: f()
 QTimer.shots.clear()
 assert Mq.elegido("qgis") and Mq.activo("qgis", "puente")
@@ -160,12 +160,12 @@ import geocad.modulos_ui as mui
 real = _real0
 mui.elegir = lambda QtW, parent, programa, primera: Mq.guardar(programa, {"puente": False})
 G.choose_modules()
-assert "Enviar a IngeCAD los objetos seleccionados" not in textos() and "Módulos..." in textos()
+assert "Enviar a IngeCAD..." not in textos() and "Módulos..." in textos()
 assert "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)..." in textos() and not G.readonly_by_us
 # sin Puente, el temporizador no manda latidos ni toca capas
 G._tick()
 mui.elegir = lambda QtW, parent, programa, primera: Mq.guardar(programa, {"puente": True})
-G.choose_modules(); assert "Enviar a IngeCAD los objetos seleccionados" in textos()
+G.choose_modules(); assert "Enviar a IngeCAD..." in textos()
 mui.elegir = real
 # la ventana de verdad (con las casillas falsas): Aceptar guarda lo tildado
 QDialog.respuesta = 1

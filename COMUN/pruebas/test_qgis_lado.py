@@ -47,11 +47,15 @@ for l in (lay, otra, fuera): QgsProject.instance().layers[l.id()] = l
 lay.editable = True; lay.modified = True; QMessageBox.answer = QMessageBox.StandardButton.Yes
 from geocad.plugin import VERSION as QV
 qbuzon.heartbeat("ingecad", {"version": QV})   # IngeCAD abierto con la misma versión: no se lanza
-P.send_visible(); print(bar.msgs[-1])
+P.send([lay, otra, fuera], "completa"); print(bar.msgs[-1])
 assert not lay.isEditable()                     # se guardó en QGIS antes de enviar
 assert "CSV suelto" in bar.msgs[-1] and "Fuera de la carpeta personal: En disco externo" in bar.msgs[-1]
 qbuzon.receive("ingecad")                       # descartar ese envío de prueba
-# modo por defecto = selección: sin nada seleccionado avisa y no manda nada
+# 3.50.1: en el menú sólo «Enviar a IngeCAD»; lo demás se elige en su ventana
+textos = [getattr(i, "text", "") for i in P.menu.items if not isinstance(i, str)]
+assert sum(1 for t in textos if "Enviar a IngeCAD" in str(t)) == 1, textos
+assert not any(k in P.actions for k in ("send_sel", "send_screen", "send_full", "send_active"))
+# lo seleccionado (lo elegido la última vez): sin nada seleccionado avisa y no manda nada
 P.send_default(); assert "No hay objetos seleccionados" in bar.msgs[-1] and not qbuzon.receive("ingecad")
 lay.selected = [2, 4]; P.send_default(); print(bar.msgs[-1])
 pedido = qbuzon.receive("ingecad"); assert pedido[0]["capas"][0]["fids"] == [2, 4] and "2 objeto(s)" in bar.msgs[-1]
@@ -62,9 +66,15 @@ assert f"IngeCAD tiene GeoCAD Yaguareté 2.8.1 y QGIS {QV}" in bar.msgs[-1] and 
 qbuzon.heartbeat("ingecad"); P.send_default(); qbuzon.receive("ingecad")
 assert "anterior a 3.1.1" in bar.msgs[-1], bar.msgs[-1]
 qbuzon.heartbeat("ingecad", {"version": QV})
-P.send_screen(); pedido = qbuzon.receive("ingecad"); assert all(c["bbox"] == [10, 20, 30, 40] for c in pedido[0]["capas"])
-lay.selected = [2, 4]; P.send_selected()
-assert QTimer_shots_ok if False else True
+# la capa activa entera
+from geocad import envio_ui
+envio_ui.remember({"modo": "capa", "altura": 3.0})
+P.send_default(); assert "Elija una capa vectorial" in bar.msgs[-1] and not qbuzon.receive("ingecad")
+iface.activeLayer = lambda: lay
+P.send_default(); pedido = qbuzon.receive("ingecad"); print(bar.msgs[-1])
+assert len(pedido[0]["capas"]) == 1 and "fids" not in pedido[0]["capas"][0] and "bbox" not in pedido[0]["capas"][0], pedido
+envio_ui.remember({"modo": "seleccion", "altura": 3.0})
+lay.selected = [2, 4]; P.send_default()
 
 # --- IngeCAD ------------------------------------------------------------------
 lp = load_plugin(Path(__file__).resolve().parents[2] / "INGECAD" / "codigo" / "geocad", bundled=False); assert lp.available, lp.reason
@@ -117,7 +127,7 @@ called = []
 qp.subprocess.Popen = lambda cmd, **k: called.append(cmd) or types.SimpleNamespace(poll=lambda: 1)
 qp.shutil.which = lambda n: "/usr/bin/" + n if n == "flatpak" else None
 otra.visible = False; fuera.visible = False
-P.send_visible(); print("lanza:", called)
+envio_ui.remember({"modo": "capa", "altura": 3.0}); P.send_default(); print("lanza:", called)
 assert called and called[0][-1] == "org.ingecad.IngeCAD"
 from qgis.PyQt.QtCore import QTimer
 for f in QTimer.shots: f()

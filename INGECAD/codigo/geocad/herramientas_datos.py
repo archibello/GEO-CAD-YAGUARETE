@@ -384,20 +384,36 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
     3.48.1: con ``anteriores == "conservar"`` no se borra ningún rótulo (los
     nuevos se suman); con ``altura == "menor"`` todos quedan con la altura
     del más chico de esa vez (cada uno se vuelve a ubicar con ella)."""
-    from . import rotulos
-    op = opciones or rotulos.OpcionesRotulo()
-    medir = rotulos.medidor(document.doc)
     data = datos.layer_data(document, key)
     f = data.field(field)
     by_fid = data.entities_by_fid(document)
     values = {r.fid: datos.show(r.values.get(f.name)) for r in data.rows}
+    if fids is not None:
+        fids = set(fids)
+        by_fid = {k: v for k, v in by_fid.items() if k in fids}
+    items = [(fid, values.get(fid, ""), [r for e in ents for r in datos.entity_rings(e)])
+             for fid, ents in sorted(by_fid.items())]
+    return place_labels(document, key, f.name, items, height, opciones, fids)
+
+
+def place_labels(document, key, tag: str, items, height, opciones=None, fids=None):
+    """El motor de ROTULOSIG sobre [(fid, texto, anillos)] ya armados; ``tag``
+    va en el XDATA de cada rótulo (el campo). ``height``: una altura, o
+    {fid: altura} (3.50.0: los rótulos que llegan de QGIS, cada uno con la
+    altura de su etiqueta). Devuelve lo mismo que label_commands.
+
+    3.50.1: con ``altura == "achicados"`` (Enviar a IngeCAD) los que entran
+    quedan con su altura; los achicados, en categorías iguales entre sí
+    (rotulos.grupos_achicados: 3.50.2 media y mínima, 3.50.3 intermedia)."""
+    from . import rotulos
+    op = opciones or rotulos.OpcionesRotulo()
+    medir = rotulos.medidor(document.doc)
     layer = label_layer(key)
     commands: list = []
     if layer not in document.doc.layers:
         commands.append(NewLayerCommand(layer, color=7))
     if fids is not None:
         fids = set(fids)
-        by_fid = {k: v for k, v in by_fid.items() if k in fids}
     if op.anteriores == "conservar":
         old = []
         quedan = _textos(existing_labels(document, key))
@@ -406,17 +422,22 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
         quedan = _textos(existing_labels(document, key)) - _textos(old)
         commands += erase_labels(document, key, fids)
     n = omitted = 0
-    ubicados = []
-    for fid, ents in sorted(by_fid.items()):
-        text = values.get(fid, "")
-        if not text:
+    ubicados, pedidas = [], {}
+    for fid, text, rings in items:
+        h = height.get(fid, 0.0) if isinstance(height, dict) else height
+        if not text or not h or h <= 0:
             continue
-        rings = [r for e in ents for r in datos.entity_rings(e)]
-        u = rotulos.ubicar(text, height, rings, op, medir)
+        u = rotulos.ubicar(text, h, rings, op, medir)
         if u is None:
             omitted += 1 if rings else 0
             continue
         ubicados.append((fid, text, rings, u))
+        pedidas[fid] = h
+    if op.altura == "achicados":
+        nuevos = rotulos.grupos_achicados([(fid, t, u) for fid, t, _r, u in ubicados], pedidas, medir)
+        omitted += sum(1 for v in nuevos.values() if v is None)      # 3.50.3: no se leerían
+        ubicados = [(fid, text, rings, nuevos.get(fid, u)) for fid, text, rings, u in ubicados
+                    if nuevos.get(fid, u) is not None]
     if op.altura == "menor" and ubicados:
         menor = min(u.altura for _f, _t, _r, u in ubicados)
         ubicados = [(fid, text, rings, u if u.altura <= menor
@@ -429,7 +450,7 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
             ensure_appid(msp.doc)
             entity = msp.add_text(text, height=u.altura, rotation=u.giro)
             entity.set_placement(u.punto, align=getattr(TextEntityAlignment, u.alineacion))
-            entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, f.name)])
+            entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, tag)])
             return entity
 
         commands.append(AddToModelCommand("SHP label", make, layer=layer))
@@ -439,7 +460,7 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
             def circulo(msp, u=u, fid=fid):
                 ensure_appid(msp.doc)
                 entity = msp.add_circle(u.punto, radius=u.circulo)
-                entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, f.name)])
+                entity.set_xdata(APPID, [(1000, LABEL_TAG), (1000, key), (1071, fid), (1000, tag)])
                 return entity
 
             commands.append(AddToModelCommand("SHP label circle", circulo, layer=layer))
