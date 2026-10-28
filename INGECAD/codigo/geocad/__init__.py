@@ -27,6 +27,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import sqlite_win
+
+sqlite_win.asegurar()     # Windows: IngeCAD empaquetado no trae sqlite3 (GeoPackage)
+
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, categorias, config, dibujo, modulos, nombre, ventanas
@@ -42,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.53.0"
+VERSION = "3.54.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -147,6 +151,15 @@ def cmd_acerca(ctx, *args) -> None:
         nombre.mostrar_acerca(QtWidgets, window, PROGRAMA, VERSION, resumen)
 
 
+def cmd_diagnostico(ctx, *args) -> None:
+    """GEOCADDIAG: qué tiene este equipo para GeoCAD (sistema, Python, sqlite3,
+    módulos, carpetas). Sirve sobre todo para el IngeCAD de Windows."""
+    from . import diagnostico
+
+    for linea in diagnostico.informe(getattr(ctx, "host", None)):
+        ctx.echo(linea)
+
+
 def construir_spec() -> PluginSpec:
     """El plugin tal como lo piden los módulos activos en este momento."""
     est = modulos.estado(PROGRAMA)
@@ -156,6 +169,7 @@ def construir_spec() -> PluginSpec:
         "QGISUPDATE": actualizacion.cmd_actualizar,
         "GEOCADMODULES": cmd_modulos,
         "GEOCADABOUT": cmd_acerca,
+        "GEOCADDIAG": cmd_diagnostico,
         "GEOBUTTONS": categorias.cmd_administrar,
     }
     tools["SHPCONFIG"] = TOOL_CLASSES["SHPCONFIG"]
@@ -380,12 +394,13 @@ def construir_spec() -> PluginSpec:
         MenuItem("Manage buttons...", "GEOBUTTONS"),
         MenuItem("Shared settings...", "SHPCONFIG"),
         MenuItem("Update GeoCAD Yaguareté (IngeCAD and QGIS)...", "QGISUPDATE"),
+        MenuItem("Diagnose GeoCAD Yaguareté on this computer", "GEOCADDIAG"),
         MenuItem("About GEO-CAD-YAGUARETÉ...", "GEOCADABOUT"),
     ]
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.53.0",
+        version="3.54.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

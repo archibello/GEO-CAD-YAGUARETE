@@ -23,6 +23,23 @@ import time
 import uuid
 from pathlib import Path
 
+
+def _reemplazar(tmp, path, intentos: int = 20) -> None:
+    """os.replace con reintentos: en Windows falla si otro programa (QGIS o
+    IngeCAD) tiene el archivo abierto en ese instante para leerlo."""
+    for i in range(intentos):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if os.name != "nt" or i == intentos - 1:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+            time.sleep(0.05)
+
 PROGRAMS = ("ingecad", "qgis")
 #: un programa que no actualizó su estado en este tiempo se da por cerrado
 ALIVE_SECONDS = 12
@@ -45,7 +62,7 @@ def _atomic_write(path: Path, data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".tmp-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=1)
-    os.replace(tmp, path)
+    _reemplazar(tmp, path)
 
 
 def send(to: str, message: dict, sender: str) -> Path:
@@ -94,6 +111,16 @@ def clear_heartbeat(program: str) -> None:
         (base_dir() / "estado" / f"{program}.json").unlink()
     except OSError:
         pass
+
+
+def puede(program: str, cosa: str) -> bool:
+    """Lo que ``program`` anunció que puede hacer (p. ej. "gpkg": abrir
+    GeoPackage). Si no lo anunció (versión vieja o cerrado), se supone que sí."""
+    try:
+        data = json.loads((base_dir() / "estado" / f"{program}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return True
+    return bool(data.get(cosa, True))
 
 
 def version_of(program: str) -> str:

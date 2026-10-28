@@ -18,6 +18,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from .buzon import _reemplazar      # reintenta en Windows si el otro programa lo está leyendo
+
 PROGRAMAS = ("ingecad", "qgis")
 
 
@@ -281,7 +283,7 @@ def guardar(programa: str, valores: dict) -> dict:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".modulos-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    _reemplazar(tmp, path)
     return estado(programa)
 
 

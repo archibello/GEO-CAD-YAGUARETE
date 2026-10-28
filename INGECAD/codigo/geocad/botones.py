@@ -26,6 +26,8 @@ import tempfile
 import unicodedata
 from pathlib import Path
 
+from .buzon import _reemplazar      # reintenta en Windows si el otro programa lo está leyendo
+
 VERSION = 1
 
 #: las categorías de fábrica: el último estado de Fernando (25/10/2026: «la
@@ -148,7 +150,7 @@ def _escribir(data: dict) -> None:
     fd, tmp = tempfile.mkstemp(dir=ruta.parent, prefix=".botones-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
-    os.replace(tmp, ruta)
+    _reemplazar(tmp, ruta)
 
 
 def distribuir(fabrica, guardado=None, programa=None) -> list:

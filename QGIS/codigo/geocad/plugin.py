@@ -16,7 +16,6 @@ Los mensajes viajan por archivos (ver buzon.py): sin red y sin puertos.
 from __future__ import annotations
 
 import os
-import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -40,8 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.53.0"
-INGECAD_FLATPAK = "org.ingecad.IngeCAD"
+VERSION = "3.54.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -654,6 +652,8 @@ class GeoCAD:
         opts = opts or self._options_saved(mode)
         extra = self._send_context(opts, layers, mode)
         refs, skipped, notes, first, count = [], [], [], None, 0
+        gpkg_sin_sqlite = []
+        sin_gpkg = buzon.is_alive("ingecad") and not buzon.puede("ingecad", "gpkg")
         home = Path.home().resolve()
         for layer in layers:
             if not layer.isSpatial():
@@ -661,6 +661,9 @@ class GeoCAD:
             src = layer_source(layer)
             if src is None:
                 skipped.append(f"{layer.name()} (no es GeoPackage ni shapefile)")
+                continue
+            if sin_gpkg and src[0] == "gpkg":
+                gpkg_sin_sqlite.append(layer.name())
                 continue
             if layer.isEditable():
                 if layer.isModified():
@@ -696,6 +699,10 @@ class GeoCAD:
             refs.append(ref)
             first = first or layer
         if not refs:
+            if gpkg_sin_sqlite:
+                skipped.append("IngeCAD no puede abrir GeoPackage en esta computadora (falta "
+                               "sqlite3; vea DIAGNOSTICOGEOCAD en IngeCAD): "
+                               + ", ".join(gpkg_sin_sqlite))
             self._bar("Nada para enviar. " + "; ".join(skipped), "warn", 10)
             return
         msg = {"tipo": "conectar", "capas": refs, "crs": first.crs().authid(),
@@ -707,16 +714,22 @@ class GeoCAD:
         text = f"Enviado a IngeCAD: {what}."
         if skipped:
             text += " No se enviaron: " + "; ".join(skipped)
+        notes = notes if os.name != "nt" else []      # Flatpak: carpetas fuera de la personal
         if notes:
             text += (" Fuera de la carpeta personal: " + ", ".join(notes) + " (si IngeCAD no "
                      "la abre: flatpak override --user --filesystem=/media org.ingecad.IngeCAD).")
+        if gpkg_sin_sqlite:
+            text += (" IngeCAD no puede abrir GeoPackage en esta computadora (falta sqlite3; "
+                     "vea DIAGNOSTICOGEOCAD en IngeCAD): no se enviaron "
+                     + ", ".join(gpkg_sin_sqlite) + ". Use Shapefile.")
         other = buzon.version_of("ingecad") if buzon.is_alive("ingecad") else VERSION
         if other != VERSION:
             text += (f" IngeCAD tiene GeoCAD Yaguareté {other or 'anterior a 3.1.1'} y QGIS {VERSION}: "
                      "actualícelo (ACTUALIZARGEOCAD en IngeCAD) o pueden no llegar rótulos, "
                      "colores ni símbolos.")
         mismatch = other != VERSION
-        self._bar(text, "warn" if (skipped or notes or mismatch) else "ok", 15 if mismatch else 12)
+        self._bar(text, "warn" if (skipped or notes or mismatch or gpkg_sin_sqlite) else "ok",
+                  15 if mismatch else 12)
         if not buzon.is_alive("ingecad"):
             self.launch_ingecad()
 
@@ -809,18 +822,12 @@ class GeoCAD:
 
     # abrir IngeCAD
     def launch_ingecad(self) -> None:
-        candidates = []
-        if os.path.exists("/.flatpak-info"):      # QGIS corre como Flatpak
-            candidates.append(["flatpak-spawn", "--host", "flatpak", "run", INGECAD_FLATPAK])
-        if shutil.which("flatpak"):
-            candidates.append(["flatpak", "run", INGECAD_FLATPAK])
-        if shutil.which("ingecad"):
-            candidates.append(["ingecad"])
-        for cmd in candidates:
+        from . import abrir_ingecad as A
+
+        ruta = str(config.load().get("ingecad_windows") or "") if os.name == "nt" else ""
+        for cmd in A.comandos(ruta_elegida=ruta):
             try:
-                self._launch = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
-                                                stderr=subprocess.DEVNULL,
-                                                start_new_session=True)
+                self._launch = subprocess.Popen(cmd, **A.popen_kwargs())
             except OSError:
                 continue
             self._bar("Abriendo IngeCAD... el pedido se carga solo al abrirse.")
@@ -834,12 +841,9 @@ class GeoCAD:
             self._launch_failed()
 
     def _launch_failed(self) -> None:
-        QMessageBox.information(
-            self.iface.mainWindow(), "IngeCAD",
-            "No pude abrir IngeCAD desde QGIS. Ábralo a mano: el pedido lo está "
-            "esperando y se carga solo.\n\nPara que QGIS (Flatpak) pueda abrirlo, "
-            "ejecute una vez en una terminal:\n\n"
-            "flatpak override --user --talk-name=org.freedesktop.Flatpak org.qgis.qgis")
+        from . import abrir_ingecad as A
+
+        QMessageBox.information(self.iface.mainWindow(), "IngeCAD", A.ayuda_si_falla())
 
     # configuración y estado
     def open_config(self) -> None:

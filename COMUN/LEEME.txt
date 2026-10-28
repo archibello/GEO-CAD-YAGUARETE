@@ -22,10 +22,10 @@ ANTES DE INSTALAR
 -----------------
 GEO-CAD-YAGUARETÉ se instala DENTRO de IngeCAD y de QGIS: primero tienen que
 estar los dos programas.
-1. Linux (por ahora funciona sólo en Linux).
+1. Linux o Windows (Windows desde la 3.54.0; ver «EN WINDOWS» más abajo).
 2. Instalar IngeCAD y QGIS. Versiones probadas: IngeCAD 0.6.5 (Flatpak,
    desde ingecad.org); QGIS 4.2.2 (Flatpak de Flathub), 3.40.5 (Debian)
-   o 3.28.9 LTS.
+   o 3.28.9 LTS. En Windows: IngeCAD 0.6.8.2 y QGIS 4.2.3.
 3. Abrir cada programa UNA VEZ y cerrarlo: así crean su carpeta de
    configuración. El instalador sólo instala donde la encuentra; si un
    programa nunca se abrió, queda sin GEO-CAD-YAGUARETÉ.
@@ -52,6 +52,21 @@ módulos.
 También se puede: en IngeCAD, AP con el mismo archivo (instala IngeCAD y, si
 puede, QGIS); o en QGIS, Instalar a partir de ZIP con geocad_qgis_<v>.zip
 (sólo QGIS).
+
+EN WINDOWS
+----------
+Con IngeCAD y QGIS cerrados: doble clic en INSTALAR_GeoCAD_Windows.bat.
+Usa el Python que trae QGIS (no hace falta instalar Python ni ser
+administrador) y corre el mismo instalador único:
+   IngeCAD: %APPDATA%\IngeCAD\plugins\geocad, activado en el Registro
+            (HKEY_CURRENT_USER\Software\IngeCAD\IngeCAD\plugins).
+   QGIS:    cada perfil de %APPDATA%\QGIS\QGIS4\profiles (y QGIS3), activado.
+Si QGIS nunca se abrió en ese usuario no tiene perfil: abrirlo una vez,
+cerrarlo y volver a instalar.
+Después, en IngeCAD: DIAGNOSTICOGEOCAD (GeoCAD Yaguareté > Diagnóstico...)
+tiene que decir «GeoPackage (sqlite3): sí». El IngeCAD de Windows no trae
+sqlite3; GeoCAD trae su copia y la usa sólo si falta.
+Lo de «flatpak override» de más abajo es sólo de Linux.
 
 ACTUALIZAR (sin AP ni ZIP)
 --------------------------

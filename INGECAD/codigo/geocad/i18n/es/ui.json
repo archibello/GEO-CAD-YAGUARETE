@@ -25,6 +25,7 @@
   "Manage buttons...": "Administrar botones...",
   "Shared settings...": "Configuración común...",
   "Update GeoCAD Yaguareté (IngeCAD and QGIS)...": "Actualizar GeoCAD Yaguareté (IngeCAD y QGIS)...",
+  "Diagnose GeoCAD Yaguareté on this computer": "Diagnóstico de GeoCAD Yaguareté en este equipo",
   "About GEO-CAD-YAGUARETÉ...": "Acerca de GEO-CAD-YAGUARETÉ...",
   "Right button = Enter on/off": "Botón derecho = Enter sí/no",
   "GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.": "GIS to CAD y CAD to GIS con QGIS: editar capas GeoPackage y shapefile con herramientas CAD, con respaldo y control de conflictos. Los módulos se eligen al instalar.",

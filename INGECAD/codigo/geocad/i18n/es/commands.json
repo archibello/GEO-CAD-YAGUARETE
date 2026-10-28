@@ -158,5 +158,8 @@
   },
   "GEOEARTHINSERT": {
     "name": "INSERTARGE"
+  },
+  "GEOCADDIAG": {
+    "name": "DIAGNOSTICOGEOCAD"
   }
 }

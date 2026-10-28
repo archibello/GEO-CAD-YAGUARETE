@@ -20,6 +20,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from .buzon import _reemplazar      # reintenta en Windows si el otro programa lo está leyendo
+
 VERSION = 1
 
 
@@ -101,6 +103,9 @@ SETTINGS = (
     Setting("carpeta_actualizaciones", "Carpeta de donde se actualiza GeoCAD Yaguareté", "text", "",
             "La carpeta del proyecto (o donde se copian las entregas). "
             "Se busca ahí la versión más nueva."),
+    Setting("ingecad_windows", "IngeCAD en Windows (ruta de ingecad.exe)", "text", "",
+            "Vacío: QGIS lo busca solo (Registro, C:\\Program Files\\IngeCAD). "
+            "Sólo hace falta si IngeCAD está instalado en otro lado."),
 )
 # 3.50.1: lo que recuerda la ventana «Enviar a IngeCAD» de QGIS; no se muestra
 # en Configuración común (Fernando: «sacar modo de configuración común»)
@@ -198,7 +203,7 @@ def save(changes: dict, program: str) -> dict:
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".configuracion-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    _reemplazar(tmp, path)
     values = load()
     for fn in list(AL_GUARDAR):
         try:

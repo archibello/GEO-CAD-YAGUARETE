@@ -41,6 +41,30 @@ def _home():
     return Path(os.environ.get("HOME") or Path.home())
 
 
+def _appdata():
+    """Windows: %APPDATA% (ahí guardan sus cosas IngeCAD y QGIS)."""
+    return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+
+
+# -- Windows: IngeCAD guarda sus ajustes en el Registro, no en IngeCAD.conf ---------------
+INGECAD_REGISTRO = "Software\\IngeCAD\\IngeCAD"
+
+
+def _registro_poner(subclave, nombre, valor):
+    import winreg
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, INGECAD_REGISTRO + "\\" + subclave) as k:
+        winreg.SetValueEx(k, nombre, 0, winreg.REG_SZ, valor)
+
+
+def _registro_hay_ingecad():
+    try:
+        import winreg
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CURRENT_USER, INGECAD_REGISTRO))
+        return True
+    except OSError:
+        return False
+
+
 # -- archivos .ini (IngeCAD.conf, QGIS4.ini): poner una clave sin tocar el resto ---------
 def _ini_poner(path, seccion, clave, valor):
     path = Path(path)
@@ -166,6 +190,16 @@ def _ingecad_desde_afuera():
     """Consola: instala en cada IngeCAD que encuentre (Flatpak y/o común) y lo activa."""
     home = _home()
     hechos = []
+    if os.name == "nt":
+        base = _appdata() / "IngeCAD"
+        if base.is_dir() or _registro_hay_ingecad():
+            target = _copiar_ingecad(base / "plugins")
+            _registro_poner("plugins\\" + PLUGIN_ID, "enabled", "true")
+            _registro_poner("plugins\\" + PLUGIN_ID, "toolbar", "true")
+            for old in OLD_IDS:
+                _registro_poner("plugins\\" + old, "enabled", "false")
+            hechos.append(target)
+        return hechos
     for base in (home / ".var" / "app" / "org.ingecad.IngeCAD" / "config" / "IngeCAD",
                  home / ".config" / "IngeCAD"):
         if not base.is_dir():
@@ -183,8 +217,10 @@ def _ingecad_desde_afuera():
 # -- QGIS ----------------------------------------------------------------------------------
 def _perfiles_qgis():
     home = _home()
-    for base in (home / ".var" / "app" / "org.qgis.qgis" / "data" / "QGIS",
-                 home / ".local" / "share" / "QGIS"):
+    bases = ((_appdata() / "QGIS",) if os.name == "nt" else
+             (home / ".var" / "app" / "org.qgis.qgis" / "data" / "QGIS",
+              home / ".local" / "share" / "QGIS"))
+    for base in bases:
         for ver in ("QGIS4", "QGIS3"):
             profiles = base / ver / "profiles"
             if profiles.is_dir():
@@ -234,7 +270,11 @@ def _informar_qgis():
              + "). Si QGIS estaba abierto, reinícielo.")
     for f in fallas:
         _say("QGIS: no se pudo instalar en " + f)
-    if not hechos:
+    if not hechos and os.name == "nt":
+        _say("QGIS: no se encontró ningún perfil (si QGIS nunca se abrió en este usuario, "
+             "ábralo una vez, ciérrelo y vuelva a instalar; o en QGIS: Instalar a partir "
+             "de ZIP con geocad_qgis_" + VERSION + ".zip).")
+    elif not hechos:
         _say("QGIS: no se encontró o no se pudo escribir su carpeta de complementos. "
              "Para terminar, corra este mismo archivo desde la Consola: "
              "python3 instalar_geocad_" + VERSION + ".py (o en QGIS: Instalar a partir de "

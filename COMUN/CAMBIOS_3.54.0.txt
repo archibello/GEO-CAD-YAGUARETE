@@ -1,0 +1,92 @@
+GeoCAD - versión 3.54.0
+=======================
+GEOCAD YAGUARETÉ PARA WINDOWS. La 3.53.0 completa, ahora también en IngeCAD
+y QGIS 4 de Windows. En Linux no cambia nada de lo que se ve.
+
+Pedido (28/10/2026): «preparar la versión 3.53.0 para Windows».
+- Había una adaptación aparte, «GeoCAD 3.4.0 Windows», hecha sobre el código
+  de la 3.4.0 y fuera del proyecto (sólo existía instalada y en su .exe).
+  Lo de Windows pasa ahora al código del proyecto, sobre la 3.53.0, y sale
+  en una sola entrega para los dos sistemas.
+
+INSTALAR EN WINDOWS
+- Nuevo: INSTALAR_GeoCAD_Windows.bat (en GeoCad Tool y en el .zip). Doble
+  clic, con IngeCAD y QGIS cerrados. Usa el Python que trae QGIS: no hace
+  falta instalar Python ni ser administrador. Corre el mismo instalador
+  único de siempre (huella SHA-256, copia .anterior-geocad).
+- IngeCAD: %APPDATA%\IngeCAD\plugins\geocad, activado en el Registro
+  (HKEY_CURRENT_USER\Software\IngeCAD\IngeCAD\plugins), que es donde el
+  IngeCAD de Windows guarda sus ajustes (no en IngeCAD.conf). Se retira el
+  Puente 1.x igual que en Linux.
+- QGIS: cada perfil de %APPDATA%\QGIS\QGIS4\profiles (y QGIS3), activado.
+  Si QGIS nunca se abrió en ese usuario no hay perfil: el instalador lo dice.
+- AP en IngeCAD con instalar_geocad_3.54.0.py y Actualizar también sirven
+  en Windows (usan el mismo instalador).
+- Sin NSIS en este equipo no se arma el .exe: el .bat lo reemplaza.
+
+GEOPACKAGE EN EL INGECAD DE WINDOWS
+- El IngeCAD de Windows viene empaquetado y no trae sqlite3 de Python: sin
+  él no se lee ni se guarda GeoPackage. GeoCAD trae su copia (Python 3.12,
+  64 bits; win/py312, de python-build-standalone) y la usa SÓLO si falta.
+  Se carga desde %LOCALAPPDATA%\GeoCAD\sqlite para poder actualizar GeoCAD
+  con IngeCAD abierto.
+- IngeCAD le dice a QGIS si puede abrir GeoPackage; si no, QGIS no manda
+  esas capas (avisa y sugiere Shapefile) en vez de fallar del otro lado.
+
+ABRIR INGECAD DESDE QGIS (WINDOWS)
+- QGIS busca ingecad.exe en el Registro (instalador de IngeCAD), en
+  C:\Program Files\IngeCAD y en %LOCALAPPDATA%\Programs\IngeCAD. Si está en
+  otro lado: Configuración común > «IngeCAD en Windows (ruta de ingecad.exe)».
+- IngeCAD queda abierto aunque se cierre QGIS, sin ventana de consola.
+- En Windows no aparecen los consejos de «flatpak override» (sólo Linux).
+
+DIAGNÓSTICO
+- Nuevo en IngeCAD: GeoCAD Yaguareté > Diagnóstico de GeoCAD Yaguareté en
+  este equipo (DIAGNOSTICOGEOCAD / GEOCADDIAG): sistema, Python, GeoPackage
+  (sqlite3) y de dónde, módulos de Python que falten, carpeta común con QGIS
+  y si se puede escribir, si QGIS está abierto.
+
+MÁS FIRME EN WINDOWS (los dos programas)
+- Buzón, configuración, módulos y botones: si el otro programa está leyendo
+  el archivo justo cuando se reemplaza (Windows no lo deja), se reintenta
+  unos instantes en vez de fallar.
+
+Por dentro
+- Nuevos: INGECAD/codigo/geocad/sqlite_win.py, diagnostico.py, win/py312/;
+  QGIS/codigo/geocad/abrir_ingecad.py.
+- nucleo/buzon.py: _reemplazar (reintentos) y puede() (lo que anuncia el
+  otro programa); config, modulos y botones usan _reemplazar; config: clave
+  «ingecad_windows».
+- plantilla_instalador: rutas de %APPDATA% y Registro cuando os.name == "nt".
+- build.py: lee y escribe UTF-8 con \n tal cual (en Windows write_text
+  cambiaba la codificación y los finales de línea) y arma el .bat.
+
+Pruebas
+- Nueva test_windows.py (corre en Linux y en Windows; simula el sistema y no
+  toca el Registro): instalador en %APPDATA% con Registro, sin IngeCAD, y
+  Linux igual que antes; el .bat; abrir IngeCAD; sqlite3 propio (en Windows,
+  carga real de la copia); lo que anuncia IngeCAD; reintentos.
+- test_e2e.py cierra su lector de pyshp (en Windows bloqueaba el guardado).
+- tmp_pruebas.py, en Windows: USERPROFILE, HOME, APPDATA y LOCALAPPDATA van
+  a la carpeta temporal de la prueba y «~» sigue a HOME como en Linux. Antes
+  las pruebas instalaban GeoCAD y escribían ~/.config/geocad en las carpetas
+  REALES del usuario. En Linux no cambia nada.
+- En este equipo (Windows 10, Python 3.12 de QGIS 4.2.3, IngeCAD 0.6.8.2):
+  55 de 67 pasan, y ninguna toca ya las carpetas reales (comprobado antes y
+  después). Las otras 12 fallan igual con la 3.53.0 sin tocar: esperan rutas
+  de Linux (XDG_CONFIG_HOME), usan /proc, o necesitan GDAL_GPKG (datos de
+  prueba de GDAL, que acá no están). Hay que correrlas TODAS en Linux antes
+  de cerrar.
+- En Linux (28/10/2026, IngeCAD 0.6.8.2 y 0.6.7): las 67 pasan. Hizo falta
+  un ajuste: abrir_ingecad arma las rutas de ingecad.exe como rutas de
+  Windows también al simularlo en Linux (en Windows da lo mismo), y
+  test_qgis_lado prueba «abrir IngeCAD» en abrir_ingecad.py.
+- Instalada en este equipo con el .bat: IngeCAD anuncia 3.54.0 y GeoPackage sí.
+
+A probar a mano (sección RZ de 02_PRUEBAS_MANUALES.txt)
+- Windows: instalar con el .bat; DIAGNOSTICOGEOCAD; Enviar a IngeCAD con un
+  .shp y con un .gpkg; Devolver a QGIS CON LA CAPA ABIERTA EN QGIS (en
+  Windows un archivo abierto no se puede reemplazar: si QGIS lo retiene,
+  GeoCAD no guarda y restaura el original; ver si pasa); abrir IngeCAD
+  desde QGIS; Actualizar.
+- Linux: que todo siga igual (instalar, Enviar, Devolver, Actualizar).

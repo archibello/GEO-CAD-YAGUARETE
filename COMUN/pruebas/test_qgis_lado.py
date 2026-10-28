@@ -125,7 +125,7 @@ lay.setReadOnly(False)
 qbuzon.clear_heartbeat("ingecad")
 called = []
 qp.subprocess.Popen = lambda cmd, **k: called.append(cmd) or types.SimpleNamespace(poll=lambda: 1)
-qp.shutil.which = lambda n: "/usr/bin/" + n if n == "flatpak" else None
+importlib.import_module(qp.__package__ + ".abrir_ingecad").shutil.which = lambda n: "/usr/bin/" + n if n == "flatpak" else None
 otra.visible = False; fuera.visible = False
 envio_ui.remember({"modo": "capa", "altura": 3.0}); P.send_default(); print("lanza:", called)
 assert called and called[0][-1] == "org.ingecad.IngeCAD"

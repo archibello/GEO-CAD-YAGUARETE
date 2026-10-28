@@ -17,9 +17,10 @@ _state = {"timer": None, "window": None, "ticks": 0, "pending": []}
 
 def _heartbeat() -> None:
     """Señal de vida, con la versión (QGIS avisa si no coincide con la suya)."""
-    from . import VERSION
+    from . import VERSION, sqlite_win
 
-    buzon.heartbeat("ingecad", {"version": VERSION})
+    # "gpkg": si este IngeCAD puede abrir GeoPackage (en Windows depende de sqlite3)
+    buzon.heartbeat("ingecad", {"version": VERSION, "gpkg": sqlite_win.disponible()})
 
 def ensure_started(window) -> None:
     """Arranca el puente una sola vez por ventana."""

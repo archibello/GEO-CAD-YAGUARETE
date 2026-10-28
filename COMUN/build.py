@@ -7,6 +7,7 @@
         GeoCad Tool/instalar_geocad_<v>.py   INSTALADOR ÚNICO: IngeCAD y QGIS
                                              (Consola: python3 ..., o AP en IngeCAD)
         GeoCad Tool/INSTALAR_GeoCAD.sh       lo mismo, con doble clic
+        GeoCad Tool/INSTALAR_GeoCAD_Windows.bat  lo mismo en Windows (con el Python de QGIS)
         GeoCad Tool/geocad_qgis_<v>.zip      sólo QGIS (Instalar a partir de ZIP)
         CAMBIOS_<v>.txt, LEEME.txt
         GeoCAD_<v>.zip                       todo junto, para llevar a otra computadora
@@ -86,15 +87,49 @@ def instalador(src: Path, version: str, qgis_src: Path = None) -> str:
             .replace("@DATA@", _b64(raw)))
 
 
+def _leer(p: Path) -> str:
+    return p.read_bytes().decode("utf-8")
+
+
+def _escribir(p: Path, texto: str) -> None:
+    """UTF-8 y \\n tal cual: en Windows write_text() cambiaría la codificación y los finales."""
+    p.write_bytes(texto.encode("utf-8"))
+
+
 def poner_version(version: str) -> None:
-    init = (ING / "__init__.py").read_text()
+    init = _leer(ING / "__init__.py")
     init = re.sub(r'version="[^"]+"', f'version="{version}"', init, count=1)
     init = re.sub(r'^VERSION = "[^"]+"', f'VERSION = "{version}"', init, count=1, flags=re.M)
-    (ING / "__init__.py").write_text(init)
-    meta = re.sub(r"^version=.*$", f"version={version}", (QG / "metadata.txt").read_text(), flags=re.M)
-    (QG / "metadata.txt").write_text(meta)
-    plug = re.sub(r'^VERSION = "[^"]+"', f'VERSION = "{version}"', (QG / "plugin.py").read_text(), flags=re.M)
-    (QG / "plugin.py").write_text(plug)
+    _escribir(ING / "__init__.py", init)
+    meta = re.sub(r"^version=.*$", f"version={version}", _leer(QG / "metadata.txt"), flags=re.M)
+    _escribir(QG / "metadata.txt", meta)
+    plug = re.sub(r'^VERSION = "[^"]+"', f'VERSION = "{version}"', _leer(QG / "plugin.py"), flags=re.M)
+    _escribir(QG / "plugin.py", plug)
+
+
+def bat_windows(version: str) -> str:
+    """INSTALAR_GeoCAD_Windows.bat: corre el instalador único con el Python que trae
+    QGIS (no hace falta instalar Python ni ser administrador)."""
+    lineas = [
+        "@echo off",
+        f"rem GEO-CAD-YAGUARETE {version}: instala y activa GEO-CAD-YAGUARETE en IngeCAD y en QGIS (Windows).",
+        "chcp 65001 >nul",
+        'cd /d "%~dp0"',
+        "set PYTHONUTF8=1",
+        "set PY=",
+        'for /d %%D in ("%ProgramFiles%\\QGIS*") do for /d %%P in ("%%D\\apps\\Python3*") do '
+        'if exist "%%P\\python.exe" set PY="%%P\\python.exe"',
+        "if not defined PY where py >nul 2>nul && set PY=py -3",
+        "if not defined PY (",
+        "  echo No se encontro QGIS en %ProgramFiles% ni Python. Instale QGIS y vuelva a intentar.",
+        "  pause",
+        "  exit /b 1",
+        ")",
+        f"%PY% instalar_geocad_{version}.py",
+        "echo.",
+        "pause",
+    ]
+    return "\r\n".join(lineas) + "\r\n"
 
 
 def main():
@@ -118,13 +153,15 @@ def main():
     poner_version(VERSION)
     tool.mkdir(parents=True, exist_ok=True)
     qgis_zip.write_bytes(zip_folder(QG, "geocad"))
-    installer_py.write_text(instalador(ING, VERSION), encoding="utf-8")
+    _escribir(installer_py, instalador(ING, VERSION))
     script = (f"#!/bin/sh\n# GEO-CAD-YAGUARETÉ {VERSION}: instala y activa GEO-CAD-YAGUARETÉ en IngeCAD y en QGIS.\n"
               f'cd "$(dirname "$0")" && python3 instalar_geocad_{VERSION}.py\n'
               "printf '\\nPulse Enter para cerrar. '; read _\n")
     sh = tool / "INSTALAR_GeoCAD.sh"
-    sh.write_text(script, encoding="utf-8")
+    _escribir(sh, script)
     sh.chmod(0o755)
+    bat = bat_windows(VERSION)
+    _escribir(tool / "INSTALAR_GeoCAD_Windows.bat", bat)
     shutil.copy2(changes, carpeta / changes.name)
     shutil.copy2(COMUN / "LEEME.txt", carpeta / "LEEME.txt")
     top = f"GeoCAD_{VERSION}"
@@ -134,6 +171,10 @@ def main():
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o755 << 16
         zf.writestr(info, script)
+        info = zipfile.ZipInfo(f"{top}/INSTALAR_GeoCAD_Windows.bat", date_time=(2026, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = 0o644 << 16
+        zf.writestr(info, bat)
         zf.write(qgis_zip, f"{top}/opcional_QGIS_geocad_qgis_{VERSION}.zip")
         zf.write(COMUN / "LEEME.txt", f"{top}/LEEME.txt")
         zf.write(changes, f"{top}/{changes.name}")

@@ -119,6 +119,7 @@ r = shapefile.Reader(shp, encoding="utf-8")
 print("pyshp:", len(r), [rec[1] for rec in r.iterRecords()])
 for sr in r.iterShapeRecords():
     pass
+r.close()                       # en Windows un archivo abierto no se puede reemplazar
 # polígonos: exterior en sentido horario
 for i in (0, 2, 5, 6):
     g = new.geometry(i); assert shpio.signed_area(g.parts[0][:-1]) < 0, i

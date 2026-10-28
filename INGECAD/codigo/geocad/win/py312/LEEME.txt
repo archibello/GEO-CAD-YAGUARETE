@@ -1,0 +1,11 @@
+sqlite3 para el IngeCAD de Windows (Python 3.12, 64 bits)
+=========================================================
+El IngeCAD de Windows viene empaquetado (PyInstaller) y no trae el módulo
+sqlite3 de Python, que GeoCAD necesita para leer y guardar GeoPackage.
+GeoCAD lo usa SÓLO si el de IngeCAD no está (ver ../../sqlite_win.py).
+
+Origen: python-build-standalone 20250918, CPython 3.12.11,
+x86_64-pc-windows-msvc (github.com/astral-sh/python-build-standalone):
+    DLLs/_sqlite3.pyd, DLLs/sqlite3.dll, Lib/sqlite3/{__init__,dbapi2,dump}.py
+Licencias: Python (PSF License) y SQLite (dominio público).
+Si IngeCAD pasa a otra versión de Python (3.13...), va otra carpeta pyXYZ.
