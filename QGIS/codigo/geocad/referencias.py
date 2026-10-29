@@ -48,7 +48,7 @@ MENU = (
 )
 
 #: las que todavía no están (en gris, como en IngeCAD)
-NO_DISPONIBLES = {"APP": "Apparent intersection is not implemented yet."}
+NO_DISPONIBLES = {}     # APP desde la 3.56.0 (guias.py)
 
 ETIQUETA = {item[0]: item[1] for item in MENU if item}
 

@@ -156,6 +156,12 @@ CATALOGO = {
                "imagen hecha de varias capturas más cercanas), GeoTIFF, PNG+PGW o JPG+JGW en una "
                "carpeta común a IngeCAD y QGIS. Apagado no queda rastro: sin enlace en Google "
                "Earth ni atajo.", requiere="georref"),
+        Modulo("referencias", "Perpendicular y Apparent Intersection con guías de puntos",
+               "Con Perpendicular o Apparent Intersection (Mayús + clic derecho, PER o APP): "
+               "detenerse medio segundo sobre una línea la toma, y la línea se prolonga con "
+               "trazo de puntos hasta el punto flotante (el pie, el cruce aparente) donde va "
+               "el clic. Apparent Intersection deja de estar en gris.",
+               cambia_programa=True),
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),
@@ -174,11 +180,12 @@ CATALOGO = {
         Modulo("capas", "Capas CAD (Layer Properties)",
                "Administrador de capas estilo AutoCAD con LAYER_CODE (antes Layer Properties 6.7)."),
         Modulo("referencias", "Referencias a objetos con Shift + clic derecho",
-               "Al digitalizar líneas, polilíneas o polígonos con las herramientas de QGIS, "
+               "Al digitalizar líneas, polilíneas o polígonos (Dibujo de GeoCAD o herramientas de QGIS), "
                "Shift + clic derecho despliega el menú de referencias de IngeCAD (From, Mid "
-               "Between 2 Points, Endpoint, Midpoint, Intersection, Extension, Center, "
+               "Between 2 Points, Endpoint, Midpoint, Intersection, Apparent Intersection, Extension, Center, "
                "Geometric Center, Quadrant, Tangent, Perpendicular, Parallel, Node, Insertion, "
-               "Nearest, Origin, None) para el punto siguiente, como en AutoCAD.",
+               "Nearest, Origin, None) para el punto siguiente, como en AutoCAD. Perpendicular y "
+               "Apparent Intersection prolongan las líneas con trazo de puntos.",
                cambia_programa=True),
         Modulo("tablas", "Tablas: Pegar tabla en las composiciones",
                "Botón «Pegar tabla» en la ventana de cada composición (y en el menú GeoCAD): "

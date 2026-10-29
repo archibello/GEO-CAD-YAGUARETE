@@ -1,0 +1,61 @@
+GeoCAD - versión 3.56.0
+=======================
+PERPENDICULAR Y APPARENT INTERSECTION CON GUÍAS DE PUNTOS, EN INGECAD Y EN
+QGIS. Hay que actualizar los dos.
+
+Pedido de Fernando (29/10/2026)
+- «Mejorar la función perpendicular y aparente intersección: extender las
+  líneas con líneas de punto hasta un punto flotante que se produce donde
+  debería concretarse la operación; en ambos casos se activan al pasar por
+  encima de las entidades.» En las dos plataformas.
+- Acordado: una línea se toma deteniéndose medio segundo encima (como en
+  AutoCAD, para no tomar todo lo que cruza el cursor); la tercera
+  reemplaza a la más vieja.
+
+Qué cambia (IngeCAD y QGIS)
+- Perpendicular: al pasar por una línea, el pie de la perpendicular desde
+  el punto anterior, AUNQUE CAIGA FUERA DEL TRAMO: la línea se prolonga con
+  trazo de puntos naranja desde su punta más cercana hasta el pie, donde
+  aparece la marca. Detenerse medio segundo la toma (verde): el pie queda
+  aunque el cursor se vaya, y el clic pone el punto ahí. (IngeCAD solo no
+  daba el pie fuera del tramo.)
+- Apparent Intersection: sale del gris en el menú de Mayús + clic derecho
+  (y en IngeCAD también se puede escribir APP o dejarla entre las
+  referencias activas). Detenerse medio segundo sobre una línea la toma;
+  pasar por otra muestra el cruce de las dos (prolongadas) con las guías de
+  puntos de cada una que no llega. Con las dos tomadas el punto queda; el
+  clic, en cualquier lado, lo pone en el cruce. Si se cruzan de verdad, es
+  el cruce. Dos paralelas: sin punto (QGIS lo avisa).
+- Con el punto se sueltan las líneas tomadas y las guías. Esc cancela.
+- QGIS: en Dibujo de GeoCAD (LINEA, PLINEA...) y en las herramientas de
+  QGIS (Agregar entidad de línea / de polígono).
+
+Módulos
+- IngeCAD: módulo nuevo «Perpendicular y Apparent Intersection con guías
+  de puntos» (prendido por defecto). Apagado, IngeCAD queda como venía
+  (APP en gris, PER sólo dentro del tramo).
+- QGIS: va dentro de «Referencias a objetos con Shift + clic derecho».
+
+Por dentro
+- guias.py (núcleo, nuevo): las cuentas, iguales en los dos lados (pie,
+  cruce aparente, prolongaciones, las líneas tomadas).
+- IngeCAD, guias_ingecad.py (nuevo): envuelve ToolController.on_hover y
+  clear_tracking, MainWindow.osnap_override_menu, Viewport._draw_tracking
+  y _draw_snap_marker (la marca de APP: cuadrado con X); APP disponible en
+  core.osnap mientras el módulo está prendido.
+- QGIS, referencias_qgis.py: el reloj del medio segundo y dos QgsRubberBand
+  (las tomadas y las guías de puntos); referencias.py: APP disponible.
+
+Pruebas
+- test_guias.py (nuevo): las cuentas y el lado de IngeCAD con un
+  controlador simulado (APP fuera del gris, tomar, reemplazar, paralelas,
+  módulo apagado, el dibujo de las guías).
+- ventana/banco_guias_ventana.py (nuevo): la VENTANA REAL de IngeCAD (Qt
+  offscreen, con el Python del Flatpak de IngeCAD) con 0.6.8.2 y 0.6.7:
+  APP en el menú, el reloj de Qt, el cruce y el pie con sus guías
+  dibujadas, LINE termina en el punto, módulo apagado.
+- test_referencias.py: además, con el QGIS de Flatpak (4.2.2 y 3.28.9), APP
+  y PER con guías en un comando de Dibujo, con el medio segundo de verdad.
+- test_modulos.py: el módulo nuevo de IngeCAD.
+- Todas las de COMUN/pruebas con IngeCAD 0.6.8.2 y 0.6.7.
+- Prueba manual: sección SG de 02_PRUEBAS_MANUALES.txt.

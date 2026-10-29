@@ -10,6 +10,10 @@ como en AutoCAD. Vale en las dos clases de herramienta:
   el punto va al comando como un punto enganchado (3.55.1).
 Esc cancela la referencia sin cancelar el dibujo.
 
+Perpendicular y Apparent Intersection (3.56.0): la línea se toma
+deteniéndose medio segundo encima y se prolonga con trazo de puntos hasta
+el punto flotante (el pie, el cruce aparente). Cuentas en guias.py.
+
 No toca la herramienta: un filtro de eventos sobre el lienzo, que se saca
 entero al apagar el módulo. Las cuentas están en referencias.py.
 """
@@ -17,19 +21,20 @@ from __future__ import annotations
 
 import math
 
-from qgis.core import (QgsCoordinateTransform, QgsFeatureRequest, QgsGeometry, QgsPointXY,
+from qgis.core import (Qgis, QgsCoordinateTransform, QgsFeatureRequest, QgsGeometry, QgsPointXY,
                        QgsProject, QgsRectangle, QgsVectorLayer, QgsWkbTypes)
-from qgis.gui import QgsMapToolCapture, QgsVertexMarker
+from qgis.gui import QgsMapToolCapture, QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtCore import QEvent, QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QColor, QCursor
 from qgis.PyQt.QtWidgets import QInputDialog, QMenu, QToolTip
 
+from . import guias as G
 from . import referencias as R
 
 APERTURA_PX = 12        # radio de búsqueda alrededor del cursor, en píxeles
 MAX_ENTIDADES = 500     # por capa y por movimiento del cursor
 
-_ICONO = {"END": "ICON_BOX", "MID": "ICON_TRIANGLE", "INT": "ICON_X", "EXT": "ICON_CROSS",
+_ICONO = {"END": "ICON_BOX", "MID": "ICON_TRIANGLE", "INT": "ICON_X", "APP": "ICON_X", "EXT": "ICON_CROSS",
           "CEN": "ICON_CIRCLE", "GCE": "ICON_CIRCLE", "QUA": "ICON_RHOMBUS",
           "TAN": "ICON_CIRCLE", "PER": "ICON_BOX", "PAR": "ICON_CROSS", "NOD": "ICON_CIRCLE",
           "INS": "ICON_BOX", "NEA": "ICON_DOUBLE_TRIANGLE", "ORI": "ICON_CROSS",
@@ -42,6 +47,14 @@ def _enum(owner, scope, member):
     if sc is not None and hasattr(sc, member):
         return getattr(sc, member)
     return getattr(owner, member)
+
+
+def _linea():
+    """El tipo de geometría línea para QgsRubberBand (QGIS 3 y 4)."""
+    gt = getattr(Qgis, "GeometryType", None)
+    if gt is not None and hasattr(gt, "Line"):
+        return gt.Line
+    return QgsWkbTypes.LineGeometry
 
 
 def _exec(obj, *args):
@@ -79,6 +92,21 @@ class ReferenciasQgis(QObject):
         self.guia.setIconType(_enum(QgsVertexMarker, "IconType", "ICON_CROSS"))
         self.guia.setIconSize(10)
         self.guia.hide()
+        # PER y APP: las líneas tomadas (verde) y sus prolongaciones de puntos
+        self.tomadas = None
+        self.lineas = ([], [])       # (guías, tramos usados)
+        self._ultimo = None          # el último cursor, en píxeles
+        self.prolong = QgsRubberBand(self.canvas, _linea())
+        self.prolong.setColor(QColor(255, 140, 0))
+        self.prolong.setWidth(2)
+        self.prolong.setLineStyle(_enum(Qt, "PenStyle", "DotLine"))
+        self.resalte = QgsRubberBand(self.canvas, _linea())
+        self.resalte.setColor(QColor(0, 160, 0, 170))
+        self.resalte.setWidth(3)
+        self._reloj = QTimer(self)
+        self._reloj.setSingleShot(True)
+        self._reloj.setInterval(G.TOMA_MS)
+        self._reloj.timeout.connect(self._tomar)
         self.canvas.viewport().installEventFilter(self)
         self.canvas.installEventFilter(self)
         self.canvas.mapToolSet.connect(self._cambio_herramienta)
@@ -95,7 +123,7 @@ class ReferenciasQgis(QObject):
             except Exception:  # noqa: BLE001
                 pass
         scene = self.canvas.scene()
-        for item in (self.marca, self.guia):
+        for item in (self.marca, self.guia, self.prolong, self.resalte):
             try:
                 scene.removeItem(item)
             except Exception:  # noqa: BLE001
@@ -222,7 +250,10 @@ class ReferenciasQgis(QObject):
             self._aviso("Parallel needs a previous point.")
             return
         self.modo = clave
-        mensajes = {"FROM": "From  Base point:", "M2P": "First point of mid:",
+        if clave in G.MAX_TOMADAS:
+            self.tomadas = G.Tomadas(clave)
+        mensajes = {"PER": "Perpendicular: pass over a line (pause to keep it).",
+                    "APP": "Apparent Intersection: pause over a line, then over another.","FROM": "From  Base point:", "M2P": "First point of mid:",
                     "EXT": "Extension: pause over the end of a line, then follow its path.",
                     "PAR": "Parallel: pause over a line, then move parallel to it.",
                     "NON": "None: the next point is not snapped."}
@@ -243,8 +274,14 @@ class ReferenciasQgis(QObject):
         self.modo, self.etapa, self.base, self.candidato = None, 0, None, None
         self.fuentes, self.direcciones = [], []
         self._tragar_suelta = False
+        self.tomadas, self.lineas, self._ultimo = None, ([], []), None
+        try:
+            self._reloj.stop()
+        except Exception:  # noqa: BLE001
+            pass
         self.marca.hide()
         self.guia.hide()
+        self._dibujar_lineas()
 
     # ------------------------------------------------------------ búsqueda
     def _mapa(self, x, y):
@@ -285,9 +322,46 @@ class ReferenciasQgis(QObject):
             if d is not None and d not in self.direcciones:
                 self.direcciones = [d]
             return R.sobre_paralela(p, u, previo, self.direcciones)
+        if self.modo in G.MAX_TOMADAS and self.tomadas is not None:
+            return self._con_guias(p, u, datos, previo)
         return R.buscar(self.modo, p, u, datos, previo)
 
+    def _con_guias(self, p, u, datos, previo):
+        """PER y APP: la línea bajo el cursor (y el reloj para tomarla), el
+        punto flotante y sus guías de puntos."""
+        encima = G.tramo_cercano(p, u, datos.segs)
+        if self.tomadas.esperar(encima):
+            self._reloj.start()
+        elif self.tomadas.espera is None:
+            self._reloj.stop()
+        r = G.calcular(self.modo, self.tomadas, encima, previo)
+        if r is not None:
+            self.lineas = (r[1], r[2])
+            return r[0]
+        self.lineas = ([], list(self.tomadas.lista))
+        # sin línea recta: el PER de un círculo, o el cruce real bajo el cursor
+        return R.buscar("PER" if self.modo == "PER" else "INT", p, u, datos, previo)
+
+    def _tomar(self):
+        if self.tomadas is None or not self.tomadas.tomar():
+            return
+        tool = self.herramienta()
+        if tool is not None and self._ultimo is not None:
+            self._mover(tool, *self._ultimo)
+
+    def _dibujar_lineas(self):
+        guias, usados = self.lineas
+        tomadas = list(self.tomadas.lista) if self.tomadas is not None else []
+        for rb, tramos in ((self.prolong, [list(g) for g in guias]),
+                           (self.resalte, [[(t[0], t[1]), (t[2], t[3])] for t in tomadas])):
+            if not tramos:
+                rb.reset(_linea())
+                continue
+            geom = QgsGeometry.fromMultiPolylineXY([[QgsPointXY(*a) for a in t] for t in tramos])
+            rb.setToGeometry(geom, None)
+
     def _mover(self, tool, x, y):
+        self._ultimo = (x, y)
         p = self._mapa(x, y)
         self.candidato = self._calcular(tool, p)
         if self.candidato is None or self.modo == "NON":
@@ -303,6 +377,7 @@ class ReferenciasQgis(QObject):
             self.guia.show()
         else:
             self.guia.hide()
+        self._dibujar_lineas()
 
     def _clic(self, tool, x, y):
         if self.modo is None:
@@ -337,6 +412,10 @@ class ReferenciasQgis(QObject):
             destino = R.medio(self.base, punto)
             self.cancelar()
             self._agregar(tool, *destino)
+            return
+        if punto is None and self.modo == "APP" and self.tomadas is not None \
+                and len(self.tomadas.lista) == 2:
+            self._aviso("The lines are parallel: no apparent intersection. Pause over another line.")
             return
         if punto is None:
             self._aviso(f"No {R.ETIQUETA[self.modo].lower()} found for specified point.")

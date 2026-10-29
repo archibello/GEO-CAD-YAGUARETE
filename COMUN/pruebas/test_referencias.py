@@ -14,7 +14,7 @@ from geocad import referencias as R, modulos
 
 # el módulo se elige al instalar (sólo en QGIS), activo por defecto
 assert "referencias" in [m.clave for m in modulos.catalogo("qgis")]
-assert "referencias" not in [m.clave for m in modulos.catalogo("ingecad")]
+assert "referencias" in [m.clave for m in modulos.catalogo("ingecad")]   # guías de PER y APP (3.56.0)
 assert modulos.activo("qgis", "referencias")
 assert [m for m in modulos.catalogo("qgis") if m.clave == "referencias"][0].cambia_programa
 
@@ -30,7 +30,7 @@ assert textos == ["From", "Mid Between 2 Points", "-", "Endpoint", "Midpoint", "
                   "Apparent Intersection", "Extension", "-", "Center", "Geometric Center",
                   "Quadrant", "Tangent", "-", "Perpendicular", "Parallel", "Node", "Insertion",
                   "Nearest", "Origin", "None", "-", "Object Snap Settings..."], textos
-assert set(R.NO_DISPONIBLES) == {"APP"}          # en gris, como en IngeCAD
+assert R.NO_DISPONIBLES == {}                  # APP disponible desde la 3.56.0
 
 def cerca(p, q, tol=1e-6):
     return p is not None and abs(p[0] - q[0]) < tol and abs(p[1] - q[1]) < tol
@@ -143,6 +143,8 @@ win.resize(800, 600); win.show()
 base = QgsVectorLayer("LineString?crs=EPSG:22185", "base", "memory")
 f = QgsFeature(); f.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(0, 0), QgsPointXY(100, 0)]))
 base.dataProvider().addFeatures([f])
+fv = QgsFeature(); fv.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(150, 20), QgsPointXY(150, 60)]))
+base.dataProvider().addFeatures([fv])                  # V: para Apparent Intersection
 circ = QgsFeature(); circ.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(200, 50)).buffer(20, 16))
 pol = QgsVectorLayer("Polygon?crs=EPSG:22185", "pol", "memory"); pol.dataProvider().addFeatures([circ])
 nueva = QgsVectorLayer("LineString?crs=EPSG:22185", "nueva", "memory")
@@ -256,6 +258,43 @@ ref.elegir("PER"); clic(60, 0.8)
 ref.elegir("MID"); clic(51, 1)
 ref.elegir("NON"); clic(30, 30)
 out["dib"] = mgr.puntos
+# 3.56.0: Apparent Intersection y Perpendicular con guías de puntos (el medio segundo de verdad)
+import time
+def mover(x, y):
+    app.sendEvent(vp, evento(MOVE, px(x, y), NADA, SIN)); app.processEvents()
+def quieto(s=0.7):
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < s:
+        app.processEvents(); time.sleep(0.01)
+def rb(banda):
+    g = banda.asGeometry()
+    return 0 if g.isNull() else len(g.asMultiPolyline() if g.isMultipart() else [g.asPolyline()])
+ref.elegir("APP")
+mover(50, 0.5)
+app_ = {"una": ref.candidato}
+quieto()                                               # base tomada
+app_["tomadas"] = len(ref.tomadas.lista)
+mover(150.3, 40)                                       # sobre V: el cruce al momento
+app_["cruce"] = [round(v, 6) for v in ref.candidato]
+app_["guias"] = [len(ref.lineas[0]), rb(ref.prolong), rb(ref.resalte)]
+mover(-10, 90)                                         # lejos sin tomar V: nada
+app_["lejos"] = ref.candidato
+mover(150.3, 40); quieto(); mover(-10, 90)             # V tomada: el punto queda
+app_["queda"] = [round(v, 6) for v in ref.candidato]
+clic(-10, 90)                                          # el clic lejos va al cruce
+app_["clic"] = mgr.puntos[-1]
+app_["suelta"] = [ref.modo, rb(ref.prolong), rb(ref.resalte)]
+out["app"] = app_
+mgr.command.base = lambda: QgsPointXY(-30, 50)         # el pie cae fuera de la base
+ref.elegir("PER")
+mover(50, 0.5)
+per_ = {"pie": [round(v, 6) for v in ref.candidato], "guias": [[list(map(float, a)), list(map(float, b))]
+                                                           for a, b in ref.lineas[0]]}
+quieto(); mover(-10, 90)
+per_["queda"] = [round(v, 6) for v in ref.candidato]
+clic(-10, 90)
+per_["clic"] = mgr.puntos[-1]
+out["per2"] = per_
 mgr.command = None                                     # sin comando: Mayús + clic derecho = Enter
 clic(40, 60, DER, SHIFT)
 out["dib_sin"] = [len(menus), herr.derechos]
@@ -297,8 +336,16 @@ for rama in ramas_qgis():
     assert out["dib_menu"] == [1, 0] and out["dib_sin"] == [1, 1], out
     assert out["dib"][0] == [0, 0, True] and out["dib"][1] == [50, 0, True], out
     assert out["dib"][2][2] is False, out                # None: sin enganche
-    print("  QGIS %s: Shift + clic derecho, MID, CEN, QUA, PER, From y M2P en QGIS y en Dibujo"
-          % out["version"])
+    a = out["app"]
+    assert a["una"] is None and a["tomadas"] == 1, a
+    assert a["cruce"] == [150, 0] and a["guias"] == [2, 2, 1], a
+    assert a["lejos"] is None and a["queda"] == [150, 0], a
+    assert a["clic"] == [150, 0, True] and a["suelta"] == [None, 0, 0], a
+    q = out["per2"]
+    assert q["pie"] == [-30, 0] and q["guias"] == [[[0, 0], [-30, 0]]], q
+    assert q["queda"] == [-30, 0] and q["clic"] == [-30, 0, True], q
+    print("  QGIS %s: Shift + clic derecho, MID, CEN, QUA, PER, From y M2P en QGIS y en Dibujo;"
+          " APP y PER con guías de puntos" % out["version"])
 if not ramas_qgis():
     print("  (QGIS de Flatpak no instalado: sólo las cuentas)")
 print("TODO OK: referencias con Shift + clic derecho en QGIS")

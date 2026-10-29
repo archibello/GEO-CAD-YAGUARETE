@@ -34,7 +34,7 @@ sqlite_win.asegurar()     # Windows: IngeCAD empaquetado no trae sqlite3 (GeoPac
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, categorias, config, dibujo, modulos, nombre, ventanas
-from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
+from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.55.1"
+VERSION = "3.56.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -113,6 +113,7 @@ def _document_open(ctx, document):
     redibujo_imagenes.instalar()
     orden.instalar()
     uniones.instalar()
+    guias_ingecad.instalar()
     barra.instalar()
     capas.instalar()
     legibles.instalar()
@@ -400,7 +401,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.55.1",
+        version="3.56.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -458,6 +459,7 @@ recorte_imagen.instalar()
 redibujo_imagenes.instalar()
 orden.instalar()
 uniones.instalar()
+guias_ingecad.instalar()
 pegartabla.instalar()
 pegarimagen.instalar()
 barra.instalar()
