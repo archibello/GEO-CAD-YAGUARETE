@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Comandos de edición al estilo AutoCAD:
-DESPLAZA, COPIA, GIRA, ALINEAR, ESTIRA, EQDIST, ALARGA y EMPALME.
+DESPLAZA, COPIA, GIRA, ALINEAR, ESTIRA, EQDIST, ALARGA, EMPALME y CHAFLÁN.
 """
 
 import math
@@ -16,13 +16,14 @@ from .editkit import (EditCommand, GeomIO, affine, block_scale_fn, mirror_geom, 
                       text_rotation_fn, text_scale_fn, cap_flat, conform, copy_feature, explode,
                       join_miter, nearest_part, pick_feature, query_geom, rebuild, replace_part,
                       search_radius, segments_from_geometry)
-from .geomops import (GeomError, break_at, break_between, divide_distances, explode_segments,
-                      extend_end, fillet_same, fillet_two, measure_distances, perpendicular_foot,
+from .geomops import (EXTREMO, GeomError, break_at, break_between, chamfer_all, chamfer_same, chamfer_two,
+                      divide_distances, explode_segments, extend_end, fillet_same, fillet_two, measure_distances, perpendicular_foot,
                       point_at, same,
                       prolong_segments, seg_seg, segments_of, split_at_distances, trim_polyline,
                       trim_removed)
 from .settings import get_setting, set_setting
 from .units import InputError, format_length, format_point, parse_degrees, parse_distance, parse_point
+from .. import ochava
 
 OPT_UNDO = ('H', 'U', 'DESHACER', 'UNDO')
 OPT_EXIT = ('S', 'SALIR', 'E', 'EXIT')
@@ -1275,6 +1276,334 @@ class FilletCommand(_PickCommand):
 
 
 # ==========================================================================
+def _lineas(geoms):
+    return [QgsGeometry.fromPolylineXY([QgsPointXY(*c) for c in g]) for g in geoms if g]
+
+
+class ChamferCommand(_PickCommand):
+    """CHAFLÁN (CHAMFER), el de IngeCAD (3.15.0) en QGIS (3.57.0): el EMPALME
+    de Dibujo con un bisel recto en lugar del arco (lado del clic, resaltado,
+    vista previa, polilíneas, dos tramos del mismo objeto, Mayús = esquina).
+
+    Ochava (O), la principal y por defecto: se da el Largo (L) del bisel y los
+    dos ángulos quedan iguales (A = B); en una esquina a 90° cada línea se
+    corta a L/√2. El largo se guarda y es el mismo que en IngeCAD (núcleo,
+    ochava.py). Además desHacer, Polilínea (todos los vértices), Distancia,
+    Ángulo, Recortar, mEtodo y Múltiple, como en IngeCAD.
+
+    Copiado de nuestra versión para IngeCAD (Fernando, 29/10/2026: «se tiene
+    que copiar exactamente», «de nuestra versión creada para IngeCAD»): las
+    mismas preguntas, opciones, valores de la sesión y mensajes. En la capa
+    activa: dos líneas (partes de dos vértices) -> se recortan y el bisel es
+    un objeto nuevo con los atributos de la primera; con una polilínea (sólo
+    su tramo primero o último) -> todo queda unido en ella y el otro objeto
+    se borra; dos lados del mismo objeto (la esquina de un polígono o de una
+    polilínea) -> el bisel queda dentro del objeto. Un polígono con otro
+    objeto no (como las cerradas en IngeCAD)."""
+    title = 'CHAFLÁN'
+    VALORES = ('ochava', 'd1', 'd2', 'largo', 'angulo')
+
+    # valores de la sesión de QGIS, como en IngeCAD (sólo la ochava queda guardada)
+    metodo = 'O'          # 'O' ochava (por defecto), 'D' distancia, 'A' ángulo
+    dist1 = 0.0
+    dist2 = 0.0
+    largo = 0.0           # método Ángulo: longitud sobre la primera línea
+    angulo = 0.0          # método Ángulo: grados desde la primera línea
+    trim = True
+
+    def begin(self):
+        self.ochava = ochava.leer_ochava()       # puede haberse cambiado en IngeCAD
+        self.multiple = False
+        self.state = 'first'
+        self.first = None
+        self._announce()
+        if self.metodo == 'O' and self.ochava <= 0:      # sin largo todavía: se pide
+            self.state = 'ochava'
+        self.prompt()
+
+    def _L(self, v):
+        return format_length(v, self.mgr.units)
+
+    def _announce(self):
+        modo = 'RECORTAR' if self.trim else 'NO RECORTAR'
+        if self.metodo == 'O':
+            self.cl.echo('(Modo %s) Ochava actual: Largo = %s' % (modo, self._L(self.ochava)))
+        elif self.metodo == 'A':
+            self.cl.echo('(Modo %s) Longitud actual de chaflán = %s, Ángulo = %g'
+                         % (modo, self._L(self.largo), self.angulo))
+        else:
+            self.cl.echo('(Modo %s) Distancia1 actual de chaflán = %s, Distancia2 = %s'
+                         % (modo, self._L(self.dist1), self._L(self.dist2)))
+
+    def dists(self, theta):
+        """(d1, d2) según el método: la cuenta del núcleo, la misma de IngeCAD."""
+        return ochava.distancias(self.metodo, theta, self.ochava, self.dist1, self.dist2,
+                                 self.largo, self.angulo)
+
+    def step_prompt(self):
+        st = self.state
+        if st == 'first':
+            self.cl.set_prompt('Designe primera línea o',
+                               [('O', 'Ochava'), ('H', 'desHacer'), ('P', 'Polilínea'), ('D', 'Distancia'),
+                                ('A', 'Ángulo'), ('R', 'Recortar'), ('E', 'mEtodo'), ('M', 'Múltiple')])
+        elif st == 'second':
+            self.cl.set_prompt('Designe segunda línea o Mayús+clic para hacer esquina')
+        elif st == 'ochava':
+            self.cl.set_prompt('Precise largo de ochava (L)', None, self._L(self.ochava))
+        elif st == 'd1':
+            self.cl.set_prompt('Precise primera distancia de chaflán', None, self._L(self.dist1))
+        elif st == 'd2':
+            self.cl.set_prompt('Precise segunda distancia de chaflán', None, self._L(self.dist1))
+        elif st == 'largo':
+            self.cl.set_prompt('Precise longitud de chaflán en la primera línea', None, self._L(self.largo))
+        elif st == 'angulo':
+            self.cl.set_prompt('Precise ángulo de chaflán desde la primera línea', None, '%g' % self.angulo)
+        elif st == 'trim':
+            self.cl.set_prompt('Indique opción de modo Recortar', [('R', 'Recortar'), ('N', 'No recortar')],
+                               'Recortar' if self.trim else 'No recortar')
+        elif st == 'metodo':
+            self.cl.set_prompt('Indique método', [('O', 'Ochava'), ('D', 'Distancia'), ('A', 'Ángulo')],
+                               {'A': 'Ángulo', 'D': 'Distancia'}.get(self.metodo, 'Ochava'))
+        elif st == 'polyline':
+            self.cl.set_prompt('Designe polilínea 2D')
+
+    def _valor(self, st, v):
+        """Guarda el número dado en ``st`` y pasa a lo que sigue."""
+        if st == 'ochava':
+            self.ochava = v
+            ChamferCommand.metodo = 'O'
+            ochava.guardar_ochava(v)
+        elif st == 'd1':
+            ChamferCommand.dist1 = v
+            self.state = 'd2'
+            return
+        elif st == 'd2':
+            ChamferCommand.dist2, ChamferCommand.metodo = v, 'D'
+        elif st == 'largo':
+            ChamferCommand.largo = v
+            self.state = 'angulo'
+            return
+        else:
+            if v >= 180:
+                raise InputError('El ángulo tiene que ser menor que 180.')
+            ChamferCommand.angulo, ChamferCommand.metodo = v, 'A'
+        self.state = 'first'
+
+    def step_text(self, text):
+        k = _key(text)
+        st = self.state
+        if st in self.VALORES:
+            v = parse_distance(text)
+            if v < 0:
+                raise InputError('Requiere un número positivo.')
+            self._valor(st, v)
+        elif st == 'trim':
+            if k[:1] == 'N':
+                ChamferCommand.trim = False
+            elif k[:1] in ('R', 'T'):
+                ChamferCommand.trim = True
+            else:
+                raise InputError('Requiere Recortar o No recortar.')
+            self.state = 'first'
+        elif st == 'metodo':
+            if k[:1] not in ('O', 'D', 'A'):
+                raise InputError('Requiere Ochava, Distancia o Ángulo.')
+            ChamferCommand.metodo = k[:1]
+            self.state = 'first'
+        elif st == 'first' and k in ('O', 'OCHAVA', 'L', 'LARGO'):
+            self.state = 'ochava'
+        elif st == 'first' and k in ('D', 'DISTANCIA', 'DISTANCE'):
+            self.state = 'd1'
+        elif st == 'first' and k in ('A', 'ANGULO', 'ÁNGULO', 'ANGLE'):
+            self.state = 'largo'
+        elif st == 'first' and k in ('R', 'RECORTAR', 'T', 'TRIM'):
+            self.state = 'trim'
+        elif st == 'first' and k in ('E', 'METODO', 'MÉTODO', 'METHOD'):
+            self.state = 'metodo'
+        elif st == 'first' and k in ('M', 'MULTIPLE', 'MÚLTIPLE'):
+            self.multiple = True
+        elif st == 'first' and k in ('P', 'POLILINEA', 'POLILÍNEA', 'POLYLINE'):
+            self.state = 'polyline'
+        elif st == 'first' and k in OPT_UNDO:
+            self.undo_last()
+        else:
+            self._resolve_and_apply(text)
+            return
+        self.prompt()
+
+    def step_enter(self):
+        st = self.state
+        if st in self.VALORES:                   # Enter: el valor que estaba
+            self._valor(st, {'ochava': self.ochava, 'd1': self.dist1, 'd2': self.dist1,
+                             'largo': self.largo, 'angulo': self.angulo}[st])
+        elif st in ('trim', 'metodo', 'polyline'):
+            self.state = 'first'
+        else:
+            self.end()
+            return
+        self.prompt()
+
+    def step_point(self, p):
+        if self.state in self.VALORES:           # un clic en vez del número: sigue con el que había
+            self.state = 'first'
+        if self.state not in ('first', 'second', 'polyline'):
+            return
+        fid, f = self.pick(p)
+        if fid is None:
+            return
+        if self.state == 'polyline':
+            try:
+                self._polilinea(fid, f, p)
+            except GeomError as e:
+                self.cl.echo(str(e))
+            self._next()
+            return
+        if self.state == 'first':
+            self.first = (fid, f, p)
+            self.highlight([fid])
+            self.state = 'second'
+            self.prompt()
+            return
+        try:
+            self._chamfer(self.first, (fid, f, p), self.mgr.shift)
+        except GeomError as e:
+            self.cl.echo(str(e))
+        self._next()
+
+    def _next(self):
+        self.layer.removeSelection()
+        self.first = None
+        self.state = 'first'
+        if self.multiple:
+            self.prompt()
+        else:
+            self.end()
+
+    def _calc(self, a, b, corner):
+        """Lo que cambia (SRC del mapa), sin tocar la capa: (cambios, bisel, aviso).
+        cambios = {fid: geometría nueva, o None para borrar el objeto}; bisel =
+        objeto nuevo con los atributos del primero, o None. corner = Mayús: la
+        esquina. Como el chaflán de IngeCAD: dos líneas -> bisel aparte; con
+        polilínea -> todo unido en una; en el mismo objeto -> dentro de él."""
+        fid1, f1, p1 = a
+        fid2, f2, p2 = b
+        kind1, s1, flat1, idx1 = explode(self.io.to_canvas(f1.geometry()))
+        P1, P2 = (p1.x(), p1.y()), (p2.x(), p2.y())
+        k1 = nearest_part(flat1, p1)
+        dists = (lambda t: (0.0, 0.0)) if corner else self.dists
+        if fid1 == fid2:
+            k2 = nearest_part(flat1, p2)
+            if k2 == k1:
+                pts = flat1[k1]
+                closed = kind1 == 'polygon' or same(pts[0], pts[-1])
+                new, bevel = chamfer_same(pts, P1, P2, dists, closed)
+                if not self.trim and kind1 == 'line':
+                    return {}, bevel, None           # No recortar: sólo el bisel
+                return {fid1: rebuild(kind1, replace_part(kind1, s1, idx1, k1, new))}, None, None
+            kind2, s2, flat2, idx2 = kind1, s1, flat1, idx1  # dos partes de un multiparte
+        else:
+            kind2, s2, flat2, idx2 = explode(self.io.to_canvas(f2.geometry()))
+            k2 = nearest_part(flat2, p2)
+        if kind1 != 'line' or kind2 != 'line':
+            raise GeomError(EXTREMO)                 # polígonos: por sus vértices
+        r = chamfer_two(flat1[k1], P1, flat2[k2], P2, dists, self.trim or corner)
+        bevel = r['bevel']
+        if not self.trim and not corner:
+            return {}, bevel, None
+        if 'lines' in r:
+            n1, n2 = r['lines']
+            if fid1 == fid2:
+                st = replace_part('line', replace_part('line', s1, idx1, k1, n1), idx1, k2, n2)
+                return {fid1: rebuild('line', st)}, bevel, None
+            return {fid1: rebuild('line', replace_part('line', s1, idx1, k1, n1)),
+                    fid2: rebuild('line', replace_part('line', s2, idx2, k2, n2))}, bevel, None
+        # con polilínea: unidas en una, la del objeto base; la otra parte se quita
+        join = r['join']
+        if r['base'] == 1:
+            kb, sb, ib, fb, ko, so, io_, fo = k1, s1, idx1, fid1, k2, s2, idx2, fid2
+        else:
+            kb, sb, ib, fb, ko, so, io_, fo = k2, s2, idx2, fid2, k1, s1, idx1, fid1
+        aviso = None
+        if fb == fo:
+            st = replace_part('line', sb, ib, kb, join)
+            del st[ib[ko][0]]
+            cambios = {fb: rebuild('line', st)}
+        else:
+            resto = [part for j, part in enumerate(so) if j != io_[ko][0]]
+            cambios = {fb: rebuild('line', replace_part('line', sb, ib, kb, join)),
+                       fo: rebuild('line', resto) if resto else None}
+            if len(flat1[k1]) > 2 and len(flat2[k2]) > 2:
+                aviso = 'GeoCAD Yaguareté: las dos polilíneas quedaron unidas en una.'
+        return cambios, None, aviso
+
+    def _chamfer(self, a, b, corner):
+        cambios, bevel, aviso = self._calc(a, b, corner)
+        f1 = a[1]
+        self.layer.beginEditCommand('CHAFLÁN')
+        try:
+            for fid, g in cambios.items():
+                if g is None:
+                    self.layer.deleteFeature(fid)
+                else:
+                    self.layer.changeGeometry(fid, conform(self.io.to_layer(g), self.layer))
+            if bevel:
+                gb = conform(self.io.to_layer(rebuild('line', [bevel])), self.layer)
+                self.layer.addFeature(copy_feature(self.layer, f1, gb))
+        except Exception:
+            self.layer.destroyEditCommand()
+            raise
+        self.layer.endEditCommand()
+        self.marks.append(self.layer.undoStack().index())
+        self.layer.triggerRepaint()
+        if aviso:
+            self.cl.echo(aviso)
+
+    def _polilinea(self, fid, f, p):
+        """Opción Polilínea: el chaflán en todos los vértices que entran."""
+        kind, s, flat, idx = explode(self.io.to_canvas(f.geometry()))
+        if kind not in ('line', 'polygon'):
+            raise GeomError('No es una polilínea 2D.')
+        k = nearest_part(flat, p)
+        pts = flat[k]
+        if len(pts) < 3:
+            raise GeomError('No es una polilínea 2D.')
+        closed = kind == 'polygon' or same(pts[0], pts[-1])
+        new, hechas, cortas = chamfer_all(pts, self.dists, closed)
+        corto = '1 era demasiado corta' if cortas == 1 else '%d eran demasiado cortas' % cortas
+        if not hechas:
+            self.cl.echo('0 líneas achaflanadas' + (' (%s).' % corto if cortas else '.'))
+            return
+        msg = '%d línea achaflanada' % hechas if hechas == 1 else '%d líneas achaflanadas' % hechas
+        self.cl.echo(msg + ('; %s.' % corto if cortas else '.'))
+        ng = rebuild(kind, replace_part(kind, s, idx, k, new))
+        self.layer.beginEditCommand('CHAFLÁN')
+        self.layer.changeGeometry(fid, conform(self.io.to_layer(ng), self.layer))
+        self.layer.endEditCommand()
+        self.marks.append(self.layer.undoStack().index())
+        self.layer.triggerRepaint()
+
+    def snap_points(self):
+        return []
+
+    def preview(self, cur):
+        return [], False, [], []
+
+    def preview_geoms(self, cur):
+        if cur is None or self.state not in ('first', 'second', 'polyline'):
+            return None
+        if self.state != 'second' or self.first is None:
+            return self.hover_geoms(cur)
+        fid, f = pick_feature(self.canvas, self.io, self.layer, cur)
+        if fid is None:
+            return None
+        try:
+            cambios, bevel, _ = self._calc(self.first, (fid, f, cur), self.mgr.shift)
+        except (GeomError, InputError, ValueError, ZeroDivisionError):
+            return None
+        return [g for g in cambios.values() if g is not None] + _lineas([bevel])
+
+
+# ==========================================================================
 class TrimCommand(ExtendCommand):
     """RECORTA (TRIM), con el comportamiento del Trim de Fernando: primero las
     aristas de corte (quedan marcadas) y cada una corta también por su
@@ -1910,6 +2239,8 @@ EDIT_COMMANDS = [
      ('line',), 'Alarga líneas hasta los contornos (Mayús = recorta)', 'extend'),
     ('FILLET', ('EMPALME', 'EMPALMAR', 'EMP', 'F'), FilletCommand, 'EMPALME',
      ('line', 'polygon'), 'Empalme con radio (0 = esquina; paralelas = semicírculo)', 'fillet'),
+    ('CHAMFER', ('CHAFLAN', 'CHAFLÁN', 'CHA', 'CHANFLE'), ChamferCommand, 'CHAFLÁN',
+     ('line', 'polygon'), 'Chaflán: Ochava con el largo del bisel (A = B), Distancia o Ángulo', 'chamfer'),
     ('PERPENDICULAR', ('PERP', 'PERPEND'), PerpendicularCommand, 'PERPENDICULAR',
      ('line',), 'Línea perpendicular desde un punto a otra línea o a su prolongación', 'perp'),
     ('BREAKATPOINT', ('PARTEENPUNTO', 'PARTEPUNTO', 'BAP', 'PP'), BreakAtPointCommand, 'PARTEENPUNTO',

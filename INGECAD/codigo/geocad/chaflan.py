@@ -25,38 +25,15 @@ un bisel recto en lugar del arco. Opciones como en AutoCAD:
 """
 from __future__ import annotations
 
-import json
 import math
-from pathlib import Path
 
 from core import actions
 from core.i18n import tr
 
 from .empalme import EPS, EmpalmeTool, _unit
-
-
-def _archivo() -> Path:
-    return Path.home() / ".config" / "geocad" / "chaflan.json"
-
-
-def leer_ochava() -> float:
-    """El largo de ochava guardado (0 si no hay)."""
-    try:
-        v = float(json.loads(_archivo().read_text(encoding="utf-8")).get("ochava", 0.0))
-    except (OSError, ValueError, TypeError, AttributeError):
-        return 0.0
-    return v if v >= 0 and math.isfinite(v) else 0.0
-
-
-def guardar_ochava(valor: float) -> None:
-    path = _archivo()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"ochava": valor}), encoding="utf-8")
-        tmp.replace(path)
-    except OSError:
-        pass                    # sin disco: vale para esta sesión
+from . import ochava as _ochava
+# la cuenta y el largo guardado están en el núcleo, compartidos con QGIS (3.57.0)
+from .ochava import archivo as _archivo, guardar_ochava, leer_ochava  # noqa: F401
 
 
 def _cortas(n: int) -> str:
@@ -129,20 +106,8 @@ class ChaflanTool(EmpalmeTool):
     def distancias(self, theta: float):
         """(d1, d2) según el método; theta = ángulo entre las dos ramas."""
         cls = type(self)
-        if cls.metodo == "O":                       # A = B: la misma distancia en las dos
-            largo = cls.ochava or 0.0
-            if largo <= 0:
-                return 0.0, 0.0
-            d = largo / (2.0 * math.sin(theta / 2.0))
-            return d, d
-        if cls.metodo != "A":
-            return cls.dist1, cls.dist2
-        alfa = math.radians(cls.angulo)
-        if cls.largo <= 0 or alfa <= 0:
-            return 0.0, 0.0
-        if alfa + theta >= math.pi - 1e-9:
-            return cls.largo, float("inf")          # el bisel no llega a la otra línea
-        return cls.largo, cls.largo * math.sin(alfa) / math.sin(alfa + theta)
+        return _ochava.distancias(cls.metodo, theta, cls.ochava or 0.0, cls.dist1, cls.dist2,
+                                  cls.largo, cls.angulo)
 
     def _esquina(self, p, u1, u2, radio):
         cos_t = max(-1.0, min(1.0, u1[0] * u2[0] + u1[1] * u2[1]))

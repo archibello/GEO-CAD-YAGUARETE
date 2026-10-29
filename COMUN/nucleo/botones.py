@@ -59,7 +59,7 @@ DEFECTO = {
         ("Yaguá Edición", (
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
-            "dibujo:extend", "dibujo:fillet", "dibujo:perp", "dibujo:breakpt", "dibujo:break",
+            "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:perp", "dibujo:breakpt", "dibujo:break",
             "dibujo:explode", "dibujo:divide", "dibujo:measure", "dibujo:copybase",
             "dibujo:pastebase", "dibujo:aligncopy",)),
         ("Yaguá Texto", (

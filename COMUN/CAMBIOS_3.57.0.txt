@@ -1,0 +1,74 @@
+GeoCAD - versión 3.57.0
+=======================
+FUNCIÓN NUEVA (QGIS, Dibujo): CHAFLÁN con la OCHAVA de IngeCAD.
+Hay que actualizar QGIS. En IngeCAD no cambia lo que se ve: el CHAFLÁN
+usa ahora la cuenta del núcleo, la misma de QGIS.
+
+Pedido de Fernando (29/10/2026)
+- «Tenemos que agregar a QGIS la orden CHA (CHANFER) con la variante que le
+  agregamos a IngeCAD (OCHAVA).» «Se tiene que copiar exactamente», «de
+  nuestra versión creada para IngeCAD», y «tiene que funcionar entre
+  líneas, polilíneas y polígonos».
+
+CHAFLÁN en Dibujo de QGIS (CHA / CHAFLAN / CHAFLÁN / CHAMFER)
+- En la barra Edición CAD, entre Alarga y Empalme; en el menú GeoCAD >
+  Dibujo CAD y en la categoría «Yaguá Edición» de Administrar botones.
+- Copiado de nuestro CHAFLÁN de IngeCAD (3.15.0): las mismas preguntas,
+  opciones, valores por defecto y mensajes:
+  Designe primera línea o
+    [Ochava/desHacer/Polilínea/Distancia/Ángulo/Recortar/mEtodo/Múltiple]
+  Designe segunda línea o Mayús+clic para hacer esquina
+- Ochava (O), la principal y por defecto: se da el Largo (L) del bisel y los
+  dos ángulos quedan iguales (A = B). En una esquina a 90° son de 135° y
+  cada línea se corta a L/√2 de la esquina (L = 5: 3,5355); en cualquier
+  esquina, L / (2·sen(θ/2)). La primera vez pide «Precise largo de ochava
+  (L) <0>»; después dice «Ochava actual: Largo = 5» y va directo a elegir.
+- El largo queda guardado y es el MISMO en IngeCAD y en QGIS
+  (~/.config/geocad/chaflan.json): si se cambia en uno, el otro lo usa.
+  Distancia (D), Ángulo (A), mEtodo (E: Ochava/Distancia/Ángulo) y
+  Recortar (R) valen mientras QGIS está abierto, como en IngeCAD; al
+  abrirlo de nuevo vuelve a Ochava. Múltiple (M), desHacer (H), Mayús +
+  clic en la segunda = esquina. Coma decimal en los números.
+- Queda el lado de cada clic (también en una X); el objeto bajo el cursor
+  se resalta y antes del segundo clic se ve cómo queda.
+
+Líneas, polilíneas y polígonos (en la capa activa, como EMPALME)
+- Dos líneas (objetos de dos vértices): se recortan y el bisel es un objeto
+  NUEVO con los atributos de la primera.
+- Con una polilínea (como en IngeCAD): se toma su tramo primero o último,
+  del lado que sigue hacia el resto; todo queda UNIDO en una polilínea, con
+  los atributos de la polilínea (la primera, si son dos) y el otro objeto se
+  borra (H o Ctrl+Z lo recupera). Un tramo del medio: «de una polilínea
+  abierta se empalma un tramo EXTREMO…».
+- Dos lados del mismo objeto (la esquina de un polígono, por ejemplo una
+  parcela, o de una polilínea): la ochava queda DENTRO del mismo objeto.
+  Un polígono con otro objeto no se hace (como las cerradas en IngeCAD).
+- Polilínea (P): ochava en todos los vértices de la polilínea o del
+  polígono que entran; avisa cuántos lados eran demasiado cortos.
+- Líneas multiparte: cada parte es una línea o polilínea; entre dos partes
+  del mismo objeto también.
+- No recortar: los objetos quedan y sólo se agrega el bisel (en polígonos
+  la ochava se hace igual: un polígono no puede llevar una línea aparte).
+
+Por dentro
+- COMUN/nucleo/ochava.py (nuevo): la cuenta (Ochava, Distancia, Ángulo) y
+  el largo guardado, compartidos. INGECAD/codigo/geocad/chaflan.py la usa
+  (sin cambio de comportamiento).
+- QGIS dibujo/geomops.py: chamfer_two, chamfer_same, chamfer_all (la
+  búsqueda del vértice común, compartida con el empalme).
+- QGIS dibujo/edit_commands.py: ChamferCommand; dibujo/plugin.py: botón
+  en la barra; dibujo/icons/chamfer.svg; nucleo/botones.py: dibujo:chamfer
+  en «Yaguá Edición».
+
+Pruebas
+- test_chaflan_qgis.py (nueva): la cuenta del núcleo (90° y 60°, Distancia,
+  Ángulo, no llega), el largo guardado, bisel entre dos líneas (lado del
+  clic, X, prolongación, No recortar, esquina), polilíneas unidas (tramo
+  extremo, lado del resto, Mayús), los mensajes de IngeCAD, ochava en la
+  esquina de un polígono y de una polilínea, opción Polilínea, botón y menú.
+- ventana/banco_chaflan_qgis.py (nuevo): con el QGIS real 4.2.2: pide el
+  largo, bisel de 5 como objeto nuevo con los atributos, Mayús, H,
+  Múltiple, Distancia, No recortar, mEtodo, polilínea + línea unidas (y H),
+  tramo del medio, multiparte, polígono, Polilínea y dos polígonos.
+- Todas las de COMUN/pruebas con IngeCAD 0.6.8.2 y 0.6.7.
+- Prueba manual: CQ1-CQ9 en 02_PRUEBAS_MANUALES.txt.

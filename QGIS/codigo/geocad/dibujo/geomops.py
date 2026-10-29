@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Geometría 2D pura (sin QGIS) para EMPALME y ALARGA.
+Geometría 2D pura (sin QGIS) para EMPALME, CHAFLÁN y ALARGA.
 
 Puntos: tuplas (x, y). Polilíneas: listas de puntos.
 """
@@ -248,8 +248,9 @@ def _fillet_parallel(l1, p1, l2, p2, a0, a1, b0, b1):
     return list(l1), new2, arc
 
 
-def fillet_same(coords, p1, p2, r, closed=False):
-    """Empalme entre dos segmentos contiguos de la misma polilínea / anillo."""
+def _contiguous(coords, p1, p2, closed):
+    """Dos segmentos contiguos de la misma polilínea / anillo: (anillo, n,
+    vértice común, ¿el primer clic es el tramo que llega al vértice?)."""
     ring = list(coords[:-1]) if closed and same(coords[0], coords[-1]) else list(coords)
     n = len(ring)
     pts = ring + [ring[0]] if closed else ring
@@ -272,6 +273,12 @@ def fillet_same(coords, p1, p2, r, closed=False):
             v = i1
         else:
             raise GeomError('Los segmentos no son contiguos.')
+    return ring, n, v, (i1 + 1) % nseg == i2 if closed else i2 == i1 + 1
+
+
+def fillet_same(coords, p1, p2, r, closed=False):
+    """Empalme entre dos segmentos contiguos de la misma polilínea / anillo."""
+    ring, n, v, _ = _contiguous(coords, p1, p2, closed)
     if r <= 0:
         raise GeomError('Los segmentos ya forman una esquina.')
     vprev = ring[(v - 1) % n] if (closed or v > 0) else None
@@ -288,6 +295,174 @@ def fillet_same(coords, p1, p2, r, closed=False):
         if not same(new[0], new[-1]):
             new.append(new[0])
     return new
+
+
+# ---------------------------------------------------------------- CHAFLÁN
+# El de GeoCAD para IngeCAD (chaflan.py y empalme.py), copiado tal cual
+# (Fernando, 29/10/2026: «de nuestra versión creada para IngeCAD»), con sus
+# mensajes. ``dists(theta)`` da (d1, d2): d1 sobre el primer objeto, d2 sobre
+# el segundo (la cuenta, con la Ochava, está en el núcleo: ochava.py).
+# Una parte de dos vértices es una LÍNEA; de más, una POLILÍNEA.
+NO_ENTRA = 'GeoCAD Yaguareté: el chaflán no entra en esos tramos.'
+ALINEADOS = 'GeoCAD Yaguareté: los tramos están alineados.'
+EXTREMO = ('GeoCAD Yaguareté: de una polilínea abierta se empalma un tramo EXTREMO '
+           '(el primero o el último); las cerradas, por sus vértices.')
+LADO_RESTO = ('GeoCAD Yaguareté: de una polilínea se conserva el lado que sigue hacia el resto '
+              'de la polilínea; toque ese lado (o use PARTEENPUNTO antes).')
+DISTINTO = 'Elija un objeto distinto.'
+
+
+def _theta(u1, u2):
+    theta = math.acos(max(-1.0, min(1.0, dot(u1, u2))))
+    if theta < 1e-7 or abs(theta - math.pi) < 1e-7:
+        raise GeomError(ALINEADOS)
+    return theta
+
+
+def _bevel_dists(dists, theta):
+    d1, d2 = dists(theta)
+    if d1 <= EPS or d2 <= EPS:
+        return 0.0, 0.0                    # como AutoCAD: con 0, la esquina
+    return d1, d2
+
+
+def _rama(l, x, i, q):
+    # q: el clic tal cual (como lado() de IngeCAD), no su proyección sobre el tramo
+    """Desde el cruce x: (dirección que se conserva, punto lejano, largo
+    disponible, extremo cortado: 0 / len-1, o None para una línea)."""
+    a, b = l[i], l[i + 1]
+    n = len(l)
+    if n > 2 and same(l[0], l[-1]):
+        raise GeomError(EXTREMO)
+    if n == 2:
+        u = unit(sub(b, a))
+        if dot(sub(q, x), u) < 0:
+            u = mul(u, -1.0)
+        da, db = dot(sub(a, x), u), dot(sub(b, x), u)
+        return (u, a, da, None) if da >= db else (u, b, db, None)
+    if i == 0:                             # primer tramo: se conserva hacia el vértice 1
+        interior, extremo = l[1], 0
+    elif i == n - 2:                       # último tramo: hacia el vértice n-2
+        interior, extremo = l[n - 2], n - 1
+    else:
+        raise GeomError(EXTREMO)
+    if same(interior, x):
+        raise GeomError(EXTREMO)
+    u = unit(sub(interior, x))
+    t = unit(sub(b, a))
+    if dot(sub(q, x), t) * dot(u, t) < 0:
+        raise GeomError(LADO_RESTO)        # se tocó el lado de afuera
+    return u, interior, dot(sub(interior, x), u), extremo
+
+
+def chamfer_two(l1, p1, l2, p2, dists, trim=True):
+    """
+    Chaflán entre dos objetos distintos, como en IngeCAD. Devuelve un dict:
+      dos líneas:  {'lines': (nueva_l1, nueva_l2), 'bevel': bisel o None}
+                   (el bisel es un objeto nuevo);
+      con polilínea: {'join': coords, 'base': 1 o 2, 'bevel': ...}: todo
+                   queda unido en UNA polilínea (la del objeto ``base``; el
+                   otro se borra), como AutoCAD.
+    Distancias 0 (o Mayús): la esquina. trim=False (No recortar): sólo
+    importa 'bevel', los objetos quedan como estaban.
+    """
+    i1 = closest_segment(l1, p1)[0]
+    i2 = closest_segment(l2, p2)[0]
+    x = line_intersection(l1[i1], l1[i1 + 1], l2[i2], l2[i2 + 1])
+    if x is None:
+        if len(l1) == 2 and len(l2) == 2:
+            raise GeomError('GeoCAD Yaguareté: las líneas son paralelas.')
+        raise GeomError('GeoCAD Yaguareté: los tramos son paralelos.')
+    u1, fin1, largo1, ext1 = _rama(l1, x, i1, p1)
+    u2, fin2, largo2, ext2 = _rama(l2, x, i2, p2)
+    d1, d2 = _bevel_dists(dists, _theta(u1, u2))
+    if largo1 < d1 - 1e-9 or largo2 < d2 - 1e-9:
+        raise GeomError(NO_ENTRA)
+    t1, t2 = add(x, mul(u1, d1)), add(x, mul(u2, d2))
+    bevel = [t1, t2] if dist(t1, t2) > EPS else None
+    if not trim and bevel is None:
+        raise GeomError('Con distancias 0 y No recortar no hay nada que hacer.')
+    if ext1 is None and ext2 is None:      # dos líneas: cada una conserva su sentido
+        n1 = [fin1, t1] if same(fin1, l1[0]) else [t1, fin1]
+        n2 = [fin2, t2] if same(fin2, l2[0]) else [t2, fin2]
+        return {'lines': (n1, n2), 'bevel': bevel}
+    # con polilínea: la primera llega al cruce, la segunda sale de él
+    if ext1 is None:
+        body = [fin1]
+    else:
+        body = list(l1[::-1] if ext1 == 0 else l1)[:-1]
+    body += [t1] + ([t2] if bevel else [])
+    if ext2 is None:
+        body.append(fin2)
+    else:
+        body += list(l2[::-1] if ext2 == len(l2) - 1 else l2)[1:]
+    return {'join': dedupe(body), 'base': 1 if ext1 is not None else 2, 'bevel': bevel}
+
+
+def chamfer_same(coords, p1, p2, dists, closed=False):
+    """Chaflán entre dos segmentos contiguos de la misma polilínea / anillo
+    (la ochava de la esquina de un polígono): el bisel queda en el objeto.
+    Devuelve (nuevas_coords, bisel)."""
+    try:
+        ring, n, v, first_prev = _contiguous(coords, p1, p2, closed)
+    except GeomError as e:
+        raise GeomError(DISTINTO if 'distintos' in str(e)
+                        else 'GeoCAD Yaguareté: elija dos tramos contiguos de la polilínea.')
+    vprev = ring[(v - 1) % n] if (closed or v > 0) else None
+    vnext = ring[(v + 1) % n] if (closed or v < n - 1) else None
+    if vprev is None or vnext is None:
+        raise GeomError('Los segmentos no son contiguos.')
+    x = ring[v]
+    up, un = unit(sub(vprev, x)), unit(sub(vnext, x))
+    u1, u2 = (up, un) if first_prev else (un, up)
+    d1, d2 = _bevel_dists(dists, _theta(u1, u2))
+    if d1 <= 0:
+        raise GeomError('GeoCAD Yaguareté: con radio (o distancias) 0 ese vértice ya es una esquina.')
+    dp, dn = (d1, d2) if first_prev else (d2, d1)
+    if dp > dist(x, vprev) + 1e-9 or dn > dist(x, vnext) + 1e-9:
+        raise GeomError(NO_ENTRA)
+    bevel = [add(x, mul(up, dp)), add(x, mul(un, dn))]
+    new = dedupe(ring[:v] + bevel + ring[v + 1:])
+    if closed and not same(new[0], new[-1]):
+        new.append(new[0])
+    return new, bevel
+
+
+def chamfer_all(coords, dists, closed=False):
+    """Opción Polilínea: chaflán en todos los vértices que entran.
+    Devuelve (nuevas_coords, achaflanados, demasiado_cortos)."""
+    ring = list(coords[:-1]) if closed and same(coords[0], coords[-1]) else list(coords)
+    n = len(ring)
+    largos = [dist(ring[k], ring[(k + 1) % n]) for k in range(n)]
+    usado_ini = [0.0] * n        # lo que ya se comió del principio de cada tramo
+    usado_fin = [0.0] * n        # y del final
+    cortes, cortos = {}, 0
+    for v in (range(n) if closed else range(1, n - 1)):
+        ant, sig = (v - 1) % n, (v + 1) % n
+        x = ring[v]
+        if same(ring[ant], x) or same(ring[sig], x):
+            continue
+        ua, us = unit(sub(ring[ant], x)), unit(sub(ring[sig], x))
+        try:
+            d_ant, d_sig = _bevel_dists(dists, _theta(ua, us))
+        except GeomError:
+            continue                              # alineados o no llega
+        if d_ant <= 0 or math.isinf(d_sig):
+            continue                              # esquina, o el bisel no llega
+        if (usado_ini[ant] + d_ant > largos[ant] + 1e-9
+                or usado_fin[v] + d_sig > largos[v] + 1e-9):
+            cortos += 1
+            continue
+        usado_fin[ant] = d_ant
+        usado_ini[v] = d_sig
+        cortes[v] = (add(x, mul(ua, d_ant)), add(x, mul(us, d_sig)))
+    new = []
+    for k, p in enumerate(ring):
+        new.extend(cortes[k] if k in cortes else [p])
+    new = dedupe(new)
+    if closed:
+        new.append(new[0])
+    return new, len(cortes), cortos
 
 
 # ---------------------------------------------------------------- ARCO / CÍRCULO
