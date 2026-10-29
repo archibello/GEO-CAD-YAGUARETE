@@ -72,7 +72,9 @@ class CommandManager(QObject):
         self.cmdline = cmdline
         self.units = load_units()
         self.ortho = get_setting('ortho', False, bool)
-        self.relative = get_setting('relangle', False, bool)
+        # Lo acordado es @d<a interior desde el tramo anterior: prendido salvo que
+        # se apague (3.56.1; antes un perfil de QGIS nuevo, Windows, lo tenía apagado)
+        self.relative = get_setting('relangle', True, bool)
         self.lastpoint = None        # LASTPOINT (SRC del mapa)
         self.last_line_end = None    # para continuar LÍNEA con Intro
         self.command = None

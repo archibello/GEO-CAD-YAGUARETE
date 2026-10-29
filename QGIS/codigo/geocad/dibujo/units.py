@@ -66,7 +66,7 @@ class InputError(ValueError):
     pass
 
 
-_NUM = r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)'
+_NUM = r'[+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+)'   # coma decimal también (3.56.1)
 _DMS_RE = re.compile(
     r'^(?P<sign>[+-]?)(?P<d>\d+(?:\.\d*)?|\.\d+)\s*[d°]'
     r'(?:\s*(?P<m>\d+(?:\.\d*)?)\s*\')?'
@@ -77,7 +77,7 @@ _BEARING_RE = re.compile(r'^(?P<ns>[NS])(?P<ang>.*?)(?P<ew>[EWO])$', re.I)
 def _num(text):
     if not re.match('^' + _NUM + '$', text):
         raise InputError('Valor numérico no válido: "%s"' % text)
-    return float(text)
+    return float(text.replace(',', '.'))
 
 
 def _norm360(deg):
@@ -259,7 +259,8 @@ class PointInput:
 
 
 def _split_xy(t):
-    parts = t.split(',')
+    # con «;» entre X e Y se puede usar coma decimal: 12,5;-3,25 (como en From)
+    parts = t.split(';') if ';' in t else t.split(',')
     if len(parts) not in (2, 3):
         raise InputError('Se esperaba X,Y: "%s"' % t)
     return _num(parts[0]), _num(parts[1])
@@ -306,7 +307,7 @@ def parse_point(text, units, last=None, ref=None, relative=False):
         dist = _num(d)
         ang = parse_angle(a, units, ref, relative)
         return PointInput('point', (dist * math.cos(ang), dist * math.sin(ang)))
-    if ',' in t:
+    if ',' in t or ';' in t:
         return PointInput('point', _split_xy(t))
     try:
         return PointInput('distance', distance=_num(t))

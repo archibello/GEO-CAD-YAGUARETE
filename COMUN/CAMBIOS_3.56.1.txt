@@ -1,0 +1,41 @@
+GeoCAD - versión 3.56.1
+=======================
+CORRECCIÓN DE LA 3.56.0: MEDIDAS Y ÁNGULOS POR TECLADO EN DIBUJO DE QGIS
+COMO SE ACORDÓ, TAMBIÉN EN WINDOWS. Hay que actualizar QGIS (IngeCAD sólo
+cambia de número).
+
+Lo que encontró Fernando con la 3.56.0 en Windows (29/10/2026)
+- «El ingreso de medidas y ángulos que habíamos acordado como
+  comportamiento, no se cumple.» Lo acordado: «@distancia<ángulo interno en
+  contra de las agujas del reloj», desde el tramo anterior (180 = sigue
+  derecho), igual que en IngeCAD.
+- Por qué: en Dibujo de QGIS los «Ángulos relativos al último tramo (REL)»
+  arrancaban APAGADOS si el perfil de QGIS no los tenía guardados. En Linux
+  venían prendidos desde Dibujo CAD 16.3; en un QGIS nuevo (Windows) no, y
+  @10<90 iba siempre hacia el norte.
+- Además, los números no aceptaban coma decimal: con la configuración
+  regional de Argentina, el punto del teclado numérico escribe coma, y
+  @12,5<90 daba «Valor numérico no válido».
+
+Qué cambia (QGIS, Dibujo: LINEA, PLINEA y los demás comandos que piden un
+punto)
+- REL prendido por defecto: @d<a es el ángulo interior antihorario desde el
+  tramo anterior; en el primer tramo, absoluto (0 = este). @d<<a fuerza
+  absoluto; 30dI / 30dD, deflexión. Se sigue apagando con REL o su botón,
+  y queda como se dejó.
+- Coma decimal en distancias y ángulos: @12,5<90,5 vale igual que
+  @12.5<90.5. Con «;» entre X e Y se puede usar coma decimal en las
+  coordenadas: 12,5;-3,25 y @1,5;2 (como en From de la 3.55.0).
+- Como en AutoCAD, «12,5» solo sigue siendo el punto X=12, Y=5; para una
+  distancia sola con decimales, usar el punto: 12.5.
+
+Por dentro
+- dibujo/commands.py: get_setting('relangle', True).
+- dibujo/units.py: _NUM y _num con coma decimal; _split_xy con «;».
+
+Pruebas
+- test_medidas_angulos_qgis.py (nueva): REL prendido por defecto, P4
+  (0,0 @10<0 @5<90 @10<90 @5<90 cierra), 180 recto, <<, coma decimal en la
+  polar, «;» en X,Y, RUMBOS con coma.
+- Todas las de COMUN/pruebas con IngeCAD 0.6.8.2 y 0.6.7.
+- Prueba manual: sección MA de 02_PRUEBAS_MANUALES.txt.
