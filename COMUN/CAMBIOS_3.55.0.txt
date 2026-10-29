@@ -1,0 +1,68 @@
+GeoCAD - versión 3.55.0
+=======================
+REFERENCIAS CON SHIFT + CLIC DERECHO EN QGIS. El menú de referencias de
+IngeCAD, para un solo punto, mientras se digitalizan líneas, polilíneas o
+polígonos con las herramientas de QGIS. Hay que actualizar QGIS (IngeCAD
+sólo cambia de número).
+
+Pedido de Fernando (29/10/2026)
+- Con una captura del menú de IngeCAD: «replicarlo en QGIS mientras
+  digitalizamos». Se despliega con Shift + clic derecho; queda disponible,
+  no aparece solo; sólo mientras se edita; líneas, polilíneas y polígonos.
+- Decidido: sólo en las herramientas propias de QGIS (no en Dibujo de
+  GeoCAD), todo en esta versión, en inglés igual que IngeCAD.
+
+Qué cambia (QGIS)
+- Con «Agregar entidad de línea» o «de polígono» activa, Shift + clic
+  derecho despliega: From, Mid Between 2 Points | Endpoint, Midpoint,
+  Intersection, Apparent Intersection (en gris, como en IngeCAD),
+  Extension | Center, Geometric Center, Quadrant, Tangent | Perpendicular,
+  Parallel, Node, Insertion, Nearest, Origin, None | Object Snap Settings...
+- Abrir el menú no termina la línea ni el polígono.
+- La opción elegida vale para UN punto, como en AutoCAD. Una marca naranja
+  muestra dónde va a caer y el vértice se agrega exacto ahí (no en el
+  píxel del cursor).
+- From: punto base (con el enganche de QGIS) y el desplazamiento en una
+  ventanita: @dx,dy o @distancia<ángulo (con «;» se puede usar coma
+  decimal: @2,5;-1,5).
+- Mid Between 2 Points: dos clics (con el enganche de QGIS), el vértice en
+  el medio.
+- Center, Quadrant y Tangent también en los círculos linealizados (como
+  llegan de IngeCAD y de un DXF) y en los arcos de verdad de QGIS.
+- Geometric Center: el centro del área (en un lote en L no es el promedio
+  de los vértices). Perpendicular: el pie aunque quede lejos del cursor.
+- Extension: pasar por la punta de una línea y seguir la prolongación.
+  Parallel: pasar por una línea y moverse paralelo desde el último punto.
+- Node e Insertion: los puntos de las capas de puntos. Origin: el (0, 0).
+  None: el punto siguiente sin enganche.
+- Object Snap Settings...: las opciones de enganche de QGIS.
+- Esc cancela la referencia sin borrar lo dibujado. Sin nada cerca dice
+  «No ... found for specified point.» y espera otro clic.
+- Con otra herramienta (Mover el mapa, Dibujo de GeoCAD...) Shift + clic
+  derecho no cambia.
+- Módulo nuevo «Referencias a objetos con Shift + clic derecho», elegible
+  al instalar y en GeoCAD > Módulos... (prendido por defecto). Apagado no
+  queda rastro.
+
+Límite conocido
+- Con la digitalización avanzada de QGIS prendida, el panel CAD no se
+  entera de los vértices que agrega el menú: sus restricciones relativas
+  toman el punto anterior a ese.
+
+Por dentro
+- referencias.py (nuevo): las cuentas, en Python puro, con el criterio del
+  motor de referencias de IngeCAD (core/snap.py).
+- referencias_qgis.py (nuevo): filtro de eventos sobre el lienzo, el menú,
+  la marca y QgsMapToolCapture.addVertex.
+- plugin.py: _sync_referencias / _quitar_referencias, como Tablas.
+- modulos.py (núcleo): el módulo «referencias» en el catálogo de QGIS.
+
+Pruebas
+- test_referencias.py (nuevo): el menú igual al de IngeCAD; cada referencia
+  con sus cuentas; y, con el QGIS de Flatpak, una línea digitalizada de
+  verdad (sin ventanas) en QGIS 4.2.2 y 3.28.9: Shift + clic derecho no la
+  termina, MID, CEN, QUA, PER, From y M2P exactos, una sola vez, Esc, y
+  nada con otra herramienta.
+- test_modulos.py, test_submodulos.py: el módulo nuevo en la lista.
+- 68/68 con IngeCAD 0.6.8.2 y 0.6.7.
+- Prueba manual: sección SR de 02_PRUEBAS_MANUALES.txt.

@@ -173,6 +173,13 @@ CATALOGO = {
                "Presentaciones.", requiere="dibujo"),
         Modulo("capas", "Capas CAD (Layer Properties)",
                "Administrador de capas estilo AutoCAD con LAYER_CODE (antes Layer Properties 6.7)."),
+        Modulo("referencias", "Referencias a objetos con Shift + clic derecho",
+               "Al digitalizar líneas, polilíneas o polígonos con las herramientas de QGIS, "
+               "Shift + clic derecho despliega el menú de referencias de IngeCAD (From, Mid "
+               "Between 2 Points, Endpoint, Midpoint, Intersection, Extension, Center, "
+               "Geometric Center, Quadrant, Tangent, Perpendicular, Parallel, Node, Insertion, "
+               "Nearest, Origin, None) para el punto siguiente, como en AutoCAD.",
+               cambia_programa=True),
         Modulo("tablas", "Tablas: Pegar tabla en las composiciones",
                "Botón «Pegar tabla» en la ventana de cada composición (y en el menú GeoCAD): "
                "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "

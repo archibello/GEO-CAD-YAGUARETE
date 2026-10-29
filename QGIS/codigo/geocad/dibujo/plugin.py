@@ -151,7 +151,7 @@ class DibujoCADPlugin:
         self._action('rumbos', 'Rumbos (RUMBOS / RB) — tramo base y distancia<ángulo, '
                      'ángulo interior o deflexión', lambda: self.run_command('RUMBOS'))
         self.toolbar.addSeparator()
-        self.a_ortho = self._action('ortho', 'Modo Orto (F8) — Mayús lo invierte temporalmente',
+        self.a_ortho = self._action('ortho', 'Modo Orto (F8)',
                                     self.mgr.set_ortho, checkable=True)
         self.a_ortho.setChecked(self.mgr.ortho)
         self.mgr.orthoChanged.connect(self.a_ortho.setChecked)

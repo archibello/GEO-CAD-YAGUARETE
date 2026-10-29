@@ -426,7 +426,8 @@ class CommandManager(QObject):
         self.refresh()
 
     def effective_cursor(self):
-        """Cursor con modificación de ángulo, ORTO (Mayús lo invierte) y referencia a objetos."""
+        """Cursor con modificación de ángulo, ORTO (sólo F8: Mayús ya no lo invierte, pedido de
+        Fernando 29/10/2026; Mayús + clic derecho es el menú de referencias) y referencia a objetos."""
         pt = self.cursor
         if pt is None or self.command is None:
             return pt
@@ -438,7 +439,7 @@ class CommandManager(QObject):
             return QgsPointXY(base.x() + d * ux, base.y() + d * uy)
         if self.cursor_snapped:
             return pt
-        if base is not None and (self.ortho != self.shift) and not getattr(self.command, 'no_ortho', False):
+        if base is not None and self.ortho and not getattr(self.command, 'no_ortho', False):
             dx, dy = pt.x() - base.x(), pt.y() - base.y()
             return QgsPointXY(pt.x(), base.y()) if abs(dx) >= abs(dy) else QgsPointXY(base.x(), pt.y())
         return pt
@@ -513,7 +514,7 @@ class CommandManager(QObject):
             except Exception:  # noqa: BLE001
                 pass
         tags = []
-        if self.ortho != self.shift:
+        if self.ortho:
             tags.append('ORTO')
         if self.relative:
             tags.append('REL')

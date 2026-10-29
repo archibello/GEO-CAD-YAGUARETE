@@ -1,0 +1,49 @@
+GeoCAD - versión 3.55.1
+=======================
+CORRECCIÓN DE LA 3.55.0: EL MENÚ DE REFERENCIAS TAMBIÉN EN DIBUJO DE GEOCAD,
+Y MAYÚS YA NO INVIERTE EL ORTO (QGIS). Hay que actualizar QGIS (IngeCAD
+sólo cambia de número).
+
+Lo que encontró Fernando con la 3.55.0 (29/10/2026)
+- «Lo único que replicó de IngeCAD es lo único que no era de mi interés: al
+  apretar SHIFT se activa el modo ortogonal. Nunca apareció el menú
+  desplegable.»
+- Por qué: estaba dibujando con los comandos de Dibujo de GeoCAD (LINEA,
+  PLINEA...). La 3.55.0 ponía el menú sólo en las herramientas propias de
+  QGIS, y en Dibujo Mayús invertía el Orto (como IngeCAD) y el clic derecho
+  era siempre Intro.
+
+Qué cambia (QGIS)
+- Dibujo de GeoCAD: con un comando que pide un punto (LINEA, PLINEA, y los
+  demás), Mayús + clic derecho despliega el mismo menú de referencias que
+  en las herramientas de QGIS (igual al de IngeCAD). El punto elegido va al
+  comando exacto, como un punto enganchado. None: el punto sin enganche.
+- Sin comando en curso, Mayús + clic derecho sigue siendo Intro (repite el
+  último comando), como el clic derecho solo.
+- Mayús ya NO invierte el Orto en Dibujo: el Orto se prende y apaga sólo
+  con F8 (o su botón), y la marca [ORTO] de la línea de comandos sigue al
+  Orto de verdad. El botón decía «Mayús lo invierte temporalmente»: ya no.
+- Mayús sigue sirviendo para lo demás de AutoCAD: quitar de la designación,
+  alargar en vez de recortar, empalme o chaflán con radio cero.
+- Las herramientas de QGIS (Agregar entidad de línea / de polígono), igual
+  que en la 3.55.0.
+
+Pendiente aparte
+- En IngeCAD, Mayús también invierte el Orto (es de IngeCAD, no de GeoCAD).
+  Fernando quiere corregirlo; se ve después de probar esta versión.
+
+Por dentro
+- referencias_qgis.py: la herramienta activa se envuelve en _Captura
+  (QgsMapToolCapture, addVertex) o _Dibujo (el administrador de Dibujo:
+  point_clicked con el punto enganchado; el punto anterior es la base del
+  comando).
+- dibujo/commands.py: effective_cursor y la marca ORTO usan sólo self.ortho.
+- dibujo/plugin.py: el texto del botón Orto.
+
+Pruebas
+- test_referencias.py: además, un comando de Dibujo en el QGIS de Flatpak
+  (4.2.2 y 3.28.9): Mayús + clic derecho abre el menú y no llega como
+  Intro; PER, MID y None van al comando; sin comando, es Intro. Y que Mayús
+  ya no invierte el Orto en Dibujo.
+- Todas las de COMUN/pruebas con IngeCAD 0.6.8.2 y 0.6.7.
+- Prueba manual: sección SR de 02_PRUEBAS_MANUALES.txt (SR11 y SR12 nuevas).

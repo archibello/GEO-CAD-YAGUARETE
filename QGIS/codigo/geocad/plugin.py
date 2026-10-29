@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.54.0"
+VERSION = "3.55.1"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -119,6 +119,7 @@ class GeoCAD:
         self.actions = {}
         self.subs = None
         self.tablas = None          # módulo «Tablas»: Pegar tabla en las composiciones
+        self.referencias = None     # módulo «Referencias»: Shift + clic derecho al digitalizar
         self._cargando = False
         self._submenus = []
 
@@ -268,6 +269,28 @@ class GeoCAD:
                 self._bar(f"No se pudo iniciar Tablas: {type(exc).__name__}: {exc}", "warn", 10)
         elif not quiere and self.tablas is not None:
             self._quitar_tablas()
+        self._sync_referencias()
+
+    def _sync_referencias(self) -> None:
+        """Shift + clic derecho al digitalizar, según el módulo «Referencias»."""
+        quiere = modulos.activo(PROGRAMA, "referencias")
+        if quiere and self.referencias is None:
+            try:
+                from .referencias_qgis import ReferenciasQgis
+                self.referencias = ReferenciasQgis(self.iface)
+            except Exception as exc:  # noqa: BLE001
+                self.referencias = None
+                self._bar(f"No se pudo iniciar Referencias: {type(exc).__name__}: {exc}", "warn", 10)
+        elif not quiere and self.referencias is not None:
+            self._quitar_referencias()
+
+    def _quitar_referencias(self) -> None:
+        if self.referencias is not None:
+            try:
+                self.referencias.unload()
+            except Exception:  # noqa: BLE001
+                pass
+            self.referencias = None
 
     def _quitar_tablas(self) -> None:
         if self.tablas is not None:
@@ -305,6 +328,7 @@ class GeoCAD:
     def unload(self) -> None:
         self._restaurar_botones()
         self._quitar_tablas()
+        self._quitar_referencias()
         from . import googleearth_qgis
         googleearth_qgis.apagar()
         if self.subs is not None:
