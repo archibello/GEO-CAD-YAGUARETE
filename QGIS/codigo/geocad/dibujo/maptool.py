@@ -284,3 +284,84 @@ class KeyGuard(QObject):
             if self.mgr.cmdline.feed_key(ev):
                 ev.accept()
         return True              # el mapa no la procesa (Espacio no desplaza)
+
+
+def _edita(tool):
+    """¿Herramienta de edición de QGIS? (isEditTool en QGIS 3; en QGIS 4, la bandera)."""
+    fn = getattr(tool, 'isEditTool', None)
+    try:
+        if fn is not None:
+            return bool(fn())
+        flag = enum(QgsMapTool, 'Flag', 'EditTool')
+        return bool(tool.flags() & flag)
+    except (AttributeError, RuntimeError, TypeError):
+        return True                     # ante la duda, no se toca
+
+
+# --------------------------------------------------------------------------
+class ClicDerecho(QObject):
+    """
+    Botón derecho = Intro también con las herramientas de QGIS que no dibujan
+    (Desplazar, Identificar, Seleccionar...): acepta lo escrito en la línea de
+    comandos o, sin nada escrito, repite el último comando (módulo «Botón
+    derecho = Enter», 3.59; Fernando, 30/10/2026: «boton derecho del maus
+    equivale a enter y a ultimo comando»).
+
+    Las herramientas de GeoCAD ya lo hacen solas (CadMapTool). Las de edición
+    de QGIS (Agregar entidad, Vértices) y las de medir conservan su clic
+    derecho, que ya termina lo que se dibuja. Ctrl + clic derecho deja el menú
+    de QGIS y Mayús + clic derecho es el menú de referencias.
+    """
+
+    _NO_TOCAR = ('Measure', 'Capture', 'Digitiz', 'Vertex', 'Edit')
+
+    def __init__(self, canvas, mgr, tools):
+        super().__init__(canvas)
+        self.canvas = canvas
+        self.mgr = mgr
+        self.tools = tools              # las herramientas de GeoCAD
+        self._press = enum(QEvent, 'Type', 'MouseButtonPress')
+        self._release = enum(QEvent, 'Type', 'MouseButtonRelease')
+        self._dbl = enum(QEvent, 'Type', 'MouseButtonDblClick')
+        self._menu = enum(QEvent, 'Type', 'ContextMenu')
+        self._derecho = qt('MouseButton', 'RightButton')
+        self._mods = (qt('KeyboardModifier', 'ControlModifier')
+                      | qt('KeyboardModifier', 'ShiftModifier')
+                      | qt('KeyboardModifier', 'AltModifier'))
+        canvas.installEventFilter(self)
+        canvas.viewport().installEventFilter(self)
+
+    def remove(self):
+        for w in (self.canvas, self.canvas.viewport()):
+            try:
+                w.removeEventFilter(self)
+            except (RuntimeError, TypeError):
+                pass
+
+    def es_nuestra(self, tool=None):
+        """¿El clic derecho de esta herramienta pasa a ser Intro?"""
+        tool = self.canvas.mapTool() if tool is None else tool
+        if tool is None or any(tool is x for x in self.tools):
+            return False                # sin herramienta, o una de GeoCAD (ya es Intro)
+        if _edita(tool):
+            return False
+        nombre = type(tool).__name__
+        return not any(p in nombre for p in self._NO_TOCAR)
+
+    def eventFilter(self, obj, ev):
+        t = ev.type()
+        if t not in (self._press, self._release, self._dbl, self._menu):
+            return False
+        try:
+            if ev.modifiers() & self._mods:
+                return False
+            if t != self._menu and ev.button() != self._derecho:
+                return False
+            if not self.es_nuestra():
+                return False
+        except (AttributeError, RuntimeError, TypeError):
+            return False
+        if t == self._release:
+            self.mgr.enter()
+        ev.accept()
+        return True                     # ni desplazamiento ni menú de QGIS

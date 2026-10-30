@@ -1,0 +1,53 @@
+GeoCAD - versión 3.59.0
+=======================
+FUNCIÓN NUEVA (IngeCAD y QGIS): el teclado va siempre a la línea de comandos;
+en QGIS, el botón derecho = Enter también con Desplazar, Identificar...
+Hay que actualizar los dos programas.
+
+Pedido de Fernando (30/10/2026)
+- «¿Se puede configurar ambos programas QGIS y IngeCAD para que siempre la
+  prioridad de ingreso de los comandos sea por teclado? Porque hay veces que
+  hay que hacer clic en la barra de comandos para empezar a ingresar
+  instrucciones.» Le pasaba al iniciar la edición de una capa, tras un clic
+  en el panel de capas o en un panel, tras un diálogo y con una herramienta
+  de QGIS.
+
+Módulo nuevo «Teclado siempre a la línea de comandos» (GeoCAD > Módulos,
+prendido por defecto; en QGIS necesita Dibujo)
+- Letras, números y signos (@ < , ; . - ...) van a la línea de comandos esté
+  donde esté el foco en la ventana principal: panel de capas, paleta
+  Properties, barras y botones, después de un diálogo, y en QGIS también el
+  mapa con Desplazar, Identificar u otra herramienta de QGIS.
+- Intro, Retroceso y Espacio, sólo si ya hay algo escrito (si no, cada lugar
+  los usa como siempre: Espacio sigue desplazando el mapa de QGIS).
+- Esc, si hay algo escrito o un comando en marcha (lo cancela).
+- No se toca: campos de texto y de números, listas editables, la tabla de
+  atributos, la consola de Python, el editor de textos, diálogos y ventanas
+  aparte, Ctrl/Alt + tecla, flechas, Supr y teclas F.
+- QGIS con la Digitalización avanzada prendida: las letras sobre el mapa son
+  de QGIS (A, D, X, Y...).
+- Sobre el dibujo de IngeCAD manda IngeCAD, como venía. Apagado el módulo,
+  los dos programas quedan como antes.
+
+Botón derecho = Enter y último comando (Fernando, 30/10/2026: «boton derecho
+del maus equivale a enter y a ultimo comando»)
+- IngeCAD ya lo hacía con el módulo «Botón derecho = Enter»: durante una
+  orden es Enter, acepta lo escrito y sin orden repite la última, con el foco
+  donde sea. No cambia.
+- QGIS: con las herramientas de GeoCAD ya era así. Nuevo módulo «Botón
+  derecho = Enter» (GeoCAD > Módulos, prendido por defecto, necesita
+  Dibujo): también con Desplazar, Identificar, Seleccionar y otras
+  herramientas de QGIS que no dibujan, el clic derecho sobre el mapa acepta
+  lo escrito o repite el último comando. Agregar entidad, Vértices y Medir
+  conservan el suyo; Ctrl + clic derecho, el menú de QGIS; Mayús + clic
+  derecho, el menú de referencias.
+
+Pruebas
+- test_teclado.py (nueva): reglas, qué no se toca, el filtro; 72/72 con
+  IngeCAD 0.6.8.2 y 0.6.7.
+- ventana/banco_teclado_ventana.py con la ventana real de IngeCAD 0.6.8.2,
+  0.6.7 y 0.7.0 (también el clic derecho con el foco en el panel de capas):
+  TODO OK.
+- ventana/banco_teclado_qgis.py con el QGIS real 4.2.2 (también el clic
+  derecho con Desplazar): TODO OK.
+- A mano: TK1-TK8 en 02_PRUEBAS_MANUALES.txt.

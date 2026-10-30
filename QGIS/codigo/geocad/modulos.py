@@ -165,6 +165,14 @@ CATALOGO = {
         Modulo("angulos_relativos", "Ángulos relativos al tramo anterior",
                "En LÍNEA y POLILÍNEA, @d<ángulo es el ángulo interior, antihorario "
                "(180 = recto), como en Dibujo CAD.", cambia_programa=True),
+        Modulo("teclado", "Teclado siempre a la línea de comandos",
+               "Lo que se escribe (letras, números, @, <, coma) va a la línea de comandos "
+               "aunque el foco esté en el panel de capas, una barra o la paleta Properties, "
+               "o recién se cerró un diálogo, como en AutoCAD: no hace falta "
+               "hacer clic en ella. Intro, Retroceso y Espacio, si ya hay algo escrito; Esc, "
+               "también con un comando en marcha. No se toca en campos de texto, la tabla "
+               "de atributos, diálogos ni con Ctrl o Alt.",
+               cambia_programa=True),
     ),
     "qgis": (
         Modulo("puente", "Puente con IngeCAD",
@@ -174,6 +182,21 @@ CATALOGO = {
                "(antes el complemento Dibujo CAD 16.3)."),
         Modulo("bloques", "Bloques CAD",
                "BLOQUE, INSERT, WBLOQUE y LIMPIA, con su barra.", requiere="dibujo"),
+        Modulo("boton_derecho", "Botón derecho = Enter",
+               "Con Desplazar, Identificar, Seleccionar y otras herramientas de QGIS que "
+               "no dibujan, el clic derecho sobre el mapa acepta lo escrito en la línea de "
+               "comandos o repite el último comando, como con las de GeoCAD. Agregar "
+               "entidad, Vértices y Medir conservan el suyo. Ctrl + botón derecho muestra "
+               "el menú de QGIS.", requiere="dibujo", cambia_programa=True),
+        Modulo("teclado", "Teclado siempre a la línea de comandos",
+               "Lo que se escribe (letras, números, @, <, coma) va a la línea de comandos "
+               "aunque el foco esté en el panel de capas, una barra o el mapa con otra "
+               "herramienta, o recién se cerró un diálogo, como en AutoCAD: no hace falta "
+               "hacer clic en ella. Intro, Retroceso y Espacio, si ya hay algo escrito; Esc, "
+               "también con un comando en marcha. No se toca en campos de texto, la tabla "
+               "de atributos, diálogos ni con Ctrl o Alt; con la Digitalización avanzada "
+               "de QGIS prendida, las letras sobre el mapa quedan para QGIS.",
+               requiere="dibujo", cambia_programa=True),
         Modulo("papel", "Espacio papel",
                "Presentaciones, VENTANAS, BLOQVENT y TRAZAR, con las pestañas Modelo / "
                "Presentaciones.", requiere="dibujo"),

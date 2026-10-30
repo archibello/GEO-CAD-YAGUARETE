@@ -21,7 +21,7 @@ import os
 from qgis.PyQt.QtCore import QTimer
 
 from .commands import CommandManager, CommandSpec
-from .maptool import KeyGuard
+from .maptool import ClicDerecho, KeyGuard
 from .edit_commands import EDIT_COMMANDS, oops
 
 from .block_commands import BlockCommand, InsertCommand, importar_gms, purge, wblock
@@ -113,6 +113,37 @@ class DibujoCADPlugin:
             self.cmdline.show()
         self.cmdline.echo('Comando: %s' % text)
         self.mgr.run(text)
+
+    # ------------------------------------------------------------ teclado
+    def _iniciar_teclado(self):
+        """Lo que se escribe va a la línea de comandos aunque el foco esté en el
+        panel de capas, una barra, el mapa con otra herramienta o tras un diálogo."""
+        from qgis.PyQt import QtCore, QtWidgets
+        from ..teclado import Teclado
+        canvas = self.iface.mapCanvas()
+
+        def propio(w):
+            if w is not canvas and w is not canvas.viewport():
+                return False
+            tool = canvas.mapTool()
+            kg = getattr(self, 'key_guard', None)
+            if kg is not None and any(tool is x for x in kg.tools):
+                return True             # una herramienta de GeoCAD: ya lo maneja KeyGuard
+            try:                        # Digitalización avanzada: A, D, X, Y... son de QGIS
+                return bool(self.iface.cadDockWidget().cadEnabled())
+            except Exception:  # noqa: BLE001
+                return False
+
+        def entregar(ev):
+            self.cmdline.input.setFocus()
+            self.cmdline.feed_key(ev)
+
+        self.teclado = Teclado(
+            QtCore, QtWidgets, self.iface.mainWindow,
+            lambda: self.cmdline.input if self.cmdline is not None else None,
+            lambda: self.mgr is not None and self.mgr.command is not None,
+            propio, entregar)
+        self.teclado.instalar()
 
     # ------------------------------------------------------------ GUI
     def initGui(self):
@@ -224,6 +255,16 @@ class DibujoCADPlugin:
         # ---- aislamiento del teclado mientras se usan las herramientas CAD
         self.key_guard = KeyGuard(self.iface.mapCanvas(), self.mgr)
         self.key_guard.tools = [self.mgr.tool, self.text_select_tool]
+
+        # ---- el teclado va siempre a la línea de comandos (módulo «Teclado»)
+        self.teclado = None
+        if _modulo('teclado'):
+            _safe(self._iniciar_teclado)
+
+        # ---- botón derecho = Intro también con Desplazar, Identificar... («Botón derecho = Enter»)
+        self.clic_derecho = None
+        if _modulo('boton_derecho'):
+            self.clic_derecho = ClicDerecho(self.iface.mapCanvas(), self.mgr, self.key_guard.tools)
 
         self.cmdline.echo('GeoCAD Yaguareté %s · Dibujo CAD listo. Escriba AYUDA para ver los comandos disponibles.'
                           % _version())
@@ -619,6 +660,14 @@ class DibujoCADPlugin:
             stop_sync()
         except Exception:  # noqa: BLE001
             pass
+        cd = getattr(self, 'clic_derecho', None)
+        if cd is not None:
+            cd.remove()
+            self.clic_derecho = None
+        tec = getattr(self, 'teclado', None)
+        if tec is not None:
+            tec.quitar()
+            self.teclado = None
         kg = getattr(self, 'key_guard', None)
         if kg is not None:
             kg.remove()
