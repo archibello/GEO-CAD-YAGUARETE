@@ -1609,9 +1609,14 @@ class TrimCommand(ExtendCommand):
     aristas de corte (quedan marcadas) y cada una corta también por su
     prolongación, aunque no llegue a la línea (Arista = Prolongación). Intro
     sin designar = modo rápido de AutoCAD: todos los objetos visibles cortan,
-    tal como están."""
+    tal como están.
+
+    En una capa de polígonos (3.58.0, Fernando): primero los polígonos de corte
+    (Intro) y cada clic sobre otro polígono de la capa le quita la parte que se
+    superpone con ellos; los de corte quedan como están. Si queda partido, cada
+    pedazo es un objeto con los atributos del original; si queda entero adentro,
+    se borra. Vista previa: el contorno de lo que se va."""
     title = 'RECORTA'
-    select_prompt = 'Designe aristas de corte o <todos>'
     all_text = 'Aristas: todos los objetos visibles (modo rápido).'
     trims = True
     EDGES = {'E': 'Prolongación', 'N': 'No prolongación'}
@@ -1624,6 +1629,92 @@ class TrimCommand(ExtendCommand):
         self.edge = 'N' if str(get_setting('trimedge', 'E', str)).upper() == 'N' else 'E'
         self.cl.echo('Parámetros actuales: Proyección = SCP  Arista = %s' % self.EDGES[self.edge])
         self._designar_contornos()
+
+    @property
+    def select_prompt(self):
+        if self._poly():
+            return 'Designe polígonos de corte'
+        return 'Designe aristas de corte o <todos>'
+
+    def _poly(self):
+        return geometry_kind(self.layer) == 'polygon'
+
+    def on_enter(self):
+        if self._poly() and self.selecting and not self.sel:
+            self.cl.echo('En una capa de polígonos hay que designar los polígonos de corte.')
+            self.prompt()
+            return
+        super().on_enter()
+
+    # ------------------------------------------------ polígonos: quitar lo superpuesto
+    def _cutter(self):
+        """Unión de los polígonos de corte (SRC del mapa)."""
+        key = tuple(self.boundary or ())
+        if getattr(self, '_cutter_key', None) != key:
+            req = QgsFeatureRequest().setFilterFids(list(key))
+            gs = [self.io.to_canvas(f.geometry()) for f in self.layer.getFeatures(req) if f.hasGeometry()]
+            self._cutter_geom = QgsGeometry.unaryUnion(gs) if gs else None
+            self._cutter_key = key
+        return self._cutter_geom
+
+    def _poly_calc(self, p, quiet=False):
+        """(fid, f, lo que se va, pedazos que quedan) o None; sin tocar la capa."""
+        cut = self._cutter()
+        if cut is None or cut.isEmpty():
+            return None
+        exclude = tuple(self.boundary or ())
+        if quiet:
+            fid, f = pick_feature(self.canvas, self.io, self.layer, p, exclude)
+        else:
+            fid, f = self.pick(p, exclude)
+        if fid is None:
+            return None
+        g = self.io.to_canvas(f.geometry())
+        tiny = max(g.area(), cut.area()) * 1e-9
+        se_va = g.intersection(cut) if g.intersects(cut) else None
+        if se_va is None or se_va.isEmpty() or se_va.area() <= tiny:
+            if not quiet:
+                self.cl.echo('El polígono no se superpone con los polígonos de corte.')
+            return None
+        queda = []
+        for parte in g.difference(cut).asGeometryCollection():
+            if parte.type() == g.type() and parte.area() > tiny:
+                queda.append(parte)
+        return fid, f, se_va, queda
+
+    def _poly_trim(self, p):
+        r = self._poly_calc(p)
+        if r is None:
+            return False
+        fid, f, _se_va, queda = r
+        lyr = self.layer
+        lyr.beginEditCommand(self.title)
+        try:
+            if not queda:
+                lyr.deleteFeature(fid)          # estaba entero dentro del de corte
+            else:
+                lyr.changeGeometry(fid, conform(self.io.to_layer(queda[0]), lyr))
+                for parte in queda[1:]:
+                    lyr.addFeature(copy_feature(lyr, f, conform(self.io.to_layer(parte), lyr)))
+        except Exception:
+            lyr.destroyEditCommand()
+            raise
+        lyr.endEditCommand()
+        self.marks.append(lyr.undoStack().index())
+        lyr.triggerRepaint()
+        if not queda:
+            self.cl.echo('El polígono quedó entero dentro del de corte: se borró.')
+        elif len(queda) > 1:
+            self.cl.echo('Quedó partido en %d objetos con los mismos atributos.' % len(queda))
+        return True
+
+    def preview_geoms(self, cur):
+        if not self._poly():
+            return super().preview_geoms(cur)
+        if self.selecting or self.edge_ask:
+            return None
+        r = self._poly_calc(cur, quiet=True)
+        return [r[2]] if r is not None else None
 
     def _cut_segments(self, rect, exclude):
         segs = self._boundaries(rect, exclude)
@@ -1641,6 +1732,9 @@ class TrimCommand(ExtendCommand):
                 self.cl.set_prompt('Precise primer punto de borde')
             else:
                 self.cl.set_prompt('Precise punto final de línea o', [('H', 'desHacer')])
+            return
+        if self._poly():
+            self.cl.set_prompt('Designe polígono que desea recortar o', [('C', 'Contornos'), ('H', 'desHacer')])
             return
         self.cl.set_prompt('Designe objeto que desea recortar o mantenga pulsada Mayús y designe objeto '
                            'para alargar o', [('C', 'Contornos'), ('B', 'Borde'), ('A', 'Arista'),
@@ -1668,6 +1762,8 @@ class TrimCommand(ExtendCommand):
             else:
                 self._resolve_and_apply(text)
             return
+        if self._poly() and k in ('B', 'BORDE', 'F', 'FENCE', 'A', 'ARISTA', 'E', 'EDGE'):
+            raise InputError('Con polígonos se recorta con un clic sobre cada polígono.')
         if k in ('B', 'BORDE', 'F', 'FENCE'):
             self.fence = []
             self.prompt()
@@ -1684,7 +1780,9 @@ class TrimCommand(ExtendCommand):
             self.fence.append(p)
             self.prompt()
             return
-        if self.mgr.shift:
+        if self._poly():
+            self._poly_trim(p)
+        elif self.mgr.shift:
             self._extend_at(p)        # Mayús + clic: alarga
         else:
             self._trim_at(p)
@@ -2234,7 +2332,8 @@ EDIT_COMMANDS = [
     ('OFFSET', ('EQDIST', 'DESFASE', 'EQ', 'O'), OffsetCommand, 'EQDIST',
      ('line', 'polygon'), 'Crea objetos paralelos a una distancia', 'offset'),
     ('TRIM', ('RECORTA', 'RECORTAR', 'TR', 'RR'), TrimCommand, 'RECORTA',
-     ('line',), 'Recorta objetos en las aristas de corte (Mayús = alarga)', 'trim'),
+     ('line', 'polygon'), 'Recorta objetos en las aristas de corte (Mayús = alarga; polígonos: quita lo '
+     'superpuesto)', 'trim'),
     ('EXTEND', ('ALARGA', 'ALARGAR', 'EXTENDER', 'AA', 'EX'), ExtendCommand, 'ALARGA',
      ('line',), 'Alarga líneas hasta los contornos (Mayús = recorta)', 'extend'),
     ('FILLET', ('EMPALME', 'EMPALMAR', 'EMP', 'F'), FilletCommand, 'EMPALME',

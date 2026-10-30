@@ -1,6 +1,7 @@
 """Banco con el QGIS REAL (sin pantalla): RECORTA y ALARGA con el
 comportamiento de las herramientas de Fernando, y F3 / F8 con otra
-herramienta de QGIS (3.40.0).
+herramienta de QGIS (3.40.0). RECORTA en una capa de polígonos: el de corte
+le quita a cada polígono tocado la parte superpuesta (3.58.0).
 
 Se corre con el Python de QGIS (Flatpak org.qgis.qgis), con el complemento
 GeoCAD copiado a una carpeta de prueba (nunca la carpeta real de QGIS):
@@ -156,6 +157,66 @@ clic(4.5, -3)
 assert abs(geoms()[fuente2].boundingBox().xMaximum() - 7.0) < 1e-6, geoms()[fuente2].asWkt()
 mgr.cancel()
 print("ok ALARGA: líneas de llegada primero, vista previa, contornos quietos, Intro = todos")
+
+
+# ---- 3b. RECORTA con polígonos: el de corte quita lo superpuesto (3.58.0) -----------------
+plyr = QgsVectorLayer("MultiPolygon?crs=EPSG:32721&field=nombre:string", "poligonos", "memory")
+QgsProject.instance().addMapLayer(plyr)
+canvas.setLayers([plyr, lyr])
+plyr.startEditing()
+iface.activeLayer.return_value = plyr
+
+
+def poligono(nombre, wkt):
+    f = QgsFeature(plyr.fields())
+    f.setAttributes([nombre])
+    f.setGeometry(QgsGeometry.fromWkt(wkt))
+    plyr.addFeature(f)
+    return f.id()
+
+
+def pgeoms():
+    return {f.id(): f for f in plyr.getFeatures()}
+
+
+corte = poligono("corte", "POLYGON((0 0, 4 0, 4 4, 0 4, 0 0))")
+a = poligono("a", "POLYGON((2 2, 8 2, 8 3, 2 3, 2 2))")                 # se superpone en 2..4
+b = poligono("b", "POLYGON((-2 1, 6 1, 6 1.5, -2 1.5, -2 1))")          # lo atraviesa: dos pedazos
+c = poligono("c", "POLYGON((1 3.2, 2 3.2, 2 3.8, 1 3.8, 1 3.2))")       # entero adentro
+d = poligono("d", "POLYGON((10 -5, 12 -5, 12 -3, 10 -3, 10 -5))")       # no se toca
+mgr.run("RECORTA")
+assert mgr.command is not None and mgr.command.selecting
+mgr.enter()                                     # sin designar: con polígonos no hay modo rápido
+assert mgr.command.selecting, "con polígonos hay que designar el de corte"
+clic(0.5, 0.5)
+assert plyr.selectedFeatureIds() == [corte]
+mgr.enter()
+assert not mgr.command.selecting and mgr.command.boundary == [corte]
+pv = mgr.command.preview_geoms(P(7, 2.5))       # vista previa: lo que se va
+assert pv and abs(pv[0].area() - 2.0) < 1e-6, pv
+clic(7, 2.5)
+g = pgeoms()[a].geometry()
+assert abs(g.area() - 4.0) < 1e-6 and abs(g.boundingBox().xMinimum() - 4.0) < 1e-6, g.asWkt()
+assert abs(pgeoms()[corte].geometry().area() - 16.0) < 1e-6, "el de corte no cambia"
+n0 = len(pgeoms())
+clic(5, 1.25)                                   # partido: dos objetos con el mismo nombre
+fs = [f for f in pgeoms().values() if f["nombre"] == "b"]
+assert len(pgeoms()) == n0 + 1 and len(fs) == 2, [f.geometry().asWkt() for f in fs]
+assert sorted(round(f.geometry().area(), 6) for f in fs) == [1.0, 1.0]
+clic(1.5, 3.5)                                  # entero adentro: se borra
+assert c not in pgeoms()
+clic(11, -4)                                    # no se superpone: queda igual
+assert abs(pgeoms()[d].geometry().area() - 4.0) < 1e-6
+mgr.submit("H")                                 # deshace el borrado de c
+assert c in pgeoms()
+mgr.submit("H")                                 # y el corte en dos de b
+assert len([f for f in pgeoms().values() if f["nombre"] == "b"]) == 1
+assert abs(pgeoms()[b].geometry().area() - 4.0) < 1e-6
+mgr.cancel()
+assert mgr.command is None
+iface.activeLayer.return_value = lyr
+canvas.setLayers([lyr])
+print("ok RECORTA con polígonos: quita lo superpuesto, pedazos con sus atributos, desHacer")
 
 
 # ---- 4. F3 / F8 con otra herramienta de QGIS ---------------------------------------------

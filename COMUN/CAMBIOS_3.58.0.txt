@@ -1,0 +1,33 @@
+GeoCAD - versión 3.58.0
+=======================
+FUNCIÓN NUEVA (QGIS, Dibujo): RECORTA también en polígonos.
+Hay que actualizar QGIS. IngeCAD no cambia.
+
+Pedido de Fernando (30/10/2026)
+- «Necesito que la herramienta "Trim" pueda funcionar en Polígonos, de una
+  manera diferente al comportamiento estándar para líneas o polilíneas»:
+  «el primero corta a los segundos con los que se superpone, solo la parte
+  que está superpuesta».
+
+RECORTA en una capa de polígonos (RECORTA / RECORTAR / TR / TRIM)
+- Con una capa de polígonos activa y en edición:
+  Designe polígonos de corte          (clic o ventana; Intro)
+  Designe polígono que desea recortar o [Contornos/desHacer]
+- Cada clic sobre otro polígono de la capa le quita la parte que se
+  superpone con los polígonos de corte. Antes del clic se ve el contorno de
+  lo que se va. Los polígonos de corte no cambian.
+- Si queda partido en pedazos, cada pedazo es un objeto aparte con los
+  mismos atributos del original. Si estaba entero adentro, se borra. Si no
+  se superpone, no pasa nada (lo avisa).
+- desHacer (H) deshace el último corte; Intro (o clic derecho) termina;
+  Contornos (C) vuelve a designar los de corte.
+- Con polígonos hay que designar los de corte (Intro sin designar lo avisa);
+  Borde y Arista son sólo para líneas.
+- En una capa de líneas RECORTA sigue igual que antes.
+
+Pruebas
+- 71/71 con IngeCAD 0.6.8.2 y 0.6.7.
+- ventana/banco_recorta_qgis.py con el QGIS real 4.2.2: caso nuevo de
+  polígonos (lo que se va, pedazos con sus atributos, entero adentro,
+  desHacer). TODO OK.
+- A mano: TP1-TP5 en 02_PRUEBAS_MANUALES.txt.
