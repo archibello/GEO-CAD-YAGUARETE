@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 # GeoCAD · módulo Capas CAD (antes el complemento Layer Properties 6.7).
 """
-Layer Properties Manager (estilo AutoCAD) para QGIS 3.28+ / 4.x
+Capas CAD para QGIS 3.28+ / 4.x, como en IngeCAD (3.60.0).
 
-Barra de herramientas 'Capas CAD' (equivalente a la barra Capas / panel Capas de AutoCAD)
-y paleta 'Administrador de propiedades de capas'.
+Barra 'Capas CAD' = la de IngeCAD: lista de capa + Color, Tipo de línea y Grosor
+de línea (barra.py). Panel 'Capas' = el administrador de capas de IngeCAD 0.7.0
+(panel.py). LAYISO, LAYOFF y los demás siguen como comandos y en el menú Capas CAD.
 """
 
 from qgis.PyQt.QtCore import Qt, QTimer
@@ -12,8 +13,9 @@ from qgis.PyQt.QtCore import Qt, QTimer
 from .compat import QAction, qt
 from .controller import CadLayerController
 from .icons import icon
+from .barra import ColorCombo, LinetypeCombo, LineweightCombo
 from .layer_combo import LayerCombo
-from .manager import LayerManagerDock
+from .panel import LayersDock
 from .maptools import PickFeatureTool
 
 MENU = '&Capas CAD'
@@ -36,16 +38,27 @@ class LayerPropertiesPlugin:
         self.toolbar.setObjectName('CadLayersToolbar')
         self.toolbar.setToolTip('Capas CAD')
 
-        self.a_props = self._action('layprops', 'Administrador de propiedades de capas (LAYER)',
-                                    self.toggle_manager, checkable=True, menu=True)
+        # primero el botón del panel (3.60.2, Fernando: «no está el panel de capas Yaguá»;
+        # «preferiría que vaya al principio»), después las cuatro listas de IngeCAD
+        self.a_props = self._action('layprops', 'Panel Yaguá Capas (LAYER)', self.toggle_manager,
+                                    checkable=True)
+        self.a_props.setProperty('geocad_id', 'capas:layprops')
+        self.toolbar.addAction(self.a_props)
+        # la barra de IngeCAD: cuatro listas (también en Administrar botones, 3.46.0)
         self.combo = LayerCombo(self.ctrl, self.toolbar)
-        wa = self.toolbar.addWidget(self.combo)
-        wa.setProperty('geocad_id', 'capas:capa')        # también en Administrar botones (3.46.0)
-        wa.setText('Capa CAD actual')
-        wa.setIcon(icon('layprops'))
+        self.props = [ColorCombo(self.ctrl, self.toolbar), LinetypeCombo(self.ctrl, self.toolbar),
+                      LineweightCombo(self.ctrl, self.toolbar)]
+        for widget, clave, texto in ((self.combo, 'capa', 'Capa CAD actual'),
+                                     (self.props[0], 'color', 'Color'),
+                                     (self.props[1], 'linetype', 'Tipo de línea'),
+                                     (self.props[2], 'lineweight', 'Grosor de línea')):
+            wa = self.toolbar.addWidget(widget)
+            wa.setProperty('geocad_id', 'capas:' + clave)
+            wa.setText(texto)
+            wa.setIcon(icon('layprops'))
+        # lo demás, en el menú Capas CAD (ya no en la barra: la de IngeCAD no lo tiene)
         self._action('laymcur', 'Establecer como actual la capa del objeto (LAYMCUR)', self.cmd_laymcur)
         self.a_prev = self._action('layerp', 'Capa previa (LAYERP)', self.ctrl.layer_previous)
-        self.toolbar.addSeparator()
         self._action('laymch', 'Igualar capa (LAYMCH)', self.cmd_laymch)
         self._action('layiso', 'Aislar (LAYISO)', self.cmd_layiso)
         self._action('layuniso', 'Desaislar (LAYUNISO)', self.ctrl.unisolate)
@@ -55,7 +68,6 @@ class LayerPropertiesPlugin:
         self._action('layulk', 'Desbloquear capa del objeto (LAYULK)', lambda: self._with_layers(self.ctrl.layulk, 'desbloquear'))
         self._action('layon', 'Activar todas las capas (LAYON)', self.ctrl.layon_all)
         self._action('laythw', 'Reutilizar todas las capas (LAYTHW)', self.ctrl.laythw_all)
-        self.toolbar.addSeparator()
         self.a_lw = self._action('lwdisplay', 'Mostrar/ocultar grosor de línea (LWDISPLAY)',
                                  self._toggle_lw, checkable=True)
         self.a_lw.setChecked(self.ctrl.lwdisplay)
@@ -65,6 +77,9 @@ class LayerPropertiesPlugin:
         self.ctrl.attach(self.iface.activeLayer())
         self._update_actions()
         QTimer.singleShot(0, self._connect_command_line)
+        # a la vista desde el arranque, como la pestaña Capas de IngeCAD (salvo que se cerró)
+        if self.ctrl.setting('panel/visible', True, bool):
+            QTimer.singleShot(0, lambda: self.toggle_manager(True, raise_=False))
 
     # ------------------------------------------------------------ línea de comandos (Dibujo CAD)
     def _connect_command_line(self):
@@ -103,17 +118,16 @@ class LayerPropertiesPlugin:
         for name, aliases, fn, title, desc in cmds:
             host.register_command(name, aliases, fn, title=title, group='capas', description=desc)
 
-    def _action(self, ico, text, slot, checkable=False, menu=False):
+    def _action(self, ico, text, slot, checkable=False, menu=True):
         a = QAction(icon(ico), text, self.iface.mainWindow())
         a.setToolTip(text)
-        a.setProperty('geocad_id', 'capas:' + ico)      # Administrar botones (3.38.0)
         a.setStatusTip(text)
+        a.setProperty('geocad_id', 'capas:' + ico)      # banco Capas CAD (3.60.7)
         a.setCheckable(checkable)
         if checkable:
             a.triggered.connect(lambda checked=False: slot(checked))
         else:
             a.triggered.connect(lambda *_: slot())
-        self.toolbar.addAction(a)
         if menu:
             self.iface.addPluginToMenu(MENU, a)
         self.actions.append((a, menu))
@@ -161,20 +175,27 @@ class LayerPropertiesPlugin:
             self.ctrl = None
 
     # ------------------------------------------------------------ paleta
-    def toggle_manager(self, checked=True):
+    def toggle_manager(self, checked=True, raise_=True):
+        # acoplado a la DERECHA, como la barra lateral de IngeCAD. No en pestaña ni apilado a
+        # la izquierda: allí QGIS ya apila Navegador, Capas, Estilo... y las alturas mínimas se
+        # suman; con la pestaña la ventana de Fernando llegó a 1065 px de mínimo en una
+        # pantalla de 1080 y minimizar/maximizar dejaron de andar (3.60.4)
+        if self.ctrl is None:
+            return
         if self.dock is None:
-            self.dock = LayerManagerDock(self.iface, self.ctrl, self.iface.mainWindow())
+            self.dock = LayersDock(self.ctrl, self.iface.mainWindow())
             self.iface.addDockWidget(qt('DockWidgetArea', 'RightDockWidgetArea'), self.dock)
-            self.dock.setFloating(True)
-            mw = self.iface.mainWindow().geometry()
-            w, h = min(1100, mw.width() - 80), 440
-            self.dock.resize(w, h)
-            self.dock.move(mw.x() + (mw.width() - w) // 2, mw.y() + (mw.height() - h) // 2)
-            self.dock.visibilityChanged.connect(self.a_props.setChecked)
+            self.dock.visibilityChanged.connect(self._dock_visible)
+        self.ctrl.set_setting('panel/visible', bool(checked))
         self.dock.setVisible(checked)
         if checked:
-            self.dock.raise_()
+            if raise_:
+                self.dock.raise_()
             self.ctrl.refresh()
+
+    def _dock_visible(self, visible):
+        if self.a_props is not None:
+            self.a_props.setChecked(bool(self.dock is not None and not self.dock.isHidden()))
 
     def _toggle_lw(self, checked):
         self.ctrl.set_global('lwdisplay', bool(checked))

@@ -197,8 +197,15 @@ class LayerCombo(QComboBox):
         if not name:
             return
         dlog('lista: elegir "%s" (selección=%s)' % (name, self.ctrl.has_selection()))
+        # la regla de IngeCAD (3.60.0): elegir una capa acá es «que la capa mande en el
+        # aspecto»: el color vuelve a PorCapa en el mismo gesto
         if self.ctrl.has_selection():
             self.ctrl.assign_selection(name)     # objetos seleccionados -> capa elegida
+            if self.ctrl.selection_prop('color') is not None:
+                self.ctrl.set_selection_prop('color', None)
+            self.ctrl.clear_selection()          # que se vea el resultado (3.60.1)
         else:
             self.ctrl.set_current(name)
+            if self.ctrl.current_prop('color') is not None:
+                self.ctrl.set_current_prop('color', None)
         self.refresh()

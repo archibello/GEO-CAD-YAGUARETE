@@ -1,0 +1,20 @@
+GeoCAD - versión 3.60.1
+=======================
+CORRECCIÓN (sólo QGIS) de la 3.60.0. Hay que actualizar QGIS.
+
+Falla que encontró Fernando (01/11/2026)
+- «Cuando se asigna una entidad a una capa con la herramienta Yaguá Capas,
+  la selección queda activa y no se aprecia el resultado final elegido.»
+
+Arreglo
+- Barra Yaguá Capas (lista de capa, Color, Tipo de línea y Grosor de línea):
+  con objetos seleccionados, después de cambiarlos se quita la selección. Así
+  se ve enseguida la capa, el color, el tipo o el grosor que quedó, y la
+  lista de capa vuelve a mostrar la capa actual.
+- Sin selección no cambia nada: la barra sigue eligiendo con qué se dibuja
+  lo próximo.
+
+Todo lo demás de la 3.60.0 queda igual (panel y barra de capas de IngeCAD).
+
+Pruebas: test_capas_qgis y banco_capas_qgis (con QGIS 4.2.2 real)
+comprueban que la selección se quita después de asignar.

@@ -22,6 +22,7 @@ from qgis.core import (
     QgsSimpleLineSymbolLayer, QgsSimpleMarkerSymbolLayer, QgsVectorLayer,
 )
 
+from . import filtros
 from .aci import aci_to_hex, color_hex
 from .compat import geometry_kind, qt, render_mm, string_field, symbol_property, enum
 from .linetypes import (LEGACY_LINETYPES, LINETYPES, LW_DEFAULT, has_dots,
@@ -34,6 +35,10 @@ NAME_EXPR = 'if(coalesce("%s", \'\') = \'\', \'0\', "%s")' % (FIELD, FIELD)
 INVALID_CHARS = '<>/\\":;?*|=`,'
 STATE_PROPS = ('on', 'frozen', 'locked', 'plot', 'color', 'linetype',
                'lineweight', 'transparency')
+# Propiedades actuales de los objetos nuevos ($CECOLOR, $CELTYPE, $CELWEIGHT de
+# IngeCAD, 3.60.0): None = PorCapa. Van a los campos de Dibujo CAD.
+CURRENT_PROPS = {'color': ('cecolor', 'CAD_COLOR'), 'linetype': ('celtype', 'CAD_LTYPE'),
+                 'lineweight': ('celweight', 'CAD_LW')}
 
 
 # --------------------------------------------------------------------------
@@ -110,10 +115,14 @@ def _legacy_layer(code, p):
 
 def normalize_config(data, ensure_zero=True):
     """Convierte cualquier formato conocido (v1, v2, lista) en config v2."""
-    cfg = {'version': 2, 'current': '0', 'layers': [], 'states': {}}
+    cfg = {'version': 2, 'current': '0', 'layers': [], 'states': {}, 'filters': [],
+           'cecolor': None, 'celtype': None, 'celweight': None}
     if isinstance(data, dict) and 'layers' in data:
         cfg['current'] = str(data.get('current', '0'))
         cfg['states'] = data.get('states', {}) or {}
+        cfg['filters'] = filtros.normalize(data.get('filters'))
+        for key, _f in CURRENT_PROPS.values():
+            cfg[key] = data.get(key)
         layers = data.get('layers', [])
     elif isinstance(data, list):
         layers = data
@@ -440,14 +449,16 @@ class CadLayerController(QObject):
             return False
         if self.field_index() == -1:
             ok = False
-            prov = self.layer.dataProvider()
-            try:
-                ok = prov.addAttributes([string_field(FIELD, 50)])
-                self.layer.updateFields()
-            except Exception:
-                ok = False
-            if not ok and self.layer.isEditable():
+            # en edición, dentro de la edición: agregado al proveedor por debajo, los campos
+            # nuevos sin guardar se corrían de columna (un color terminaba en CAD_LW, 3.60.2)
+            if self.layer.isEditable():
                 ok = self.layer.addAttribute(string_field(FIELD, 50))
+            else:
+                try:
+                    ok = self.layer.dataProvider().addAttributes([string_field(FIELD, 50)])
+                    self.layer.updateFields()
+                except Exception:
+                    ok = False
             if not ok or self.field_index() == -1:
                 self.warn('No se pudo crear el campo %s en "%s".' % (FIELD, self.layer.name()))
                 return False
@@ -586,7 +597,8 @@ class CadLayerController(QObject):
 
     # ------------------------------------------------------------ cambios
     def _snapshot(self):
-        return copy.deepcopy({'layers': self.cfg['layers'], 'current': self.cfg['current']})
+        return copy.deepcopy({'layers': self.cfg['layers'], 'current': self.cfg['current'],
+                              'filters': self.cfg.get('filters', [])})
 
     def _commit(self, snap=None, history=True):
         if history and snap is not None:
@@ -621,6 +633,7 @@ class CadLayerController(QObject):
         snap = self._history[self.layer.id()].pop()
         self.cfg['layers'] = snap['layers']
         self.cfg['current'] = snap['current']
+        self.cfg['filters'] = snap.get('filters', self.cfg.get('filters', []))
         self._commit(history=False)
         self.msg('Estado de capa previo restablecido.')
 
@@ -714,6 +727,7 @@ class CadLayerController(QObject):
             if not todel:
                 return False
             self.cfg['layers'] = [l for l in self.cfg['layers'] if l['name'] not in todel]
+            filtros.drop_layers(self.cfg.setdefault('filters', []), todel)
             for st in self.cfg['states'].values():
                 for n in todel:
                     st.get('layers', {}).pop(n, None)
@@ -731,8 +745,15 @@ class CadLayerController(QObject):
         fld = layer.fields().field(idx)
         dlog('  campo %s tipo=%s longitud=%s editable_capa=%s' % (fld.name(), fld.typeName(), fld.length(),
                                                                   layer.isEditable()))
-        if fld.typeName().lower() not in ('string', 'text', 'varchar', 'char', 'character', 'str', 'qstring') \
-                and 'char' not in fld.typeName().lower() and 'str' not in fld.typeName().lower():
+        tipo = fld.typeName().lower()
+        # el tipo real (un campo agregado dentro de la edición todavía no tiene nombre de tipo:
+        # el aviso salía en blanco, «es de tipo : debe ser texto», 3.60.3)
+        try:
+            texto = 'string' in str(fld.type()).lower()
+        except Exception:  # noqa: BLE001
+            texto = False
+        if not texto and tipo not in ('string', 'text', 'varchar', 'char', 'character', 'str', 'qstring') \
+                and 'char' not in tipo and 'str' not in tipo:
             self.warn('El campo %s de "%s" es de tipo %s: debe ser texto para guardar el nombre de la capa.'
                       % (FIELD, layer.name(), fld.typeName()))
         if fld.length() and 0 < fld.length() < len(str(value)):
@@ -797,6 +818,7 @@ class CadLayerController(QObject):
             lay['name'] = new
             if self.cfg['current'] == old:
                 self.cfg['current'] = new
+            filtros.rename_layer(self.cfg.setdefault('filters', []), old, new)
             for st in self.cfg['states'].values():
                 ls = st.get('layers', {})
                 if old in ls:
@@ -804,6 +826,179 @@ class CadLayerController(QObject):
                 if st.get('current') == old:
                     st['current'] = new
         return self.modify(fn)
+
+    # -- filtros de grupo (panel de capas de IngeCAD, 3.60.0)
+    def filters(self):
+        return self.cfg.setdefault('filters', []) if self.active else []
+
+    def new_group(self, parent=(), layers=()):
+        holder = {}
+
+        def fn():
+            holder['path'] = filtros.new_group(self.cfg.setdefault('filters', []), parent,
+                                               layers=layers)
+            return False if holder['path'] is None else None
+        self.modify(fn)
+        return holder.get('path')
+
+    def delete_group(self, path):
+        return self.modify(lambda: None if filtros.delete(self.cfg.setdefault('filters', []), path)
+                           else False)
+
+    def rename_group(self, path, new):
+        holder = {}
+
+        def fn():
+            holder['err'] = filtros.rename(self.cfg.setdefault('filters', []), path, new)
+            return False if holder['err'] else None
+        self.modify(fn)
+        return holder.get('err')
+
+    def group_layers(self, path, names, add=True):
+        return self.modify(lambda: None if filtros.group_layers(
+            self.cfg.setdefault('filters', []), path, names, add) else False)
+
+    def set_names_state(self, names, prop, value):
+        """Las capas de un filtro en un estado (clic derecho en el filtro). La capa
+        actual no se inutiliza, como en IngeCAD. False si no hay nada que cambiar."""
+        names = [n for n in names if self.find(n, True) and self.find(n, True)[prop] != value
+                 and not (prop == 'frozen' and value and n == self.current)]
+        if not names:
+            return False
+        return self.set_props(names, **{prop: value})
+
+    # -- propiedades actuales de los objetos nuevos y de la selección (barra de IngeCAD)
+    def current_prop(self, prop):
+        """Color ('#rrggbb'), tipo de línea o grosor actual; None = PorCapa."""
+        return self.cfg.get(CURRENT_PROPS[prop][0]) if self.active else None
+
+    def set_current_prop(self, prop, value):
+        if not self.active:
+            return False
+        self.cfg[CURRENT_PROPS[prop][0]] = value
+        self._save()
+        self.changed.emit()
+        return True
+
+    def _ensure_field(self, lyr, name, kind):
+        if lyr.fields().indexOf(name) != -1:
+            return True
+        try:
+            from qgis.PyQt.QtCore import QMetaType
+            from qgis.core import QgsField
+            fld = (QgsField(name, QMetaType.Type.Double) if kind == 'double'
+                   else string_field(name, 50))
+        except (ImportError, AttributeError, TypeError):
+            from qgis.PyQt.QtCore import QVariant
+            from qgis.core import QgsField
+            fld = QgsField(name, QVariant.Double) if kind == 'double' else string_field(name, 50)
+        ok = False
+        if lyr.isEditable():
+            ok = lyr.addAttribute(fld)
+        else:
+            try:
+                ok = lyr.dataProvider().addAttributes([fld])
+                lyr.updateFields()
+            except Exception:  # noqa: BLE001
+                ok = False
+        if not ok or lyr.fields().indexOf(name) == -1:
+            self.warn('No se pudo crear el campo %s en "%s".' % (name, lyr.name()))
+            return False
+        return True
+
+    def new_feature_attrs(self, layer):
+        """{índice: valor} de las propiedades actuales que no son PorCapa, para un
+        objeto nuevo de Dibujo CAD en ``layer`` (crea el campo si falta)."""
+        if not self.active or layer is not self.layer:
+            return {}
+        if all(self.cfg.get(k) is None for k, _f in CURRENT_PROPS.values()):
+            return {}
+        if not self.ensure_initialized():          # si no, el objeto nuevo no se vería así
+            return {}
+        out, nuevos = {}, False
+        for prop, (key, field) in CURRENT_PROPS.items():
+            value = self.cfg.get(key)
+            if value is None or (prop == 'linetype' and geometry_kind(layer) == 'point'):
+                continue
+            nuevos = nuevos or layer.fields().indexOf(field) == -1
+            if self._ensure_field(layer, field, 'double' if prop == 'lineweight' else 'string'):
+                out[layer.fields().indexOf(field)] = value
+        if nuevos:
+            self._apply_to(layer, self.cfg)        # la simbología lee los campos nuevos
+        return out
+
+    def selection_prop(self, prop):
+        """El valor común de la selección (None = PorCapa); ``False`` si es mixto."""
+        field = CURRENT_PROPS[prop][1]
+        valor, hay = None, False
+        for lyr, fids in self.selection_sources():
+            idx = lyr.fields().indexOf('COLOR' if prop == 'color' and
+                                       lyr.customProperty('dibujo_cad/text_layer') == '1' else field)
+            req = QgsFeatureRequest().setFilterFids(fids)
+            req.setFlags(_no_geometry_flag())
+            for f in lyr.getFeatures(req):
+                v = None if idx == -1 or is_null(f.attribute(idx)) or f.attribute(idx) == '' \
+                    else f.attribute(idx)
+                if prop == 'color' and v is not None:
+                    v = str(v).lower()
+                elif prop == 'lineweight' and v is not None:
+                    try:
+                        v = float(v)
+                    except (TypeError, ValueError):     # un valor que no es grosor: como mixto
+                        return False
+                if hay and v != valor:
+                    return False
+                valor, hay = v, True
+        return valor
+
+    def clear_selection(self):
+        """Quita la selección de todas las capas gestionadas: después de asignar desde la
+        barra se ve el resultado (Fernando, 01/11/2026, 3.60.1)."""
+        for lyr, _fids in self.selection_sources():
+            try:
+                lyr.removeSelection()
+            except RuntimeError:
+                pass
+        self.selectionChanged.emit()
+
+    def set_selection_prop(self, prop, value, title=None):
+        """Cambia el color, tipo o grosor propio de los objetos seleccionados."""
+        field = CURRENT_PROPS[prop][1]
+        title = title or {'color': 'Color', 'linetype': 'Tipo de línea',
+                          'lineweight': 'Grosor de línea'}[prop]
+        sources = self.selection_sources()
+        # la capa activa todavía sin capas CAD (sin LAYER_CODE, con otro estilo): se prepara
+        # como en el primer cambio del panel, si no lo escrito no se ve (Fernando, 3.60.2)
+        if any(lyr is self.layer for lyr, _ in sources) and not self.ensure_initialized():
+            return 0
+        total = 0
+        for lyr, fids in sources:
+            text = lyr.customProperty('dibujo_cad/text_layer') == '1'
+            name = 'COLOR' if prop == 'color' and text else field
+            if text and prop != 'color':
+                continue
+            if value is not None and not self._ensure_field(
+                    lyr, name, 'double' if prop == 'lineweight' else 'string'):
+                continue
+            idx = lyr.fields().indexOf(name)
+            if idx == -1:
+                continue
+            if not lyr.isEditable():
+                lyr.startEditing()
+            lyr.beginEditCommand(title)
+            for fid in fids:
+                lyr.changeAttributeValue(fid, idx, value)
+            lyr.endEditCommand()
+            total += len(fids)
+            self._apply_to(lyr, self._load(lyr) if lyr is not self.layer else self.cfg)
+            if text:
+                try:
+                    from ..dibujo.text_tool import refresh_text_colors
+                    refresh_text_colors(lyr)
+                except Exception:  # noqa: BLE001
+                    pass
+        self.selectionChanged.emit()
+        return total
 
     def merge(self, sources, target):
         """LAYMRG: mueve los objetos de 'sources' a 'target' y suprime 'sources'."""

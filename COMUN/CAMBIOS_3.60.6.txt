@@ -1,0 +1,27 @@
+GeoCAD - versión 3.60.6
+=======================
+CORRECCIÓN (sólo QGIS) de la 3.60.5. Hay que actualizar QGIS.
+
+Pedido de Fernando (01/11/2026, prioridad)
+- «La idea de trabajar con la herramienta capas de GeoCAD debería ser algo
+  opcional, por eso al instalar geocad por primera vez no deberían modificar
+  la interfaz de qgis; lo único que debería estar presente es la barra de
+  línea de comandos.»
+
+Qué aparecía al instalar por primera vez (medido con el QGIS 4.2.2 real)
+- Las barras de GeoCAD ya arrancaban apagadas (desde la 3.47.0).
+- Pero el módulo Capas venía prendido y abría solo el panel Yaguá Capas.
+- Y el módulo Papel ponía abajo la barra de pestañas Modelo / Presentaciones.
+
+Cambios
+- En QGIS, los módulos Capas y Papel vienen SIN TILDAR en la ventana de
+  Módulos de la primera instalación. Al instalar, lo único nuevo a la vista
+  es la línea de comandos.
+- Se prenden cuando se quiera en GeoCAD Yaguareté > Módulos...: Capas trae el
+  panel Yaguá Capas y su barra; Papel, las pestañas, TRAZAR y PRESENTACION.
+- Quien ya tenía GeoCAD instalado conserva lo que eligió: no se apaga nada.
+- IngeCAD no cambia.
+
+Pruebas: test_modulos, test_submodulos y test_botones; banco nuevo
+banco_primera_qgis (QGIS real, sin nada guardado: sólo la línea de comandos
+a la vista, sin panel Yaguá Capas ni barras; prendidos después, aparecen).

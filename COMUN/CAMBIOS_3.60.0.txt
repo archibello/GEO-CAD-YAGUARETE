@@ -1,0 +1,59 @@
+GeoCAD - versión 3.60.0
+=======================
+FUNCIÓN NUEVA (sólo QGIS): el panel de capas y la barra de capas son los de
+IngeCAD. Hay que actualizar QGIS (IngeCAD no cambia).
+
+Pedido de Fernando (01/11/2026)
+- «Necesito que reemplaces por completo el panel administrador de capas de
+  QGIS (Yaguá Capas) por el de IngeCAD y que adoptes todos sus
+  comportamientos para reforzar la idea de un puente entre estas dos
+  plataformas.» Acordado: el modelo es el panel de IngeCAD 0.7.0; la barra
+  Yaguá Capas también pasa a la de IngeCAD; lo nuestro que IngeCAD no tiene
+  se va.
+
+Panel «Capas» (LA / CAPA, o menú Capas CAD > Capas)
+- Acoplado al costado, como la pestaña Capas de IngeCAD (antes era una
+  ventana flotante). El título dice de qué capa QGIS son las capas CAD.
+- Columnas de IngeCAD: Estado (✓ actual, ▪ en uso, vacía), Nombre,
+  Encendida/Apagada, Inut, Bloq, Color (número ACI), Tipo de línea, Grosor
+  de línea, Imprimir y Descripción (oculta de entrada).
+- Arriba: + Nueva capa (con las propiedades de la elegida y el nombre abierto
+  para escribir), Eliminar capa, Establecer actual, Nuevo filtro de grupo y
+  Buscar capa (admite * y ?).
+- Doble clic en una fila: la hace actual. Doble clic en el nombre: lo cambia.
+  Un clic en la bombilla, el sol, el candado o la impresora lo cambia; en el
+  color, el tipo o el grosor, los elige.
+- Eliminar no deja borrar la 0, la actual ni una capa con objetos; avisa en
+  la línea de comandos con las palabras de IngeCAD.
+- Clic derecho en el encabezado: qué columnas se ven (se recuerda) y
+  Optimizar todas las columnas.
+- Filtros de grupo (aparecen cuando hay alguno): Todas, Todas las capas
+  utilizadas y los grupos. Un clic muestra sus capas; clic derecho: Nuevo
+  filtro de grupo, Cambiar nombre, Eliminar y Activar / Desactivar /
+  Reutilizar / Inutilizar / Bloquear / Desbloquear capas (todas las del
+  filtro). Las capas entran a un grupo arrastradas sobre él o con su clic
+  derecho (Añadir al grupo, Nuevo grupo con estas capas, Quitar del grupo).
+  Los grupos se guardan con la capa QGIS; CAPAP también los deshace.
+- Se fueron (acordado): Transparencia, Invertir filtro, Capas no utilizadas,
+  la fila de botones del panel viejo (estados de capa, orden de dibujo,
+  seleccionar objetos, importar/exportar) y su menú de parámetros.
+
+Barra «Capas CAD» / Yaguá Capas = la de IngeCAD
+- Lista de capa + Color + Tipo de línea + Grosor de línea, nada más.
+- Con objetos seleccionados, cada lista los cambia (y muestra lo de ellos,
+  en blanco si es mixto); sin selección, elige con qué se dibuja lo PRÓXIMO
+  (como $CECOLOR, $CELTYPE y $CELWEIGHT): LINEA, PLINEA, ARCO, CIRCULO y
+  RECTANG de Dibujo lo toman. Copias y demás conservan lo suyo.
+- Regla de IngeCAD: elegir una capa en la lista deja el color en PorCapa.
+- LAYISO, LAYOFF, LAYFRZ, LAYLCK, LAYMCH, LAYMCUR, LAYERP, LAYON, LAYTHW y
+  LWDISPLAY siguen como comandos y en el menú Capas CAD (ya no en la barra).
+- Administrar botones: Yaguá Capas pasa sola (una vez) a las cuatro listas;
+  la lista de capa sale de Yaguá Dibujo. Después se puede repartir de nuevo.
+
+No cambia: las capas CAD siguen siendo valores de LAYER_CODE dentro de la
+capa QGIS activa, con su configuración y CAPAP.
+
+Pruebas: test_capas_qgis (nueva), test_botones (Yaguá Capas nueva y la
+conversión de lo guardado); bancos con QGIS 4.2.2 real: banco_capas_qgis
+(nuevo, 42 comprobaciones), banco_listas_qgis, banco_botones_qgis y
+banco_teclado_qgis.

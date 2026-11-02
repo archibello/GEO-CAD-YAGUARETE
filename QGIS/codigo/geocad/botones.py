@@ -55,7 +55,7 @@ DEFECTO = {
     "qgis": (
         ("Yaguá Dibujo", (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
-            "dibujo:rumbos", "dibujo:relangle", "dibujo:gmsblocks", "capas:capa",)),
+            "dibujo:rumbos", "dibujo:relangle", "dibujo:gmsblocks",)),
         ("Yaguá Edición", (
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
@@ -67,10 +67,10 @@ DEFECTO = {
             "dibujo:size", "dibujo:textcolor",)),
         ("Yaguá Bloques", ("dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:purge")),
         ("Yaguá Impresión", ("dibujo:plot", "dibujo:layout", "dibujo:mview")),
-        ("Yaguá Capas", (
-            "capas:layprops", "capas:laymcur", "capas:layerp", "capas:laymch", "capas:layiso",
-            "capas:layuniso", "capas:layoff", "capas:layfrz", "capas:laylck", "capas:layulk",
-            "capas:layon", "capas:laythw", "capas:lwdisplay",)),
+        # 3.60.0: la barra de IngeCAD (Fernando, 01/11/2026), lista de capa + propiedades;
+        # 3.60.2: y primero el botón del panel Yaguá Capas
+        ("Yaguá Capas", ("capas:layprops", "capas:capa", "capas:color", "capas:linetype",
+                         "capas:lineweight")),
         ("Yaguá-IngeCAD", ("puente:send",)),
         ("Yaguá Setting", (
             "dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:properties", "dibujo:cmdline",)),
@@ -92,6 +92,19 @@ PRENDIDOS = {
 }
 
 
+#: los bancos de respaldo (3.60.7, Fernando, 02/11/2026: «dos listados de botones
+#: de respaldo que permanecerán apagados por defecto ... un banco de botones para
+#: recurrir en caso de recuperación, para armar las barras de herramientas
+#: personalizadas»): en la fábrica, ``(BANCO + título, [botones])`` con TODOS los
+#: botones de un submenú (Dibujo CAD, Capas CAD), también los que ya están en una
+#: categoría. Nunca son una categoría ni una barra: de ahí se traen botones.
+BANCO = "banco:"
+
+
+def es_banco(nombre: str) -> bool:
+    return str(nombre).startswith(BANCO)
+
+
 def de_fabrica(programa: str):
     """Las categorías de fábrica de ``programa`` como si estuvieran guardadas
     (o None: sin categorías de fábrica, las barras de siempre). Todas
@@ -109,6 +122,60 @@ def de_fabrica(programa: str):
             "ocultos": ocultos, "apagadas": [], "todas": True, "prendidas": prendidas}
 
 
+#: conversiones de lo guardado, una sola vez cada una (se anotan en «migraciones»).
+#: «capas-ingecad» (3.60.0): Yaguá Capas pasa a ser la barra de IngeCAD; la lista
+#: de capa sale de donde estuviera (los botones viejos de capas ya no son botones).
+CAPAS_INGECAD = ("capas:capa", "capas:color", "capas:linetype", "capas:lineweight")
+#: «capas-panel» (3.60.2): el botón del panel Yaguá Capas, primero en Yaguá Capas.
+#: «capas-banco» (3.60.7): los comandos que la 3.60.0 sacó de la barra de capas
+#: vuelven a ser botones, pero sólo en el banco Capas CAD (Fernando, 02/11/2026:
+#: «quedan en el banco»): fuera de lo guardado antes, para que no reaparezcan solos.
+CAPAS_BANCO = tuple("capas:" + c for c in (
+    "laymcur", "layerp", "laymch", "layiso", "layuniso", "layoff", "layfrz", "laylck",
+    "layulk", "layon", "laythw", "lwdisplay"))
+MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco")}
+
+
+def _migrar(programa: str, crudo: dict) -> bool:
+    """Aplica a ``crudo`` las conversiones pendientes; True si cambió algo."""
+    hechas = list(crudo.get("migraciones") or ())
+    cambio = False
+    for nombre in MIGRACIONES.get(programa, ()):
+        if nombre in hechas:
+            continue
+        hechas.append(nombre)
+        cambio = True
+        if nombre == "capas-ingecad":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            for c in cats:
+                c["botones"] = [b for b in c.get("botones") or () if b not in CAPAS_INGECAD]
+            destino = next((c for c in cats if c.get("nombre") == "Yaguá Capas"), None)
+            if destino is None:
+                destino = {"nombre": "Yaguá Capas", "botones": []}
+                cats.append(destino)
+            destino["botones"] = list(CAPAS_INGECAD) + destino["botones"]
+            crudo["categorias"] = cats
+            crudo["ocultos"] = [b for b in crudo.get("ocultos") or () if b not in CAPAS_INGECAD]
+        elif nombre == "capas-panel":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            for c in cats:
+                c["botones"] = [b for b in c.get("botones") or () if b != "capas:layprops"]
+            destino = next((c for c in cats if c.get("nombre") == "Yaguá Capas"), None)
+            if destino is None:
+                destino = {"nombre": "Yaguá Capas", "botones": []}
+                cats.append(destino)
+            destino["botones"] = ["capas:layprops"] + destino["botones"]
+            crudo["categorias"] = cats
+            crudo["ocultos"] = [b for b in crudo.get("ocultos") or () if b != "capas:layprops"]
+        elif nombre == "capas-banco":
+            for c in crudo.get("categorias") or ():
+                if isinstance(c, dict):
+                    c["botones"] = [b for b in c.get("botones") or () if b not in CAPAS_BANCO]
+            crudo["ocultos"] = [b for b in crudo.get("ocultos") or () if b not in CAPAS_BANCO]
+    crudo["migraciones"] = hechas
+    return cambio
+
+
 def archivo() -> Path:
     return Path.home() / ".config" / "geocad" / "botones.json"
 
@@ -124,9 +191,15 @@ def _leer_todo() -> dict:
 def leer(programa: str):
     """Lo guardado para ``programa`` ({"categorias": [...], "ocultos": [...]})
     o None si está como de fábrica (o el archivo está dañado)."""
-    crudo = _leer_todo().get(programa)
+    data = _leer_todo()
+    crudo = data.get(programa)
     if not isinstance(crudo, dict) or not isinstance(crudo.get("categorias"), list):
         return None
+    if _migrar(programa, crudo):
+        try:
+            _escribir(data)
+        except OSError:
+            pass
     categorias, vistos = [], set()
     for cat in crudo["categorias"]:
         if not isinstance(cat, dict):
@@ -165,6 +238,8 @@ def distribuir(fabrica, guardado=None, programa=None) -> list:
     for barra, botones in fabrica:
         for b in botones:
             existen.setdefault(b, barra)
+    # lo que sólo está en un banco no va a ninguna categoría hasta que se lo traiga
+    fabrica = [(barra, botones) for barra, botones in fabrica if not es_banco(barra)]
     if guardado is None:
         return [(barra, [(b, True) for b in botones if existen.get(b) == barra])
                 for barra, botones in fabrica]
@@ -240,6 +315,7 @@ def guardar(programa: str, modelo, fabrica, apagadas=()) -> None:
                 por_nombre[cat["nombre"]] += [b for b in cat["botones"] if b not in existen
                                               and b not in por_nombre[cat["nombre"]]]
         nuevo["ocultos"] += [b for b in anterior["ocultos"] if b not in existen]
+        nuevo["migraciones"] = list(MIGRACIONES.get(programa, ()))   # ya están aplicadas
         data[programa] = nuevo
     _escribir(data)
 

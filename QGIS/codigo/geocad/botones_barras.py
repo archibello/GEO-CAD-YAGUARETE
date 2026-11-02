@@ -63,10 +63,12 @@ def _escondida_a_proposito(bar) -> bool:
         return bar.isHidden()
 
 
-def elementos(fabricas, id_de, window=None) -> list:
+def elementos(fabricas, id_de, window=None, bancos=()) -> list:
     """[(título de la barra, [(botón, acción), ...])] de las barras de fábrica
     (la primera vez que aparece cada botón). Con ``window``: como estaban de
-    fábrica aunque las categorías estén puestas (sin tocar las barras)."""
+    fábrica aunque las categorías estén puestas (sin tocar las barras).
+    ``bancos``: [(botones.BANCO + título, [acciones])], al final y enteros
+    (también los botones que ya están en una barra; 3.60.7)."""
     fotos = {}
     est = _ESTADOS.get(_clave(window)) if window is not None else None
     for bar, foto, _q in (est or {}).get("fotos", ()):
@@ -78,6 +80,14 @@ def elementos(fabricas, id_de, window=None) -> list:
             b = id_de(a)
             if b and b not in vistos:
                 vistos.add(b)
+                fila.append((b, a))
+        salida.append((nombre, fila))
+    for nombre, acciones in bancos:
+        fila, propios = [], set()
+        for a in acciones:
+            b = id_de(a)
+            if b and b not in propios:
+                propios.add(b)
                 fila.append((b, a))
         salida.append((nombre, fila))
     return salida
@@ -168,7 +178,7 @@ def restaurar(window) -> None:
 
 
 def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None,
-            mostrar=False) -> list:
+            mostrar=False, bancos=()) -> list:
     """Arma las barras de ``distribucion`` ([(categoría, [botones])], o None =
     de fábrica; o una función que la calcula con la fábrica [(barra, [botones])]
     DESPUÉS de restaurar: con las categorías puestas, las barras de fábrica
@@ -178,16 +188,21 @@ def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None,
     ``divisor(barra)``: agrega un divisor (por defecto, un separador).
     La barra que el usuario había escondido vuelve escondida, salvo con
     ``mostrar`` (al aceptar Administrar botones, que ya las contó como
-    apagadas). Devuelve las barras de las categorías."""
+    apagadas). ``bancos``: como en ``elementos``; un botón traído de un banco
+    que no estaba en ninguna barra se saca al restaurar. Devuelve las barras
+    de las categorías."""
     antes = set() if mostrar else escondidas(window)
     restaurar(window)
     if callable(distribucion):
         distribucion = distribucion([(n, [b for b, _a in fila])
-                                     for n, fila in elementos(fabricas, id_de)])
+                                     for n, fila in elementos(fabricas, id_de, bancos=bancos)])
     if distribucion is None:          # [] = todas apagadas: se vacían igual (3.47.0)
         return []
     divisor = divisor or (lambda bar: bar.addSeparator())
-    acciones = {b: a for _n, fila in elementos(fabricas, id_de) for b, a in fila}
+    acciones = {}
+    for _n, fila in elementos(fabricas, id_de, bancos=bancos):
+        for b, a in fila:
+            acciones.setdefault(b, a)
     tema = temas(fabricas, id_de)
     est = {"fotos": [], "agregados": [], "nuevas": [], "escondidas": [], "puestas": []}
     _ESTADOS[_clave(window)] = est
@@ -224,6 +239,8 @@ def aplicar(window, fabricas, id_de, distribucion, nueva_barra, divisor=None,
                 est["agregados"].append((bar, sep))
             bar.addAction(acciones[b])
             poner(acciones[b])
+            if not any(acciones[b] in q for _b, _f, q in est["fotos"]):
+                est["agregados"].append((bar, acciones[b]))    # vino de un banco
         if primera is not None:
             sep = divisor(bar)
             poner(sep)

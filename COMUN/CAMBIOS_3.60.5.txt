@@ -1,0 +1,34 @@
+GeoCAD - versión 3.60.5
+=======================
+CORRECCIÓN (sólo QGIS) de la 3.60.4. Hay que actualizar QGIS.
+
+Pedido de Fernando (01/11/2026)
+- «Habría que analizar qué ítems de este panel están agrandando el ancho, y
+  optar por las mismas configuraciones» (captura del panel de IngeCAD junto
+  al Yaguá Capas). «Lo que veo es que están en distintos idiomas, eso puede
+  ser algo.»
+
+Qué lo agrandaba (medido en una copia de su QGIS, pantalla al doble)
+- Las columnas de ícono (bombilla, sol, candado, impresora, estado) tomaban
+  40 px por el encabezado de QGIS; en IngeCAD, unos 32.
+- Los títulos en español («Tipo de línea», «Grosor de línea») y
+  «Predeterminado» eran más anchos que el contenido («Continuous»,
+  «Default» en el IngeCAD en inglés).
+- La letra general de QGIS (11 pt): filas de 30 px y encabezado de 36.
+
+Cambios en el panel Yaguá Capas
+- Columnas de ícono de 28 px.
+- Títulos cortos «Tipo» y «Grosor»: el nombre entero sale al pasar el mouse
+  y en el menú del encabezado (ocultar columnas).
+- «Por defecto» en lugar de «Predeterminado», como el IngeCAD en español.
+- Letra de 11 px, filas de 20 y encabezado plano de 24, como IngeCAD.
+- Resultado: las columnas pasan de unos 620 px a 446 (IngeCAD, unos 460).
+
+También (encontrado al verificar): después de descargar GeoCAD (Actualizar en
+caliente, apagar el complemento) un latido tardío del reloj de GeoCAD podía
+volver a armar las barras Yaguá, escondidas. Ahora el reloj no hace nada si
+GeoCAD ya se descargó. Se veía de a ratos en el banco de barras («al
+descargar, sin barras de categorías»); atrapado con la pila de llamadas.
+
+Pruebas: test_capas_qgis y banco_capas_qgis; medido en una copia del perfil
+de Fernando en su pantalla (Wayland, x2).

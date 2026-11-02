@@ -1,0 +1,26 @@
+GeoCAD - versión 3.60.3
+=======================
+CORRECCIONES (sólo QGIS) de la 3.60.2. Hay que actualizar QGIS.
+
+Lo que pidió y encontró Fernando (01/11/2026)
+- «¿Podríamos poner el panel de capas Yaguá Capas del color de QGIS y no del
+  color de IngeCAD?»
+- El aviso amarillo «Capas CAD: El campo LAYER_CODE de "Nueva capa borrador"
+  es de tipo : debe ser texto para guardar el nombre de la capa.»
+
+Cambios
+- Panel Yaguá Capas: toma los colores del tema de QGIS (claro u oscuro, el
+  que se use). Conserva las medidas compactas, las columnas y todo el
+  comportamiento de IngeCAD.
+- El aviso falso ya no sale. Era un campo LAYER_CODE recién agregado dentro
+  de la edición: QGIS todavía no le pone nombre de tipo y el control miraba
+  ese nombre. Ahora mira el tipo real del campo (sigue avisando si de verdad
+  no es de texto).
+
+Nota (no es una falla de GeoCAD): en un proyecto nuevo en POSGAR 2007 faja 7
+(EPSG:5349) QGIS arranca mirando cerca de 0,0, muy fuera de la zona de esa
+proyección (falso este 7.500.000); ahí calcula mal la escala (1:1) y lo
+dibujado puede no verse hasta «Zoom a la capa».
+
+Pruebas: test_capas_qgis y banco_capas_qgis (QGIS 4.2.2 real) comprueban
+los colores del panel y que no sale el aviso falso.

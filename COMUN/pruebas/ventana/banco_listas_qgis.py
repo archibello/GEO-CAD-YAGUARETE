@@ -102,9 +102,10 @@ _fab = [(n, [x for x, _a in f]) for n, f in botones_barras.elementos(P._fabricas
 botones.guardar("qgis", botones.distribuir(_fab, None, "qgis"), _fab)
 P._aplicar_botones()
 QApplication.processEvents()
-# 3.47.0: la capa CAD actual, en Yaguá Dibujo (el último estado de Fernando)
+# 3.60.0: la capa CAD actual, con Color, Tipo y Grosor, en Yaguá Capas (la barra de IngeCAD)
 LISTAS = {"dibujo:font": "Yaguá Texto", "dibujo:size": "Yaguá Texto", "dibujo:textcolor": "Yaguá Texto",
-          "capas:capa": "Yaguá Dibujo"}
+          "capas:capa": "Yaguá Capas", "capas:color": "Yaguá Capas", "capas:linetype": "Yaguá Capas",
+          "capas:lineweight": "Yaguá Capas"}
 
 
 def accion(bar, clave):
@@ -147,7 +148,7 @@ botones_ui.administrar = mirar
 P.administrar_botones()
 QApplication.processEvents()
 todos = {x for _n, f in vistos["fabrica"] for x in f}
-comprobar(set(LISTAS) <= todos, "la ventana muestra las cuatro listas")
+comprobar(set(LISTAS) <= todos, "la ventana muestra las siete listas")
 comprobar(vistos["etiquetas"].get("dibujo:font") == "Fuente del texto" and
           vistos["etiquetas"].get("capas:capa") == "Capa CAD actual", "con su nombre")
 b = barras()
@@ -182,6 +183,7 @@ comprobar(all(se_ve(b[fab], k) for fab, k in (("TextoCADToolbar", "dibujo:font")
                                               ("TextoCADToolbar", "dibujo:textcolor"),
                                               ("CadLayersToolbar", "capas:capa"))),
           "como de fábrica: cada lista en su barra de siempre, a la vista")
+P.timer.stop()                         # el reloj se para (sin esto seguía latiendo, 3.60.5)
 P.timer = None
 P.unload()
 QApplication.processEvents()

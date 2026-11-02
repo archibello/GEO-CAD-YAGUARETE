@@ -1,0 +1,33 @@
+GeoCAD - versión 3.60.4
+=======================
+CORRECCIÓN (sólo QGIS) de la 3.60.3. Hay que actualizar QGIS.
+
+Lo que encontró Fernando (01/11/2026)
+- «Minimizar y maximizar no responden correctamente» (y antes, QGIS que no
+  respondía después de apretar el botón del panel Yaguá Capas).
+
+Causa (medida en copias de su perfil)
+- La ventana de QGIS necesitaba como MÍNIMO 1035 px de alto (1065 con el
+  panel Yaguá Capas en pestaña, desde la 3.60.2) y la pantalla deja 994 con
+  la ventana maximizada. Se suman las alturas mínimas de los paneles apilados
+  en una columna (en su perfil, cinco a la izquierda: Navegador, Editor de
+  vértices, Digitalización avanzada, Capas y Estilo de capas) y las filas de
+  barras. Con una ventana más alta que la pantalla, GNOME no puede
+  maximizarla ni achicarla.
+- Sin GeoCAD su perfil necesitaba 951 px; GeoCAD sumaba la fila de barras
+  Yaguá, la barra Presentaciones y la pestaña del panel.
+
+Arreglos
+- Panel Yaguá Capas: a la DERECHA, solo (sin pestaña), con poca altura
+  mínima. Nombre interno nuevo: no hereda la pestaña que quedó guardada en el
+  perfil con la 3.60.2 y la 3.60.3. Si se lo mueve a mano, QGIS lo recuerda.
+- Aviso al arrancar (una vez): si la ventana necesita más alto que la
+  pantalla, dice cuánto y nombra los paneles de la columna más cargada para
+  ponerlos en pestaña o cerrar alguno. GeoCAD no mueve esos paneles solo.
+
+Para que vuelva a andar en un perfil como el de Fernando: arrastrar el
+Editor de vértices sobre el Navegador (quedan en pestaña). Medido: mínimo
+913 px, maximiza a 1920x994 y restaura bien.
+
+Pruebas: test_capas_qgis (aviso, con los números medidos) y banco_capas_qgis
+(QGIS 4.2.2 real: panel a la derecha, solo, poca altura mínima).

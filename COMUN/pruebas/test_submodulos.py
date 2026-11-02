@@ -37,10 +37,10 @@ for ref in (None, 0.0, 33.0, 271.5):
 print("ok ángulos iguales en el núcleo y en Dibujo CAD")
 
 # ---- 2. catálogo: Bloques y Papel dependen de Dibujo ----------------------------------
-assert modulos.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": True,
-                                  "capas": True, "referencias": True, "tablas": True, "googleearth": True,
-                                  "teclado": True, "boton_derecho": True}
-modulos.guardar("qgis", {"dibujo": False})
+assert modulos.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False,
+                                  "capas": False, "referencias": True, "tablas": True, "googleearth": True,
+                                  "teclado": True, "boton_derecho": True}       # Papel y Capas, opcionales (3.60.6)
+modulos.guardar("qgis", {"dibujo": False, "papel": True, "capas": True})
 e = modulos.estado("qgis"); assert not e["bloques"] and not e["papel"] and e["capas"]
 modulos.guardar("qgis", {"dibujo": True})
 print("ok catálogo")
@@ -120,17 +120,20 @@ for f in QTimer.shots: f()
 QTimer.shots.clear()
 titulos = lambda: [i.title for i in G.menu.items if isinstance(getattr(i, "title", None), str)
                    and i.title != "Google Earth"]          # el de Google Earth es propio (3.33.0)
-assert titulos() == ["Dibujo CAD", "Capas CAD"]
-sub_dibujo = [i for i in G.menu.items if isinstance(getattr(i, "title", None), str) and i.title == "Dibujo CAD"][0]
-assert [a.text for a in sub_dibujo.items] == ["acción de DibujoCADPlugin"]
+# 3.60.7 (Fernando): sin submenús Dibujo CAD y Capas CAD; son los bancos de respaldo
+# de Administrar botones
+bancos = lambda: [(n, [a.text for a in acc]) for n, acc in G._bancos()]
+assert titulos() == []
+assert bancos() == [("banco:Dibujo CAD", ["acción de DibujoCADPlugin"]),
+                    ("banco:Capas CAD", ["acción de LayerPropertiesPlugin"])], bancos()
 # apagar Dibujo desde Módulos...: se descarga (con Bloques y Papel) y sale del menú
 import geocad.modulos_ui as mui
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": False})
 G.choose_modules()
-assert titulos() == ["Capas CAD"] and "Dibujo_CAD" not in qgis.utils.plugins
+assert [n for n, _a in bancos()] == ["banco:Capas CAD"] and "Dibujo_CAD" not in qgis.utils.plugins
 assert creados[0].descargado and creados[1].descargado and len(creados) == 3   # Capas se reinicia
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": True})
-G.choose_modules(); assert titulos() == ["Dibujo CAD", "Capas CAD"]
+G.choose_modules(); assert [n for n, _a in bancos()] == ["banco:Dibujo CAD", "banco:Capas CAD"]
 G.unload()
 assert "Dibujo_CAD" not in qgis.utils.plugins and "Layer_Properties" not in qgis.utils.plugins
 print("ok menú GeoCAD")

@@ -125,6 +125,7 @@ comprobar(all(not ids(b[n]) for n in ("DibujoCADToolbar", "EdicionCADToolbar", "
 comprobar(not avisos, "sin avisos de error " + str(avisos))
 
 vistos = {}
+real_administrar = botones_ui.administrar
 def mirar(QtW, parent, prog, fabrica, etiquetas, *a, **k):
     vistos["fabrica"] = fabrica
     vistos["modelo"] = botones.distribuir(fabrica, botones.leer(prog), prog)
@@ -132,8 +133,40 @@ def mirar(QtW, parent, prog, fabrica, etiquetas, *a, **k):
 botones_ui.administrar = mirar
 P.administrar_botones()
 QApplication.processEvents()
-fab_total = sum(len(f) for _n, f in vistos["fabrica"])
+fab_total = sum(len(f) for n, f in vistos["fabrica"] if not botones.es_banco(n))
 comprobar(fab_total == total and fab_total > 50, f"la ventana ve los {fab_total} botones")
+# 3.60.7: Dibujo CAD y Capas CAD, sin submenú: bancos de respaldo enteros
+bancos = {n: f for n, f in vistos["fabrica"] if botones.es_banco(n)}
+comprobar(sorted(bancos) == ["banco:Capas CAD", "banco:Dibujo CAD"], "los dos bancos de respaldo")
+comprobar("capas:layiso" in bancos.get("banco:Capas CAD", ()) and "dibujo:line" in bancos.get("banco:Dibujo CAD", ()),
+          "LAYISO en el banco Capas CAD y LÍNEA en Dibujo CAD")
+comprobar(not [a for a in P.menu.actions() if a.menu() is not None and a.text() in ("Dibujo CAD", "Capas CAD")],
+          "el menú GeoCAD sin los submenús Dibujo CAD y Capas CAD")
+# la ventana real: el banco elegido muestra sus botones y «Pasar» trae uno
+from qgis.PyQt.QtWidgets import QListWidget, QComboBox, QPushButton
+vista = {}
+def mirar_dialogo(dlg):
+    listas = dlg.findChildren(QListWidget)
+    lb = [l for l in listas if l.count() == 2 and l.item(0).text() == "Dibujo CAD"]
+    vista["bancos"] = bool(lb) and lb[0].item(1).text() == "Capas CAD" and lb[0].isVisibleTo(dlg)
+    if lb:
+        lb[0].setCurrentRow(1)
+        der = [l for l in listas if l is not lb[0]][1]
+        textos = [der.item(i).text() for i in range(der.count())]
+        vista["sin_barra"] = any("LAYISO" in t and "(sin barra)" in t for t in textos)
+        k = next(i for i, t in enumerate(textos) if "LAYISO" in t)
+        der.setCurrentRow(k)
+        dlg.findChild(QComboBox).setCurrentIndex(0)
+        next(b for b in dlg.findChildren(QPushButton) if b.text() == "Pasar").click()
+        textos = [der.item(i).text() for i in range(der.count())]
+        vista["traido"] = any("LAYISO" in t and "(en Yaguá Dibujo)" in t for t in textos)
+    return False
+botones_ui._exec = mirar_dialogo
+botones_ui.administrar = real_administrar
+P.administrar_botones()
+comprobar(vista.get("bancos"), "la ventana muestra los dos bancos debajo de las categorías")
+comprobar(vista.get("sin_barra") and vista.get("traido"),
+          "LAYISO del banco: «sin barra» y con «Pasar» queda en Yaguá Dibujo " + str(vista))
 llenas = [n for n, f in vistos["modelo"] if f]
 comprobar(len(llenas) == len(esperadas), "en la ventana ninguna categoría vacía (0/0)")
 b = barras()
@@ -153,6 +186,7 @@ QApplication.processEvents()
 # unload, módulos nuevos, classFactory e initGui en la misma vuelta (Fernando,
 # 24/10/2026: con la 3.40.0 recién instalada, todas las categorías 0/0)
 viejo_dibujo = sys.modules["geocad.dibujo.plugin"]
+P.timer.stop()                         # el reloj se para (sin esto seguía latiendo, 3.60.5)
 P.timer = None
 P.unload()
 qgis.utils._unloadPluginModules("geocad")          # lo que hace reloadPlugin
@@ -171,13 +205,14 @@ comprobar(sorted(cats) == sorted(esperadas) and sum(len(ids(x)) for x in cats.va
 vistos.clear()
 botones_ui.administrar = mirar
 P.administrar_botones()
-comprobar(sum(len(f) for _n, f in vistos.get("fabrica", [])) == total,
+comprobar(sum(len(f) for n, f in vistos.get("fabrica", []) if not botones.es_banco(n)) == total,
           "tras actualizar en caliente, la ventana ve todos los botones (no 0/0)")
 QApplication.processEvents()
 b = barras()
 comprobar(sum(len(ids(x)) for n, x in b.items() if n.startswith("GeoCADCategoria_")) == total,
           "y siguen en sus barras después de procesar los eventos")
 
+P.timer.stop()                         # el reloj se para (sin esto seguía latiendo, 3.60.5)
 P.timer = None
 P.unload()
 QApplication.processEvents()

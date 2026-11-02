@@ -1,0 +1,40 @@
+GeoCAD - versión 3.60.2
+=======================
+CORRECCIONES (sólo QGIS) de la 3.60.1. Hay que actualizar QGIS.
+
+Lo que encontró Fernando (01/11/2026)
+- «Cuando se asigna un color, o un estilo de línea, o un espesor de línea,
+  no se reflejan los cambios adoptados en los objetos seleccionados.»
+- «El problema está en que no está el panel de capas Yaguá donde se
+  administran las configuraciones.» / «Tendríamos que agregar un botón en la
+  barra Yaguá Capas que prenda el panel cuando no está activo.» /
+  «Preferiría que vaya al principio.»
+- «ValueError: could not convert string to float: '#00ff00'» al usar la
+  barra Yaguá Capas.
+
+Arreglos
+- Se ve lo asignado: si la capa activa todavía no tenía capas CAD (sin
+  LAYER_CODE, con su propio estilo, p. ej. categorizado por CAD_COLOR), la
+  barra la prepara antes de asignar color, tipo o grosor, como el panel en el
+  primer cambio. Desde ahí se dibuja con lo de cada objeto (el estilo que
+  tenía esa capa se reemplaza). Lo mismo para los objetos nuevos dibujados
+  con un color, tipo o grosor actual.
+- Panel «Yaguá Capas» (antes «Capas», que se confundía con el de QGIS): se
+  abre solo al arrancar QGIS, en pestaña junto al panel Capas de QGIS. Si se
+  cierra con la ×, queda cerrado la próxima vez.
+- Botón del panel, PRIMERO en la barra Yaguá Capas (antes de la lista de
+  capa, Color, Tipo y Grosor): lo abre y lo cierra; se ve hundido mientras
+  el panel está abierto. Lo ya guardado en Administrar botones lo recibe
+  primero, una sola vez.
+- El error del grosor: con la capa en edición y campos nuevos sin guardar,
+  al preparar la capa el campo LAYER_CODE se agregaba por fuera de la edición
+  y los valores se corrían una columna (un color quedaba en CAD_LW). Ahora se
+  agrega dentro de la edición. La barra, si encuentra un grosor que no es
+  número, lo muestra en blanco en vez de fallar.
+  Una capa que ya quedó con valores corridos en una edición sin guardar:
+  descartar esa edición.
+
+Pruebas: test_capas_qgis, test_botones y banco_capas_qgis (QGIS 4.2.2 real:
+capa con estilo propio dibujada en rojo, panel a la vista y en pestaña,
+botón, capa en edición sin valores corridos); banco_listas_qgis,
+banco_botones_qgis y banco_teclado_qgis.

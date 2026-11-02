@@ -197,11 +197,16 @@ CATALOGO = {
                "de atributos, diálogos ni con Ctrl o Alt; con la Digitalización avanzada "
                "de QGIS prendida, las letras sobre el mapa quedan para QGIS.",
                requiere="dibujo", cambia_programa=True),
+        # 3.60.6: apagado de fábrica, como Capas: sus pestañas son una barra más
         Modulo("papel", "Espacio papel",
                "Presentaciones, VENTANAS, BLOQVENT y TRAZAR, con las pestañas Modelo / "
-               "Presentaciones.", requiere="dibujo"),
+               "Presentaciones.", requiere="dibujo", defecto=False),
+        # 3.60.6: apagado de fábrica (Fernando, 01/11/2026: «trabajar con la herramienta
+        # capas de GeoCAD debería ser algo opcional»; al instalar, a la vista sólo la
+        # línea de comandos)
         Modulo("capas", "Capas CAD (Layer Properties)",
-               "Administrador de capas estilo AutoCAD con LAYER_CODE (antes Layer Properties 6.7)."),
+               "Administrador de capas estilo AutoCAD con LAYER_CODE (antes Layer Properties 6.7).",
+               defecto=False),
         Modulo("referencias", "Referencias a objetos con Shift + clic derecho",
                "Al digitalizar líneas, polilíneas o polígonos (Dibujo de GeoCAD o herramientas de QGIS), "
                "Shift + clic derecho despliega el menú de referencias de IngeCAD (From, Mid "

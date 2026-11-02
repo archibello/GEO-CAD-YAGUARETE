@@ -31,7 +31,7 @@ try:                                    # Qt6 (QGIS 4)
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos
+from . import actualizar, bloqueo, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos, ventana_alta
 
 MENU_TITLE = nombre.NOMBRE_CORTO
 PROGRAMA = "qgis"
@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.59.0"
+VERSION = "3.60.7"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -166,16 +166,9 @@ class GeoCAD:
             self.menu.addSeparator()
             add("reload", "Recargar las capas que editó IngeCAD", self.reload_all)
             add("status", "Estado del puente...", self.show_status)
+        # 3.60.7 (Fernando): sin los submenús Dibujo CAD y Capas CAD; sus comandos
+        # quedan como bancos de respaldo en Administrar botones (_bancos)
         self._submenus = []
-        if self.subs is not None:
-            for titulo, acciones in self.subs.menus():
-                if not acciones:
-                    continue
-                self.menu.addSeparator()
-                sub = self.menu.addMenu(titulo)
-                for a in acciones:
-                    sub.addAction(a)
-                self._submenus.append(sub)
         if self.tablas is not None:
             self.menu.addSeparator()
             add("pegartabla", "Pegar tabla en la composición (GenOffice, Calc, Excel, QGIS)...",
@@ -230,6 +223,10 @@ class GeoCAD:
             self._bar(aviso, "ok" if aviso.startswith("Se retiró") else "warn", 10)
 
     def _primer_inicio(self) -> None:
+        # con las barras y los paneles ya puestos: ¿la ventana entra en la pantalla? (3.60.4)
+        QTimer.singleShot(8000, lambda: ventana_alta.revisar(
+            self.iface, lambda t: self.iface.messageBar().pushMessage(
+                "GeoCAD", t, level=_MSG["warn"], duration=30)))
         retirados = self._retirar_viejos()
         if retirados:
             self._bar("Se retiró el Puente IngeCAD-QGIS 1.x (queda una copia como "
@@ -393,6 +390,14 @@ class GeoCAD:
         except RuntimeError:
             return None
 
+    def _bancos(self) -> list:
+        """[(botones.BANCO + título, [acciones])]: los submenús de Dibujo CAD y
+        Capas CAD como bancos de respaldo de Administrar botones (3.60.7)."""
+        if self.subs is None:
+            return []
+        return [(botones.BANCO + titulo, acciones)
+                for titulo, acciones in self.subs.menus() if acciones]
+
     def _nueva_barra(self, nombre):
         bar = self.iface.addToolBar(nombre)
         bar.setObjectName(botones.objeto_barra(nombre))
@@ -406,7 +411,7 @@ class GeoCAD:
                 return
             botones_barras.aplicar(self.iface.mainWindow(), fab, self._id_boton,
                                    lambda fabrica: botones.barras(PROGRAMA, fabrica),
-                                   self._nueva_barra, mostrar=mostrar)
+                                   self._nueva_barra, mostrar=mostrar, bancos=self._bancos())
         except Exception as exc:  # noqa: BLE001 - las barras quedan como de fábrica
             self._bar(f"Administrar botones: {type(exc).__name__}: {exc}", "warn")
 
@@ -423,7 +428,8 @@ class GeoCAD:
         # los botones de la foto de fábrica, sin tocar las barras: mirar no
         # prende nada (Fernando, 25/10/2026); con Cancelar todo queda como estaba
         win = self.iface.mainWindow()
-        elems = botones_barras.elementos(self._fabricas(), self._id_boton, win)
+        elems = botones_barras.elementos(self._fabricas(), self._id_boton, win,
+                                         bancos=self._bancos())
         fabrica = [(n, [b for b, _a in fila]) for n, fila in elems]
         if not any(fila for _n, fila in fabrica):
             self._bar("No hay barras de GeoCAD: prendé Dibujo, Capas o Puente en Módulos.", "warn")
@@ -476,6 +482,8 @@ class GeoCAD:
 
     # temporizador
     def _tick(self) -> None:
+        if self.menu is None:
+            return          # ya descargado: un latido tardío no vuelve a armar las barras (3.60.5)
         self.ticks += 1
         try:
             if not self._puente():

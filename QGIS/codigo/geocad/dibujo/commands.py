@@ -537,15 +537,28 @@ class CommandManager(QObject):
         """Agrega varias geometrías (SRC del mapa) en una sola operación de deshacer."""
         if not layer.isEditable():
             layer.startEditing()
+        attrs = self._current_attrs(layer)
         layer.beginEditCommand(title)
         n = 0
         for g in geoms:
             g = self._conform_new(layer, g)
-            if layer.addFeature(QgsVectorLayerUtils.createFeature(layer, g, {}, layer.createExpressionContext())):
+            if layer.addFeature(QgsVectorLayerUtils.createFeature(layer, g, dict(attrs),
+                                                                  layer.createExpressionContext())):
                 n += 1
         layer.endEditCommand()
         layer.triggerRepaint()
         return n
+
+    @staticmethod
+    def _current_attrs(layer):
+        """Color, tipo y grosor actuales de la barra de Capas CAD (lo que no es PorCapa),
+        como $CECOLOR/$CELTYPE/$CELWEIGHT en IngeCAD (3.60.0)."""
+        try:
+            from qgis.utils import plugins
+            ctrl = getattr(plugins.get('Layer_Properties'), 'ctrl', None)
+            return ctrl.new_feature_attrs(layer) if ctrl is not None else {}
+        except Exception:  # noqa: BLE001 - sin Capas CAD se dibuja PorCapa
+            return {}
 
     def _conform_new(self, layer, geom):
         src = self.canvas.mapSettings().destinationCrs()
@@ -572,7 +585,8 @@ class CommandManager(QObject):
             geom.get().addZValue(0.0)
         if QgsWkbTypes.hasM(wkb) and not QgsWkbTypes.hasM(geom.wkbType()):
             geom.get().addMValue(0.0)
-        feat = QgsVectorLayerUtils.createFeature(layer, geom, {}, layer.createExpressionContext())
+        feat = QgsVectorLayerUtils.createFeature(layer, geom, self._current_attrs(layer),
+                                                 layer.createExpressionContext())
         layer.beginEditCommand(title)
         if layer.addFeature(feat):
             layer.endEditCommand()

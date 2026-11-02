@@ -70,6 +70,49 @@ assert BT.objeto_barra("Edición y más") == "GeoCADCategoria_Edicion_y_mas"
 assert BT.objeto_barra("¿?") == "GeoCADCategoria_sin_nombre"
 print("ok modelo")
 
+# ---- 1a. 3.60.0: Yaguá Capas = la barra de IngeCAD, también en lo ya guardado -----------
+assert dict(DEFECTO["qgis"])["Yaguá Capas"] == ("capas:layprops", "capas:capa", "capas:color",
+                                                "capas:linetype", "capas:lineweight")
+assert "capas:capa" not in dict(DEFECTO["qgis"])["Yaguá Dibujo"]
+viejo = {"qgis": {"categorias": [{"nombre": "Yaguá Dibujo", "botones": ["dibujo:line", "capas:capa"]},
+                                 {"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:layiso"]}],
+                  "ocultos": ["capas:capa", "dibujo:line"]}}
+BT.archivo().write_text(json.dumps(viejo), encoding="utf-8")
+m = BT.leer("qgis")
+assert m["categorias"] == [{"nombre": "Yaguá Dibujo", "botones": ["dibujo:line"]},
+                           {"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:capa", "capas:color",
+                                                                 "capas:linetype", "capas:lineweight"]}], m
+assert m["ocultos"] == ["dibujo:line"]
+assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones"] == ["capas-ingecad",
+                                                                                      "capas-panel", "capas-banco"]
+# 3.60.7: lo que ya pasó por la 3.60.2: LAYISO y los demás sólo en el banco Capas CAD
+BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "Mía", "botones": [
+    "capas:layiso", "dibujo:line", "capas:lwdisplay"]}], "ocultos": ["capas:layoff", "dibujo:arc"],
+    "migraciones": ["capas-ingecad", "capas-panel"]}}), encoding="utf-8")
+m = BT.leer("qgis")
+assert m["categorias"][0]["botones"] == ["dibujo:line"] and m["ocultos"] == ["dibujo:arc"], m
+# 3.60.2: lo que ya pasó por la 3.60.0/1 (botón del panel al final): el botón va primero
+BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "Yaguá Capas", "botones": [
+    "capas:capa", "capas:color", "capas:linetype", "capas:lineweight", "capas:layprops"]}],
+    "ocultos": ["capas:layprops"], "migraciones": ["capas-ingecad"]}}), encoding="utf-8")
+m = BT.leer("qgis")
+assert m["categorias"][0]["botones"][:2] == ["capas:layprops", "capas:capa"] and m["ocultos"] == [], m
+# una sola vez: si Fernando después saca la lista de color de Yaguá Capas, queda así
+FQ4 = [("Capas CAD", ["capas:capa", "capas:color", "capas:linetype", "capas:lineweight"]),
+       ("Dibujo CAD", ["dibujo:line"])]
+mod = BT.distribuir(FQ4, BT.leer("qgis"))
+mod = [(n, [(b, v) for b, v in f if b != "capas:color"]) for n, f in mod] + [("Otra", [("capas:color", True)])]
+BT.guardar("qgis", mod, FQ4)
+assert dict(BT.barras("qgis", FQ4))["Otra"] == ["capas:color"]
+assert "capas:color" not in dict(BT.barras("qgis", FQ4))["Yaguá Capas"]
+# sin categoría Yaguá Capas guardada: se crea al final
+BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "A", "botones": ["capas:capa"]}]}}),
+                        encoding="utf-8")
+assert [c["nombre"] for c in BT.leer("qgis")["categorias"]] == ["A", "Yaguá Capas"]
+assert BT.leer("ingecad") is None                       # IngeCAD no se toca
+BT.restablecer("qgis")
+print("ok Yaguá Capas de IngeCAD")
+
 # ---- 1b. las categorías de fábrica (3.39.0): las de Fernando ---------------------------
 BT.DEFECTO = DEFECTO
 assert [n for n, _b in DEFECTO["ingecad"]][:2] == ["Yaguá GEO", "Yaguá Dibujo"]
@@ -133,9 +176,11 @@ assert V.borrar(j) is None and "Ed" not in V.apagadas
 BT.guardar("ingecad", V.resultado(), FAB3, V.apagadas)
 assert [n for n, _b in BT.barras("ingecad", FAB3)] == ["Yaguá Dibujo", "Selección", "Yaguá Edición"]
 BT.restablecer("ingecad")
-# los módulos: todos prendidos de fábrica (también un estándar desde 3.39.0)
+# los módulos: todos prendidos de fábrica (también un estándar desde 3.39.0), menos
+# Papel y Capas en QGIS: opcionales, al instalar sólo la línea de comandos (3.60.6)
 from nucleo import modulos as MO
-assert all(m.defecto for prog in MO.PROGRAMAS for m in MO.CATALOGO[prog])
+assert [(prog, m.clave) for prog in MO.PROGRAMAS for m in MO.CATALOGO[prog]
+        if not m.defecto] == [("qgis", "papel"), ("qgis", "capas")]
 print("ok fábrica")
 BT.DEFECTO = {}
 
@@ -306,6 +351,36 @@ assert ecos and "ventana" in ecos[0]
 for n in ("botones.py", "botones_barras.py", "botones_ui.py"):
     for lado in ("INGECAD/codigo/geocad", "QGIS/codigo/geocad"):
         assert filecmp.cmp(RAIZ / "COMUN/nucleo" / n, RAIZ / lado / n, shallow=False), (n, lado)
+# 3.60.7: los bancos de respaldo (Fernando, 02/11/2026): Dibujo CAD y Capas CAD
+# enteros, sin barra; de ahí se traen botones a una categoría
+layiso2, laymcur = capas.actions()[0], boton("capas:laymcur")
+bancos = [(BT.BANCO + "Dibujo CAD", [line, arc, line]), (BT.BANCO + "Capas CAD", [layiso2, laymcur])]
+el = [(n, [x for x, _a in f]) for n, f in BB.elementos(fabs, idb, bancos=bancos)]
+assert el[-2:] == [("banco:Dibujo CAD", ["line", "arc"]), ("banco:Capas CAD", ["layiso", "capas:laymcur"])]
+fabb = el
+assert BT.distribuir(fabb) == BT.distribuir(el[:-2])                # un banco no es categoría
+g = {"categorias": [{"nombre": "Mía", "botones": ["capas:laymcur", "line"]}], "ocultos": []}
+m = BT.distribuir(fabb, g)
+assert m[0] == ("Mía", [("capas:laymcur", True), ("line", True)])
+assert all(not BT.es_banco(n) for n, _f in m) and "capas:laymcur" not in [b for _n, f in m[1:] for b, _v in f]
+v = BU.Ventana(BT.distribuir(el[:-2]))
+assert v.donde("line") == "Dibujo CAD" and v.donde("capas:laymcur") is None
+v.traer("line", 1)
+v.traer("capas:laymcur", 1)
+assert v.donde("line") == "Texto CAD" and [b for b, _v in v.modelo[0][1]] == ["arc", "rect", "ortho"]
+assert v.modelo[1][1][-2:] == [["line", True], ["capas:laymcur", True]]
+# en la barra: el botón del banco que no estaba en ninguna barra se saca al restaurar
+puestas = BB.aplicar(win, fabs, idb, [("Capas CAD", ["layiso", "capas:laymcur"])], nueva_barra,
+                     bancos=bancos)
+assert [a.nombre for a in capas.actions() if idb(a)] == ["layiso", "capas:laymcur"]
+BB.restaurar(win)
+assert {b.titulo: b.actions() for _n, b in fabs} == antes
+calc = lambda fab: [("Nueva", ["capas:laymcur"])] if any(n == "banco:Capas CAD" for n, _f in fab) else []
+BB.aplicar(win, fabs, idb, calc, nueva_barra, bancos=bancos)
+assert [a.nombre for a in nuevas[-1].actions()] == ["capas:laymcur"]
+BB.restaurar(win)
+assert {b.titulo: b.actions() for _n, b in fabs} == antes
+print("ok bancos de respaldo")
 print("ok ingecad")
 
 # ---- 5. QGIS: en el menú GeoCAD; los botones con nombre propio --------------------------
@@ -326,11 +401,16 @@ P.initGui()
 textos_q = [getattr(i, "text", "") for i in P.menu.items if not isinstance(i, str)]
 assert "Administrar botones..." in textos_q
 assert textos_q.index("Administrar botones...") == textos_q.index("Módulos...") + 1
+# 3.60.7: sin los submenús Dibujo CAD y Capas CAD; son bancos de Administrar botones
+assert "Dibujo CAD" not in textos_q and "Capas CAD" not in textos_q
+assert all(BT.es_banco(n) for n, _a in P._bancos())
+assert "a.setProperty('geocad_id', 'capas:' + ico)" in (RAIZ / "QGIS/codigo/geocad/capas/plugin.py").read_text(encoding="utf-8")
 P._aplicar_botones()                     # ventana sin barras: nada, sin avisos
 assert P._fabricas() == [] and not mensajes
 fuente = (RAIZ / "QGIS/codigo/geocad/dibujo/plugin.py").read_text(encoding="utf-8")
 assert "setProperty('geocad_id', 'dibujo:' + ico)" in fuente
-assert "setProperty('geocad_id', 'capas:' + ico)" in (RAIZ / "QGIS/codigo/geocad/capas/plugin.py").read_text(encoding="utf-8")
+# 3.60.0: la barra de Capas CAD es la de IngeCAD, cuatro listas con su geocad_id
+assert "wa.setProperty('geocad_id', 'capas:' + clave)" in (RAIZ / "QGIS/codigo/geocad/capas/plugin.py").read_text(encoding="utf-8")
 P.timer = None
 P.unload()
 print("ok qgis")
