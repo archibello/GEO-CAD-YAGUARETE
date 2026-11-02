@@ -1,5 +1,6 @@
 """Banco con el QGIS REAL (sin pantalla): el panel Capas y la barra de IngeCAD
-en QGIS (3.60.0).
+en QGIS (3.60.0). Desde la 3.61.2, con el estilo Breeze y la letra de QGIS:
+la barra con la letra y las filas del panel, justa, y los números de Grosor enteros.
 
 Fernando, 01/11/2026: «reemplaces por completo el panel administrador de
 capas de QGIS (Yaguá Capas) por el de IngeCAD y que adoptes todos sus
@@ -20,6 +21,12 @@ os.environ["HOME"] = tempfile.mkdtemp(prefix="banco-home-")
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 app = start_app()
+# como el QGIS de Fernando (3.61.2): estilo Breeze y la letra de 11 pt que QGIS pone con
+# una hoja de estilo para toda la aplicación (un setFont() solo no alcanza)
+from qgis.PyQt.QtWidgets import QStyleFactory
+if "Breeze" in QStyleFactory.keys():
+    app.setStyle(QStyleFactory.create("Breeze"))
+app.setStyleSheet("* { font-size: 11pt; }")
 from qgis.core import QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer
 from qgis.gui import QgsMapCanvas
 from qgis.PyQt.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidgetAction
@@ -85,6 +92,58 @@ comprobar(int(win.dockWidgetArea(P.dock).value) == 2 and not win.tabifiedDockWid
 comprobar(P.dock.minimumSizeHint().height() <= 120, "poca altura mínima (%d)" % P.dock.minimumSizeHint().height())
 comprobar(P.props[0].currentText() == "PorCapa" and P.props[1].currentText() == "PorCapa"
           and P.props[2].currentText() == "PorCapa", "sin selección: PorCapa")
+# 3.61.2 (Fernando, 02/11/2026, QGIS 4.2.2: la lista de Grosor decía «Po…pa», «0…m»):
+# la barra con la letra y las filas del panel, y todo el texto entero
+from geocad.capas.medidas import FILA, LETRA_PX
+from qgis.PyQt.QtWidgets import QStyle, QStyleOptionComboBox
+for lista in [P.combo] + P.props:
+    nombre = type(lista).__name__
+    comprobar(lista.fontInfo().pixelSize() == LETRA_PX and lista.view().fontInfo().pixelSize() == LETRA_PX,
+              "%s: letra de %d px como el panel (%d / %d)" % (nombre, LETRA_PX, lista.fontInfo().pixelSize(),
+                                                          lista.view().fontInfo().pixelSize()))
+    lista.showPopup()
+    eventos()
+    v = lista.view()
+    comprobar(v.sizeHintForRow(0) == FILA, "%s: filas de %d (%d)" % (nombre, FILA, v.sizeHintForRow(0)))
+    lista.hidePopup()
+    eventos()
+# Fernando: «el resto puede estar más justo»: capa, Color y Tipo con los anchos de IngeCAD 0.7.0
+anchos = [P.combo.width(), P.props[0].width(), P.props[1].width()]
+comprobar(anchos == [200, 96, 128], "capa, Color y Tipo con los anchos de IngeCAD %s" % anchos)
+# «lo importante es que se vean los números para elegir los espesores de líneas»: en el
+# desplegable de Grosor cada número entero; si no entra, se recorta la muestra, nunca el número
+from geocad.capas.barra import GrosorDelegate
+from qgis.PyQt.QtCore import QRect
+grosor = P.props[2]
+comprobar(isinstance(grosor.itemDelegate(), GrosorDelegate), "Grosor dibuja sus filas con el número primero")
+grosor.showPopup()
+eventos()
+v = grosor.view()
+fm = v.fontMetrics()
+dg = grosor.itemDelegate()
+textos = [grosor.itemText(i) for i in range(grosor.count())]
+comprobar(textos[:2] == ["PorCapa", "Por defecto"] and "0.00 mm" in textos and "2.11 mm" in textos,
+          "Grosor: PorCapa, Por defecto y de 0.00 a 2.11 mm")
+for ancho in (v.viewport().width(), 90, 70, 50):
+    cortados, sin_muestra = [], []
+    for t in textos:
+        mw, lugar = dg.partes(QRect(0, 0, ancho, FILA), fm, t)
+        if lugar.width() < fm.horizontalAdvance(t):
+            cortados.append(t)
+        if mw == 0:
+            sin_muestra.append(t)
+    comprobar(not cortados, "Grosor a %d px: los números enteros %s" % (ancho, cortados or ""))
+    if ancho == v.viewport().width():
+        comprobar(not sin_muestra, "Grosor a %d px (el del desplegable): con muestra y número" % ancho)
+grosor.hidePopup()
+eventos()
+opt = QStyleOptionComboBox()
+grosor.initStyleOption(opt)
+campo = grosor.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, opt,
+                                      QStyle.SubControl.SC_ComboBoxEditField, grosor).width()
+largos = [t for t in textos if fm.horizontalAdvance(t) + grosor.iconSize().width() + 4 > campo]
+comprobar(not largos, "la casilla de Grosor (%d px) muestra entero %s" % (campo, largos or "cada valor"))
+comprobar(P.props[2].findText("0.25 mm") >= 0 and P.props[2].findText("Por defecto") >= 0, "grosores con su nombre")
 textos_menu = [a.text() for a, _m in P.actions]
 comprobar("Panel Yaguá Capas (LAYER)" in textos_menu and "Aislar (LAYISO)" in textos_menu, "LAYER y LAYISO en el menú")
 
@@ -96,6 +155,8 @@ panel = dock.panel
 comprobar(isinstance(dock, QDockWidget) and not dock.isFloating(), "panel acoplado al costado")
 comprobar(dock.windowTitle() == "Yaguá Capas · Obra", "título con la capa QGIS: %r" % dock.windowTitle())
 t = panel.table
+comprobar(t.fontInfo().pixelSize() == P.props[2].fontInfo().pixelSize(),
+          "3.61.2: el panel y la barra con la misma letra (%d)" % t.fontInfo().pixelSize())
 cabeza = [t.horizontalHeaderItem(c).toolTip() for c in range(t.columnCount())]
 comprobar(cabeza == ["Estado", "Nombre", "Encendida/Apagada", "Inut", "Bloq", "Color", "Tipo de línea",
                      "Grosor de línea", "Imprimir", "Descripción"], "columnas de IngeCAD")

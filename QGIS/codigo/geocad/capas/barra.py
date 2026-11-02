@@ -9,15 +9,16 @@ mixto) o el actual. Los valores van a los campos CAD_COLOR, CAD_LTYPE y
 CAD_LW de Dibujo CAD (vacío = PorCapa); en las capas de textos, a COLOR.
 PorBloque no se ofrece: en QGIS no hay de dónde heredarlo.
 """
-from qgis.PyQt.QtCore import QSize
+from qgis.PyQt.QtCore import QRect, QSize
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QComboBox
+from qgis.PyQt.QtWidgets import QApplication, QComboBox, QStyle, QStyleOptionViewItem
 
 from .aci import aci_to_hex
-from .compat import accepted_code, exec_dialog
+from .compat import accepted_code, enum, exec_dialog, qt
 from .dialogs import ColorDialog, LinetypeDialog
 from .icons import color_swatch, linetype_sample, lineweight_sample
 from .linetypes import LINETYPE_ORDER, LINEWEIGHTS, LW_DEFAULT
+from .medidas import FilaDelegate, ajustar_desplegable, ancho_casilla, preparar_lista
 
 ACI_NAMES = {1: 'Rojo', 2: 'Amarillo', 3: 'Verde', 4: 'Cian', 5: 'Azul',
              6: 'Magenta', 7: 'Blanco', 8: 'Gris', 9: 'Gris claro'}
@@ -51,15 +52,25 @@ def lineweight_label(value):
 class _PropCombo(QComboBox):
     prop = ''
     tip = ''
+    ancho = 0           # el de la barra de IngeCAD 0.7.0
+    entero = False      # True: casilla y desplegable a la medida del texto (sólo Grosor)
+    muestra = (40, 12)  # la muestra de cada renglón (la de tipo de línea necesita el largo)
 
     def __init__(self, ctrl, parent=None):
         super().__init__(parent)
         self.ctrl = ctrl
         self.setToolTip(self.tip)
         self.setMaxVisibleItems(16)
-        self.setIconSize(QSize(40, 12))
+        self.setIconSize(QSize(*self.muestra))
         self._loading = False
+        # la letra y las filas del panel Yaguá Capas (3.61.2, Fernando: «Po…pa», «0…m»)
+        preparar_lista(self)
         self._fill()
+        if self.entero:
+            textos = [self.itemText(i) for i in range(self.count()) if self.itemData(i) not in (PICK, OTHER)]
+            self.setFixedWidth(ancho_casilla(self, textos, minimo=self.ancho))
+        else:
+            self.setFixedWidth(self.ancho)   # Fernando: «el resto puede estar más justo»
         self.activated.connect(self._activated)
         ctrl.changed.connect(self.refresh)
         ctrl.attachedChanged.connect(self.refresh)
@@ -68,6 +79,11 @@ class _PropCombo(QComboBox):
 
     def _fill(self):
         raise NotImplementedError
+
+    def showPopup(self):
+        if self.entero:
+            ajustar_desplegable(self)
+        super().showPopup()
 
     def _value_at(self, index):
         data = self.itemData(index)
@@ -147,10 +163,8 @@ class _PropCombo(QComboBox):
 class ColorCombo(_PropCombo):
     prop = 'color'
     tip = 'Color'
-
-    def __init__(self, ctrl, parent=None):
-        super().__init__(ctrl, parent)
-        self.setFixedWidth(110)
+    ancho = 96
+    muestra = (12, 12)
 
     def _fill(self):
         self.addItem('PorCapa', '')
@@ -178,10 +192,7 @@ class ColorCombo(_PropCombo):
 class LinetypeCombo(_PropCombo):
     prop = 'linetype'
     tip = 'Tipo de línea'
-
-    def __init__(self, ctrl, parent=None):
-        super().__init__(ctrl, parent)
-        self.setFixedWidth(150)
+    ancho = 128
 
     def _fill(self):
         fg = self.palette().text().color().name()
@@ -200,19 +211,65 @@ class LinetypeCombo(_PropCombo):
         return 'PorCapa' if value is None else value
 
 
+class GrosorDelegate(FilaDelegate):
+    """Cada fila del desplegable de Grosor con su número ENTERO; si no entra todo, se
+    recorta la muestra de la línea, nunca el número (Fernando, 02/11/2026: «lo
+    importante es que se vean los números para elegir los espesores de líneas»)."""
+
+    MARGEN, ENTRE = 4, 6
+
+    def __init__(self, muestra, parent=None):
+        super().__init__(parent)
+        self.muestra = muestra
+
+    def partes(self, rect, fm, texto):
+        """(ancho de la muestra, lugar del número) dentro de la fila."""
+        tw = fm.horizontalAdvance(texto)
+        libre = rect.width() - 2 * self.MARGEN - tw - self.ENTRE
+        mw = max(0, min(self.muestra[0], libre))
+        x = rect.left() + self.MARGEN + (mw + self.ENTRE if mw else 0)
+        return mw, QRect(x, rect.top(), max(tw, rect.right() - x), rect.height())
+
+    def paint(self, p, option, index):
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        texto, ico = opt.text, QIcon(opt.icon)       # copia: opt.icon es una referencia
+        opt.text, opt.icon = '', QIcon()
+        style = opt.widget.style() if opt.widget is not None else QApplication.style()
+        style.drawControl(enum(QStyle, 'ControlElement', 'CE_ItemViewItem'), opt, p, opt.widget)
+        mw, lugar = self.partes(opt.rect, opt.fontMetrics, texto)
+        p.save()
+        if mw and not ico.isNull():
+            w, h = self.muestra
+            pm = ico.pixmap(QSize(w, h))
+            r = pm.devicePixelRatio()
+            y = opt.rect.center().y() - h // 2
+            p.drawPixmap(QRect(opt.rect.left() + self.MARGEN, y, mw, h), pm, QRect(0, 0, int(mw * r), int(h * r)))
+        selected = bool(opt.state & enum(QStyle, 'StateFlag', 'State_Selected'))
+        p.setPen(opt.palette.highlightedText().color() if selected else opt.palette.text().color())
+        p.setFont(opt.font)
+        p.drawText(lugar, qt('AlignmentFlag', 'AlignVCenter') | qt('AlignmentFlag', 'AlignLeft'), texto)
+        p.restore()
+
+
 class LineweightCombo(_PropCombo):
     prop = 'lineweight'
     tip = 'Grosor de línea'
+    ancho = 104
+    muestra = (28, 12)
+    entero = True
 
     def __init__(self, ctrl, parent=None):
         super().__init__(ctrl, parent)
-        self.setFixedWidth(130)
+        self.setItemDelegate(GrosorDelegate(self.muestra, self))
+        ajustar_desplegable(self)
 
     def _fill(self):
         fg = self.palette().text().color().name()
-        self.addItem(QIcon(lineweight_sample(0.25, 40, 12, fg)), 'PorCapa', '')
+        w, h = self.muestra
+        self.addItem(QIcon(lineweight_sample(0.25, w, h, fg)), 'PorCapa', '')
         for lw in [float(LW_DEFAULT)] + LINEWEIGHTS:
-            self.addItem(QIcon(lineweight_sample(0.25 if lw < 0 else lw, 40, 12, fg)),
+            self.addItem(QIcon(lineweight_sample(0.25 if lw < 0 else lw, w, h, fg)),
                          lineweight_label(lw), float(lw))
 
     def label(self, value):

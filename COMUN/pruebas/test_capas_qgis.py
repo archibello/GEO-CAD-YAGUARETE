@@ -76,7 +76,8 @@ assert "self.toolbar.addSeparator" not in plugin
 assert "if self.ctrl.setting('panel/visible', True, bool):" in plugin
 assert "TITLE = 'Yaguá Capas'" in panel
 # 3.60.3 (Fernando): con los colores del tema de QGIS, no los de IngeCAD
-assert "background" not in panel.split("PANEL_STYLE")[1].split('"""')[1] and "#1e1e22" not in panel
+medidas = (CAPAS / "medidas.py").read_text(encoding="utf-8")
+assert "background" not in medidas.split("PANEL_STYLE = ")[1].split('"""')[1] and "#1e1e22" not in panel
 for clave in ("'capa'", "'color'", "'linetype'", "'lineweight'"):
     assert clave in plugin, clave
 barra = (CAPAS / "barra.py").read_text(encoding="utf-8")
@@ -111,7 +112,26 @@ assert "        if self.menu is None:\n            return          # ya descarga
 # 3.60.5 (Fernando: «qué ítems están agrandando el ancho... las mismas configuraciones»):
 # las medidas de IngeCAD aunque QGIS tenga letra y encabezados más grandes
 assert "(C_LT, 'Tipo', 'Tipo de línea', None)" in panel and "(C_LW, 'Grosor', 'Grosor de línea', None)" in panel
-assert "ICON_WIDTH = 28" in panel and "'Por defecto'" in panel and "Predeterminado'" not in panel
-assert "chica.setPixelSize(11)" in panel and "setFixedHeight(24)" in panel
+assert "ICONO_COL = 28" in medidas and "ICON_WIDTH = ICONO_COL" in panel
+assert "'Por defecto'" in panel and "Predeterminado'" not in panel
+assert "LETRA_PX = 11" in medidas and "chica.setPixelSize(LETRA_PX)" in medidas
+assert "ENCABEZADO = 24" in medidas and "setFixedHeight(ENCABEZADO)" in panel
+# 3.61.2 (Fernando, 02/11/2026: en la lista de Grosor «Po…pa», «0…m»; «si podemos utilizar
+# los mismos para ambas sería mejor»): la barra con la letra, las filas y la hoja de estilo
+# del panel, definidas una sola vez en capas/medidas.py
+assert "FILA = 20" in medidas and "setDefaultSectionSize(FILA)" in panel
+assert "letra_chica(self.table.font())" in panel and "PANEL_STYLE = " not in panel
+assert "font-size: %dpx; combobox-popup: 0;" in medidas        # como la barra de IngeCAD 0.7.0
+assert "preparar_lista(self)" in barra and "preparar_lista(self, delegate=False)" in combo
+assert "ancho_casilla(self, textos, minimo=self.ancho)" in barra
+for n in ("ancho = 96", "ancho = 128", "ancho = 104"):         # los de IngeCAD 0.7.0
+    assert n in barra, n
+# Fernando: «el resto puede estar más justo»: capa, Color y Tipo con el ancho de IngeCAD;
+# «lo importante es que se vean los números»: sólo Grosor a la medida de su texto
+assert "self.setFixedWidth(self.ancho)" in barra and "self.setFixedWidth(200)" in combo
+assert barra.count("entero = True") == 1 and "ajustar_desplegable" not in combo
+assert "class GrosorDelegate(FilaDelegate)" in barra and "GrosorDelegate(self.muestra, self)" in barra
+assert "mw = max(0, min(self.muestra[0], libre))" in barra      # se recorta la muestra, no el número
+assert "QIcon(opt.icon)" in barra                                # copia (opt.icon es una referencia)
 print("ok panel y barra de IngeCAD")
 print("TODO OK")

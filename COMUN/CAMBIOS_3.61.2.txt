@@ -1,0 +1,45 @@
+GeoCAD - versión 3.61.2
+=======================
+CORRECCIÓN (sólo QGIS). Hay que actualizar QGIS. Incluye todo lo de la 3.61.1.
+
+Lo que pidió Fernando (02/11/2026, QGIS 4.2.2)
+- En la barra Yaguá Capas, al desplegar Grosor de línea los textos salían
+  cortados («Po…pa», «Po…to», «0…m» en todas las filas) y la letra era grande
+  comparada con la barra. «Así como regulamos las dimensiones del Panel Yaguá
+  Capas, tendríamos que optimizar las dimensiones de la barra de herramientas
+  de Yaguá Capas ... Si podemos utilizar los mismos para ambas sería mejor.»
+
+Causa (medida con QGIS 4.2.2 real, estilo Breeze, pantalla x2)
+- Con el estilo Breeze el desplegable se abre del ancho de la casilla (Grosor:
+  130 px) y con la letra general de QGIS (11 pt, unos 15 px) y filas de 33 px
+  no entraba el texto al lado de la muestra. La casilla de Grosor también
+  cortaba «PorCapa».
+
+Cambios
+- Las medidas del panel Yaguá Capas están ahora en un solo lugar
+  (capas/medidas.py) y las usan el panel y la barra: letra de 11 px y filas
+  de 20 px (el panel además conserva su encabezado de 24 y las columnas de
+  íconos de 28).
+- Las cuatro listas de la barra (capa, Color, Tipo de línea y Grosor) y sus
+  desplegables usan esa letra y esas filas, con la misma regla que la barra
+  de IngeCAD 0.7.0 (letra de 11 px y lista común de Qt).
+- Grosor de línea, lo importante («que se vean los números para elegir los
+  espesores de líneas», Fernando): cada fila del desplegable muestra ENTERO
+  su valor (PorCapa, Por defecto, 0.00 mm ... 2.11 mm). El desplegable es tan
+  ancho como el número más largo y, si aun así faltara lugar, se achica o
+  desaparece la muestra de la línea, nunca el número. La casilla también
+  muestra entero cada valor. (PorBloque no se ofrece en QGIS: no hay bloque
+  del que heredar el grosor.)
+- Lo demás, más justo («el resto puede estar más justo»): lista de capa,
+  Color y Tipo de línea con los anchos de la barra de IngeCAD 0.7.0 (200, 96 y
+  128 px), y sus desplegables del ancho de la casilla. Muestra de Color de 12
+  px y de Grosor de 28 (antes 40).
+- IngeCAD no cambia.
+
+Pruebas: banco_capas_qgis con QGIS 4.2.2 real ahora corre con el estilo Breeze
+y la letra de QGIS, y controla en las cuatro listas la letra (igual a la del
+panel) y el alto de las filas, los anchos de IngeCAD de capa, Color y Tipo, y
+en Grosor que cada número entre entero en el desplegable (también si la fila
+midiera 90, 70 o 50 px) y en la casilla (con la 3.61.1 se ve «Po…pa»). Bancos capas,
+listas, botones, primera y teclado OK con pantalla x1 y x2. Las medidas nuevas
+probadas también con QGIS 3.28.9 (Qt5). test_capas_qgis controla el código.

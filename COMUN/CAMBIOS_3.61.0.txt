@@ -1,0 +1,66 @@
+GeoCAD - versión 3.61.0
+=======================
+FUNCIÓN NUEVA (sólo QGIS) sobre la 3.60.7. Hay que actualizar QGIS.
+
+Pedido de Fernando (02/11/2026)
+- «Lo próximo es agregar a QGIS todas las opciones de IngeCAD ZOOM (Z), PAN
+  (P), etc. para ingresar por teclado. Y si se puede, en esta misma próxima
+  versión agregar también "Match Properties" (MA).»
+- Elegido por Fernando: el número 3.61.0; ZOOM con las opciones de IngeCAD y
+  además Siguiente, Objeto, Ampliar/Reducir y la escala 1:n; PAN, REGEN /
+  REDIBUJA y los transparentes ('Z, 'P); IGUALARPROP con lo CAD y, entre
+  textos, altura, fuente y negrita.
+
+Cambios (en la línea de comandos de Dibujo, en QGIS)
+- ZOOM (Z), con las opciones del ZOOM de IngeCAD 0.7.0:
+    Todo (T) ........ todas las capas (el «Zoom general» de QGIS)
+    Centro (C) ...... punto central y altura de la vista (o 2X)
+    Extensión (E) ... lo que ocupan las capas vectoriales visibles (un mapa
+                      de fondo de todo el mundo no cuenta); Intro = Extensión
+    Previo (P) ...... la vista anterior
+    Escala (S) ...... 2X (de la vista actual) o 1:500 (escala del mapa)
+    Ventana (V/W) ... dos esquinas, con referencias a objetos
+    2X / 0.5X ....... la vista actual más cerca o más lejos
+    2 ............... de todo el dibujo (como en IngeCAD)
+    una esquina ..... clic o coordenadas (10;20) empiezan la ventana
+  y además Siguiente (SI), Objeto (O: a lo seleccionado en cualquier capa, o
+  a lo que se designe con clics), Ampliar (AM) y Reducir (R), y la escala 1:n
+  (Z 1:1000). nXP (las ventanas gráficas de IngeCAD) avisa que en QGIS se usa
+  1:n.
+- La opción se puede escribir en la misma línea: Z E, ZOOM 2X, Z 1:500.
+- ENCUADRE / PAN (P): la mano de QGIS; arrastrar con el izquierdo. Esc, Intro
+  o clic derecho terminan y vuelve el modo CAD (elegir otra herramienta de
+  QGIS también termina).
+- REGEN (RE) vuelve a leer y dibujar todas las capas; REDIBUJA (R) vuelve a
+  dibujar el mapa.
+- Transparentes, como en IngeCAD: dentro de otro comando, 'Z E, 'Z 2X, 'Z P,
+  'Z 1:500 o 'RE no lo cortan; 'P recuerda que el botón central del ratón
+  encuadra siempre; 'Z V (pide puntos) avisa que no se puede.
+- ZOOM Previo / Siguiente con un historial propio de vistas: el mapa de
+  QGIS 4 no anota las vistas que cambia un complemento. Un giro de la rueda
+  cuenta como una sola vista.
+- IGUALARPROP (MATCHPROP / MA), como el nuestro de IngeCAD: clic en el objeto
+  de origen (en cualquier capa visible; queda resaltado con su color y más
+  grueso), Intro lo confirma (otro clic lo cambia; un objeto ya seleccionado
+  es el origen directamente) y después los destinos de la capa activa, con
+  todas las designaciones (clic, ventana, V C PV PC B T U P; E quita, A
+  agrega, H deshace). Cada paso se ve al momento; E y H devuelven a esos
+  objetos lo que tenían. Intro termina. Se copia capa CAD, color, tipo y
+  grosor de línea (vacío = PorCapa); entre textos, además, altura, fuente y
+  negrita. Si a la capa de destino le faltan los campos CAD, se crean, y la
+  capa CAD se agrega a su configuración con las propiedades que tiene en la
+  capa de origen. Cada paso queda en Deshacer de QGIS (Ctrl+Z).
+- Botones nuevos (Zoom, Zoom Ventana, Extensión, Previo, Objeto, Encuadre,
+  Regenerar e Igualar propiedades) en el banco Dibujo CAD de GeoCAD
+  Yaguareté > Administrar botones...: no están en ninguna categoría de
+  fábrica (se pasan a una con «Pasar a»). Los de vista, apretados dentro de
+  otro comando, no lo cortan.
+- AYUDA los lista en el grupo VISTA.
+- IngeCAD no cambia.
+
+Pruebas: test_vista_igualar_qgis (opciones y cuentas de ZOOM, historial de
+vistas, qué copia IGUALARPROP, los mismos alias que IngeCAD, transparentes,
+botones sólo en el banco); banco_vista_igualar_qgis con QGIS real (cada
+opción de ZOOM sobre el mapa, transparentes dentro de LÍNEA, ENCUADRE con
+Esc, Intro y clic derecho de verdad, IGUALARPROP con H, E, Captura,
+preselección, Ctrl+Z y entre capas).

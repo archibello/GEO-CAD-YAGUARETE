@@ -15,6 +15,7 @@ from qgis.PyQt.QtWidgets import (QComboBox, QStyle, QStyledItemDelegate,
 from .compat import enum, qt
 from .controller import dlog
 from .icons import pixmap
+from .medidas import FILA, preparar_lista
 
 ROLE = qt('ItemDataRole', 'UserRole')
 _EV_PRESS = enum(QEvent, 'Type', 'MouseButtonPress')
@@ -50,7 +51,8 @@ class LayerItemDelegate(QStyledItemDelegate):
         self.ctrl = ctrl
 
     def sizeHint(self, option, index):
-        return QSize(max(option.rect.width(), 220), 22)
+        # la fila del panel Yaguá Capas; del ancho de la lista (3.61.2: «más justo»)
+        return QSize(NAME_X + 40, FILA)
 
     def paint(self, p, option, index):
         lay = self.ctrl.find(index.data(ROLE), True)
@@ -79,11 +81,12 @@ class LayerCombo(QComboBox):
     def __init__(self, ctrl, parent=None):
         super().__init__(parent)
         self.ctrl = ctrl
-        self.setMinimumWidth(260)
+        self.setFixedWidth(200)     # el máximo de la lista de IngeCAD 0.7.0 (3.61.2)
         self.setMaxVisibleItems(25)
         self.setToolTip('Control de capas: capa actual o capa de los objetos seleccionados.\n'
                         'Pulse la bombilla, el sol o el candado para cambiar el estado sin cerrar la lista.')
         self.setItemDelegate(LayerItemDelegate(ctrl, self))
+        preparar_lista(self, delegate=False)     # la letra del panel Yaguá Capas (3.61.2)
         self._names = []
         self.view().viewport().installEventFilter(self)
         self.view().setMouseTracking(True)

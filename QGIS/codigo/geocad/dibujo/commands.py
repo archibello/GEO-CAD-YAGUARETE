@@ -30,10 +30,12 @@ class CommandSpec:
                           con start/prompt/on_point/on_text/on_enter/escape/preview/base.
     layer_types        -> tipos de capa admitidos ('line', 'polygon', 'point') o None si no requiere capa.
     edit               -> True si necesita la capa en modo edición.
+    transparent        -> handler(manager, args) para usarlo dentro de otro comando ('ZOOM E,
+                          'PAN), aunque sea interactivo (3.61.0).
     """
 
     def __init__(self, name, aliases, handler, kind='action', title=None,
-                 layer_types=None, edit=False, group='', description=''):
+                 layer_types=None, edit=False, group='', description='', transparent=None):
         self.name = name.upper()
         self.aliases = tuple(a.upper() for a in aliases) + (self.name,)
         self.handler = handler
@@ -43,6 +45,7 @@ class CommandSpec:
         self.edit = edit
         self.group = group
         self.description = description
+        self.transparent = transparent
 
 
 OPT_UNDO = ('H', 'U', 'DESHACER', 'UNDO')
@@ -160,12 +163,23 @@ class CommandManager(QObject):
         transparent = text.strip().startswith("'") and self.command is not None
         key = _key(text).lstrip("'")
         name = self.alias_map.get(key)
+        args = ''
+        if name is None and ' ' in key:
+            # «Z E», «ZOOM 2X»: el comando y su primera respuesta en una línea (3.61.0)
+            head, args = key.split(None, 1)
+            name = self.alias_map.get(head)
+            key = head if name else key
         spec = self.specs.get(name) if name else None
         if spec is None:
             self.cmdline.echo('Comando desconocido "%s". Escriba AYUDA para ver la lista.' % key)
             return
         if transparent:
-            if spec.kind == 'interactive':
+            if spec.transparent is not None:
+                spec.transparent(self, args)
+                self.cmdline.echo('>> Reanudando el comando %s.' % (getattr(self.command, 'title', '')
+                                                                      or self.last_cmd or ''))
+                self.command.prompt()
+            elif spec.kind == 'interactive':
                 self.cmdline.echo('%s no se puede usar de forma transparente.' % spec.title)
             else:
                 spec.handler()
@@ -221,6 +235,11 @@ class CommandManager(QObject):
         if not self.osnap_enabled():
             self.cmdline.echo('Referencia a objetos desactivada: pulse F3 o escriba REFENT para activarla.')
         self.command.start()
+        if args and self.command is not None:
+            try:
+                self.command.on_text(args)
+            except (InputError, ValueError) as e:
+                self.cmdline.echo(str(e))
         try:
             self.cmdline.input.setFocus()   # el teclado va a la línea de comandos (como AutoCAD)
         except Exception:  # noqa: BLE001

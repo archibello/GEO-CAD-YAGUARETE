@@ -1,0 +1,26 @@
+GeoCAD - versión 3.61.1
+=======================
+CORRECCIÓN (sólo QGIS) de la 3.61.0. Hay que actualizar QGIS.
+
+Lo que encontró Fernando (02/11/2026, QGIS 4.2.2)
+- Al usar ENCUADRE / PAN (P): «TypeError: invalid result from
+  _PanTool.flags(), int cannot be converted to QFlags».
+
+Causa
+- La mano de ENCUADRE le saca a la herramienta Desplazar de QGIS el menú del
+  clic derecho (para que el clic derecho termine el encuadre). En QGIS 4
+  (PyQt6) la cuenta con las banderas da un número entero y QGIS lo rechaza;
+  en QGIS 3 andaba.
+
+Cambios
+- ENCUADRE devuelve las banderas con el mismo tipo que usa QGIS: anda en
+  QGIS 4 y en QGIS 3, sin el menú de QGIS en el clic derecho.
+- Revisado: ZOOM, REGEN, REDIBUJA e IGUALARPROP no tienen el mismo problema
+  (no redefinen nada de QGIS que devuelva un valor).
+- Todo lo demás de la 3.61.0 sigue igual. IngeCAD no cambia.
+
+Pruebas: banco_vista_igualar_qgis con QGIS 4.2.2 real ahora junta los errores
+que QGIS sólo imprime (los de dentro de una llamada de QGIS a Python) y falla
+si hay alguno; activa ENCUADRE y controla el tipo de flags(). Con la 3.61.0
+no pasa; con la 3.61.1, sí. La misma cuenta probada también con QGIS 3.28.9.
+test_vista_igualar_qgis controla el código.

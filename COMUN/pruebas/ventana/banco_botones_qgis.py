@@ -140,6 +140,11 @@ bancos = {n: f for n, f in vistos["fabrica"] if botones.es_banco(n)}
 comprobar(sorted(bancos) == ["banco:Capas CAD", "banco:Dibujo CAD"], "los dos bancos de respaldo")
 comprobar("capas:layiso" in bancos.get("banco:Capas CAD", ()) and "dibujo:line" in bancos.get("banco:Dibujo CAD", ()),
           "LAYISO en el banco Capas CAD y LÍNEA en Dibujo CAD")
+# 3.61.0: ZOOM, ENCUADRE, REGEN e IGUALARPROP sólo en el banco Dibujo CAD, sin categoría
+nuevos = ["dibujo:" + i for i in ("zoom", "zoomwin", "zoomext", "zoomprev", "zoomobj", "pan", "regen", "matchprop")]
+comprobar(all(x in bancos.get("banco:Dibujo CAD", ()) for x in nuevos)
+          and not any(x in f for n, f in vistos["modelo"] for x in nuevos),
+          "ZOOM, ENCUADRE, REGEN e IGUALARPROP en el banco Dibujo CAD, en ninguna categoría")
 comprobar(not [a for a in P.menu.actions() if a.menu() is not None and a.text() in ("Dibujo CAD", "Capas CAD")],
           "el menú GeoCAD sin los submenús Dibujo CAD y Capas CAD")
 # la ventana real: el banco elegido muestra sus botones y «Pasar» trae uno

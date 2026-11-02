@@ -38,6 +38,8 @@ from .compat import accepted_code, enum, exec_dialog, exec_menu, qt
 from .dialogs import ColorDialog, LinetypeDialog
 from .icons import color_swatch, icon
 from .linetypes import LINEWEIGHTS, LW_DEFAULT, lineweight_text
+# letra, filas y encabezado compartidos con la barra Yaguá Capas (3.61.2)
+from .medidas import ENCABEZADO, FILA, ICONO_COL, PANEL_STYLE, letra_chica
 
 TITLE = 'Yaguá Capas'         # «Capas» a secas es el panel de QGIS (3.60.2)
 (C_STATUS, C_NAME, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT, C_DESC) = range(10)
@@ -49,23 +51,12 @@ HIDEABLE = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT, C_DESC)
 DEFAULT_HIDDEN = str(C_DESC)    # Descripción oculta hasta que se pida (IngeCAD)
 AUTO_SIZED = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT)
 ICON_COLS = (C_STATUS, C_ON, C_FRZ, C_LCK, C_PLOT)
-ICON_WIDTH = 28                 # como en IngeCAD; el encabezado de QGIS pedía 40 (3.60.5)
+ICON_WIDTH = ICONO_COL          # 28 como en IngeCAD; el encabezado de QGIS pedía 40 (3.60.5)
 
 
 def lw_label(lw):
     """El grosor como lo escribe IngeCAD en español («Por defecto», no «Predeterminado»)."""
     return 'Por defecto' if lw is None or lw < 0 else lineweight_text(lw)
-
-# Medidas compactas de IngeCAD, con los colores del tema de QGIS (Fernando, 01/11/2026:
-# «del color de QGIS y no del color de IngeCAD»)
-PANEL_STYLE = """
-#CadLayersPanel QTableWidget { font-size: 11px; }
-#CadLayersPanel QHeaderView::section { padding: 1px 3px; font-size: 11px; border: none;
-    border-right: 1px solid palette(midlight); }
-#CadLayersPanel QToolButton { border: none; padding: 2px 5px; font-size: 11px; }
-#CadLayersPanel QTreeWidget { font-size: 11px; }
-#CadLayersPanel QLineEdit { font-size: 11px; padding: 1px 4px; }
-"""
 
 
 def aci_of(color):
@@ -175,13 +166,12 @@ class LayersPanel(QWidget):
         self.table.setIconSize(QSize(14, 14))
         # letra y filas de IngeCAD (11 px, filas de 20): con la letra general de QGIS (11 pt)
         # las filas salían de 30 y el encabezado de 36 (3.60.5)
-        chica = QFont(self.table.font())
-        chica.setPixelSize(11)
+        chica = letra_chica(self.table.font())
         self.table.setFont(chica)
         self.table.horizontalHeader().setFont(chica)
-        self.table.horizontalHeader().setFixedHeight(24)
+        self.table.horizontalHeader().setFixedHeight(ENCABEZADO)
         self.table.verticalHeader().setMinimumSectionSize(18)
-        self.table.verticalHeader().setDefaultSectionSize(20)
+        self.table.verticalHeader().setDefaultSectionSize(FILA)
         self.table.setTextElideMode(qt('TextElideMode', 'ElideRight'))
         self.table.setMinimumHeight(48)      # poca altura mínima: no agranda la ventana (3.60.4)
 

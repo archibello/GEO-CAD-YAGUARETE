@@ -210,6 +210,7 @@ class DibujoCADPlugin:
         self.a_cmd.setShortcut('Ctrl+9')
         self.a_cmd.setChecked(True)
         self.cmdline.visibilityChanged.connect(self.a_cmd.setChecked)
+        self._build_view_commands()
 
         # ---- barra Edición CAD
         self.edit_toolbar = self.iface.addToolBar('Edición CAD')
@@ -329,6 +330,47 @@ class DibujoCADPlugin:
                                       lambda: (self.props.show(), self.props.raise_(), self.props.schedule()),
                                       title='PROPIEDADES', group='edición',
                                       description='Paleta Propiedades de los objetos seleccionados (Ctrl+1)'))
+        # IGUALARPROP (MA) de IngeCAD (3.61.0): botón sólo en el banco Dibujo CAD
+        from .igualar_commands import MatchPropCommand
+        self.mgr.register(CommandSpec('MATCHPROP', ('IGUALARPROP', 'IGUALARPROPIEDADES', 'MA', 'MATCHPROP',
+                                                    'PAINTER'), MatchPropCommand, 'interactive', 'IGUALARPROP',
+                                      ('line', 'polygon', 'point'), True, 'edición',
+                                      'Copia capa CAD, color, tipo y grosor de línea (y en textos altura, '
+                                      'fuente y negrita) de un objeto a otros'))
+        self._action('matchprop', 'Igualar propiedades (IGUALARPROP / MA) — de un objeto de origen a los '
+                     'designados', lambda: self.run_command('IGUALARPROP'), toolbar=False)
+
+    def _build_view_commands(self):
+        """ZOOM (Z), ENCUADRE (P), REGEN (RE) y REDIBUJA (R) de IngeCAD (3.61.0). Los botones
+        quedan en el banco Dibujo CAD de Administrar botones, no en una categoría."""
+        from .vista_commands import (PanCommand, Vistas, ZoomCommand, pan_transparente, redibuja, regen,
+                                     zoom_transparente)
+        mgr = self.mgr
+        mgr.vistas = Vistas(self.iface.mapCanvas())     # para ZOOM Previo / Siguiente
+        mgr.register(CommandSpec('ZOOM', ('ZOOM', 'Z'), ZoomCommand, 'interactive', 'ZOOM', None, False,
+                                 'vista', 'Todo, Centro, Extensión, Previo, Siguiente, Escala, Ventana, '
+                                 'Objeto, Ampliar, Reducir, 2X, 1:500', transparent=zoom_transparente))
+        mgr.register(CommandSpec('PAN', ('ENCUADRE', 'ENCUADRAR', 'PAN', 'P'), PanCommand, 'interactive',
+                                 'ENCUADRE', None, False, 'vista',
+                                 'Desplaza la vista con el ratón (Esc, Intro o clic derecho termina)',
+                                 transparent=pan_transparente))
+        mgr.register(CommandSpec('REGEN', ('REGEN', 'RE', 'REGENERAR', 'REGENT', 'REGENALL'),
+                                 lambda: regen(mgr), title='REGEN', group='vista',
+                                 description='Vuelve a leer y dibujar todas las capas'))
+        mgr.register(CommandSpec('REDRAW', ('REDIBUJA', 'REDIBUJAR', 'REDRAW', 'R', 'RA', 'REDRAWALL'),
+                                 lambda: redibuja(mgr), title='REDIBUJA', group='vista',
+                                 description='Vuelve a dibujar el mapa'))
+        for ico, texto, orden in (
+                ('zoomwin', 'Zoom Ventana (ZOOM V)', 'ZOOM V'),
+                ('zoomext', 'Zoom Extensión (ZOOM E) — lo que ocupan las capas vectoriales visibles', 'ZOOM E'),
+                ('zoomprev', 'Zoom Previo (ZOOM P)', 'ZOOM P'),
+                ('zoomobj', 'Zoom Objeto (ZOOM O) — a lo seleccionado o a lo que se designe', 'ZOOM O'),
+                ('zoom', 'Zoom (ZOOM / Z) — Todo, Centro, Extensión, Previo, Siguiente, Escala, Ventana...',
+                 'ZOOM'),
+                ('pan', 'Encuadre (ENCUADRE / PAN / P) — Esc, Intro o clic derecho termina', 'ENCUADRE'),
+                ('regen', 'Regenerar (REGEN / RE)', 'REGEN')):
+            # con «'» delante: dentro de otro comando no lo corta (como los botones de AutoCAD)
+            self._action(ico, texto, lambda o=orden: self.run_command("'" + o), toolbar=False)
 
     def _build_text_toolbar(self):
         from qgis.PyQt.QtGui import QDoubleValidator, QFont
@@ -591,7 +633,8 @@ class DibujoCADPlugin:
             a.triggered.connect(lambda checked=False: slot(checked))
         else:
             a.triggered.connect(lambda *_: slot())
-        (toolbar or self.toolbar).addAction(a)
+        if toolbar is not False:            # False: sólo en el banco Dibujo CAD (3.61.0)
+            (toolbar or self.toolbar).addAction(a)
         self.iface.addPluginToMenu(MENU, a)
         self.actions.append(a)
         return a
@@ -604,6 +647,10 @@ class DibujoCADPlugin:
             self.mgr.refresh()
 
     def unload(self):
+        vistas = getattr(self.mgr, 'vistas', None) if getattr(self, 'mgr', None) is not None else None
+        if vistas is not None:
+            vistas.remove()
+            self.mgr.vistas = None
         dyn = getattr(self, 'dyn', None)
         if dyn is not None:
             try:

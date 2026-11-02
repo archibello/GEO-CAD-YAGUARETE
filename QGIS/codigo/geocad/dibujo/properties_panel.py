@@ -106,6 +106,75 @@ def kind_of(layer, feature):
     return 'Polilínea'
 
 
+def ensure_field(lyr, name, kind='string', length=20, echo=None):
+    """Crea el campo ``name`` si falta (también lo usa IGUALARPROP, 3.61.0)."""
+    if lyr.fields().indexOf(name) != -1:
+        return True
+    try:
+        from qgis.PyQt.QtCore import QMetaType
+        t = QMetaType.Type.Double if kind == 'double' else QMetaType.Type.QString
+        fld = QgsField(name, t, len=length if kind == 'string' else 0)
+    except (ImportError, AttributeError, TypeError):
+        from qgis.PyQt.QtCore import QVariant
+        fld = QgsField(name, QVariant.Double if kind == 'double' else QVariant.String,
+                       len=length if kind == 'string' else 0)
+    ok = False
+    if lyr.isEditable():
+        ok = lyr.addAttribute(fld)
+    else:
+        try:
+            ok = lyr.dataProvider().addAttributes([fld])
+            lyr.updateFields()
+        except Exception:  # noqa: BLE001
+            ok = False
+    ok = ok and lyr.fields().indexOf(name) != -1
+    if not ok:
+        if echo is not None:
+            echo('No se pudo crear el campo %s en "%s".' % (name, lyr.name()))
+        return False
+    restyle(lyr)
+    return True
+
+
+def restyle(lyr):
+    """Que Layer Properties vuelva a armar la simbología (incluye los campos nuevos)."""
+    try:
+        from qgis.utils import plugins
+        ctrl = getattr(plugins.get('Layer_Properties'), 'ctrl', None)
+        if ctrl is not None and lyr.customProperty(CFG_KEY):
+            ctrl._apply_to(lyr, ctrl._load(lyr))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def add_cad_layer_def(layers, name, sources=()):
+    """Que cada capa QGIS de ``layers`` tenga definida la capa CAD ``name``, con las
+    propiedades que tenga en otra (de ``layers`` o ``sources``) o nueva."""
+    defs = {}
+    for lyr in list(sources) + list(layers):
+        try:
+            for l in json.loads(lyr.customProperty(CFG_KEY) or '{}').get('layers', []):
+                defs.setdefault(l['name'], l)
+        except (ValueError, TypeError, AttributeError):
+            pass
+    for lyr in layers:
+        raw = lyr.customProperty(CFG_KEY)
+        if not raw:
+            continue
+        try:
+            cfg = json.loads(raw)
+            if any(l['name'] == name for l in cfg['layers']):
+                continue
+            if name in defs:
+                cfg['layers'].append(dict(defs[name]))
+            else:
+                from Layer_Properties.controller import new_layer
+                cfg['layers'].append(new_layer(name))
+            lyr.setCustomProperty(CFG_KEY, json.dumps(cfg, ensure_ascii=False))
+        except Exception:  # noqa: BLE001
+            pass
+
+
 class PropertiesPanel(QDockWidget):
     def __init__(self, iface, mgr, parent=None):
         super().__init__('Propiedades', parent)
@@ -276,41 +345,10 @@ class PropertiesPanel(QDockWidget):
 
     # ------------------------------------------------------------ escritura
     def _ensure_field(self, lyr, name, kind='string', length=20):
-        if lyr.fields().indexOf(name) != -1:
-            return True
-        try:
-            from qgis.PyQt.QtCore import QMetaType
-            t = QMetaType.Type.Double if kind == 'double' else QMetaType.Type.QString
-            fld = QgsField(name, t, len=length if kind == 'string' else 0)
-        except (ImportError, AttributeError, TypeError):
-            from qgis.PyQt.QtCore import QVariant
-            fld = QgsField(name, QVariant.Double if kind == 'double' else QVariant.String,
-                           len=length if kind == 'string' else 0)
-        ok = False
-        if lyr.isEditable():
-            ok = lyr.addAttribute(fld)
-        else:
-            try:
-                ok = lyr.dataProvider().addAttributes([fld])
-                lyr.updateFields()
-            except Exception:  # noqa: BLE001
-                ok = False
-        ok = ok and lyr.fields().indexOf(name) != -1
-        if not ok:
-            self.mgr.cmdline.echo('No se pudo crear el campo %s en "%s".' % (name, lyr.name()))
-            return False
-        self._restyle(lyr)
-        return True
+        return ensure_field(lyr, name, kind, length, self.mgr.cmdline.echo)
 
     def _restyle(self, lyr):
-        """Que Layer Properties vuelva a armar la simbología (incluye los campos nuevos)."""
-        try:
-            from qgis.utils import plugins
-            ctrl = getattr(plugins.get('Layer_Properties'), 'ctrl', None)
-            if ctrl is not None and lyr.customProperty(CFG_KEY):
-                ctrl._apply_to(lyr, ctrl._load(lyr))
-        except Exception:  # noqa: BLE001
-            pass
+        restyle(lyr)
 
     def _write(self, sel, field, value, kind='string', title='Propiedades'):
         by_layer = {}
@@ -481,29 +519,7 @@ class PropertiesPanel(QDockWidget):
     def _set_cad_layer(self, sel, name):
         """Cambia la capa CAD; si la capa QGIS no la tiene definida, la agrega con las mismas
         propiedades que tenga en otra capa (si no, los objetos quedarían sin dibujar)."""
-        defs = {}
-        for lyr in {l for l, _f, _t in sel}:
-            try:
-                for l in json.loads(lyr.customProperty(CFG_KEY) or '{}').get('layers', []):
-                    defs.setdefault(l['name'], l)
-            except (ValueError, TypeError, AttributeError):
-                pass
-        for lyr in {l for l, _f, _t in sel}:
-            raw = lyr.customProperty(CFG_KEY)
-            if not raw:
-                continue
-            try:
-                cfg = json.loads(raw)
-                if any(l['name'] == name for l in cfg['layers']):
-                    continue
-                if name in defs:
-                    cfg['layers'].append(dict(defs[name]))
-                else:
-                    from Layer_Properties.controller import new_layer
-                    cfg['layers'].append(new_layer(name))
-                lyr.setCustomProperty(CFG_KEY, json.dumps(cfg, ensure_ascii=False))
-            except Exception:  # noqa: BLE001
-                pass
+        add_cad_layer_def({l for l, _f, _t in sel}, name)
         by_layer_len = 50
         for lyr in {l for l, _f, _t in sel}:
             self._ensure_field(lyr, 'LAYER_CODE', 'string', by_layer_len)
