@@ -75,7 +75,8 @@ class Host:
     document = None
     def __init__(self): self.calls = []; self.command_line = types.SimpleNamespace(echo=said.append)
     def __getattr__(self, n): return lambda *a, **k: self.calls.append(n) or True
-host = Host(); host.history = types.SimpleNamespace(_undo=[])
+from core.commands import History   # 0.7.0: run_python usa history.fold
+host = Host(); host.history = History()
 host.plugins = PluginManager(host=host, bundled_dir=home3 / "nada", user_dir=root); host.plugins.discover()
 count, err = scripting.run_python(inst, host); assert err is None, err
 print("\n".join(said))

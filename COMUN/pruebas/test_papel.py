@@ -18,7 +18,8 @@ P.instalar()
 
 # ------------------------------------------------------------- 1. el módulo
 assert any(m.clave == "papel" for m in M.catalogo("ingecad")) and M.activo("ingecad", "papel")
-assert hasattr(L.paper_frame, "_puente_original") and hasattr(L.effective_page, "_puente_original")
+PROPIA = hasattr(L, "paper_mm_per_unit")   # IngeCAD 0.7.0 escala la hoja: GeoCAD no la envuelve
+assert PROPIA or (hasattr(L.paper_frame, "_puente_original") and hasattr(L.effective_page, "_puente_original"))
 print("ok módulo")
 
 
@@ -97,13 +98,14 @@ assert abs((x1 - x0) - 420.0) < 1e-9
 M.guardar("ingecad", {"papel": False})
 assert not P.activo()
 x0, y0, x1, y1 = L.paper_frame(lay)["sheet"]
-assert abs((x1 - x0) - 420.0) < 1e-9                          # IngeCAD de fábrica
+DE_FABRICA = 0.420 if PROPIA else 420.0                       # 0.7.0 ya escala la hoja
+assert abs((x1 - x0) - DE_FABRICA) < 1e-9                     # IngeCAD de fábrica
 L.NewLayoutCommand("Apagado").do(doc)
 assert P.unidades_por_mm(doc.doc.layouts.get("Apagado")) == 1.0
 M.guardar("ingecad", {"papel": True})
 # instalar dos veces no envuelve dos veces
 P.instalar()
-assert not hasattr(L.paper_frame._puente_original, "_puente_original")
+assert PROPIA or not hasattr(L.paper_frame._puente_original, "_puente_original")
 print("ok 1:1 y apagado")
 
 # ------------------------------------------------------------- 7. escala escrita (3.6.0)

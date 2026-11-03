@@ -457,7 +457,11 @@ def instalar() -> None:
         from core import layouts
     except Exception:  # noqa: BLE001
         return
-    _aplicar(layouts, LAYOUTS, envolver)
+    # IngeCAD 0.7.0 ya dibuja y traza la hoja a la escala de la página
+    # (paper_mm_per_unit): envolverla otra vez la escalaba dos veces (3.62.1)
+    propia = hasattr(layouts, "paper_mm_per_unit")
+    if not propia:
+        _aplicar(layouts, LAYOUTS, envolver)
     nueva = getattr(layouts, "NewLayoutCommand", None)
     if nueva is not None:
         _aplicar(nueva, {"do": _envolver_nueva_do}, envolver)
@@ -465,7 +469,8 @@ def instalar() -> None:
         from formats import pdf_out              # usa Qt: no está en las pruebas
     except Exception:  # noqa: BLE001
         return
-    _aplicar(pdf_out, PDF_OUT, envolver)
+    if not propia:
+        _aplicar(pdf_out, PDF_OUT, envolver)
     try:
         from views.print_dialog import PrintDialog
     except Exception:  # noqa: BLE001

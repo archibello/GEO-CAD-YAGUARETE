@@ -68,7 +68,8 @@ class Host:
     document = None
     def __init__(self): self.calls = []; self.command_line = types.SimpleNamespace(echo=lambda t: print("IngeCAD>", t))
     def __getattr__(self, n): return lambda *a, **k: self.calls.append(n) or True
-host = Host(); host.history = types.SimpleNamespace(_undo=[])
+from core.commands import History   # 0.7.0: run_python usa history.fold
+host = Host(); host.history = History()
 host.plugins = PluginManager(host=host, bundled_dir=Path(CFG) / "nada", user_dir=root); host.plugins.discover()
 actual_inst = Path(tempfile.mkdtemp()) / "instalar_actual.py"
 actual_inst.write_text(build.instalador(con_version(ING, "1.4.0"), "1.4.0"), encoding="utf-8")

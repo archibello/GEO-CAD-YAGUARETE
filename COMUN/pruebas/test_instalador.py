@@ -15,7 +15,8 @@ class Host:
     document = None
     def __init__(self): self.calls = []; self.command_line = type("C", (), {"echo": lambda s, t: print("IngeCAD>", t)})()
     def __getattr__(self, n): return lambda *a, **k: self.calls.append(n) or True
-host = Host(); host.history = type("H", (), {"_undo": []})(); host.plugins = PluginManager(host=host, bundled_dir=Path(CFG) / "nada", user_dir=root)
+from core.commands import History   # 0.7.0: run_python usa history.fold
+host = Host(); host.history = History(); host.plugins = PluginManager(host=host, bundled_dir=Path(CFG) / "nada", user_dir=root)
 host.plugins.discover()
 inst = sorted(glob.glob(str(Path(__file__).resolve().parents[2] / "VERSIONES" / "*" / "GeoCad Tool" / "instalar_geocad_*.py")), key=lambda f: tuple(int(x) for x in f.rsplit("_", 1)[1][:-3].split(".")))[-1]
 count, err = scripting.run_python(inst, host); print("run_python:", count, err)

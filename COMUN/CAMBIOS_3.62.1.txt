@@ -1,0 +1,22 @@
+GeoCAD - versión 3.62.1
+=======================
+CORRECCIÓN (IngeCAD). Hay que actualizar IngeCAD; en QGIS no cambia nada
+(sólo el número).
+
+IngeCAD 0.7.0 trae de fábrica lo que hacía el módulo «Espacio papel como
+AutoCAD» (3.5.0): la hoja de una presentación se dibuja y se imprime a la
+escala de su configuración de página (1 mm = 0,001 unidades con el dibujo en
+metros). GeoCAD la escalaba otra vez, así que con IngeCAD 0.7.0 la hoja
+quedaba mil veces más chica en pantalla, en TRAZAR y en el PDF.
+
+Cambios
+- Espacio papel: si IngeCAD ya escala la hoja (0.7.0 en adelante), GeoCAD se
+  aparta y deja la de IngeCAD. Siguen siendo de GeoCAD: las presentaciones
+  nuevas en metros (1 mm = 0,001), la escala escrita en el combo y TRAZAR
+  arrancando con el papel y la orientación de la hoja. Con IngeCAD 0.6.x
+  queda como venía.
+
+Pruebas: test_papel e test_impresion_etapas aceptan la escala propia de
+IngeCAD 0.7.0. test_actualizar, test_instalador e test_instalador_unico usan
+el History real de IngeCAD (0.7.0 agrupa lo que hace el instalador en un solo
+paso de deshacer con history.fold). Las 74 con IngeCAD 0.7.0, 0.6.8.2 y 0.6.7.
