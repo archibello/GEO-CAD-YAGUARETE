@@ -8,14 +8,18 @@ $CELTYPE, $CELWEIGHT). Muestra el valor de la selección (en blanco si es
 mixto) o el actual. Los valores van a los campos CAD_COLOR, CAD_LTYPE y
 CAD_LW de Dibujo CAD (vacío = PorCapa); en las capas de textos, a COLOR.
 PorBloque no se ofrece: en QGIS no hay de dónde heredarlo.
+
+3.64.0 (Fernando, 03/11/2026: «cuando estamos trabajando con polígonos ...
+color de fondo y transparencia»): Color de relleno y Transparencia de relleno,
+a CAD_FILL y CAD_FILLTR; sólo se habilitan con una capa de polígonos.
 """
 from qgis.PyQt.QtCore import QRect, QSize
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QApplication, QComboBox, QStyle, QStyleOptionViewItem
 
 from .aci import aci_to_hex
-from .compat import accepted_code, enum, exec_dialog, qt
-from .dialogs import ColorDialog, LinetypeDialog
+from .compat import accepted_code, enum, exec_dialog, geometry_kind, qt
+from .dialogs import ColorDialog, LinetypeDialog, TransparencyDialog
 from .icons import color_swatch, linetype_sample, lineweight_sample
 from .linetypes import LINETYPE_ORDER, LINEWEIGHTS, LW_DEFAULT
 from .medidas import FilaDelegate, ajustar_desplegable, ancho_casilla, preparar_lista
@@ -23,6 +27,7 @@ from .medidas import FilaDelegate, ajustar_desplegable, ancho_casilla, preparar_
 ACI_NAMES = {1: 'Rojo', 2: 'Amarillo', 3: 'Verde', 4: 'Cian', 5: 'Azul',
              6: 'Magenta', 7: 'Blanco', 8: 'Gris', 9: 'Gris claro'}
 PICK, OTHER = '__elegir__', '__otro__'
+NO_FILL = 'none'        # CAD_FILL sin relleno (controller.NO_FILL)
 BYLAYER = None
 _MIXED = object()
 
@@ -55,6 +60,7 @@ class _PropCombo(QComboBox):
     ancho = 0           # el de la barra de IngeCAD 0.7.0
     entero = False      # True: casilla y desplegable a la medida del texto (sólo Grosor)
     muestra = (40, 12)  # la muestra de cada renglón (la de tipo de línea necesita el largo)
+    poligonos = False   # True: sólo con polígonos (la capa activa o alguno seleccionado)
 
     def __init__(self, ctrl, parent=None):
         super().__init__(parent)
@@ -99,11 +105,21 @@ class _PropCombo(QComboBox):
                 return i
         return -1
 
+    def _usable(self):
+        if not self.ctrl.active:
+            return False
+        if not self.poligonos:
+            return True
+        if self.ctrl.has_selection():
+            return any(geometry_kind(lyr) == 'polygon' for lyr, _f in self.ctrl.selection_sources())
+        return geometry_kind(self.ctrl.layer) == 'polygon'
+
     def refresh(self, *args):
         self._loading = True
         try:
-            self.setEnabled(self.ctrl.active)
-            if not self.ctrl.active:
+            usable = self._usable()
+            self.setEnabled(usable)
+            if not usable:
                 self.setCurrentIndex(-1)
                 return
             if self.ctrl.has_selection():
@@ -145,7 +161,7 @@ class _PropCombo(QComboBox):
 
     def apply(self, value):
         """Con selección la cambia; sin selección, es lo actual para lo próximo."""
-        if not self.ctrl.active:
+        if not self._usable():
             return
         if self.ctrl.has_selection():
             self.ctrl.set_selection_prop(self.prop, value)
@@ -274,3 +290,72 @@ class LineweightCombo(_PropCombo):
 
     def label(self, value):
         return lineweight_label(value)
+
+
+def fill_label(value):
+    if value is None:
+        return 'PorCapa'
+    if str(value).lower() == NO_FILL:
+        return 'Ninguno'
+    return color_label(value)
+
+
+def filltr_label(value):
+    return 'PorCapa' if value is None else '%d %%' % int(round(value))
+
+
+class FillCombo(ColorCombo):
+    """Color de relleno de los polígonos (CAD_FILL): PorCapa, Ninguno o un color."""
+    prop = 'fill'
+    tip = 'Color de relleno'
+    poligonos = True
+
+    def _fill(self):
+        self.addItem('PorCapa', '')
+        self.addItem('Ninguno', NO_FILL)
+        for aci, name in ACI_NAMES.items():
+            self.addItem(QIcon(color_swatch(aci_to_hex(aci), 12, 12)), name, aci_hex(aci))
+        self.addItem('Seleccionar color...', PICK)
+
+    def _ask(self, data):
+        current = self.ctrl.current_prop('fill')
+        if not current or current == NO_FILL:
+            current = '#ffffff'
+        dlg = ColorDialog(self.window(), {'aci': None, 'rgb': current})
+        if exec_dialog(dlg) != accepted_code():
+            return _MIXED
+        c = dlg.color
+        return aci_hex(c['aci']) if c.get('aci') else (c.get('rgb') or '#000000').lower()
+
+    def label(self, value):
+        return fill_label(value)
+
+
+class FillTransparencyCombo(_PropCombo):
+    """Transparencia del relleno de los polígonos (CAD_FILLTR), de 0 a 90 %."""
+    prop = 'filltr'
+    tip = 'Transparencia de relleno'
+    ancho = 72
+    entero = True
+    poligonos = True
+
+    def _fill(self):
+        self.addItem('PorCapa', '')
+        for v in range(0, 100, 10):
+            self.addItem(filltr_label(v), float(v))
+        self.addItem('Otro...', OTHER)
+
+    def _add(self, value):
+        at = self.count() - 1                       # antes de «Otro...»
+        self.insertItem(at, filltr_label(value), float(value))
+        return at
+
+    def _ask(self, data):
+        dlg = TransparencyDialog(self.window(), self.ctrl.current_prop('filltr') or 0,
+                                 title='Transparencia de relleno')
+        if exec_dialog(dlg) != accepted_code():
+            return _MIXED
+        return float(dlg.value())
+
+    def label(self, value):
+        return filltr_label(value)

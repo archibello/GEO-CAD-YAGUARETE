@@ -299,8 +299,8 @@ class LineweightDialog(CadDialog):
 # Transparencia
 # --------------------------------------------------------------------------
 class TransparencyDialog(CadDialog):
-    def __init__(self, parent, current, theme='dark'):
-        super().__init__(parent, 'Transparencia de capa', theme)
+    def __init__(self, parent, current, theme='dark', title='Transparencia de capa'):
+        super().__init__(parent, title, theme)
         lay = QFormLayout(self)
         self.spin = QSpinBox()
         self.spin.setRange(0, 90)
@@ -318,7 +318,8 @@ class TransparencyDialog(CadDialog):
 PROP_LABELS = [('on', 'Act./Desact.'), ('frozen', 'Inutilizar/Reutilizar'),
                ('locked', 'Bloquear/Desbloquear'), ('plot', 'Trazar/No trazar'),
                ('color', 'Color'), ('linetype', 'Tipo de línea'),
-               ('lineweight', 'Grosor de línea'), ('transparency', 'Transparencia')]
+               ('lineweight', 'Grosor de línea'), ('transparency', 'Transparencia'),
+               ('fill', 'Color de relleno'), ('filltr', 'Transparencia de relleno')]
 
 
 class LayerStatesDialog(CadDialog):

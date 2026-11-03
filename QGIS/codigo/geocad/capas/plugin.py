@@ -13,7 +13,7 @@ from qgis.PyQt.QtCore import Qt, QTimer
 from .compat import QAction, qt
 from .controller import CadLayerController
 from .icons import icon
-from .barra import ColorCombo, LinetypeCombo, LineweightCombo
+from .barra import ColorCombo, FillCombo, FillTransparencyCombo, LinetypeCombo, LineweightCombo
 from .layer_combo import LayerCombo
 from .panel import LayersDock
 from .maptools import PickFeatureTool
@@ -46,12 +46,16 @@ class LayerPropertiesPlugin:
         self.toolbar.addAction(self.a_props)
         # la barra de IngeCAD: cuatro listas (también en Administrar botones, 3.46.0)
         self.combo = LayerCombo(self.ctrl, self.toolbar)
+        # 3.64.0: y el relleno de los polígonos, color y transparencia
         self.props = [ColorCombo(self.ctrl, self.toolbar), LinetypeCombo(self.ctrl, self.toolbar),
-                      LineweightCombo(self.ctrl, self.toolbar)]
+                      LineweightCombo(self.ctrl, self.toolbar), FillCombo(self.ctrl, self.toolbar),
+                      FillTransparencyCombo(self.ctrl, self.toolbar)]
         for widget, clave, texto in ((self.combo, 'capa', 'Capa CAD actual'),
                                      (self.props[0], 'color', 'Color'),
                                      (self.props[1], 'linetype', 'Tipo de línea'),
-                                     (self.props[2], 'lineweight', 'Grosor de línea')):
+                                     (self.props[2], 'lineweight', 'Grosor de línea'),
+                                     (self.props[3], 'fill', 'Color de relleno'),
+                                     (self.props[4], 'filltr', 'Transparencia de relleno')):
             wa = self.toolbar.addWidget(widget)
             wa.setProperty('geocad_id', 'capas:' + clave)
             wa.setText(texto)

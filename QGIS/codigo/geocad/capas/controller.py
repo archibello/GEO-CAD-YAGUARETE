@@ -19,7 +19,8 @@ from qgis.core import (
     Qgis, QgsCategorizedSymbolRenderer, QgsDefaultValue, QgsEditorWidgetSetup,
     QgsExpression, QgsFeatureRequest, QgsFillSymbol, QgsLineSymbol,
     QgsMarkerSymbol, QgsProperty, QgsRendererCategory, QgsSettings,
-    QgsSimpleLineSymbolLayer, QgsSimpleMarkerSymbolLayer, QgsVectorLayer,
+    QgsSimpleFillSymbolLayer, QgsSimpleLineSymbolLayer, QgsSimpleMarkerSymbolLayer,
+    QgsVectorLayer,
 )
 
 from . import filtros
@@ -34,11 +35,18 @@ SETTINGS = 'cad_layer_manager/'
 NAME_EXPR = 'if(coalesce("%s", \'\') = \'\', \'0\', "%s")' % (FIELD, FIELD)
 INVALID_CHARS = '<>/\\":;?*|=`,'
 STATE_PROPS = ('on', 'frozen', 'locked', 'plot', 'color', 'linetype',
-               'lineweight', 'transparency')
+               'lineweight', 'transparency', 'fill', 'filltr')
 # Propiedades actuales de los objetos nuevos ($CECOLOR, $CELTYPE, $CELWEIGHT de
 # IngeCAD, 3.60.0): None = PorCapa. Van a los campos de Dibujo CAD.
+# 3.64.0 (Fernando, 03/11/2026: «color de fondo y transparencia de los
+# polígonos»): relleno ('#rrggbb' o 'none' = sin relleno) y su transparencia
+# (0-90 %), sólo en las capas de polígonos.
 CURRENT_PROPS = {'color': ('cecolor', 'CAD_COLOR'), 'linetype': ('celtype', 'CAD_LTYPE'),
-                 'lineweight': ('celweight', 'CAD_LW')}
+                 'lineweight': ('celweight', 'CAD_LW'), 'fill': ('cefill', 'CAD_FILL'),
+                 'filltr': ('cefilltr', 'CAD_FILLTR')}
+FILL_PROPS = ('fill', 'filltr')
+NUMBER_PROPS = ('lineweight', 'filltr')     # campos numéricos (los demás, texto)
+NO_FILL = 'none'                            # CAD_FILL de un polígono sin relleno
 
 
 # --------------------------------------------------------------------------
@@ -89,6 +97,14 @@ def is_null(v):
     return str(v) in ('', 'NULL')
 
 
+def clamp_transparency(v):
+    """La transparencia como la acepta AutoCAD: un entero de 0 a 90."""
+    try:
+        return max(0, min(90, int(round(float(v)))))
+    except (TypeError, ValueError):
+        return 0
+
+
 def norm_name(v):
     return '0' if is_null(v) else str(v)
 
@@ -98,6 +114,7 @@ def new_layer(name, **kw):
         'name': name, 'description': '', 'on': True, 'frozen': False,
         'locked': False, 'plot': True, 'color': {'aci': 7, 'rgb': None},
         'linetype': 'Continuous', 'lineweight': LW_DEFAULT, 'transparency': 0,
+        'fill': None, 'filltr': 0,          # relleno de los polígonos (None = sin relleno)
     }
     lay.update(kw)
     return lay
@@ -116,7 +133,7 @@ def _legacy_layer(code, p):
 def normalize_config(data, ensure_zero=True):
     """Convierte cualquier formato conocido (v1, v2, lista) en config v2."""
     cfg = {'version': 2, 'current': '0', 'layers': [], 'states': {}, 'filters': [],
-           'cecolor': None, 'celtype': None, 'celweight': None}
+           'cecolor': None, 'celtype': None, 'celweight': None, 'cefill': None, 'cefilltr': None}
     if isinstance(data, dict) and 'layers' in data:
         cfg['current'] = str(data.get('current', '0'))
         cfg['states'] = data.get('states', {}) or {}
@@ -143,6 +160,9 @@ def normalize_config(data, ensure_zero=True):
             lay['linetype'] = LEGACY_LINETYPES.get(lay['linetype'], 'Continuous')
         if not isinstance(lay['color'], dict):
             lay['color'] = {'aci': 7, 'rgb': None}
+        if not isinstance(lay['fill'], dict):
+            lay['fill'] = None
+        lay['filltr'] = clamp_transparency(lay['filltr'])
         if lay['name'].lower() in seen:
             continue
         seen.add(lay['name'].lower())
@@ -181,6 +201,20 @@ def override_color_expression(field, bylayer_expr, dark):
             "WHEN lower(%s) = '#000000' THEN CASE WHEN @layout_name IS NULL THEN '%s' ELSE '0,0,0,255' END "
             "WHEN @layout_name IS NOT NULL AND @cad_ctb = 'grayscale' THEN color_grayscale_average(%s) "
             "ELSE %s END" % (f, bylayer_expr, f, bw, f, f))
+
+
+def fill_color_expression(bylayer_expr, transparency, dark, has_fill, has_tr):
+    """El color de relleno de un polígono: CAD_FILL ('#rrggbb', 'none' o vacío =
+    el de su capa CAD) con la transparencia de CAD_FILLTR (vacía = la de la capa)."""
+    c = bylayer_expr
+    if has_fill:
+        c = ("CASE WHEN lower(coalesce(\"CAD_FILL\", '')) = '%s' THEN '0,0,0,0' ELSE %s END"
+             % (NO_FILL, override_color_expression('CAD_FILL', bylayer_expr, dark)))
+    tr = str(clamp_transparency(transparency))
+    if has_tr:
+        tr = 'max(0, min(90, coalesce("CAD_FILLTR", %s)))' % tr
+    return ("CASE WHEN color_part(%s, 'alpha') = 0 THEN '0,0,0,0' "
+            "ELSE set_color_part(%s, 'alpha', round(255 * (100 - %s) / 100)) END" % (c, c, tr))
 
 
 class CadLayerController(QObject):
@@ -918,10 +952,11 @@ class CadLayerController(QObject):
         out, nuevos = {}, False
         for prop, (key, field) in CURRENT_PROPS.items():
             value = self.cfg.get(key)
-            if value is None or (prop == 'linetype' and geometry_kind(layer) == 'point'):
+            if value is None or (prop == 'linetype' and geometry_kind(layer) == 'point') \
+                    or (prop in FILL_PROPS and geometry_kind(layer) != 'polygon'):
                 continue
             nuevos = nuevos or layer.fields().indexOf(field) == -1
-            if self._ensure_field(layer, field, 'double' if prop == 'lineweight' else 'string'):
+            if self._ensure_field(layer, field, 'double' if prop in NUMBER_PROPS else 'string'):
                 out[layer.fields().indexOf(field)] = value
         if nuevos:
             self._apply_to(layer, self.cfg)        # la simbología lee los campos nuevos
@@ -932,6 +967,8 @@ class CadLayerController(QObject):
         field = CURRENT_PROPS[prop][1]
         valor, hay = None, False
         for lyr, fids in self.selection_sources():
+            if prop in FILL_PROPS and geometry_kind(lyr) != 'polygon':
+                continue                    # el relleno es sólo de los polígonos
             idx = lyr.fields().indexOf('COLOR' if prop == 'color' and
                                        lyr.customProperty('dibujo_cad/text_layer') == '1' else field)
             req = QgsFeatureRequest().setFilterFids(fids)
@@ -939,9 +976,9 @@ class CadLayerController(QObject):
             for f in lyr.getFeatures(req):
                 v = None if idx == -1 or is_null(f.attribute(idx)) or f.attribute(idx) == '' \
                     else f.attribute(idx)
-                if prop == 'color' and v is not None:
+                if prop in ('color', 'fill') and v is not None:
                     v = str(v).lower()
-                elif prop == 'lineweight' and v is not None:
+                elif prop in NUMBER_PROPS and v is not None:
                     try:
                         v = float(v)
                     except (TypeError, ValueError):     # un valor que no es grosor: como mixto
@@ -965,7 +1002,8 @@ class CadLayerController(QObject):
         """Cambia el color, tipo o grosor propio de los objetos seleccionados."""
         field = CURRENT_PROPS[prop][1]
         title = title or {'color': 'Color', 'linetype': 'Tipo de línea',
-                          'lineweight': 'Grosor de línea'}[prop]
+                          'lineweight': 'Grosor de línea', 'fill': 'Color de relleno',
+                          'filltr': 'Transparencia de relleno'}[prop]
         sources = self.selection_sources()
         # la capa activa todavía sin capas CAD (sin LAYER_CODE, con otro estilo): se prepara
         # como en el primer cambio del panel, si no lo escrito no se ve (Fernando, 3.60.2)
@@ -975,10 +1013,10 @@ class CadLayerController(QObject):
         for lyr, fids in sources:
             text = lyr.customProperty('dibujo_cad/text_layer') == '1'
             name = 'COLOR' if prop == 'color' and text else field
-            if text and prop != 'color':
+            if (text and prop != 'color') or (prop in FILL_PROPS and geometry_kind(lyr) != 'polygon'):
                 continue
             if value is not None and not self._ensure_field(
-                    lyr, name, 'double' if prop == 'lineweight' else 'string'):
+                    lyr, name, 'double' if prop in NUMBER_PROPS else 'string'):
                 continue
             idx = lyr.fields().indexOf(name)
             if idx == -1:
@@ -1405,10 +1443,21 @@ class CadLayerController(QObject):
                 sl.setCustomDashPatternUnit(mm)
             sl.setDataDefinedProperty(symbol_property('CustomDash'), QgsProperty.fromExpression(
                 "CASE WHEN coalesce(\"CAD_LTYPE\", '') = '' THEN '%s' %s ELSE '10;0' END" % (fmt(pattern), whens)))
+        # Relleno de los polígonos (3.64.0): sólo si la capa CAD o algún objeto lo tiene,
+        # así los dibujos de antes se dibujan igual que siempre
+        fill = None
+        if kind == 'polygon' and (lay.get('fill') or has('CAD_FILL')):
+            fill = QgsSimpleFillSymbolLayer()
+            fill.setStrokeStyle(qt('PenStyle', 'NoPen'))
+            fill.setDataDefinedProperty(symbol_property('FillColor'), QgsProperty.fromExpression(
+                fill_color_expression(self._fill_layer_expression(lay, dark), lay.get('filltr', 0),
+                                      dark, has('CAD_FILL'), has('CAD_FILLTR'))))
         # Trazar desactivado: se ve en pantalla pero no en composiciones
         if not lay.get('plot', True):
-            sl.setDataDefinedProperty(symbol_property('LayerEnabled'),
-                                      QgsProperty.fromExpression('@layout_name IS NULL'))
+            for capa in (sl, fill):
+                if capa is not None:
+                    capa.setDataDefinedProperty(symbol_property('LayerEnabled'),
+                                                QgsProperty.fromExpression('@layout_name IS NULL'))
 
         if kind == 'block':
             from qgis.core import QgsGeometryGeneratorSymbolLayer
@@ -1424,7 +1473,7 @@ class CadLayerController(QObject):
         elif kind == 'point':
             sym = QgsMarkerSymbol([sl])
         elif kind == 'polygon':
-            sym = QgsFillSymbol([sl])
+            sym = QgsFillSymbol([fill, sl] if fill is not None else [sl])
         else:
             sym = QgsLineSymbol([sl])
         opacity = (100 - int(lay.get('transparency', 0))) / 100.0
@@ -1531,6 +1580,21 @@ class CadLayerController(QObject):
             layer.setLabeling(QgsVectorLayerSimpleLabeling(st))
         except Exception:  # noqa: BLE001
             pass
+
+    def _fill_layer_expression(self, lay, dark):
+        """El relleno de la capa CAD en pantalla y en papel (como el color de línea;
+        el 7, blanco o negro según el fondo y negro en papel); sin relleno, '0,0,0,0'."""
+        color = lay.get('fill')
+        if not color:
+            return "'0,0,0,0'"
+        bw = self.is_bw(color)
+        base = QColor(('#ffffff' if dark else '#000000') if bw else color_hex(color))
+        paper = QColor('#000000') if bw else QColor(base)
+        gray = int(round(0.299 * paper.red() + 0.587 * paper.green() + 0.114 * paper.blue()))
+        return ("CASE WHEN @layout_name IS NULL THEN '%d,%d,%d,255' WHEN @cad_ctb = 'monochrome' "
+                "THEN '0,0,0,255' WHEN @cad_ctb = 'grayscale' THEN '%d,%d,%d,255' "
+                "ELSE '%d,%d,%d,255' END" % (base.red(), base.green(), base.blue(), gray, gray, gray,
+                                            paper.red(), paper.green(), paper.blue()))
 
     def preview_color(self, lay):
         if self.is_bw(lay['color']):

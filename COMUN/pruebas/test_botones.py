@@ -72,7 +72,8 @@ print("ok modelo")
 
 # ---- 1a. 3.60.0: Yaguá Capas = la barra de IngeCAD, también en lo ya guardado -----------
 assert dict(DEFECTO["qgis"])["Yaguá Capas"] == ("capas:layprops", "capas:capa", "capas:color",
-                                                "capas:linetype", "capas:lineweight")
+                                                "capas:linetype", "capas:lineweight",
+                                                "capas:fill", "capas:filltr")      # 3.64.0
 assert "capas:capa" not in dict(DEFECTO["qgis"])["Yaguá Dibujo"]
 viejo = {"qgis": {"categorias": [{"nombre": "Yaguá Dibujo", "botones": ["dibujo:line", "capas:capa"]},
                                  {"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:layiso"]}],
@@ -81,10 +82,12 @@ BT.archivo().write_text(json.dumps(viejo), encoding="utf-8")
 m = BT.leer("qgis")
 assert m["categorias"] == [{"nombre": "Yaguá Dibujo", "botones": ["dibujo:line"]},
                            {"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:capa", "capas:color",
-                                                                 "capas:linetype", "capas:lineweight"]}], m
+                                                                 "capas:linetype", "capas:lineweight",
+                                                                 "capas:fill", "capas:filltr"]}], m
 assert m["ocultos"] == ["dibujo:line"]
 assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones"] == ["capas-ingecad",
-                                                                                      "capas-panel", "capas-banco"]
+                                                                                      "capas-panel", "capas-banco",
+                                                                                      "capas-relleno"]
 # 3.60.7: lo que ya pasó por la 3.60.2: LAYISO y los demás sólo en el banco Capas CAD
 BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "Mía", "botones": [
     "capas:layiso", "dibujo:line", "capas:lwdisplay"]}], "ocultos": ["capas:layoff", "dibujo:arc"],

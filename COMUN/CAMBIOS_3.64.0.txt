@@ -1,0 +1,44 @@
+GeoCAD - versión 3.64.0
+=======================
+FUNCIÓN NUEVA (sólo QGIS). IngeCAD no cambia; basta con actualizar QGIS
+(GeoCAD > Actualizar pone al día los dos igual).
+
+Lo que pidió Fernando (03/11/2026), para Yaguá Capas: «cuando estamos
+trabajando con polígonos, ¿podríamos agregar dos nuevos campos para
+configurar color de fondo y transparencia de los polígonos?».
+Acordado: sólo QGIS (IngeCAD 0.7.0 no tiene relleno ni transparencia por
+capa: rellena con sombreados); por capa CAD y por objeto, como el Color.
+
+Cambios
+- Hasta ahora los polígonos se dibujaban sólo con el borde. Ahora pueden
+  tener relleno: un color y su transparencia (0 a 90 %, como en AutoCAD).
+  El borde sigue con el color, el tipo y el grosor de siempre, encima del
+  relleno.
+- Panel Yaguá Capas: con una capa QGIS de polígonos, dos columnas nuevas
+  después del Grosor: «Relleno» (Ninguno o un color; clic: Ninguno /
+  Seleccionar color...) y «Transp.» (clic: 0 a 90 de a 10, u Otro...). Es
+  el relleno de la capa CAD. Con capas de líneas o de puntos no se ven.
+  Se pueden ocultar con el clic derecho en el encabezado, como las demás.
+- Barra Yaguá Capas: dos listas nuevas detrás del Grosor, «Color de
+  relleno» (PorCapa, Ninguno, los colores de siempre y Seleccionar
+  color...) y «Transparencia de relleno» (PorCapa, 0 % a 90 %, Otro...).
+  Igual que Color: con polígonos seleccionados los cambian; sin selección,
+  son lo actual para el próximo polígono. Sólo se habilitan con polígonos.
+- Lo de cada objeto va a dos campos nuevos de la tabla, junto a CAD_COLOR,
+  CAD_LTYPE y CAD_LW: CAD_FILL (texto: '#rrggbb' como CAD_COLOR, o 'none' =
+  sin relleno) y CAD_FILLTR (número de 0 a 90). Vacío = PorCapa. Se crean
+  sólo en las capas de polígonos y la primera vez que se usan.
+- Una capa CAD nueva arranca sin relleno, y los dibujos de antes se ven
+  igual que siempre hasta que se les pone relleno.
+- La transparencia de la capa (la de siempre) se suma a la del relleno.
+- En papel el relleno sigue la tabla de estilos (monocromo: negro; escala
+  de grises: gris), como el color de línea; con «Imprimir» apagado no sale.
+- Los estados de capa guardan y recuperan también el relleno.
+- Administrar botones: las dos listas nuevas están de fábrica en Yaguá
+  Capas y se agregan solas, una vez, detrás del Grosor en lo ya guardado.
+- El relleno queda en QGIS: al pasar los polígonos a IngeCAD no se
+  convierte en sombreado.
+
+Pruebas: test_relleno_capas (nueva), test_botones y test_capas_qgis
+actualizadas; banco_relleno_qgis (nuevo: el relleno dibujado de verdad,
+medido en píxeles) y banco_capas_qgis con QGIS 4.2.2.

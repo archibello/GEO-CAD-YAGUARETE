@@ -70,7 +70,7 @@ DEFECTO = {
         # 3.60.0: la barra de IngeCAD (Fernando, 01/11/2026), lista de capa + propiedades;
         # 3.60.2: y primero el botón del panel Yaguá Capas
         ("Yaguá Capas", ("capas:layprops", "capas:capa", "capas:color", "capas:linetype",
-                         "capas:lineweight")),
+                         "capas:lineweight", "capas:fill", "capas:filltr")),
         ("Yaguá-IngeCAD", ("puente:send",)),
         ("Yaguá Setting", (
             "dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:properties", "dibujo:cmdline",)),
@@ -133,7 +133,10 @@ CAPAS_INGECAD = ("capas:capa", "capas:color", "capas:linetype", "capas:lineweigh
 CAPAS_BANCO = tuple("capas:" + c for c in (
     "laymcur", "layerp", "laymch", "layiso", "layuniso", "layoff", "layfrz", "laylck",
     "layulk", "layon", "laythw", "lwdisplay"))
-MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco")}
+#: «capas-relleno» (3.64.0): el color y la transparencia de relleno de los polígonos,
+#: detrás del grosor donde esté (Fernando, 03/11/2026).
+CAPAS_RELLENO = ("capas:fill", "capas:filltr")
+MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno")}
 
 
 def _migrar(programa: str, crudo: dict) -> bool:
@@ -172,6 +175,16 @@ def _migrar(programa: str, crudo: dict) -> bool:
                 if isinstance(c, dict):
                     c["botones"] = [b for b in c.get("botones") or () if b not in CAPAS_BANCO]
             crudo["ocultos"] = [b for b in crudo.get("ocultos") or () if b not in CAPAS_BANCO]
+        elif nombre == "capas-relleno":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any(b in CAPAS_RELLENO for c in cats for b in c.get("botones") or ()):
+                continue
+            destino = next((c for c in cats if "capas:lineweight" in (c.get("botones") or ())),
+                           next((c for c in cats if c.get("nombre") == "Yaguá Capas"), None))
+            if destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("capas:lineweight") + 1 if "capas:lineweight" in bs else len(bs)
+                destino["botones"] = bs[:at] + list(CAPAS_RELLENO) + bs[at:]
     crudo["migraciones"] = hechas
     return cambio
 

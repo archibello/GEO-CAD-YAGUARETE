@@ -63,8 +63,10 @@ assert "(C_STATUS, C_NAME, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT, C_DE
 assert "DEFAULT_HIDDEN = str(C_DESC)" in panel            # Descripción oculta de entrada
 assert "if col != C_NAME:\n            self.make_current" in panel   # doble clic = actual
 # lo propio de GeoCAD que IngeCAD no tiene, fuera (acordado)
-for fuera in ("Transparencia", "Invertir filtro", "borrador", "Capas no utilizadas"):
+for fuera in ("Invertir filtro", "borrador", "Capas no utilizadas"):
     assert fuera not in panel, fuera
+# la transparencia de capa sigue fuera; 3.64.0 sólo la del relleno de los polígonos
+assert panel.count("Transparencia") == panel.count("Transparencia de relleno") > 0
 assert not (CAPAS / "manager.py").exists()
 plugin = (CAPAS / "plugin.py").read_text(encoding="utf-8")
 assert "LayerManagerDock" not in plugin and "LayersDock" in plugin
@@ -129,7 +131,7 @@ for n in ("ancho = 96", "ancho = 128", "ancho = 104"):         # los de IngeCAD 
 # Fernando: «el resto puede estar más justo»: capa, Color y Tipo con el ancho de IngeCAD;
 # «lo importante es que se vean los números»: sólo Grosor a la medida de su texto
 assert "self.setFixedWidth(self.ancho)" in barra and "self.setFixedWidth(200)" in combo
-assert barra.count("entero = True") == 1 and "ajustar_desplegable" not in combo
+assert barra.count("entero = True") == 2 and "ajustar_desplegable" not in combo
 assert "class GrosorDelegate(FilaDelegate)" in barra and "GrosorDelegate(self.muestra, self)" in barra
 assert "mw = max(0, min(self.muestra[0], libre))" in barra      # se recorta la muestra, no el número
 assert "QIcon(opt.icon)" in barra                                # copia (opt.icon es una referencia)

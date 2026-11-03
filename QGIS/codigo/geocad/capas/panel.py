@@ -19,6 +19,11 @@ clic muestra sus capas, clic derecho las activa, inutiliza o bloquea de una
 vez y crea, cambia el nombre o elimina un grupo. Las capas entran a un grupo
 arrastradas sobre él o desde su clic derecho.
 
+3.64.0 (Fernando, 03/11/2026: «cuando estamos trabajando con polígonos ...
+color de fondo y transparencia»): con una capa de polígonos, las columnas
+Relleno (Ninguno o un color) y Transp. (0-90 %) después del Grosor. IngeCAD no
+las tiene: allí el relleno es un sombreado.
+
 Diferencia con IngeCAD: las capas CAD son las de la capa QGIS activa (el
 título lo dice) y los filtros de propiedades de AutoCAD no existen acá.
 """
@@ -34,8 +39,8 @@ from qgis.PyQt.QtWidgets import (
 
 from . import filtros
 from .aci import ACI_RGB, color_hex
-from .compat import accepted_code, enum, exec_dialog, exec_menu, qt
-from .dialogs import ColorDialog, LinetypeDialog
+from .compat import accepted_code, enum, exec_dialog, exec_menu, geometry_kind, qt
+from .dialogs import ColorDialog, LinetypeDialog, TransparencyDialog
 from .icons import color_swatch, icon
 from .linetypes import LINEWEIGHTS, LW_DEFAULT, lineweight_text
 # letra, filas y encabezado compartidos con la barra Yaguá Capas (3.61.2)
@@ -43,13 +48,17 @@ from .medidas import ENCABEZADO, FILA, ICONO_COL, PANEL_STYLE, letra_chica
 
 TITLE = 'Yaguá Capas'         # «Capas» a secas es el panel de QGIS (3.60.2)
 (C_STATUS, C_NAME, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT, C_DESC) = range(10)
+# 3.64.0: al final en el modelo (las columnas ocultas se guardan por número) y a la
+# vista después del Grosor; sólo con capas de polígonos
+C_FILL, C_FILLTR = 10, 11
+FILL_COLS = (C_FILL, C_FILLTR)
 ROLE = qt('ItemDataRole', 'UserRole')
 STATE_ROLE = ROLE + 1           # el estado de la celda (encendida, reutilizada, desbloqueada, imprime)
 ALL_LAYERS, USED_LAYERS = -1, -2
 NAME_WIDTH = 150
-HIDEABLE = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT, C_DESC)
+HIDEABLE = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_FILL, C_FILLTR, C_PLOT, C_DESC)
 DEFAULT_HIDDEN = str(C_DESC)    # Descripción oculta hasta que se pida (IngeCAD)
-AUTO_SIZED = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_PLOT)
+AUTO_SIZED = (C_STATUS, C_ON, C_FRZ, C_LCK, C_COLOR, C_LT, C_LW, C_FILL, C_FILLTR, C_PLOT)
 ICON_COLS = (C_STATUS, C_ON, C_FRZ, C_LCK, C_PLOT)
 ICON_WIDTH = ICONO_COL          # 28 como en IngeCAD; el encabezado de QGIS pedía 40 (3.60.5)
 
@@ -78,6 +87,11 @@ def color_text(color):
         return str(aci)
     h = (color.get('rgb') or '#000000').lstrip('#')
     return '%d,%d,%d' % tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def fill_text(color):
+    """Lo que muestra la columna Relleno: Ninguno, el número ACI o R,G,B."""
+    return 'Ninguno' if not color else color_text(color)
 
 
 def echo(ctrl, text):
@@ -142,7 +156,7 @@ class LayersPanel(QWidget):
         self._user_sized = set()
         self._auto_sizing = False
 
-        self.table = QTableWidget(0, 10, self)
+        self.table = QTableWidget(0, 12, self)
         heads = ((C_STATUS, '✓', 'Estado', None), (C_NAME, 'Nombre', 'Nombre', None),
                  (C_ON, '', 'Encendida/Apagada', 'bulb_on'), (C_FRZ, '', 'Inut', 'thaw'),
                  (C_LCK, '', 'Bloq', 'lock_open'), (C_COLOR, '■', 'Color', None),
@@ -150,7 +164,9 @@ class LayersPanel(QWidget):
                  # («Tipo de línea» contra «Continuous»); el nombre entero, en la ayuda (3.60.5)
                  (C_LT, 'Tipo', 'Tipo de línea', None),
                  (C_LW, 'Grosor', 'Grosor de línea', None),
-                 (C_PLOT, '', 'Imprimir', 'plot'), (C_DESC, 'Descripción', 'Descripción', None))
+                 (C_PLOT, '', 'Imprimir', 'plot'), (C_DESC, 'Descripción', 'Descripción', None),
+                 (C_FILL, 'Relleno', 'Color de relleno', None),
+                 (C_FILLTR, 'Transp.', 'Transparencia de relleno', None))
         for col, text, tip, ico in heads:
             item = QTableWidgetItem(text)
             item.setToolTip(tip)
@@ -176,6 +192,8 @@ class LayersPanel(QWidget):
         self.table.setMinimumHeight(48)      # poca altura mínima: no agranda la ventana (3.60.4)
 
         header = self.table.horizontalHeader()
+        header.moveSection(header.visualIndex(C_FILL), header.visualIndex(C_LW) + 1)
+        header.moveSection(header.visualIndex(C_FILLTR), header.visualIndex(C_FILL) + 1)
         header.setMinimumSectionSize(16)
         interactive = enum(QHeaderView, 'ResizeMode', 'Interactive')
         for col in AUTO_SIZED + (C_NAME,):
@@ -279,21 +297,33 @@ class LayersPanel(QWidget):
 
     def _restore_hidden_columns(self):
         stored = self.ctrl.setting('panel/hidden_columns', DEFAULT_HIDDEN, str)
-        hidden = {int(c) for c in str(stored or '').split(',') if c.strip().isdigit()}
+        self._hidden = {int(c) for c in str(stored or '').split(',') if c.strip().isdigit()}
+        self._show_columns()
+
+    def _polygons(self):
+        return self.ctrl.active and geometry_kind(self.ctrl.layer) == 'polygon'
+
+    def _show_columns(self):
+        """Las ocultas por el usuario, y las de relleno si la capa no es de polígonos."""
+        polygons = self._polygons()
         for col in HIDEABLE:
-            self.table.setColumnHidden(col, col in hidden)
+            self.table.setColumnHidden(col, col in self._hidden or (col in FILL_COLS and not polygons))
 
     def _save_hidden_columns(self):
-        hidden = [str(c) for c in HIDEABLE if self.table.isColumnHidden(c)]
+        hidden = [str(c) for c in HIDEABLE if c in self._hidden]
         self.ctrl.set_setting('panel/hidden_columns', ','.join(hidden))
 
     def _header_menu(self, pos):
         menu = QMenu(self)
-        for col in HIDEABLE:
+        polygons = self._polygons()
+        header = self.table.horizontalHeader()
+        for col in sorted(HIDEABLE, key=header.visualIndex):
+            if col in FILL_COLS and not polygons:
+                continue
             item = self.table.horizontalHeaderItem(col)
             action = menu.addAction(item.toolTip() if item else str(col))
             action.setCheckable(True)
-            action.setChecked(not self.table.isColumnHidden(col))
+            action.setChecked(col not in self._hidden)
             action.triggered.connect(lambda checked, c=col: self._toggle_column(c, checked))
         menu.addSeparator()
         menu.addAction('Optimizar todas las columnas').triggered.connect(
@@ -301,8 +331,12 @@ class LayersPanel(QWidget):
         exec_menu(menu, self.table.horizontalHeader().mapToGlobal(pos))
 
     def _toggle_column(self, col, visible):
-        self.table.setColumnHidden(col, not visible)
+        if visible:
+            self._hidden.discard(col)
+        else:
+            self._hidden.add(col)
         self._save_hidden_columns()
+        self._show_columns()
 
     def _optimize_columns(self):
         self.table.resizeColumnToContents(C_NAME)
@@ -319,6 +353,7 @@ class LayersPanel(QWidget):
         dock = self.parent()
         if isinstance(dock, QDockWidget):
             dock.setWindowTitle(title)
+        self._show_columns()
         self._loading = True
         try:
             if not active:
@@ -384,6 +419,22 @@ class LayersPanel(QWidget):
         lw = QTableWidgetItem(lw_label(lay['lineweight']))
         lw.setFlags(enabled | selectable)
         self.table.setItem(row, C_LW, lw)
+
+        fill = QTableWidgetItem(fill_text(lay.get('fill')))
+        fill.setTextAlignment(qt('AlignmentFlag', 'AlignCenter'))
+        if lay.get('fill'):
+            fill.setIcon(QIcon(color_swatch(color_hex(lay['fill']), 12, 12)))
+            fill.setToolTip('Relleno: %s' % color_text(lay['fill']))
+        else:
+            fill.setToolTip('Sin relleno')
+        fill.setFlags(enabled | selectable)
+        self.table.setItem(row, C_FILL, fill)
+
+        tr = QTableWidgetItem('%d' % int(lay.get('filltr', 0) or 0))
+        tr.setTextAlignment(qt('AlignmentFlag', 'AlignCenter'))
+        tr.setToolTip('Transparencia de relleno (0-90 %)')
+        tr.setFlags(enabled | selectable)
+        self.table.setItem(row, C_FILLTR, tr)
 
         self.table.setItem(row, C_DESC, QTableWidgetItem(lay.get('description', '')))
 
@@ -671,6 +722,36 @@ class LayersPanel(QWidget):
                 self.ctrl.set_props([name], linetype=dlg.value())
         elif col == C_LW:
             self._pick_lineweight(name)
+        elif col == C_FILL:
+            self._pick_fill(name, lay)
+        elif col == C_FILLTR:
+            self._pick_fill_transparency(name, lay)
+
+    def _pick_fill(self, name, lay):
+        menu = QMenu(self)
+        menu.addAction('Ninguno').triggered.connect(
+            lambda *_: self.ctrl.set_props([name], fill=None))
+        menu.addAction('Seleccionar color...').triggered.connect(
+            lambda *_: self._choose_fill(name, lay))
+        exec_menu(menu, QCursor.pos())
+
+    def _choose_fill(self, name, lay):
+        dlg = ColorDialog(self, lay.get('fill') or lay['color'])
+        if exec_dialog(dlg) == accepted_code() and dlg.color != lay.get('fill'):
+            self.ctrl.set_props([name], fill=dlg.color)
+
+    def _pick_fill_transparency(self, name, lay):
+        menu = QMenu(self)
+        for v in range(0, 100, 10):
+            menu.addAction('%d' % v).triggered.connect(
+                lambda *_, v=v: self.ctrl.set_props([name], filltr=v))
+        menu.addAction('Otro...').triggered.connect(lambda *_: self._choose_fill_transparency(name, lay))
+        exec_menu(menu, QCursor.pos())
+
+    def _choose_fill_transparency(self, name, lay):
+        dlg = TransparencyDialog(self, lay.get('filltr', 0) or 0, title='Transparencia de relleno')
+        if exec_dialog(dlg) == accepted_code():
+            self.ctrl.set_props([name], filltr=dlg.value())
 
     def _pick_lineweight(self, name):
         menu = QMenu(self)

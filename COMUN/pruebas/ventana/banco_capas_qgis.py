@@ -80,9 +80,12 @@ eventos()
 
 # ---- 1. la barra de IngeCAD -----------------------------------------------------------
 ids = [a.property("geocad_id") for a in P.toolbar.actions()]
-comprobar(ids == ["capas:layprops", "capas:capa", "capas:color", "capas:linetype", "capas:lineweight"],
-          "barra = botón del panel + capa + color + tipo + grosor (%s)" % ids)
-comprobar(all(isinstance(a, QWidgetAction) for a in P.toolbar.actions()[1:]), "las cuatro son listas")
+comprobar(ids == ["capas:layprops", "capas:capa", "capas:color", "capas:linetype", "capas:lineweight",
+                  "capas:fill", "capas:filltr"],
+          "barra = botón del panel + capa + color + tipo + grosor + relleno (3.64.0) (%s)" % ids)
+comprobar(all(isinstance(a, QWidgetAction) for a in P.toolbar.actions()[1:]), "las seis son listas")
+comprobar(not P.props[3].isEnabled() and not P.props[4].isEnabled(),
+          "3.64.0: con una capa de líneas, las listas de relleno apagadas")
 # 3.60.2: el panel aparece solo al arrancar, en pestaña junto al panel Capas de QGIS
 comprobar(P.dock is not None and P.dock.isVisible() and P.a_props.isChecked(),
           "3.60.2: el panel Yaguá Capas está a la vista desde el arranque")
@@ -159,7 +162,9 @@ comprobar(t.fontInfo().pixelSize() == P.props[2].fontInfo().pixelSize(),
           "3.61.2: el panel y la barra con la misma letra (%d)" % t.fontInfo().pixelSize())
 cabeza = [t.horizontalHeaderItem(c).toolTip() for c in range(t.columnCount())]
 comprobar(cabeza == ["Estado", "Nombre", "Encendida/Apagada", "Inut", "Bloq", "Color", "Tipo de línea",
-                     "Grosor de línea", "Imprimir", "Descripción"], "columnas de IngeCAD")
+                     "Grosor de línea", "Imprimir", "Descripción", "Color de relleno",
+                     "Transparencia de relleno"], "columnas de IngeCAD (+ relleno, 3.64.0)")
+comprobar(t.isColumnHidden(10) and t.isColumnHidden(11), "3.64.0: capa de líneas, sin columnas de relleno")
 comprobar(t.isColumnHidden(9) and not t.isColumnHidden(5), "Descripción oculta de entrada")
 comprobar(not panel.filters.isVisible(), "sin filtros: el árbol no se ve")
 comprobar(panel._rows == ["0"] and t.item(0, 0).text() == "✓", "capa 0 actual (✓)")
@@ -257,7 +262,7 @@ comprobar(panel2.table.isColumnHidden(6) and panel2.table.isColumnHidden(9), "co
 panel._toggle_column(6, True)
 
 # ---- 4. la barra: selección o lo próximo -----------------------------------------------
-color, tipo, grosor = P.props
+color, tipo, grosor = P.props[:3]
 color.apply("#ff0000")
 tipo.apply("DASHED")
 eventos()
