@@ -128,6 +128,12 @@ a, b = pixeles(poli)
 comprobar(cerca(a, (255, 128, 128)) and cerca(b, (255, 128, 128)), "capa 0 roja al 50 %%: %s %s" % (a, b))
 fila = panel._rows.index("0")
 comprobar(t.item(fila, C_FILL).text() == "1" and t.item(fila, C_FILLTR).text() == "50", "panel: 1, 50")
+# 3.64.1: el cuadrito de la leyenda del panel Capas de QGIS con el mismo relleno (antes, azul)
+items = [i for i in poli.renderer().legendSymbolItems() if i.label() == "0"]
+img = items[0].symbol().asImage(QSize(40, 40))
+c = img.pixelColor(20, 20)
+comprobar(cerca((c.red(), c.green(), c.blue()), (255, 0, 0)) and 110 <= c.alpha() <= 145,
+          "leyenda de la capa 0 roja al 50 %%: %s %s" % ((c.red(), c.green(), c.blue()), c.alpha()))
 ctrl.set_props(["0"], transparency=50)                   # la de la capa sigue sumándose
 eventos()
 a, _b = pixeles(poli)

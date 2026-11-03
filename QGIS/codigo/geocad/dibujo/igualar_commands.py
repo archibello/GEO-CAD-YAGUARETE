@@ -197,7 +197,8 @@ class MatchPropCommand(EditCommand):
         src_lyr, src_f = self.origen
         lyr = self.layer
         valores = igualar.a_copiar(_attrs(src_lyr, src_f), _es_texto(src_lyr), _es_texto(lyr),
-                                   lyr.fields().names(), self.kind == 'point')
+                                   lyr.fields().names(), self.kind == 'point',
+                                   self.kind == 'polygon')
         if not valores:
             self.cl.echo('El origen no tiene propiedades CAD para copiar.')
             return
@@ -205,6 +206,8 @@ class MatchPropCommand(EditCommand):
         if 'LAYER_CODE' in valores:
             add_cad_layer_def([lyr], valores['LAYER_CODE'], sources=[src_lyr])
             cambio_estilo = True
+        if 'CAD_FILL' in valores or 'CAD_FILLTR' in valores:
+            cambio_estilo = True     # la simbología arma el relleno sólo si hay campos (3.64.1)
         for campo in list(valores):
             if lyr.fields().indexOf(campo) == -1:
                 tipo, largo = igualar.CAMPOS[campo]

@@ -70,6 +70,12 @@ con = expr("'255,0,0,255'", 95, True, True, True)
 assert "lower(coalesce(\"CAD_FILL\", '')) = 'none' THEN '0,0,0,0'" in con
 assert 'max(0, min(90, coalesce("CAD_FILLTR", 90)))' in con, con
 assert "color_part(" in con and "set_color_part(" in con
+# 3.64.1: la leyenda del panel Capas de QGIS no evalúa la expresión de cada objeto y
+# mostraba el azul de QGIS: el símbolo lleva fijo el relleno de su capa CAD
+assert "fill.setColor(self._fill_legend_color(lay, dark))" in ctrl
+leyenda = ctrl[ctrl.index("def _fill_legend_color"):ctrl.index("def preview_color")]
+assert "return QColor(0, 0, 0, 0)" in leyenda                        # sin relleno: nada
+assert "clamp_transparency(lay.get('filltr', 0))" in leyenda and "setAlpha(" in leyenda
 print("ok modelo")
 
 # ---- 3. panel: Relleno y Transp. después del Grosor, sólo con polígonos ----------------

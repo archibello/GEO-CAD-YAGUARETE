@@ -123,6 +123,21 @@ assert I.a_copiar({}, False, False) == {}
 assert I.a_copiar({"CAD_COLOR": "#123456"}, False, False) == {"CAD_COLOR": "#123456"}, "sólo lo que tiene"
 assert set(I.CAMPOS) >= {"LAYER_CODE", "CAD_COLOR", "COLOR", "CAD_LTYPE", "CAD_LW", "ALTURA", "FUENTE", "NEGRITA"}
 print("ok IGUALARPROP: capa CAD, color, tipo y grosor; entre textos altura, fuente y negrita")
+# 3.64.1: entre polígonos, también el relleno y su transparencia (Yaguá Capas, 3.64.0)
+pol = {"LAYER_CODE": "LOTES", "CAD_COLOR": "#0000FF", "CAD_FILL": "#FFCC00", "CAD_FILLTR": 40.0}
+assert I.a_copiar(pol, False, False, destino_poligono=True) == {
+    "LAYER_CODE": "LOTES", "CAD_COLOR": "#0000ff", "CAD_FILL": "#ffcc00", "CAD_FILLTR": 40.0}
+assert I.a_copiar({"CAD_FILL": "", "CAD_FILLTR": None}, False, False, destino_poligono=True) == \
+    {"CAD_FILL": None, "CAD_FILLTR": None}, "PorCapa se copia como PorCapa"
+assert I.a_copiar({"CAD_FILL": "none"}, False, False, destino_poligono=True) == {"CAD_FILL": "none"}, \
+    "Ninguno sigue siendo Ninguno"
+# a una línea, un punto o un texto no va el relleno
+assert "CAD_FILL" not in I.a_copiar(pol, False, False)
+assert "CAD_FILL" not in I.a_copiar(pol, False, False, destino_punto=True)
+assert "CAD_FILL" not in I.a_copiar(pol, False, True)
+assert I.CAMPOS["CAD_FILL"][0] == "string" and I.CAMPOS["CAD_FILLTR"][0] == "double", \
+    "los mismos tipos que crea Yaguá Capas (controller.NUMBER_PROPS)"
+print("ok IGUALARPROP entre polígonos: relleno y transparencia (3.64.1)")
 
 # ---- 5. los mismos alias que IngeCAD (el de PYTHONPATH: 0.6.8.2 o 0.6.7) -------------------------
 from core import aliases as ing
@@ -189,5 +204,14 @@ assert "return ensure_field(lyr, name, kind, length, self.mgr.cmdline.echo)" in 
 ig = (DIBUJO / "igualar_commands.py").read_text(encoding="utf-8")
 assert "from .properties_panel import CFG_KEY, TEXT_FLAG, add_cad_layer_def, ensure_field, restyle" in ig
 print("ok IGUALARPROP usa lo del panel Propiedades (campos y capas CAD)")
+ig_src = (DIBUJO / "igualar_commands.py").read_text(encoding="utf-8")
+assert "self.kind == 'polygon')" in ig_src and "'CAD_FILL' in valores" in ig_src, \
+    "el destino de polígonos recibe el relleno y la simbología se rearma"
+cm = (DIBUJO / "commands.py").read_text(encoding="utf-8")
+i = cm.index("if not layer.startEditing():")
+assert "tomada_por_ingecad(layer)" in cm[i:i + 400] and "tomada por IngeCAD" in cm[i:i + 400], \
+    "3.64.1: el aviso dice que la capa está tomada por IngeCAD"
+assert "from ..plugin import layer_source, locked" in cm
+print("ok capa tomada por IngeCAD: el comando lo avisa claro (3.64.1)")
 
 print("TODO OK test_vista_igualar_qgis")

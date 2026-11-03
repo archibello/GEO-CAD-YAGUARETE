@@ -1,0 +1,27 @@
+GeoCAD - versión 3.64.1
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; en IngeCAD no cambia nada
+(sólo el número).
+
+Fernando, 03/11/2026: IGUALARPROP «no se activa por teclado» y «¿por qué el
+panel Capas de QGIS no detecta color de relleno?».
+
+Cambios
+- Capa tomada por IngeCAD: mientras IngeCAD tiene una capa (la mandó el
+  Puente y no se devolvió), QGIS la deja en sólo lectura. Un comando de
+  Dibujo que edita (IGUALARPROP, LINEA, DESPLAZA...) no podía ponerla en
+  edición y avisaba sólo «No se puede editar la capa»; ahora dice «La capa
+  ... está tomada por IngeCAD: devuélvala desde IngeCAD (Puente) para
+  editarla en QGIS».
+- IGUALARPROP entre polígonos copia también el relleno y su transparencia
+  (CAD_FILL y CAD_FILLTR de Yaguá Capas, 3.64.0; vacío = PorCapa, Ninguno
+  sigue siendo Ninguno). A líneas, puntos y textos no va el relleno. Si a la
+  capa de destino le faltan esos campos, se crean.
+- Panel Capas de QGIS: el cuadrito de cada capa CAD de polígonos muestra su
+  relleno con su transparencia. Antes salía siempre el azul de QGIS: la
+  leyenda no calcula el color de cada objeto, y el relleno no tenía color
+  fijo. En el mapa no cambia nada.
+
+Pruebas: test_vista_igualar_qgis (qué copia IGUALARPROP entre polígonos y el
+aviso de capa tomada) y test_relleno_capas (el color fijo del relleno);
+banco_relleno_qgis mide el cuadrito de la leyenda con el QGIS real (4.2.2).

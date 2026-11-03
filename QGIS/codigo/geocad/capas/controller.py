@@ -1449,6 +1449,7 @@ class CadLayerController(QObject):
         if kind == 'polygon' and (lay.get('fill') or has('CAD_FILL')):
             fill = QgsSimpleFillSymbolLayer()
             fill.setStrokeStyle(qt('PenStyle', 'NoPen'))
+            fill.setColor(self._fill_legend_color(lay, dark))
             fill.setDataDefinedProperty(symbol_property('FillColor'), QgsProperty.fromExpression(
                 fill_color_expression(self._fill_layer_expression(lay, dark), lay.get('filltr', 0),
                                       dark, has('CAD_FILL'), has('CAD_FILLTR'))))
@@ -1595,6 +1596,17 @@ class CadLayerController(QObject):
                 "THEN '0,0,0,255' WHEN @cad_ctb = 'grayscale' THEN '%d,%d,%d,255' "
                 "ELSE '%d,%d,%d,255' END" % (base.red(), base.green(), base.blue(), gray, gray, gray,
                                             paper.red(), paper.green(), paper.blue()))
+
+    def _fill_legend_color(self, lay, dark):
+        """El relleno fijo del símbolo: el que muestra la leyenda del panel Capas de QGIS,
+        que no evalúa la expresión de cada objeto (sin él, el azul de QGIS; 3.64.1)."""
+        color = lay.get('fill')
+        if not color:
+            return QColor(0, 0, 0, 0)
+        bw = self.is_bw(color)
+        c = QColor(('#ffffff' if dark else '#000000') if bw else color_hex(color))
+        c.setAlpha(int(round(255 * (100 - clamp_transparency(lay.get('filltr', 0))) / 100)))
+        return c
 
     def preview_color(self, lay):
         if self.is_bw(lay['color']):

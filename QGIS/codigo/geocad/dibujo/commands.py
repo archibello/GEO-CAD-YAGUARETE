@@ -57,6 +57,16 @@ def _key(text):
     return text.strip().upper().lstrip('_')
 
 
+def tomada_por_ingecad(layer):
+    """El candado de IngeCAD de esa capa (el Puente la deja en sólo lectura) o None (3.64.1)."""
+    try:
+        from ..plugin import layer_source, locked
+        src = layer_source(layer)
+        return locked(*src) if src else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _xy(p):
     return (p.x(), p.y())
 
@@ -212,7 +222,11 @@ class CommandManager(QObject):
             return
         if spec.edit and layer is not None and not layer.isEditable():
             if not layer.startEditing():
-                self.cmdline.echo('No se puede editar la capa "%s".' % layer.name())
+                if tomada_por_ingecad(layer):
+                    self.cmdline.echo('La capa "%s" está tomada por IngeCAD: devuélvala desde IngeCAD '
+                                      '(Puente) para editarla en QGIS.' % layer.name())
+                else:
+                    self.cmdline.echo('No se puede editar la capa "%s".' % layer.name())
                 return
             self.cmdline.echo('Capa "%s" en modo edición (guarde con "Guardar cambios de la capa").'
                               % layer.name())
