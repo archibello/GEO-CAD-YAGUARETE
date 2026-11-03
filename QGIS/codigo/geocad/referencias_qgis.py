@@ -19,6 +19,12 @@ encima) y queda resaltada en verde hasta el punto; el punto flotante marca
 dónde la paralela corta el objeto que pasa bajo el cursor (o su
 prolongación) o la prolongación de una línea cercana.
 
+Extension (3.63.0): la línea se toma igual y queda en verde; la
+prolongación, más allá de la punta del lado del cursor, va con trazo de
+puntos hasta el punto flotante, que marca dónde corta el objeto bajo el
+cursor (real o aparente, aunque esté lejos) o la prolongación de una línea
+cercana.
+
 No toca la herramienta: un filtro de eventos sobre el lienzo, que se saca
 entero al apagar el módulo. Las cuentas están en referencias.py.
 """
@@ -82,7 +88,6 @@ class ReferenciasQgis(QObject):
         self.modo = None            # la referencia elegida, hasta el próximo punto
         self.etapa = 0              # FROM: 0 = punto base; M2P: 0 = primero, 1 = segundo
         self.base = None
-        self.fuentes = []           # EXT: puntas adquiridas
         self.candidato = None
         self._abriendo = False
         self._tragar_suelta = False
@@ -91,12 +96,7 @@ class ReferenciasQgis(QObject):
         self.marca.setIconSize(14)
         self.marca.setPenWidth(2)
         self.marca.hide()
-        self.guia = QgsVertexMarker(self.canvas)      # lo adquirido para EXT / PAR
-        self.guia.setColor(QColor(0, 160, 0))
-        self.guia.setIconType(_enum(QgsVertexMarker, "IconType", "ICON_CROSS"))
-        self.guia.setIconSize(10)
-        self.guia.hide()
-        # PER y APP: las líneas tomadas (verde) y sus prolongaciones de puntos
+        # PER, APP, PAR y EXT: las líneas tomadas (verde) y sus prolongaciones de puntos
         self.tomadas = None
         self.lineas = ([], [])       # (guías, tramos usados)
         self._ultimo = None          # el último cursor, en píxeles
@@ -127,7 +127,7 @@ class ReferenciasQgis(QObject):
             except Exception:  # noqa: BLE001
                 pass
         scene = self.canvas.scene()
-        for item in (self.marca, self.guia, self.prolong, self.resalte):
+        for item in (self.marca, self.prolong, self.resalte):
             try:
                 scene.removeItem(item)
             except Exception:  # noqa: BLE001
@@ -258,7 +258,7 @@ class ReferenciasQgis(QObject):
             self.tomadas = G.Tomadas(clave)
         mensajes = {"PER": "Perpendicular: pass over a line (pause to keep it).",
                     "APP": "Apparent Intersection: pause over a line, then over another.","FROM": "From  Base point:", "M2P": "First point of mid:",
-                    "EXT": "Extension: pause over the end of a line, then follow its path.",
+                    "EXT": "Extension: pause over the reference line (it stays green).",
                     "PAR": "Parallel: pause over the reference line (it stays green).",
                     "NON": "None: the next point is not snapped."}
         self._aviso(mensajes.get(clave, f"{R.ETIQUETA[clave]}: pick the point (Esc cancels)."))
@@ -276,7 +276,6 @@ class ReferenciasQgis(QObject):
 
     def cancelar(self):
         self.modo, self.etapa, self.base, self.candidato = None, 0, None, None
-        self.fuentes = []
         self._tragar_suelta = False
         self.tomadas, self.lineas, self._ultimo = None, ([], []), None
         try:
@@ -284,7 +283,6 @@ class ReferenciasQgis(QObject):
         except Exception:  # noqa: BLE001
             pass
         self.marca.hide()
-        self.guia.hide()
         self._dibujar_lineas()
 
     # ------------------------------------------------------------ búsqueda
@@ -315,13 +313,8 @@ class ReferenciasQgis(QObject):
             return self._enganche_qgis(p)
         if self.modo == "NON":
             return p
-        # PAR: también las líneas cuya prolongación puede cruzar la paralela
-        datos = self.datos(p, u * (G.LEJOS if self.modo == "PAR" else 1), vertices)
-        if self.modo == "EXT":
-            fuente = R.fuente_extension(p, u, datos)
-            if fuente is not None and fuente not in self.fuentes:
-                self.fuentes = (self.fuentes + [fuente])[-2:]
-            return R.sobre_extension(p, u, self.fuentes)
+        # PAR y EXT: también las líneas cuya prolongación puede cruzar la suya
+        datos = self.datos(p, u * (G.LEJOS if self.modo in G.FIJAS else 1), vertices)
         if self.modo in G.MAX_TOMADAS and self.tomadas is not None:
             return self._con_guias(p, u, datos, previo)
         return R.buscar(self.modo, p, u, datos, previo)
@@ -339,7 +332,7 @@ class ReferenciasQgis(QObject):
             self.lineas = (r[1], r[2])
             return r[0]
         self.lineas = ([], list(self.tomadas.lista))
-        if self.modo == "PAR":
+        if self.modo in G.FIJAS:
             return None
         # sin línea recta: el PER de un círculo, o el cruce real bajo el cursor
         return R.buscar("PER" if self.modo == "PER" else "INT", p, u, datos, previo)
@@ -349,6 +342,8 @@ class ReferenciasQgis(QObject):
             return
         if self.modo == "PAR":
             self._aviso("Parallel: move along it, or over an object or a line's extension, and click.")
+        elif self.modo == "EXT":
+            self._aviso("Extension: follow it past an end, or over an object or a line's extension, and click.")
         tool = self.herramienta()
         if tool is not None and self._ultimo is not None:
             self._mover(tool, *self._ultimo)
@@ -375,12 +370,6 @@ class ReferenciasQgis(QObject):
             self.marca.setCenter(QgsPointXY(*self.candidato))
             self.marca.show()
             QToolTip.showText(QCursor.pos(), R.ETIQUETA[self.modo], self.canvas)
-        guia = (self.fuentes[-1][0] if self.modo == "EXT" and self.fuentes else None)
-        if guia is not None:
-            self.guia.setCenter(QgsPointXY(*guia))
-            self.guia.show()
-        else:
-            self.guia.hide()
         self._dibujar_lineas()
 
     def _clic(self, tool, x, y):

@@ -1,0 +1,41 @@
+GeoCAD - versión 3.63.0
+=======================
+FUNCIÓN NUEVA (IngeCAD y QGIS). Hay que actualizar los dos programas.
+
+Lo que pidió Fernando (03/11/2026), «para ir terminando la intervención a
+las ayudas al dibujo», sobre Extension (Mayús + clic derecho):
+1. que la línea de referencia quede resaltada hasta terminar la operación;
+2. que una línea de puntos acompañe la prolongación mientras se recorre con
+   el puntero;
+3. que un punto flotante marque y atraiga donde la prolongación tiene una
+   intersección real, o una intersección aparente con otra entidad lejana.
+
+Cambios (iguales en IngeCAD y QGIS; las cuentas en guias.py, compartido)
+- La línea se elige como en Parallel: deteniéndose medio segundo en
+  cualquier parte de ella (antes: sobre la punta en IngeCAD, con sólo pasar
+  en QGIS). Queda marcada en VERDE hasta poner el punto (o Esc) y no cambia
+  aunque el cursor se detenga sobre otras líneas.
+- Se prolonga por las dos puntas: por la que queda del lado del cursor. La
+  prolongación va con trazo de puntos desde la punta hasta el punto
+  flotante.
+- El punto flotante, siempre sobre la prolongación:
+  · al pasar el cursor por un objeto (línea o tramo de polilínea/polígono):
+    donde la prolongación lo corta. Si lo corta de verdad, es la
+    intersección real; si el objeto no llega, la aparente, aunque quede
+    lejos del cursor, con el objeto prolongado de puntos hasta ahí;
+  · al recorrer la prolongación y cruzar la de una línea cercana (hasta
+    20 aperturas): el punto se engancha en el cruce;
+  · si no, el punto de la prolongación más cercano al cursor, como antes.
+  El clic pone el punto ahí.
+- IngeCAD: la prolongación usa la guía y el rótulo de IngeCAD («Extension:
+  2.0000 < 0°»), así que una distancia escrita se mide desde la punta. Las
+  puntas de líneas que adquiere IngeCAD quedan de lado mientras se usa la de
+  GeoCAD; la Extension de ARCOS sigue siendo la de IngeCAD, como venía.
+  Con el módulo «Perpendicular y Apparent Intersection» apagado, IngeCAD
+  queda como venía.
+- Por ahora sólo líneas rectas: se prolongan líneas y tramos de polilíneas
+  o polígonos, y se cortan con objetos rectos (no con círculos ni arcos).
+
+Pruebas: test_guias (cuentas y lado de IngeCAD), test_referencias con QGIS
+4.2.2 y 3.28.9 reales (Extension en Dibujo de GeoCAD) y banco_guias_ventana
+con la ventana real de IngeCAD 0.7.0, 0.6.8.2 y 0.6.7 (sección 2c).

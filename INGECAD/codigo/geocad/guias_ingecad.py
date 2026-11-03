@@ -22,6 +22,14 @@ dónde la paralela corta el objeto bajo el cursor (o su prolongación) o la
 prolongación de una línea cercana; la paralela se dibuja con la guía de
 IngeCAD (track_hint), así una distancia escrita se mide sobre ella.
 
+Extension (3.63.0, del menú de Mayús + clic derecho o escrita EXT): la
+línea se toma igual que en Parallel (medio segundo en cualquier parte) y
+queda en verde hasta el punto. Su prolongación, por la punta del lado del
+cursor, va con la guía de IngeCAD y el rótulo «Extension»; el punto
+flotante marca dónde corta el objeto bajo el cursor (real o aparente) o la
+prolongación de una línea cercana. Los arcos siguen con la Extension de
+IngeCAD.
+
 Las cuentas están en guias.py (las mismas que en QGIS). Acá: envoltorios
 de ToolController (on_hover, clear_tracking) y del Viewport (las guías y la
 marca de APP), y Apparent Intersection disponible en core.osnap. Apagado
@@ -98,10 +106,10 @@ def tramos_cerca(ctrl, cursor, umbral):
 
 
 def _modo(ctrl, kinds):
-    """"PER", "APP", "PAR" o None: lo que la guía tiene que resolver ahora."""
+    """"PER", "APP", "PAR", "EXT" o None: lo que la guía tiene que resolver ahora."""
     override = getattr(ctrl, "osnap_override", None)
     if override is not None:
-        for m in ("APP", "PER", "PAR"):
+        for m in ("APP", "PER", "PAR", "EXT"):
             if m in override:
                 return m
         return None
@@ -163,6 +171,8 @@ def guiar(ctrl, reloj=None) -> None:
     tomadas = _estado(ctrl, modo)
     if modo == "PAR":
         return _paralela(ctrl, cursor, umbral, tomadas, reloj)
+    if modo == "EXT":
+        return _extension(ctrl, cursor, umbral, tomadas, reloj)
     encima = G.tramo_cercano(cursor, umbral, tramos_cerca(ctrl, cursor, umbral))
     r = reloj if reloj is not None else _reloj(ctrl)
     if tomadas.esperar(encima):
@@ -218,6 +228,47 @@ def _paralela(ctrl, cursor, umbral, tomadas, reloj=None) -> None:
     medida = texto(largo) if texto is not None else f"{largo:.4f}"
     ctrl.track_hint = ((float(previo[0]), float(previo[1])), (float(x), float(y)),
                        f"Parallel: {medida} < {angulo:.0f}°")
+    ctrl._geocad_guias = (guias[1:], list(tomadas.lista))
+
+
+def _extension(ctrl, cursor, umbral, tomadas, reloj=None) -> None:
+    """EXT: la línea tomada (fija), su prolongación con la guía de IngeCAD
+    y el punto flotante en lo que cruza. Las puntas de líneas que IngeCAD
+    adquiere quedan de lado; las de arcos siguen como en IngeCAD."""
+    fuentes = getattr(ctrl, "_ext_sources", None)
+    if fuentes:
+        arcos = [f for f in fuentes if f[0] != "line"]
+        if len(arcos) != len(fuentes):
+            ctrl._ext_sources = arcos
+            hit = ctrl.snap_hit
+            if hit is not None and getattr(hit, "kind", None) == "EXT":
+                ctrl.snap_hit = None
+                ctrl.track_hint = None
+                if arcos and hasattr(ctrl, "_tracking_snap_hit"):
+                    ctrl.snap_hit = ctrl._tracking_snap_hit(cursor[0], cursor[1], umbral)
+    tramos = tramos_cerca(ctrl, cursor, umbral * G.LEJOS)
+    encima = G.tramo_cercano(cursor, umbral, tramos)
+    r = reloj if reloj is not None else _reloj(ctrl)
+    if tomadas.esperar(encima):
+        r.start()
+    elif tomadas.espera is None:
+        r.stop()
+    res = G.calcular("EXT", tomadas, encima, None, cursor, umbral, tramos)
+    if res is None:
+        ctrl._geocad_guias = ([], list(tomadas.lista))
+        return              # sin línea tomada: lo de IngeCAD (los arcos) queda
+    from core.snap import SnapHit
+
+    (x, y), guias, _usados = res
+    punta = guias[0][0]
+    ctrl.snap_hit = SnapHit(float(x), float(y), "EXT")
+    # la prolongación, con la guía y el rótulo de IngeCAD; acá la del objeto
+    largo = math.hypot(x - punta[0], y - punta[1])
+    angulo = math.degrees(math.atan2(y - punta[1], x - punta[0])) % 360
+    texto = getattr(ctrl, "_length_text", None)
+    medida = texto(largo) if texto is not None else f"{largo:.4f}"
+    ctrl.track_hint = ((float(punta[0]), float(punta[1])), (float(x), float(y)),
+                       f"Extension: {medida} < {angulo:.0f}°")
     ctrl._geocad_guias = (guias[1:], list(tomadas.lista))
 
 

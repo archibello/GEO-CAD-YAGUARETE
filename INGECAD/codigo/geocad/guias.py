@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Perpendicular y Apparent Intersection con guías de puntos (3.56.0).
+"""Perpendicular, Apparent Intersection, Parallel y Extension con guías de puntos (3.56.0).
 
 Pedido de Fernando (29/10/2026): «extender las líneas con líneas de punto
 hasta un punto flotante que se produce donde debería concretarse la
@@ -15,6 +15,11 @@ operación». Las cuentas, iguales en IngeCAD y en QGIS:
   el punto flotante va donde la paralela por el punto anterior corta el
   objeto bajo el cursor (o su prolongación), o la prolongación de una
   línea cercana que el cursor cruza al seguir la paralela.
+- Extension (3.63.0, Fernando 03/11/2026): igual que Parallel, la línea se
+  TOMA y queda resaltada hasta el punto; la prolongación (más allá de la
+  punta del lado del cursor) se acompaña con la guía de puntos y el punto
+  flotante va donde corta el objeto bajo el cursor (cruce real o aparente,
+  aunque esté lejos) o la prolongación de una línea cercana.
 
 Una línea se TOMA deteniéndose ``TOMA_MS`` encima (como en AutoCAD) y
 queda tomada aunque el cursor se vaya; la tercera reemplaza a la más
@@ -28,8 +33,9 @@ from __future__ import annotations
 import math
 
 TOMA_MS = 500           # detenerse medio segundo sobre una línea la toma
-MAX_TOMADAS = {"PER": 1, "APP": 2, "PAR": 1}
-LEJOS = 20              # PAR: las prolongaciones se buscan hasta 20 veces el radio del cursor
+MAX_TOMADAS = {"PER": 1, "APP": 2, "PAR": 1, "EXT": 1}
+FIJAS = frozenset({"PAR", "EXT"})   # la tomada no cambia hasta el punto
+LEJOS = 20              # PAR y EXT: las prolongaciones se buscan hasta 20 veces el radio del cursor
 
 
 def tramo(s):
@@ -141,8 +147,8 @@ class Tomadas:
     def esperar(self, s):
         """El cursor está sobre s (o sobre nada, None). True si hay que
         (re)arrancar el reloj: es otra línea y todavía no está tomada.
-        PAR: la línea tomada queda fija hasta el punto (o Esc)."""
-        if s is None or self.tiene(s) or (self.modo == "PAR" and self.lista):
+        PAR y EXT: la línea tomada queda fija hasta el punto (o Esc)."""
+        if s is None or self.tiene(s) or (self.modo in FIJAS and self.lista):
             self.espera = None
             return False
         if mismo_tramo(s, self.espera):
@@ -160,15 +166,39 @@ class Tomadas:
         return True
 
 
+def _cruce(eje, ref, vale, cursor, umbral, tramos):
+    """El cruce de la RECTA ``eje`` con otro tramo de ``tramos`` (no ``ref``)
+    que cumple ``vale(p)``: (punto, tramo) o None. En este orden:
+    1. la RECTA del objeto bajo el cursor (a ``umbral`` o menos), aunque el
+       cruce quede lejos del cursor;
+    2. la prolongación de otro tramo, si el cruce está a ``umbral`` o menos
+       del cursor."""
+    otros = [tramo(s) for s in tramos if _largo2(s) > 1e-24 and not mismo_tramo(s, ref)]
+    mejor = None
+    for s in otros:                                   # 1. el objeto bajo el cursor
+        d = distancia(s, cursor)
+        if d > umbral or (mejor is not None and d >= mejor[0]):
+            continue
+        r = aparente(eje, s)
+        if r is not None and vale(r[0]):
+            mejor = (d, r[0], s)
+    if mejor is None:                                 # 2. la prolongación que cruza
+        for s in otros:
+            r = aparente(eje, s)
+            if r is None or not vale(r[0]):
+                continue
+            d = math.hypot(r[0][0] - cursor[0], r[0][1] - cursor[1])
+            if d <= umbral and (mejor is None or d < mejor[0]):
+                mejor = (d, r[0], s)
+    return (mejor[1], mejor[2]) if mejor is not None else None
+
+
 def paralela(previo, ref, cursor, umbral, tramos=()):
     """(punto, guías, tramos usados) de Parallel, o None.
 
-    La paralela a ``ref`` por ``previo``; el punto, en este orden:
-    1. donde corta la RECTA del objeto bajo el cursor (a ``umbral`` o
-       menos), aunque quede lejos del cursor;
-    2. donde corta la prolongación de otro tramo de ``tramos``, si ese
-       cruce está a ``umbral`` o menos del cursor;
-    3. el punto de la paralela más cercano al cursor, si está a ``umbral``.
+    La paralela a ``ref`` por ``previo``; el punto: donde corta el objeto
+    bajo el cursor o la prolongación de otro tramo (ver _cruce), o si no el
+    punto de la paralela más cercano al cursor, si está a ``umbral``.
     Guías: la paralela desde ``previo`` y la prolongación del objeto.
     """
     if previo is None or ref is None or cursor is None:
@@ -194,43 +224,70 @@ def paralela(previo, ref, cursor, umbral, tramos=()):
                 guias.append(g)
         return (float(p[0]), float(p[1])), guias, ([ref, tramo(s)] if s is not None else [ref])
 
-    otros = [tramo(s) for s in tramos if _largo2(s) > 1e-24 and not mismo_tramo(s, ref)]
-    mejor = None
-    for s in otros:                                   # 1. el objeto bajo el cursor
-        d = distancia(s, cursor)
-        if d > umbral or (mejor is not None and d >= mejor[0]):
-            continue
-        r = aparente(eje, s)
-        if r is not None and sobre(r[0]):
-            mejor = (d, r[0], s)
-    if mejor is None:                                 # 2. la prolongación que cruza
-        for s in otros:
-            r = aparente(eje, s)
-            if r is None or not sobre(r[0]):
-                continue
-            d = math.hypot(r[0][0] - cursor[0], r[0][1] - cursor[1])
-            if d <= umbral and (mejor is None or d < mejor[0]):
-                mejor = (d, r[0], s)
-    if mejor is not None:
-        return resultado(mejor[1], mejor[2])
-    t = (cursor[0] - px) * ux + (cursor[1] - py) * uy  # 3. sobre la paralela
+    c = _cruce(eje, ref, sobre, cursor, umbral, tramos)
+    if c is not None:
+        return resultado(*c)
+    t = (cursor[0] - px) * ux + (cursor[1] - py) * uy  # sobre la paralela
     p = (px + t * ux, py + t * uy)
     if abs(t) > tol and math.hypot(p[0] - cursor[0], p[1] - cursor[1]) <= umbral:
         return resultado(p)
     return None
 
 
+def extension(ref, cursor, umbral, tramos=()):
+    """(punto, guías, tramos usados) de Extension, o None.
+
+    La prolongación de ``ref`` por cualquiera de sus puntas (no el tramo
+    mismo); el punto: donde corta el objeto bajo el cursor, real o aparente,
+    o la prolongación de otro tramo (ver _cruce), o si no el punto de la
+    prolongación más cercano al cursor, si está a ``umbral``.
+    Guías: la prolongación desde la punta y la del objeto, si no llega.
+    """
+    if ref is None or cursor is None:
+        return None
+    ref = tramo(ref)
+    l2 = _largo2(ref)
+    if l2 <= 1e-24:
+        return None
+    tol = max(umbral * 1e-6, math.sqrt(l2) * 1e-9) / math.sqrt(l2)
+
+    def fuera(p):            # más allá de una punta, no sobre el tramo
+        t = _parametro(ref, p)
+        return t < -tol or t > 1 + tol
+
+    def resultado(p, s=None):
+        p = (float(p[0]), float(p[1]))
+        guias = [prolongacion(ref, p)]
+        if s is not None:
+            g = prolongacion(s, p)
+            if g:
+                guias.append(g)
+        return p, guias, ([ref, tramo(s)] if s is not None else [ref])
+
+    c = _cruce(ref, ref, fuera, cursor, umbral, tramos)
+    if c is not None:
+        return resultado(*c)
+    t = _parametro(ref, cursor)                       # sobre la prolongación
+    p = (ref[0] + t * (ref[2] - ref[0]), ref[1] + t * (ref[3] - ref[1]))
+    if fuera(p) and math.hypot(p[0] - cursor[0], p[1] - cursor[1]) <= umbral:
+        return resultado(p)
+    return None
+
+
 def calcular(modo, tomadas, encima, previo, cursor=None, umbral=0.0, tramos=()):
-    """El punto flotante y sus guías para ``modo`` ("PER", "APP" o "PAR").
+    """El punto flotante y sus guías para ``modo`` ("PER", "APP", "PAR" o "EXT").
 
     ``encima``: el tramo bajo el cursor (o None), que cuenta aunque todavía
     no esté tomado; ``tomadas``: una Tomadas. PAR usa además el cursor, el
-    umbral y los tramos cercanos (ver paralela). Devuelve (punto, guías,
+    umbral y los tramos cercanos (ver paralela); EXT, lo mismo sin el punto
+    anterior (ver extension). Devuelve (punto, guías,
     tramos usados) o None.
     """
     lista = list(tomadas.lista)
     if modo == "PAR":
         return paralela(previo, lista[-1], cursor, umbral, tramos) if lista else None
+    if modo == "EXT":
+        return extension(lista[-1], cursor, umbral, tramos) if lista else None
     if modo == "PER":
         s = encima if encima is not None else (lista[-1] if lista else None)
         if s is None:

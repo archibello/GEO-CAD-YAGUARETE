@@ -1,4 +1,4 @@
-"""Referencias a objetos con Shift + clic derecho en QGIS (3.55.0): el menú de
+"""Referencias a objetos con Shift + clic derecho en QGIS (3.55.0; EXT con guías, 3.63.0): el menú de
 IngeCAD para un solo punto al digitalizar líneas, polilíneas o polígonos con
 las herramientas de QGIS. Las cuentas se prueban sin QGIS; si el QGIS de
 Flatpak está instalado, además se digitaliza de verdad (sin ventanas) con
@@ -314,6 +314,31 @@ clic(150.3, 40)
 par_["clic"] = mgr.puntos[-1]
 par_["suelta"] = [ref.modo, rb(ref.prolong), rb(ref.resalte)]
 out["par"] = par_
+# 3.63.0: Extension de la base (y = 0): tomada en verde, la prolongación de puntos y los cruces
+fx = QgsFeature(); fx.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(130, -10), QgsPointXY(130, 10)]))
+base.dataProvider().addFeatures([fx])                  # X: la prolongación la cruza de verdad
+ref.elegir("EXT")
+mover(50, 0.5)
+ext_ = {"antes": ref.candidato}
+quieto()
+ext_["tomadas"] = len(ref.tomadas.lista)
+mover(120, 0.8)                                        # siguiendo la prolongación
+ext_["sobre"] = [round(v, 6) for v in ref.candidato]
+ext_["lineas"] = [rb(ref.prolong), rb(ref.resalte)]
+mover(130.3, 7)                                        # sobre X: la intersección real
+ext_["real"] = [round(v, 6) for v in ref.candidato] + [rb(ref.prolong)]
+mover(150.3, 40)                                       # sobre V: la aparente, con su guía
+ext_["aparente"] = [round(v, 6) for v in ref.candidato] + [rb(ref.prolong)]
+mover(-10, 90)                                         # lejos: sin punto, la base sigue verde
+ext_["lejos"] = [ref.candidato, rb(ref.resalte)]
+mover(-12, 0.5)                                        # por la otra punta
+ext_["otra"] = [round(v, 6) for v in ref.candidato]
+mover(150.3, 40); quieto()                             # detenerse en V no cambia la base
+ext_["fija"] = [len(ref.tomadas.lista), ref.tomadas.lista[0][1], ref.tomadas.lista[0][3]]
+clic(150.3, 40)
+ext_["clic"] = mgr.puntos[-1]
+ext_["suelta"] = [ref.modo, rb(ref.prolong), rb(ref.resalte)]
+out["ext"] = ext_
 mgr.command = None                                     # sin comando: Mayús + clic derecho = Enter
 clic(40, 60, DER, SHIFT)
 out["dib_sin"] = [len(menus), herr.derechos]
@@ -369,8 +394,15 @@ for rama in ramas_qgis():
     assert q["sobre"] == [80, 50] and q["lejos"] == [None, 1], q
     assert q["fija"] == [1, 0], q
     assert q["clic"] == [150, 50, True] and q["suelta"] == [None, 0, 0], q
+    q = out["ext"]
+    assert q["antes"] is None and q["tomadas"] == 1, q
+    assert q["sobre"] == [120, 0] and q["lineas"] == [1, 1], q
+    assert q["real"] == [130, 0, 1] and q["aparente"] == [150, 0, 2], q
+    assert q["lejos"] == [None, 1] and abs(q["otra"][0] + 12) < 0.5 and q["otra"][1] == 0, q  # un píxel
+    assert q["fija"] == [1, 0, 0], q
+    assert q["clic"] == [150, 0, True] and q["suelta"] == [None, 0, 0], q
     print("  QGIS %s: Shift + clic derecho, MID, CEN, QUA, PER, From y M2P en QGIS y en Dibujo;"
-          " APP, PER y PAR con guías de puntos" % out["version"])
+          " APP, PER, PAR y EXT con guías de puntos" % out["version"])
 if not ramas_qgis():
     print("  (QGIS de Flatpak no instalado: sólo las cuentas)")
 print("TODO OK: referencias con Shift + clic derecho en QGIS")

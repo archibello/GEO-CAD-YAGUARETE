@@ -1,4 +1,4 @@
-"""Perpendicular, Apparent Intersection (3.56.0) y Parallel (3.62.0) con guías de puntos, sin Qt:
+"""Perpendicular, Apparent Intersection (3.56.0), Parallel (3.62.0) y Extension (3.63.0) con guías de puntos, sin Qt:
 las cuentas de guias.py (iguales en IngeCAD y QGIS), las líneas tomadas con
 el medio segundo, y el lado de IngeCAD (guias_ingecad) con un controlador
 simulado: el punto flotante, las guías, APP fuera del gris y el módulo
@@ -120,6 +120,32 @@ assert t.esperar(H) and t.tomar() and t.lista == [H]
 assert t.esperar(V) is False and t.espera is None and not t.tomar()  # queda fija
 assert t.lista == [H]
 assert cerca(G.calcular("PAR", t, V, pr, (20.1, 13.0), 0.5, [H, V])[0], (20, 10))
+
+# Extension (3.63.0): la prolongación de H más allá de sus puntas (y = 0)
+X = (15.0, -5.0, 15.0, 5.0)        # vertical que H cruzaría de verdad en (15, 0)
+p, guias, usados = G.extension(H, (15.1, 3.0), 0.5, [H, V, X])
+assert cerca(p, (15, 0)) and usados == [H, X]                  # intersección real, bajo el cursor
+assert len(guias) == 1 and cerca(guias[0][0], (10, 0)) and cerca(guias[0][1], (15, 0))
+p, guias, usados = G.extension(H, (20.1, 12.0), 0.5, [H, V, X])
+assert cerca(p, (20, 0)) and usados == [H, V]                  # aparente con V, lejos del cruce
+assert len(guias) == 2 and cerca(guias[1][0], (20, 5)) and cerca(guias[1][1], (20, 0))
+p, guias, usados = G.extension(H, (30.2, 0.3), 0.5, [H, W])
+assert cerca(p, (30, 0)) and usados == [H, W]                  # cruza la prolongación de W: lo atrae
+p, guias, usados = G.extension(H, (12.0, 0.3), 0.5, [H])
+assert cerca(p, (12, 0)) and usados == [H] and len(guias) == 1  # sobre la prolongación
+assert cerca(guias[0][0], (10, 0)) and cerca(guias[0][1], (12, 0))
+p, guias, usados = G.extension(H, (-7.0, -0.2), 0.5, [H])
+assert cerca(p, (-7, 0)) and cerca(guias[0][0], (0, 0))        # por la otra punta
+assert G.extension(H, (5.0, 0.2), 0.5, [H]) is None            # sobre el tramo: no es prolongación
+assert G.extension(H, (5.1, 2.0), 0.5, [H, (5.0, -5.0, 5.0, 5.0)]) is None  # el cruce cae en el tramo
+assert G.extension(H, (12.0, 3.1), 0.5, [H, P]) is None        # P es paralela: no corta
+assert G.extension(H, (12.0, 20.0), 0.5, [H, V]) is None       # lejos
+assert G.extension(None, (12.0, 0.0), 0.5, []) is None
+t = G.Tomadas("EXT")
+assert G.calcular("EXT", t, H, None, (12.0, 0.0), 0.5, [H]) is None   # todavía sin tomar
+assert t.esperar(H) and t.tomar() and t.lista == [H]
+assert t.esperar(V) is False and not t.tomar() and t.lista == [H]  # queda fija
+assert cerca(G.calcular("EXT", t, V, None, (20.1, 12.0), 0.5, [H, V])[0], (20, 0))
 
 # ---------------------------------------------------------------- IngeCAD
 assert "referencias" in [m.clave for m in modulos.catalogo("ingecad")]
@@ -293,6 +319,36 @@ assert c.snap_hit is None and c.track_hint is None
 c = Controlador(frozenset({"PAR"}), ultimo=None)               # sin punto anterior: no toma
 c.on_hover(5.0, 0.2)
 assert c.snap_hit is None and not c.reloj.andando
+# Extension: la línea tomada queda (verde), la prolongación con la guía de IngeCAD
+c = Controlador(frozenset({"EXT"}), ultimo=None)               # no hace falta punto anterior
+c.snap_engine = Motor([H, V, P, W, X])
+arco = ("arc", (50.0, 50.0), 5.0, (55.0, 50.0), 0.0, 1.0)
+c._ext_sources = [("line", (10.0, 0.0), (1.0, 0.0)), arco]
+c.on_hover(5.0, 0.2, hit=SnapHit(9.0, 0.0, "EXT"))             # la de IngeCAD con una línea
+assert c.snap_hit is None and c._ext_sources == [arco]          # de lado; el arco queda
+assert c.reloj.andando
+c.tomar()
+assert c._geocad_tomadas.lista == [H]
+c.on_hover(12.0, 0.3)                                          # sobre la prolongación
+assert c.snap_hit.kind == "EXT" and cerca((c.snap_hit.x, c.snap_hit.y), (12, 0))
+assert c._geocad_guias == ([], [H])                            # la prolongación va en track_hint
+assert cerca(c.track_hint[0], (10, 0)) and cerca(c.track_hint[1], (12, 0))
+assert c.track_hint[2] == "Extension: 2.0000 < 0°"
+c.on_hover(15.1, 3.0)                                          # sobre X: la intersección real
+assert cerca((c.snap_hit.x, c.snap_hit.y), (15, 0)) and c._geocad_guias == ([], [H])
+c.on_hover(20.1, 12.0)                                         # sobre V, lejos: la aparente
+assert cerca((c.snap_hit.x, c.snap_hit.y), (20, 0))
+guias, tomadas = c._geocad_guias
+assert tomadas == [H] and len(guias) == 1 and cerca(guias[0][0], (20, 5))
+c.on_hover(-7.0, -0.2)                                         # por la otra punta
+assert cerca((c.snap_hit.x, c.snap_hit.y), (-7, 0)) and cerca(c.track_hint[0], (0, 0))
+assert c.track_hint[2] == "Extension: 7.0000 < 180°"
+c.on_hover(5.0, 3.1)                                           # sobre P: no reemplaza a H
+assert not c.reloj.andando and c._geocad_tomadas.lista == [H] and c.snap_hit is None
+c = Controlador(frozenset({"EXT"}))                            # sin tomar: lo de IngeCAD (arcos) queda
+arc_hit = SnapHit(50.0, 56.0, "EXT")
+c.on_hover(50.0, 56.0, hit=arc_hit)
+assert c.snap_hit is arc_hit
 # módulo apagado: nada
 modulos.guardar("ingecad", {"referencias": False})
 c = Controlador(frozenset({"APP"}))

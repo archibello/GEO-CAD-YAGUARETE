@@ -1,6 +1,8 @@
 """Banco con la VENTANA REAL de IngeCAD (sin pantalla, Qt «offscreen»):
 Perpendicular y Apparent Intersection con guías de puntos (3.56.0) y
-Parallel con la línea tomada fija y el punto donde cruza (3.62.0).
+Parallel con la línea tomada fija y el punto donde cruza (3.62.0) y
+Extension con la línea tomada, su prolongación y el punto en los cruces
+reales y aparentes (3.63.0; los arcos, con la Extension de IngeCAD).
 
 Con LINE: Apparent Intersection sale del gris en el menú de Mayús + clic
 derecho; detenerse medio segundo sobre una línea la toma (el reloj de Qt
@@ -60,12 +62,15 @@ def cerca(hit, x, y, tol=1e-6):
     return hit is not None and abs(hit.x - x) <= tol and abs(hit.y - y) <= tol
 
 
-def ventana():
+def ventana(extras=False):
     win = MainWindow()
     win.new_document("m")
     ms = win.document.modelspace()
     ms.add_line((0, 0), (10, 0))          # H
     ms.add_line((20, 5), (20, 15))        # V
+    if extras:
+        ms.add_line((15, -5), (15, 5))    # X: la prolongación de H la cruza de verdad
+        ms.add_arc((50, 50), 5, 0, 90)    # un arco: su Extension sigue siendo la de IngeCAD
     win.document.dirty = True
     win.show(); app.processEvents()
     win.regen_in_memory(); esperar(win, 0.3)
@@ -178,6 +183,52 @@ nuevas = [e for e in win.document.modelspace() if e.dxftype() == "LINE"
 ver("la línea termina en el cruce con V", len(nuevas) == 1
     and (round(nuevas[0].dxf.end.x, 6), round(nuevas[0].dxf.end.y, 6)) == (20.0, 10.0))
 ver("con el punto se suelta la tomada", getattr(win.tools, "_geocad_tomadas", None) is None)
+win.close(); app.processEvents()
+
+print("2c. Extension: la línea tomada, su prolongación y los cruces")
+win = ventana(extras=True)
+win.tools.start_tool("LINE"); esperar(win)
+win.tools.on_click(40.0, -20.0); esperar(win)
+win.tools.set_osnap_override({"EXT"})
+win.tools.on_hover(5.0, 0.1, U)
+ver("sin tomar: sin punto", win.tools.snap_hit is None)
+esperar(win, 0.7)
+ver("H tomada con el reloj de Qt", [list(t) for t in win.tools._geocad_tomadas.lista]
+    == [[0.0, 0.0, 10.0, 0.0]])
+win.tools.on_hover(12.0, 0.2, U)                              # siguiendo la prolongación
+ver("sobre la prolongación (12, 0)", win.tools.snap_hit is not None
+    and win.tools.snap_hit.kind == "EXT" and cerca(win.tools.snap_hit, 12, 0))
+ver("la prolongación con la guía de IngeCAD desde la punta", win.tools.track_hint is not None
+    and win.tools.track_hint[2].startswith("Extension") and win.tools.track_hint[0] == (10.0, 0.0))
+ver("la guía se dibuja", pintar_guias(win) > 10)
+win.tools.on_hover(15.1, 3.0, U)                              # sobre X
+ver("intersección real con X (15, 0)", cerca(win.tools.snap_hit, 15, 0))
+win.tools.on_hover(20.1, 12.0, U)                             # sobre V, lejos del cruce
+ver("intersección aparente con V (20, 0)", cerca(win.tools.snap_hit, 20, 0))
+ver("con la guía de V", len(win.tools._geocad_guias[0]) == 1
+    and win.tools._geocad_guias[1] == [(0.0, 0.0, 10.0, 0.0)])
+esperar(win, 0.7)                                             # detenerse en V no la cambia
+ver("V no reemplaza a H", len(win.tools._geocad_tomadas.lista) == 1
+    and win.tools._geocad_tomadas.lista[0][1] == 0.0)
+win.tools.on_hover(20.1, 12.0, U)
+win.tools.on_click(20.1, 12.0); esperar(win)
+win.tools.on_text(""); esperar(win)
+nuevas = [e for e in win.document.modelspace() if e.dxftype() == "LINE"
+          and (round(e.dxf.start.x, 6), round(e.dxf.start.y, 6)) == (40.0, -20.0)]
+ver("la línea termina en el cruce aparente", len(nuevas) == 1
+    and (round(nuevas[0].dxf.end.x, 6), round(nuevas[0].dxf.end.y, 6)) == (20.0, 0.0))
+ver("con el punto se suelta la tomada", getattr(win.tools, "_geocad_tomadas", None) is None)
+# un arco: la Extension de IngeCAD, como venía
+win.tools.start_tool("LINE"); esperar(win)
+win.tools.on_click(40.0, -20.0); esperar(win)
+win.tools.set_osnap_override({"EXT"})
+win.tools.on_hover(50.0, 55.0, U); esperar(win, 0.7)          # la punta del arco (90°)
+import math
+x, y = 50 + 5 * math.cos(math.radians(120)), 50 + 5 * math.sin(math.radians(120))
+win.tools.on_hover(x, y + 0.1, U)
+ver("arco: la Extension de IngeCAD sigue", win.tools.snap_hit is not None
+    and win.tools.snap_hit.kind == "EXT" and cerca(win.tools.snap_hit, x, y, 0.1))   # sobre el círculo, junto al cursor
+win.tools.on_text("")
 win.close(); app.processEvents()
 
 print("3. Módulo apagado: como viene IngeCAD")
