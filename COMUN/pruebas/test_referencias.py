@@ -295,6 +295,25 @@ per_["queda"] = [round(v, 6) for v in ref.candidato]
 clic(-10, 90)
 per_["clic"] = mgr.puntos[-1]
 out["per2"] = per_
+# 3.62.0: Parallel por (-30, 50): la base tomada queda en verde, el punto donde la paralela cruza
+ref.elegir("PAR")
+mover(50, 0.5)
+par_ = {"antes": ref.candidato}
+quieto()
+par_["tomadas"] = len(ref.tomadas.lista)
+mover(150.3, 40)                                       # sobre V: el cruce con la paralela
+par_["cruce"] = [round(v, 6) for v in ref.candidato]
+par_["lineas"] = [rb(ref.prolong), rb(ref.resalte)]
+mover(80, 50.5)                                        # siguiendo la paralela
+par_["sobre"] = [round(v, 6) for v in ref.candidato]
+mover(-10, 90)                                         # lejos: sin punto, la base sigue verde
+par_["lejos"] = [ref.candidato, rb(ref.resalte)]
+mover(150.3, 40); quieto()                             # detenerse en V no cambia la base
+par_["fija"] = [len(ref.tomadas.lista), ref.tomadas.lista[0][1]]
+clic(150.3, 40)
+par_["clic"] = mgr.puntos[-1]
+par_["suelta"] = [ref.modo, rb(ref.prolong), rb(ref.resalte)]
+out["par"] = par_
 mgr.command = None                                     # sin comando: Mayús + clic derecho = Enter
 clic(40, 60, DER, SHIFT)
 out["dib_sin"] = [len(menus), herr.derechos]
@@ -344,8 +363,14 @@ for rama in ramas_qgis():
     q = out["per2"]
     assert q["pie"] == [-30, 0] and q["guias"] == [[[0, 0], [-30, 0]]], q
     assert q["queda"] == [-30, 0] and q["clic"] == [-30, 0, True], q
+    q = out["par"]
+    assert q["antes"] is None and q["tomadas"] == 1, q
+    assert q["cruce"] == [150, 50] and q["lineas"] == [1, 1], q
+    assert q["sobre"] == [80, 50] and q["lejos"] == [None, 1], q
+    assert q["fija"] == [1, 0], q
+    assert q["clic"] == [150, 50, True] and q["suelta"] == [None, 0, 0], q
     print("  QGIS %s: Shift + clic derecho, MID, CEN, QUA, PER, From y M2P en QGIS y en Dibujo;"
-          " APP y PER con guías de puntos" % out["version"])
+          " APP, PER y PAR con guías de puntos" % out["version"])
 if not ramas_qgis():
     print("  (QGIS de Flatpak no instalado: sólo las cuentas)")
 print("TODO OK: referencias con Shift + clic derecho en QGIS")

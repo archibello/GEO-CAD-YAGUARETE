@@ -10,6 +10,11 @@ operación». Las cuentas, iguales en IngeCAD y en QGIS:
 - Apparent Intersection: el cruce de las RECTAS de dos líneas; cada una
   que no llega tiene su guía de la punta más cercana al cruce. Paralelas:
   no hay punto.
+- Parallel (3.62.0, Fernando 03/11/2026): la línea elegida queda TOMADA y
+  resaltada toda la operación (las que se cruzan después no la cambian);
+  el punto flotante va donde la paralela por el punto anterior corta el
+  objeto bajo el cursor (o su prolongación), o la prolongación de una
+  línea cercana que el cursor cruza al seguir la paralela.
 
 Una línea se TOMA deteniéndose ``TOMA_MS`` encima (como en AutoCAD) y
 queda tomada aunque el cursor se vaya; la tercera reemplaza a la más
@@ -23,7 +28,8 @@ from __future__ import annotations
 import math
 
 TOMA_MS = 500           # detenerse medio segundo sobre una línea la toma
-MAX_TOMADAS = {"PER": 1, "APP": 2}
+MAX_TOMADAS = {"PER": 1, "APP": 2, "PAR": 1}
+LEJOS = 20              # PAR: las prolongaciones se buscan hasta 20 veces el radio del cursor
 
 
 def tramo(s):
@@ -134,8 +140,9 @@ class Tomadas:
 
     def esperar(self, s):
         """El cursor está sobre s (o sobre nada, None). True si hay que
-        (re)arrancar el reloj: es otra línea y todavía no está tomada."""
-        if s is None or self.tiene(s):
+        (re)arrancar el reloj: es otra línea y todavía no está tomada.
+        PAR: la línea tomada queda fija hasta el punto (o Esc)."""
+        if s is None or self.tiene(s) or (self.modo == "PAR" and self.lista):
             self.espera = None
             return False
         if mismo_tramo(s, self.espera):
@@ -153,14 +160,77 @@ class Tomadas:
         return True
 
 
-def calcular(modo, tomadas, encima, previo):
-    """El punto flotante y sus guías para ``modo`` ("PER" o "APP").
+def paralela(previo, ref, cursor, umbral, tramos=()):
+    """(punto, guías, tramos usados) de Parallel, o None.
+
+    La paralela a ``ref`` por ``previo``; el punto, en este orden:
+    1. donde corta la RECTA del objeto bajo el cursor (a ``umbral`` o
+       menos), aunque quede lejos del cursor;
+    2. donde corta la prolongación de otro tramo de ``tramos``, si ese
+       cruce está a ``umbral`` o menos del cursor;
+    3. el punto de la paralela más cercano al cursor, si está a ``umbral``.
+    Guías: la paralela desde ``previo`` y la prolongación del objeto.
+    """
+    if previo is None or ref is None or cursor is None:
+        return None
+    ref = tramo(ref)
+    l2 = _largo2(ref)
+    if l2 <= 1e-24:
+        return None
+    largo = math.sqrt(l2)
+    ux, uy = (ref[2] - ref[0]) / largo, (ref[3] - ref[1]) / largo
+    px, py = float(previo[0]), float(previo[1])
+    eje = (px, py, px + ux * largo, py + uy * largo)
+    tol = max(umbral * 1e-6, largo * 1e-9)
+
+    def sobre(p):            # lejos del punto anterior (no es él mismo)
+        return abs((p[0] - px) * ux + (p[1] - py) * uy) > tol
+
+    def resultado(p, s=None):
+        guias = [((px, py), (float(p[0]), float(p[1])))]
+        if s is not None:
+            g = prolongacion(s, p)
+            if g:
+                guias.append(g)
+        return (float(p[0]), float(p[1])), guias, ([ref, tramo(s)] if s is not None else [ref])
+
+    otros = [tramo(s) for s in tramos if _largo2(s) > 1e-24 and not mismo_tramo(s, ref)]
+    mejor = None
+    for s in otros:                                   # 1. el objeto bajo el cursor
+        d = distancia(s, cursor)
+        if d > umbral or (mejor is not None and d >= mejor[0]):
+            continue
+        r = aparente(eje, s)
+        if r is not None and sobre(r[0]):
+            mejor = (d, r[0], s)
+    if mejor is None:                                 # 2. la prolongación que cruza
+        for s in otros:
+            r = aparente(eje, s)
+            if r is None or not sobre(r[0]):
+                continue
+            d = math.hypot(r[0][0] - cursor[0], r[0][1] - cursor[1])
+            if d <= umbral and (mejor is None or d < mejor[0]):
+                mejor = (d, r[0], s)
+    if mejor is not None:
+        return resultado(mejor[1], mejor[2])
+    t = (cursor[0] - px) * ux + (cursor[1] - py) * uy  # 3. sobre la paralela
+    p = (px + t * ux, py + t * uy)
+    if abs(t) > tol and math.hypot(p[0] - cursor[0], p[1] - cursor[1]) <= umbral:
+        return resultado(p)
+    return None
+
+
+def calcular(modo, tomadas, encima, previo, cursor=None, umbral=0.0, tramos=()):
+    """El punto flotante y sus guías para ``modo`` ("PER", "APP" o "PAR").
 
     ``encima``: el tramo bajo el cursor (o None), que cuenta aunque todavía
-    no esté tomado; ``tomadas``: una Tomadas. Devuelve (punto, guías,
+    no esté tomado; ``tomadas``: una Tomadas. PAR usa además el cursor, el
+    umbral y los tramos cercanos (ver paralela). Devuelve (punto, guías,
     tramos usados) o None.
     """
     lista = list(tomadas.lista)
+    if modo == "PAR":
+        return paralela(previo, lista[-1], cursor, umbral, tramos) if lista else None
     if modo == "PER":
         s = encima if encima is not None else (lista[-1] if lista else None)
         if s is None:

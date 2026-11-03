@@ -1,0 +1,38 @@
+GeoCAD - versión 3.62.0
+=======================
+FUNCIÓN NUEVA (IngeCAD y QGIS). Hay que actualizar los dos programas.
+
+Lo que pidió Fernando (03/11/2026), sobre Parallel en las ayudas al dibujo
+de Mayús + clic derecho:
+1. «que cuando manifestemos nuestra elección de la línea que vamos a tomar
+   como referencia, esta línea quede resaltada durante toda la operación»;
+2. «que a medida que vayamos pasando por objetos o extensiones de líneas un
+   punto flotante nos marque la opción de hacer clic y concluir la operación».
+
+Cambios (iguales en IngeCAD y QGIS; las cuentas en guias.py, compartido)
+- La línea de referencia se elige como en Perpendicular y Apparent
+  Intersection: deteniéndose medio segundo encima. Queda marcada en VERDE
+  hasta poner el punto (o Esc), y ya no cambia aunque el cursor se detenga
+  o pase sobre otras líneas (antes, en QGIS, cualquier línea que se cruzaba
+  pasaba a ser la referencia).
+- El punto flotante, siempre sobre la paralela que pasa por el punto
+  anterior:
+  · al pasar el cursor por un objeto (línea o tramo de polilínea/polígono):
+    donde la paralela lo corta, aunque quede lejos del cursor. Si el objeto
+    no llega, se prolonga con trazo de puntos hasta ese punto;
+  · al seguir la paralela y cruzar la prolongación de una línea cercana:
+    el punto se engancha ahí (con la prolongación de puntos);
+  · si no, el punto de la paralela más cercano al cursor, como antes.
+  La paralela se dibuja con trazo de puntos desde el punto anterior hasta el
+  punto flotante. El clic pone el punto ahí.
+- IngeCAD: la paralela usa la guía y el rótulo de IngeCAD («Parallel:
+  15.0000 < 0°»), así que una distancia escrita se sigue midiendo sobre
+  ella. Mientras se usa la de GeoCAD, la Parallel propia de IngeCAD queda de
+  lado. Con el módulo «Perpendicular y Apparent Intersection» apagado,
+  IngeCAD queda como venía.
+- Por ahora la paralela se corta con objetos rectos (líneas, polilíneas,
+  bordes de polígonos), no con círculos ni arcos.
+
+Pruebas: test_guias (cuentas y lado de IngeCAD), test_referencias con QGIS
+4.2.2 y 3.28.9 reales (Parallel en Dibujo de GeoCAD) y banco_guias_ventana
+con la ventana real de IngeCAD 0.7.0 y 0.6.7 (sección 2b).

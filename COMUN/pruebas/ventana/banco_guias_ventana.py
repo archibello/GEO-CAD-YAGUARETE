@@ -1,5 +1,6 @@
 """Banco con la VENTANA REAL de IngeCAD (sin pantalla, Qt «offscreen»):
-Perpendicular y Apparent Intersection con guías de puntos (3.56.0).
+Perpendicular y Apparent Intersection con guías de puntos (3.56.0) y
+Parallel con la línea tomada fija y el punto donde cruza (3.62.0).
 
 Con LINE: Apparent Intersection sale del gris en el menú de Mayús + clic
 derecho; detenerse medio segundo sobre una línea la toma (el reloj de Qt
@@ -145,6 +146,38 @@ nuevas = [e for e in win.document.modelspace() if e.dxftype() == "LINE"
           and (round(e.dxf.start.x, 6), round(e.dxf.start.y, 6)) == (-5.0, 10.0)]
 ver("la línea termina en el pie", len(nuevas) == 1
     and (round(nuevas[0].dxf.end.x, 6), round(nuevas[0].dxf.end.y, 6)) == (-5.0, 0.0))
+win.close(); app.processEvents()
+
+print("2b. Parallel: la línea tomada queda y el punto donde la paralela cruza")
+win = ventana()
+win.tools.start_tool("LINE"); esperar(win)
+win.tools.on_click(5.0, 10.0); esperar(win)                   # la paralela a H es y = 10
+win.tools.set_osnap_override({"PAR"})
+win.tools.on_hover(5.0, 0.1, U)
+ver("sin tomar: sin punto", win.tools.snap_hit is None)
+esperar(win, 0.7)
+ver("H tomada con el reloj de Qt", [list(t) for t in win.tools._geocad_tomadas.lista]
+    == [[0.0, 0.0, 10.0, 0.0]])
+win.tools.on_hover(20.1, 13.0, U)                             # sobre V
+ver("punto donde la paralela cruza V (20, 10)", win.tools.snap_hit is not None
+    and win.tools.snap_hit.kind == "PAR" and cerca(win.tools.snap_hit, 20, 10))
+ver("H sigue resaltada", win.tools._geocad_guias[1] == [(0.0, 0.0, 10.0, 0.0)])
+ver("la paralela con la guía de IngeCAD", win.tools.track_hint is not None
+    and win.tools.track_hint[2].startswith("Parallel"))
+ver("la guía se dibuja", pintar_guias(win) > 10)
+esperar(win, 0.7)                                             # detenerse en V no la cambia
+ver("V no reemplaza a H", len(win.tools._geocad_tomadas.lista) == 1
+    and win.tools._geocad_tomadas.lista[0][1] == 0.0)
+win.tools.on_hover(14.0, 10.1, U)
+ver("siguiendo la paralela (14, 10)", cerca(win.tools.snap_hit, 14, 10))
+win.tools.on_hover(20.1, 13.0, U)
+win.tools.on_click(20.1, 13.0); esperar(win)
+win.tools.on_text(""); esperar(win)
+nuevas = [e for e in win.document.modelspace() if e.dxftype() == "LINE"
+          and (round(e.dxf.start.x, 6), round(e.dxf.start.y, 6)) == (5.0, 10.0)]
+ver("la línea termina en el cruce con V", len(nuevas) == 1
+    and (round(nuevas[0].dxf.end.x, 6), round(nuevas[0].dxf.end.y, 6)) == (20.0, 10.0))
+ver("con el punto se suelta la tomada", getattr(win.tools, "_geocad_tomadas", None) is None)
 win.close(); app.processEvents()
 
 print("3. Módulo apagado: como viene IngeCAD")

@@ -1,4 +1,4 @@
-"""Perpendicular y Apparent Intersection con guías de puntos (3.56.0), sin Qt:
+"""Perpendicular, Apparent Intersection (3.56.0) y Parallel (3.62.0) con guías de puntos, sin Qt:
 las cuentas de guias.py (iguales en IngeCAD y QGIS), las líneas tomadas con
 el medio segundo, y el lado de IngeCAD (guias_ingecad) con un controlador
 simulado: el punto flotante, las guías, APP fuera del gris y el módulo
@@ -95,6 +95,31 @@ assert G.calcular("PER", t, None, (5, 10)) is None
 t.lista = [H]
 assert cerca(G.calcular("PER", t, None, (-5, 10))[0], (-5, 0))
 assert cerca(G.calcular("PER", t, V, (0, 10))[0], (20, 10))    # la de encima gana
+
+# Parallel (3.62.0): la paralela a H por (5, 10) es y = 10
+W = (30.0, 0.0, 30.0, 5.0)         # vertical que no llega a y = 10
+pr = (5.0, 10.0)
+p, guias, usados = G.paralela(pr, H, (20.1, 13.0), 0.5, [H, V, P, W])
+assert cerca(p, (20, 10)) and usados == [H, V]                 # 1. el objeto bajo el cursor
+assert len(guias) == 1 and cerca(guias[0][0], pr) and cerca(guias[0][1], (20, 10))
+p, guias, usados = G.paralela(pr, H, (30.1, 2.0), 0.5, [H, V, P, W])
+assert cerca(p, (30, 10)) and usados == [H, W]                 # ... aunque no llegue: su prolongación
+assert len(guias) == 2 and cerca(guias[1][0], (30, 5)) and cerca(guias[1][1], (30, 10))
+p, guias, usados = G.paralela(pr, H, (30.2, 10.2), 0.5, [H, V, P, W])
+assert cerca(p, (30, 10)) and usados == [H, W]                 # 2. la prolongación que cruza
+p, guias, usados = G.paralela(pr, H, (12.0, 10.3), 0.5, [H, V, P, W])
+assert cerca(p, (12, 10)) and usados == [H] and len(guias) == 1  # 3. sobre la paralela
+assert G.paralela(pr, H, (12.0, 20.0), 0.5, [H, V, P, W]) is None     # lejos
+assert G.paralela(pr, H, (5.0, 3.1), 0.5, [H, P]) is None      # P es paralela: no corta
+assert G.paralela(pr, H, (5.0, 0.1), 0.5, [H]) is None         # la referencia no cuenta
+assert G.paralela(pr, H, (5.1, 5.0), 0.5, [(5.0, 0.0, 5.0, 10.0)]) is None  # corta en el punto anterior
+assert G.paralela(None, H, (12.0, 10.0), 0.5, []) is None
+t = G.Tomadas("PAR")
+assert G.calcular("PAR", t, H, pr, (12.0, 10.0), 0.5, [H]) is None   # todavía sin tomar
+assert t.esperar(H) and t.tomar() and t.lista == [H]
+assert t.esperar(V) is False and t.espera is None and not t.tomar()  # queda fija
+assert t.lista == [H]
+assert cerca(G.calcular("PAR", t, V, pr, (20.1, 13.0), 0.5, [H, V])[0], (20, 10))
 
 # ---------------------------------------------------------------- IngeCAD
 assert "referencias" in [m.clave for m in modulos.catalogo("ingecad")]
@@ -243,6 +268,31 @@ assert c.snap_hit is None and getattr(c, "_geocad_tomadas", None) is None
 c = Controlador(frozenset({"END"}))
 c.on_hover(5.0, 0.2)
 assert c.snap_hit is None and c._geocad_guias == ([], [])
+# Parallel: la línea tomada queda (verde) y el punto en lo que cruza la paralela
+c = Controlador(frozenset({"PAR"}))
+c.snap_engine = Motor([H, V, P, W])
+c._par_dirs = [(1.0, 0.0)]
+c.on_hover(5.0, 0.2)
+assert c.snap_hit is None and c.reloj.andando and c._par_dirs == []
+c.tomar()
+assert c._geocad_tomadas.lista == [H]
+c.on_hover(20.1, 13.0)                                         # sobre V
+assert c.snap_hit.kind == "PAR" and cerca((c.snap_hit.x, c.snap_hit.y), (20, 10))
+assert c._geocad_guias == ([], [H])                            # la paralela va en track_hint
+assert cerca(c.track_hint[0], (5, 10)) and cerca(c.track_hint[1], (20, 10))
+assert c.track_hint[2] == "Parallel: 15.0000 < 0°"
+c.on_hover(30.1, 2.0)                                          # sobre W: con su prolongación
+assert cerca((c.snap_hit.x, c.snap_hit.y), (30, 10))
+guias, tomadas = c._geocad_guias
+assert tomadas == [H] and len(guias) == 1 and cerca(guias[0][1], (30, 10))
+c.on_hover(5.0, 3.1)                                           # sobre P: no reemplaza a H
+assert not c.reloj.andando and c._geocad_tomadas.lista == [H] and c.snap_hit is None
+assert c._geocad_guias == ([], [H])
+c.on_hover(12.0, 30.0, hit=SnapHit(12.0, 10.0, "PAR"))         # la Parallel de IngeCAD, de lado
+assert c.snap_hit is None and c.track_hint is None
+c = Controlador(frozenset({"PAR"}), ultimo=None)               # sin punto anterior: no toma
+c.on_hover(5.0, 0.2)
+assert c.snap_hit is None and not c.reloj.andando
 # módulo apagado: nada
 modulos.guardar("ingecad", {"referencias": False})
 c = Controlador(frozenset({"APP"}))

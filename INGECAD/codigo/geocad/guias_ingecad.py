@@ -15,6 +15,13 @@ entre las referencias activas):
   el punto ahí, aunque esté lejos del cursor;
 - APP sale del gris en IngeCAD; con dos paralelas no hay punto.
 
+Parallel (3.62.0, del menú de Mayús + clic derecho o escrita PAR): la
+línea de referencia se toma con el medio segundo y queda en verde hasta el
+punto; las que se cruzan después no la cambian. El punto flotante marca
+dónde la paralela corta el objeto bajo el cursor (o su prolongación) o la
+prolongación de una línea cercana; la paralela se dibuja con la guía de
+IngeCAD (track_hint), así una distancia escrita se mide sobre ella.
+
 Las cuentas están en guias.py (las mismas que en QGIS). Acá: envoltorios
 de ToolController (on_hover, clear_tracking) y del Viewport (las guías y la
 marca de APP), y Apparent Intersection disponible en core.osnap. Apagado
@@ -23,6 +30,7 @@ el módulo, IngeCAD queda como venía (APP en gris).
 from __future__ import annotations
 
 import dataclasses
+import math
 
 from . import guias as G
 from . import modulos
@@ -90,10 +98,10 @@ def tramos_cerca(ctrl, cursor, umbral):
 
 
 def _modo(ctrl, kinds):
-    """"PER", "APP" o None: lo que la guía tiene que resolver ahora."""
+    """"PER", "APP", "PAR" o None: lo que la guía tiene que resolver ahora."""
     override = getattr(ctrl, "osnap_override", None)
     if override is not None:
-        for m in ("APP", "PER"):
+        for m in ("APP", "PER", "PAR"):
             if m in override:
                 return m
         return None
@@ -153,6 +161,8 @@ def guiar(ctrl, reloj=None) -> None:
         return
     umbral = getattr(ctrl, "_track_tolerance", None) or 0.0
     tomadas = _estado(ctrl, modo)
+    if modo == "PAR":
+        return _paralela(ctrl, cursor, umbral, tomadas, reloj)
     encima = G.tramo_cercano(cursor, umbral, tramos_cerca(ctrl, cursor, umbral))
     r = reloj if reloj is not None else _reloj(ctrl)
     if tomadas.esperar(encima):
@@ -174,6 +184,41 @@ def guiar(ctrl, reloj=None) -> None:
     (x, y), guias, _usados = res
     ctrl.snap_hit = SnapHit(float(x), float(y), modo)
     ctrl._geocad_guias = (guias, list(tomadas.lista))
+
+
+def _paralela(ctrl, cursor, umbral, tomadas, reloj=None) -> None:
+    """PAR: la línea tomada (fija) y el punto flotante en lo que cruza la
+    paralela. La Parallel propia de IngeCAD queda de lado mientras tanto."""
+    if hasattr(ctrl, "_par_dirs"):
+        ctrl._par_dirs = []
+    hit = ctrl.snap_hit
+    if hit is not None and getattr(hit, "kind", None) == "PAR":
+        ctrl.snap_hit = None
+        ctrl.track_hint = None
+    previo = getattr(ctrl.tool, "last_point", None)
+    tramos = tramos_cerca(ctrl, cursor, umbral * G.LEJOS)
+    encima = G.tramo_cercano(cursor, umbral, tramos)
+    r = reloj if reloj is not None else _reloj(ctrl)
+    if previo is not None and tomadas.esperar(encima):
+        r.start()
+    elif tomadas.espera is None:
+        r.stop()
+    res = G.calcular("PAR", tomadas, encima, previo, cursor, umbral, tramos)
+    if res is None:
+        ctrl._geocad_guias = ([], list(tomadas.lista))
+        return
+    from core.snap import SnapHit
+
+    (x, y), guias, _usados = res
+    ctrl.snap_hit = SnapHit(float(x), float(y), "PAR")
+    # la paralela, con la guía y el rótulo de IngeCAD; acá sólo la prolongación del objeto
+    largo = math.hypot(x - previo[0], y - previo[1])
+    angulo = math.degrees(math.atan2(y - previo[1], x - previo[0])) % 360
+    texto = getattr(ctrl, "_length_text", None)
+    medida = texto(largo) if texto is not None else f"{largo:.4f}"
+    ctrl.track_hint = ((float(previo[0]), float(previo[1])), (float(x), float(y)),
+                       f"Parallel: {medida} < {angulo:.0f}°")
+    ctrl._geocad_guias = (guias[1:], list(tomadas.lista))
 
 
 # ------------------------------------------------------------- envoltorios
