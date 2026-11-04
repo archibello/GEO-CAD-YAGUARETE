@@ -1,0 +1,37 @@
+GeoCAD - versión 3.65.0
+=======================
+NUEVO (IngeCAD y QGIS). Hay que actualizar los dos.
+
+Fernando, 04/11/2026: «armar un banco de botones que estén disponibles para
+armar nuestras propias barras de herramientas, esto vale para los dos
+programas»; «meter todo en estos tres grupos» (Configuración, Edición,
+Dibujo), «así no quedan tan extensos».
+
+Cambios
+- Administrar botones: debajo de las categorías, tres bancos por tema,
+  Configuración, Edición y Dibujo, iguales en IngeCAD y en QGIS. Juntan todo
+  lo de GeoCAD: los botones de las barras de fábrica y también los comandos
+  que sólo estaban en el menú GeoCAD (Módulos, Administrar botones,
+  Actualizar, Acerca de, Google Earth, Shapefile, Bloques...). Cada comando
+  está en un solo banco. Como antes, los bancos no tienen barra: «Pasar a»
+  trae una copia del botón a una categoría propia.
+- En QGIS los tres bancos reemplazan a los de Dibujo CAD y Capas CAD
+  (3.60.7). LAYISO y las demás de capas, la vista (ZOOM, ENCUADRE, REGEN) y
+  Módulos van en Configuración; EMPALME, IGUALARPROP y los textos en Edición;
+  LÍNEA, PLINEA, bloques y Pegar tabla en Dibujo.
+- Los comandos sin dibujo propio llevan en la barra un ícono con letras
+  (MOD, BOT, ACT, ?...). En el menú siguen sin ícono.
+- IngeCAD: el menú GeoCAD ya no tiene los submenús Drawing (Dibujo), Blocks
+  (Bloques), Printing (Impresión) ni Dimensions (Cotas). Sus comandos siguen
+  en los bancos, en las barras Yaguá y en la línea de comandos (ANGREL,
+  EMPALME, BLOCK, PREVIEW, DIMLINEAR...). Quedan Puente, Sistema de
+  coordenadas, Importar, Exportar, Google Earth, Módulos, Administrar
+  botones, Configuración, Actualizar, Diagnóstico y Acerca de.
+- El menú GeoCAD de QGIS, las barras Yaguá de fábrica y las categorías ya
+  guardadas no cambian.
+
+Pruebas: test_botones (reparto en los tres bancos, cada comando en uno solo,
+íconos con letras), test_submodulos (los bancos de QGIS con los submódulos) y
+test_modulos (el menú de IngeCAD sin los cuatro submenús);
+banco_botones_ventana con la ventana real de IngeCAD (0.7.0, 0.6.8.2 y 0.6.7)
+y banco_botones_qgis con QGIS 4.2.2.

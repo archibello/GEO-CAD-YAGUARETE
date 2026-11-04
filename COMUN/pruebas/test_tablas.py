@@ -195,14 +195,16 @@ def comandos_menu(items):
             yield it.command
 
 
-assert "GEOPASTETABLE" in set(comandos_menu(spec.menu))
+# 3.65.0: Drawing ya no está en el menú GeoCAD; Pegar tabla va a los bancos
+assert "GEOPASTETABLE" not in set(comandos_menu(spec.menu))
+assert "GEOPASTETABLE" in set(comandos_menu(import_module("ingecad_plugin_geocad").construir_spec(completo=True).menu))
 es = Path(spec.i18n_dir) / "es"
 assert json.loads((es / "ui.json").read_text())["Paste table (PASTETABLE)"] == "Pegar tabla (PEGARTABLA)"
 assert json.loads((es / "commands.json").read_text())["GEOPASTETABLE"]["name"] == "PEGARTABLA"
 est = modulos.estado("ingecad"); real = modulos.estado
 modulos.estado = lambda prog: {**est, "tablas": False}
 try:
-    apagado = import_module("ingecad_plugin_geocad").construir_spec()
+    apagado = import_module("ingecad_plugin_geocad").construir_spec(completo=True)
 finally:
     modulos.estado = real
 assert "GEOPASTETABLE" not in apagado.tools and "GEOPASTETABLE" not in [x.command for x in apagado.toolbar]

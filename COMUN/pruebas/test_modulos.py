@@ -81,9 +81,14 @@ P = sys.modules["ingecad_plugin_geocad"]
 Mi = sys.modules["ingecad_plugin_geocad.modulos"]
 spec = mgr.loaded["geocad"].spec
 todo = items(spec.menu)
-for c in ("QGISEXPORT", "SHPTABLE", "SHPCONNECT", "ANGREL", "RIGHTCLICK", "GEOCADMODULES", "SHPCONFIG",
+for c in ("QGISEXPORT", "SHPTABLE", "SHPCONNECT", "GEOCADMODULES", "SHPCONFIG",
           "QGISUPDATE", "GEOCADABOUT"):
     assert c in todo, c
+# 3.65.0 (Fernando): Drawing, Blocks, Printing y Dimensions fuera del menú GeoCAD; sus
+# órdenes siguen (bancos de Administrar botones, barras y línea de comandos)
+assert not {"Drawing", "Blocks", "Printing", "Dimensions"} & {getattr(i, "label", "") for i in spec.menu}
+assert not {"ANGREL", "RIGHTCLICK", "BLOCK", "GEOPREVIEW", "DIMLINEAR"} & set(todo)
+assert {"ANGREL", "RIGHTCLICK", "BLOCK", "GEOPREVIEW", "DIMLINEAR"} <= set(items(P.construir_spec(completo=True).menu))
 # 3.21.4: «Devolver todo» y «Devolver la selección» salen del menú y de la barra
 # (siguen como órdenes); «capas nuevas» se queda con el ícono de QGIS
 assert "QGISSAVE" not in todo and "QGISSAVESEL" not in todo

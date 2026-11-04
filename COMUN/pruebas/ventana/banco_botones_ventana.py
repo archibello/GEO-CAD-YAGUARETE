@@ -153,7 +153,8 @@ def boton_dlg(dlg, texto):
 
 
 def usar(dlg):
-    cats, bots = dlg.findChildren(QListWidget)
+    listas = dlg.findChildren(QListWidget)
+    cats, bots = listas[0], listas[-1]
     boton_dlg(dlg, "Nueva...").click()
     comprobar(cats.count() == 3 and cats.item(2).text().startswith("Mía"), "Nueva... agrega «Mía»")
     cats.setCurrentRow(1)                                  # Yaguareté Tools
@@ -295,6 +296,49 @@ C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
 b = barras(win)
 comprobar(BT.leer("ingecad") is None and BT.objeto_barra("Todo") not in b
           and a_la_vista(b) == esperado, "Como de fábrica: vuelve la primera instalación")
+
+# ---- 3.65.0: los bancos Configuración, Edición y Dibujo (como los de QGIS) ----------------
+bi = C.bancos(win)
+comprobar([n for n, _f in bi] == ["banco:" + t for t in BT.BANCOS], "tres bancos: " + str([n for n, _f in bi]))
+en = {t[len("banco:"):]: [a.property("geocad_orden") for a in f] for t, f in bi}
+todos = sum(en.values(), [])
+comprobar(len(todos) == len(set(todos)), "cada botón en un solo banco")
+comprobar("ANGREL" in en.get("Configuración", []) and "GEOCADMODULES" in en.get("Configuración", [])
+          and "FILLET" in en.get("Edición", []) and "GEOREFSAVE" in en.get("Edición", [])
+          and "DIMLINEAR" in en.get("Dibujo", []) and "RECTANG" in en.get("Dibujo", []),
+          "lo del menú y lo de las barras, cada uno en su tema")
+sin_icono = [a.property("geocad_orden") for _t, f in bi for a in f if a.icon().isNull()]
+comprobar(not sin_icono, "todos con ícono " + str(sin_icono))
+comprobar([a.property("geocad_orden") for _t, f in C.bancos(win) for a in f] == todos
+          and all(x is y for (_t, f), (_u, g) in zip(bi, C.bancos(win)) for x, y in zip(f, g)),
+          "los botones propios son siempre los mismos")
+
+
+def con_bancos(dlg):
+    listas = dlg.findChildren(QListWidget)
+    cats, banco, bots = listas[0], listas[1], listas[2]
+    comprobar([banco.item(i).text() for i in range(banco.count())] == list(BT.BANCOS)
+              and not banco.isHidden(), "la ventana muestra los tres bancos")
+    banco.setCurrentRow(0)
+    textos = [bots.item(i).text() for i in range(bots.count())]
+    k = next((i for i, t in enumerate(textos) if "(ANGREL)" in t), -1)
+    comprobar(k >= 0 and "sin barra" in textos[k], "ANGREL en Configuración, sin barra")
+    bots.setCurrentRow(k)
+    dlg.findChildren(QtWidgets.QComboBox)[0].setCurrentIndex(0)
+    boton_dlg(dlg, "Pasar").click()
+    return 1
+
+
+BU._exec = con_bancos
+C.cmd_administrar(types.SimpleNamespace(host=win, echo=ecos.append))
+g = BT.leer("ingecad") or {}
+comprobar("ANGREL" in (g.get("categorias") or [{}])[0].get("botones", []), "«Pasar» trajo ANGREL a la categoría")
+BT.guardar("ingecad", [("Mía", [("ANGREL", True), ("GEOREFSAVE", True), ("FILLET", True)])], C.fabrica(win))
+C.aplicar(win, mostrar=True); app.processEvents()
+mia = barras(win).get(BT.objeto_barra("Mía"))
+comprobar(mia is not None and ordenes(mia) == ["ANGREL", "GEOREFSAVE", "FILLET"], "barra propia con botones del menú")
+mia.actions()[0].trigger(); app.processEvents()
+comprobar(llamadas[-1:] == ["ANGREL"], "el botón del banco llama a su orden")
 sacar_geocad(win)
 comprobar(not [n for n in barras(win) if n.startswith("GeoCADCategoria_") or "geocad" in n.lower()],
           "sin GeoCAD no queda ninguna barra suya")

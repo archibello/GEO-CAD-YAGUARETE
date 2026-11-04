@@ -135,16 +135,22 @@ P.administrar_botones()
 QApplication.processEvents()
 fab_total = sum(len(f) for n, f in vistos["fabrica"] if not botones.es_banco(n))
 comprobar(fab_total == total and fab_total > 50, f"la ventana ve los {fab_total} botones")
-# 3.60.7: Dibujo CAD y Capas CAD, sin submenú: bancos de respaldo enteros
+# 3.65.0: tres bancos por tema (antes, 3.60.7, Dibujo CAD y Capas CAD), con todo lo de GeoCAD
 bancos = {n: f for n, f in vistos["fabrica"] if botones.es_banco(n)}
-comprobar(sorted(bancos) == ["banco:Capas CAD", "banco:Dibujo CAD"], "los dos bancos de respaldo")
-comprobar("capas:layiso" in bancos.get("banco:Capas CAD", ()) and "dibujo:line" in bancos.get("banco:Dibujo CAD", ()),
-          "LAYISO en el banco Capas CAD y LÍNEA en Dibujo CAD")
-# 3.61.0: ZOOM, ENCUADRE, REGEN e IGUALARPROP sólo en el banco Dibujo CAD, sin categoría
+comprobar([n for n, _f in vistos["fabrica"] if botones.es_banco(n)] == ["banco:" + t for t in botones.BANCOS],
+          "los tres bancos: " + str(list(bancos)))
+en_bancos = [b for f in bancos.values() for b in f]
+comprobar(len(en_bancos) == len(set(en_bancos)), "cada botón en un solo banco")
+comprobar("capas:layiso" in bancos.get("banco:Configuración", ()) and "dibujo:line" in bancos.get("banco:Dibujo", ())
+          and "dibujo:fillet" in bancos.get("banco:Edición", ()) and "geocad:modules" in bancos.get("banco:Configuración", ()),
+          "LAYISO y Módulos en Configuración, EMPALME en Edición, LÍNEA en Dibujo")
+comprobar(all(b in en_bancos for n, f in vistos["fabrica"] if not botones.es_banco(n) for b in f),
+          "todos los botones de las barras están en algún banco")
+# 3.61.0: ZOOM, ENCUADRE, REGEN e IGUALARPROP sólo en un banco, sin categoría
 nuevos = ["dibujo:" + i for i in ("zoom", "zoomwin", "zoomext", "zoomprev", "zoomobj", "pan", "regen", "matchprop")]
-comprobar(all(x in bancos.get("banco:Dibujo CAD", ()) for x in nuevos)
+comprobar(all(x in en_bancos for x in nuevos)
           and not any(x in f for n, f in vistos["modelo"] for x in nuevos),
-          "ZOOM, ENCUADRE, REGEN e IGUALARPROP en el banco Dibujo CAD, en ninguna categoría")
+          "ZOOM, ENCUADRE, REGEN e IGUALARPROP en los bancos, en ninguna categoría")
 comprobar(not [a for a in P.menu.actions() if a.menu() is not None and a.text() in ("Dibujo CAD", "Capas CAD")],
           "el menú GeoCAD sin los submenús Dibujo CAD y Capas CAD")
 # la ventana real: el banco elegido muestra sus botones y «Pasar» trae uno
@@ -152,10 +158,11 @@ from qgis.PyQt.QtWidgets import QListWidget, QComboBox, QPushButton
 vista = {}
 def mirar_dialogo(dlg):
     listas = dlg.findChildren(QListWidget)
-    lb = [l for l in listas if l.count() == 2 and l.item(0).text() == "Dibujo CAD"]
-    vista["bancos"] = bool(lb) and lb[0].item(1).text() == "Capas CAD" and lb[0].isVisibleTo(dlg)
+    lb = [l for l in listas if l.count() == 3 and l.item(0).text() == "Configuración"]
+    vista["bancos"] = bool(lb) and [lb[0].item(i).text() for i in range(3)] == list(botones.BANCOS) \
+        and lb[0].isVisibleTo(dlg)
     if lb:
-        lb[0].setCurrentRow(1)
+        lb[0].setCurrentRow(0)
         der = [l for l in listas if l is not lb[0]][1]
         textos = [der.item(i).text() for i in range(der.count())]
         vista["sin_barra"] = any("LAYISO" in t and "(sin barra)" in t for t in textos)
@@ -169,7 +176,7 @@ def mirar_dialogo(dlg):
 botones_ui._exec = mirar_dialogo
 botones_ui.administrar = real_administrar
 P.administrar_botones()
-comprobar(vista.get("bancos"), "la ventana muestra los dos bancos debajo de las categorías")
+comprobar(vista.get("bancos"), "la ventana muestra los tres bancos debajo de las categorías")
 comprobar(vista.get("sin_barra") and vista.get("traido"),
           "LAYISO del banco: «sin barra» y con «Pasar» queda en Yaguá Dibujo " + str(vista))
 llenas = [n for n, f in vistos["modelo"] if f]

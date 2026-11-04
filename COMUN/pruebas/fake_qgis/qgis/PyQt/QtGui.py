@@ -21,7 +21,11 @@ class _Sig:
     def __init__(self): self.f = []
     def connect(self, f): self.f.append(f)
 class QAction:
-    def __init__(self, *a): self.text = a[-2] if len(a) > 2 else a[0]; self.triggered = _Sig()
-    def setIcon(self, i): pass
+    def __init__(self, *a):
+        self.text = a[-2] if len(a) > 2 else a[0]; self.triggered = _Sig()
+        if len(a) > 2: self._icono = a[0]
+    def setIcon(self, i): self._icono = i
+    def icon(self): return getattr(self, "_icono", None) or QIcon()
+    def setIconVisibleInMenu(self, b): self.icono_en_menu = b
     def setProperty(self, k, v): setattr(self, "_p_" + k, v)
     def property(self, k): return getattr(self, "_p_" + k, None)

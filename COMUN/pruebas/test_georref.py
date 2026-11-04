@@ -33,7 +33,7 @@ def cerca(a, b, tol=1e-6):
 # ------------------------------------------------------------- 1. el módulo
 m = next(m for m in mods.catalogo("ingecad") if m.clave == "georref")
 assert m.defecto and not m.cambia_programa
-spec = plugin.construir_spec()
+spec = plugin.construir_spec(completo=True)
 assert spec.tools.get("GEORREF") is G.GeorrefTool
 assert spec.aliases["RUBBERSHEET"] == "GEORREF" and spec.aliases["AJUSTEIMAGEN"] == "GEORREF"
 dibujo_menu = next(s for s in spec.menu if getattr(s, "label", "") == "Drawing")
@@ -42,7 +42,7 @@ assert ("GEORREF", "georref", None) in yag.HERRAMIENTAS and "GEORREF" in yag.DES
 assert "GEORREF" in barra._iconos_propios()                          # su ícono
 assert "flecha" in dib.ESTILO_RESALTADO and "flecha_off" in dib.ESTILO_RESALTADO
 mods.poner("ingecad", "georref", False)
-spec = plugin.construir_spec()
+spec = plugin.construir_spec(completo=True)
 assert "GEORREF" not in spec.tools and "RUBBERSHEET" not in spec.aliases
 mods.poner("ingecad", "georref", True)
 print("ok módulo")

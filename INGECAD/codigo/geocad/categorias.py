@@ -47,6 +47,69 @@ def fabricas(window) -> list:
     return salida
 
 
+def _ordenes_menu(entradas):
+    """Los MenuItem del menú GeoCAD, también los de los submenús."""
+    for e in entradas:
+        if hasattr(e, "command"):
+            yield e
+        elif hasattr(e, "items"):
+            yield from _ordenes_menu(e.items)
+
+
+def bancos(window) -> list:
+    """[(botones.BANCO + tema, [acciones])]: todo lo de GeoCAD en los bancos
+    Configuración, Edición y Dibujo de Administrar botones (3.65.0, como los de
+    QGIS). Lo que está en una barra de fábrica va con ese mismo botón; lo que
+    sólo está en el menú, con uno propio que la ventana guarda para siempre."""
+    acciones = [a for _n, fila in botones_barras.elementos(fabricas(window), id_de, window)
+                for _b, a in fila]
+    hay = {id_de(a) for a in acciones}
+    propias = getattr(window, "_geocad_banco", None)
+    if propias is None:
+        propias = {}
+        window._geocad_banco = propias
+    try:
+        from . import construir_spec
+        items = list(_ordenes_menu(construir_spec(completo=True).menu))
+    except Exception:  # noqa: BLE001 - sin el menú, sólo los botones de las barras
+        items = []
+    for item in items:
+        orden = item.command
+        if orden in hay:
+            continue
+        hay.add(orden)
+        if orden not in propias:
+            try:
+                propias[orden] = _accion_menu(window, item)
+            except Exception:  # noqa: BLE001 - sin Qt: esa orden sigue sólo en el menú
+                continue
+        acciones.append(propias[orden])
+    return botones.bancos(PROGRAMA, acciones, id_de)
+
+
+def _accion_menu(window, item):
+    """Un botón para una orden que sólo estaba en el menú."""
+    from PySide6 import QtCore, QtGui
+    from PySide6.QtGui import QAction, QIcon
+
+    from core.i18n import tr
+    from views.icons import command_icon
+
+    from . import yaguarete
+
+    orden = item.command
+    etiqueta, _o = yaguarete.separar_orden(tr(item.label))
+    etiqueta = (etiqueta or orden).rstrip(".").strip()
+    icono = QIcon(str(item.icon)) if item.icon else command_icon(orden)
+    if icono.isNull():
+        icono = botones.icono_letras(QtGui, QtCore, orden)
+    act = QAction(icono, etiqueta, window)
+    act.setToolTip(f"{etiqueta} ({orden})")
+    act.setProperty("geocad_orden", orden)
+    act.triggered.connect(lambda _=False, n=orden: window._invoke_command(n))
+    return act
+
+
 def fabrica(window) -> list:
     """[(barra, [órdenes])] como las arma hoy GeoCAD."""
     return [(n, [b for b, _a in fila])
@@ -78,7 +141,7 @@ def aplicar(window, mostrar=False) -> None:
     if not fab:
         return
     botones_barras.aplicar(window, fab, id_de, lambda fabrica: botones.barras(PROGRAMA, fabrica),
-                           _nueva_barra(window), _divisor, mostrar)
+                           _nueva_barra(window), _divisor, mostrar, bancos=bancos(window))
 
 
 def restaurar(window) -> None:
@@ -96,7 +159,7 @@ def cmd_administrar(ctx, *args) -> None:
         return
     # los botones de la foto de fábrica, sin tocar las barras: mirar no prende
     # nada (Fernando, 25/10/2026); con Cancelar todo queda como estaba
-    elems = botones_barras.elementos(fabricas(window), id_de, window)
+    elems = botones_barras.elementos(fabricas(window), id_de, window, bancos=bancos(window))
     fab = [(n, [b for b, _a in fila]) for n, fila in elems]
     etiquetas, iconos = {}, {}
     for _n, fila in elems:

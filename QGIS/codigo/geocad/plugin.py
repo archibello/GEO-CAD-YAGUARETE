@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.64.1"
+VERSION = "3.65.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -191,6 +191,8 @@ class GeoCAD:
                 a = QAction(QIcon(str(iconos / icono)), texto, self.iface.mainWindow()) if icono \
                     else QAction(texto, self.iface.mainWindow())
                 a.triggered.connect(slot)
+                a.setProperty("geocad_id", "geocad:" + clave)
+                self._icono_banco(a)
                 sub.addAction(a)
                 self.actions[clave] = a
         self.menu.addSeparator()
@@ -349,9 +351,20 @@ class GeoCAD:
         action = QAction(icon, text, self.iface.mainWindow()) if icon else \
             QAction(text, self.iface.mainWindow())
         action.triggered.connect(slot)
+        # bancos (3.65.0); «Enviar a IngeCAD» es el mismo botón de la barra GeoCAD
+        action.setProperty("geocad_id", "puente:send" if key == "send" else "geocad:" + key)
+        self._icono_banco(action)
         self.menu.addAction(action)
         self.actions[key] = action
         return action
+
+    @staticmethod
+    def _icono_banco(action) -> None:
+        """Sin dibujo: en una barra, un ícono con letras; el menú sigue sin ícono."""
+        if action.icon().isNull():
+            from qgis.PyQt import QtCore, QtGui
+            action.setIcon(botones.icono_letras(QtGui, QtCore, action.property("geocad_id")))
+            action.setIconVisibleInMenu(False)
 
     def _sync_toolbar(self) -> None:
         """Botones sólo si la configuración común lo pide: el menú está siempre."""
@@ -391,12 +404,18 @@ class GeoCAD:
             return None
 
     def _bancos(self) -> list:
-        """[(botones.BANCO + título, [acciones])]: los submenús de Dibujo CAD y
-        Capas CAD como bancos de respaldo de Administrar botones (3.60.7)."""
-        if self.subs is None:
-            return []
-        return [(botones.BANCO + titulo, acciones)
-                for titulo, acciones in self.subs.menus() if acciones]
+        """[(botones.BANCO + tema, [acciones])]: todo lo de GeoCAD (submenús de
+        Dibujo CAD y Capas CAD, listas de las barras y menú GeoCAD) en los bancos
+        Configuración, Edición y Dibujo (3.65.0; antes, 3.60.7, uno por submenú)."""
+        acciones = []
+        if self.subs is not None:
+            for _titulo, lista in self.subs.menus():
+                acciones += lista
+        for _n, fila in botones_barras.elementos(self._fabricas(), self._id_boton,
+                                                 self.iface.mainWindow()):
+            acciones += [a for _b, a in fila]
+        acciones += list((getattr(self, "actions", None) or {}).values())
+        return botones.bancos(PROGRAMA, acciones, self._id_boton)
 
     def _nueva_barra(self, nombre):
         bar = self.iface.addToolBar(nombre)

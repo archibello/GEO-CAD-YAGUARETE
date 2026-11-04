@@ -39,7 +39,9 @@ def comandos_menu(items):
             yield it.command
 
 
-assert {"GEODRAWFRONT", "GEODRAWBACK"} <= set(comandos_menu(spec.menu))
+# 3.65.0: Drawing ya no está en el menú GeoCAD; sus órdenes van a los bancos
+assert not {"GEODRAWFRONT", "GEODRAWBACK"} & set(comandos_menu(spec.menu))
+assert {"GEODRAWFRONT", "GEODRAWBACK"} <= set(comandos_menu(import_module("ingecad_plugin_geocad").construir_spec(completo=True).menu))
 import json
 ui = json.loads((Path(lp.spec.i18n_dir) / "es" / "ui.json").read_text())
 assert ui["Bring to front (DRAWORDER)"] == "Traer al frente (ALFRENTE)"
@@ -49,7 +51,7 @@ assert ui["Send to back (DRAWORDER)"] == "Enviar al fondo (ALFONDO)"
 est = modulos.estado("ingecad"); real = modulos.estado
 modulos.estado = lambda prog: {**est, "orden": False}
 try:
-    apagado = import_module("ingecad_plugin_geocad").construir_spec()
+    apagado = import_module("ingecad_plugin_geocad").construir_spec(completo=True)
 finally:
     modulos.estado = real
 assert not any(t.command.startswith("GEODRAW") for t in apagado.toolbar)

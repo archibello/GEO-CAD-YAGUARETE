@@ -27,7 +27,7 @@ barra = import_module("ingecad_plugin_geocad.barra")
 plugin = import_module("ingecad_plugin_geocad")
 
 # ------------------------------------------------------------- 1. orden, barra y menú
-spec = plugin.construir_spec()
+spec = plugin.construir_spec(completo=True)
 assert spec.tools["ASPECTOIMAGEN"] is A.AspectoImagenTool
 assert spec.aliases["IMAGEASPECT"] == "ASPECTOIMAGEN"
 ordenes = [h[0] for h in yag.HERRAMIENTAS]
@@ -43,7 +43,7 @@ assert icono.is_file() and Image.open(icono).size == (24, 24)
 ui = json.loads((Path(plugin.__file__).parent / "i18n" / "es" / "ui.json").read_text("utf-8"))
 assert ui["Image appearance (ASPECTOIMAGEN)"] == "Aspecto de la imagen (ASPECTOIMAGEN)"
 mods.poner("ingecad", "georref", False)
-s2 = plugin.construir_spec()
+s2 = plugin.construir_spec(completo=True)
 assert "ASPECTOIMAGEN" not in s2.tools
 mods.poner("ingecad", "georref", True)
 print("ok botones")

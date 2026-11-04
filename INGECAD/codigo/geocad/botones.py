@@ -105,6 +105,127 @@ def es_banco(nombre: str) -> bool:
     return str(nombre).startswith(BANCO)
 
 
+#: 3.65.0 (Fernando, 04/11/2026: «armar un banco de botones ... para armar nuestras
+#: propias barras de herramientas, esto vale para los dos programas»; «meter todo en
+#: estos tres grupos, así no quedan tan extensos»): tres bancos por tema, iguales en
+#: IngeCAD y QGIS, con todo lo de GeoCAD (también lo que sólo estaba en el menú).
+#: Cada botón en uno solo, en este orden; lo que no figura va a Configuración.
+BANCOS = ("Configuración", "Edición", "Dibujo")
+_VISTA = ("dibujo:zoomwin", "dibujo:zoomext", "dibujo:zoomprev", "dibujo:zoomobj",
+          "dibujo:zoom", "dibujo:pan", "dibujo:regen")
+TEMA_BANCO = {
+    "ingecad": {
+        "Configuración": (
+            "ANGREL", "RIGHTCLICK", "GEOCRS", "GEOREPROJECT", "GEODIMSETUP",
+            "GEOPLOTSTYLES", "GEOPREVIEW", "SHPCONNECT", "SHPSTATUS", "SHPCHECKIN",
+            "SHPRELEASE", "GEOIMPORTSHP", "GEOIMPORTKML", "GEOEXPORTSHP", "GEOEXPORTKML",
+            "EXPORTARGEO", "QGISEXPORT", "GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP",
+            "GEOCADMODULES", "GEOBUTTONS", "SHPCONFIG", "QGISUPDATE", "GEOCADDIAG",
+            "GEOCADABOUT"),
+        "Edición": (
+            "SELECT", "GEOFILTER", "STRETCH", "FILLET", "CHAMFER", "BREAKATPOINT",
+            "MATCHPROP", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
+            "GEOREFADD", "GEOREFREMOVE", "GEOREFSAVE", "GEOREFDISCARD", "GEORREF",
+            "ASPECTOIMAGEN", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO", "SHPATTR"),
+        "Dibujo": (
+            "RECTANG", "TEXT", "BLOCK", "INSERT", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR",
+            "INSERTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "SHPNEW", "SHPLABEL",
+            "SHPLABELOFF", "SHPTHEME", "SHPTHEMEOFF"),
+    },
+    "qgis": {
+        "Configuración": (
+            "dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:relangle",
+            "dibujo:properties", "dibujo:cmdline") + _VISTA + (
+            "capas:layprops", "capas:capa", "capas:color", "capas:linetype",
+            "capas:lineweight", "capas:fill", "capas:filltr", "capas:laymcur",
+            "capas:layerp", "capas:laymch", "capas:layiso", "capas:layuniso",
+            "capas:layoff", "capas:layfrz", "capas:laylck", "capas:layulk", "capas:layon",
+            "capas:laythw", "capas:lwdisplay",
+            "puente:send", "geocad:reload", "geocad:status", "dibujo:plot", "dibujo:layout",
+            "dibujo:mview", "dibujo:purge", "geocad:ge_abrir", "geocad:ge_capturar",
+            "geocad:ge_configurar", "geocad:modules", "geocad:botones", "geocad:config",
+            "geocad:update", "geocad:about"),
+        "Edición": (
+            "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
+            "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
+            "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:breakpt",
+            "dibujo:break", "dibujo:explode", "dibujo:divide", "dibujo:measure",
+            "dibujo:copybase", "dibujo:pastebase", "dibujo:aligncopy", "dibujo:matchprop",
+            "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
+            "dibujo:textcolor", "geocad:copiartabla"),
+        "Dibujo": (
+            "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
+            "dibujo:rumbos", "dibujo:perp", "dibujo:gmsblocks", "dibujo:dtext",
+            "dibujo:block", "dibujo:insert", "dibujo:wblock", "geocad:pegartabla"),
+    },
+}
+
+
+#: lo que sólo estaba en el menú no tiene dibujo: en la barra va un ícono con estas
+#: letras (3.65.0; sin ellas, las tres primeras de la orden)
+LETRAS = {
+    "ANGREL": "REL", "RIGHTCLICK": "BD", "SHPCONNECT": "CON", "SHPSTATUS": "PEN",
+    "SHPCHECKIN": "GUA", "SHPRELEASE": "DES", "GEOEARTHSETUP": "GE", "GEOCADMODULES": "MOD",
+    "GEOBUTTONS": "BOT", "SHPCONFIG": "CFG", "QGISUPDATE": "ACT", "GEOCADDIAG": "DIAG",
+    "GEOCADABOUT": "?", "GEOREFADD": "B+", "GEOREFREMOVE": "B−", "GEOREFSAVE": "B✓",
+    "GEOREFDISCARD": "B×", "SHPINFO": "i", "SHPATTR": "ATR", "SHPLABELOFF": "R×",
+    "SHPTHEMEOFF": "T×",
+    "geocad:reload": "REC", "geocad:status": "EST", "geocad:ge_configurar": "GE",
+    "geocad:modules": "MOD", "geocad:botones": "BOT", "geocad:config": "CFG",
+    "geocad:update": "ACT", "geocad:about": "?",
+}
+
+
+def letras(boton: str) -> str:
+    return LETRAS.get(boton) or str(boton).split(":")[-1][:3].upper()
+
+
+def icono_letras(QtGui, QtCore, boton: str):
+    """Un QIcon con las letras de ``boton`` (IngeCAD pasa PySide6, QGIS qgis.PyQt)."""
+    pix = QtGui.QPixmap(64, 64)
+    pix.fill(QtGui.QColor(0, 0, 0, 0))
+    p = QtGui.QPainter(pix)
+    p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+    p.setBrush(QtGui.QColor("#3c6e91"))
+    p.setPen(QtGui.QColor("#3c6e91"))
+    p.drawRoundedRect(4, 4, 56, 56, 10, 10)
+    p.setPen(QtGui.QColor("white"))
+    texto = letras(boton)
+    fuente = QtGui.QFont()
+    fuente.setBold(True)
+    fuente.setPixelSize({1: 34, 2: 28}.get(len(texto), 20))
+    p.setFont(fuente)
+    p.drawText(pix.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, texto)
+    p.end()
+    return QtGui.QIcon(pix)
+
+
+def banco_de(programa: str, boton: str) -> str:
+    """El banco de ``boton`` (3.65.0)."""
+    for tema, lista in TEMA_BANCO.get(programa, {}).items():
+        if boton in lista:
+            return tema
+    return BANCOS[0]
+
+
+def bancos(programa: str, acciones, id_de) -> list:
+    """[(BANCO + tema, [acciones])]: ``acciones`` repartidas en los tres bancos,
+    una por botón, en el orden de TEMA_BANCO (lo que no figura, al final)."""
+    filas, vistos = {t: [] for t in BANCOS}, set()
+    for a in acciones:
+        b = id_de(a)
+        if b and b not in vistos:
+            vistos.add(b)
+            filas[banco_de(programa, b)].append((b, a))
+    salida = []
+    for tema in BANCOS:
+        orden = TEMA_BANCO.get(programa, {}).get(tema, ())
+        fila = sorted(filas[tema], key=lambda x: orden.index(x[0]) if x[0] in orden else len(orden))
+        if fila:
+            salida.append((BANCO + tema, [a for _b, a in fila]))
+    return salida
+
+
 def de_fabrica(programa: str):
     """Las categorías de fábrica de ``programa`` como si estuvieran guardadas
     (o None: sin categorías de fábrica, las barras de siempre). Todas

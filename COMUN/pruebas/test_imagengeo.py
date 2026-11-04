@@ -31,7 +31,7 @@ def cerca(a, b, tol=1e-6):
 
 
 # ------------------------------------------------------------- 1. los tres botones
-spec = plugin.construir_spec()
+spec = plugin.construir_spec(completo=True)
 assert spec.tools["INSERTARGEO"] is IG.InsertarGeoTool and spec.tools["EXPORTARGEO"] is IG.ExportarGeoTool
 assert [o for o, m, _b in yag.HERRAMIENTAS if m == "georref"] == ["INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN"]
 assert all(o in yag.DESCRIPCIONES for o in ("INSERTARGEO", "EXPORTARGEO"))
@@ -39,7 +39,7 @@ assert {"INSERTARGEO", "EXPORTARGEO", "GEORREF"} <= set(barra._iconos_propios())
 dibujo_menu = next(s for s in spec.menu if getattr(s, "label", "") == "Drawing")
 assert {"INSERTARGEO", "EXPORTARGEO"} <= {getattr(i, "command", "") for i in dibujo_menu.items}
 mods.poner("ingecad", "georref", False)
-assert not {"INSERTARGEO", "EXPORTARGEO"} & set(plugin.construir_spec().tools)
+assert not {"INSERTARGEO", "EXPORTARGEO"} & set(plugin.construir_spec(completo=True).tools)
 mods.poner("ingecad", "georref", True)
 print("ok botones")
 

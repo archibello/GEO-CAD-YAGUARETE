@@ -6,8 +6,9 @@ qgis.PyQt.QtWidgets (misma forma de uso). A la izquierda las categorías
 (cada una, una barra): su casilla prende o apaga la barra entera (3.47.0);
 a la derecha sus botones: la casilla los muestra u oculta, las flechas los
 ordenan y «Pasar a» los lleva a otra categoría. Debajo, los bancos de
-respaldo (3.60.7, en QGIS Dibujo CAD y Capas CAD): todos los botones de cada
-submenú, sin barra; «Pasar a» trae una copia a una categoría.
+respaldo (3.60.7; desde 3.65.0 Configuración, Edición y Dibujo en los dos
+programas): todos los botones de GeoCAD, sin barra; «Pasar a» trae una copia
+a una categoría.
 Aceptar va arriba, como en Módulos.
 """
 from __future__ import annotations
@@ -124,8 +125,9 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
         "Agrupá los botones de la misma familia, ordenalos con las flechas y destildá "
         "los que no uses (siguen en el menú). «Como de fábrica» vuelve a las categorías "
         "con que viene GeoCAD, con todas las barras apagadas."
-        + (" Debajo, los bancos de respaldo: todos los botones de cada submenú, siempre "
-           "sin barra; de ahí «Pasar a» trae el botón a una categoría." if bancos else ""), dlg)
+        + (" Debajo, los bancos Configuración, Edición y Dibujo: todos los botones de "
+           "GeoCAD, siempre sin barra; de ahí «Pasar a» trae el botón a una categoría."
+           if bancos else ""), dlg)
     intro.setWordWrap(True)
     lay.addWidget(intro)
     caja = QtWidgets.QDialogButtonBox(dlg)

@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.64.1"
+VERSION = "3.65.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -162,8 +162,11 @@ def cmd_diagnostico(ctx, *args) -> None:
         ctx.echo(linea)
 
 
-def construir_spec() -> PluginSpec:
-    """El plugin tal como lo piden los módulos activos en este momento."""
+def construir_spec(completo: bool = False) -> PluginSpec:
+    """El plugin tal como lo piden los módulos activos en este momento.
+    Drawing, Blocks, Printing y Dimensions no van en el menú GeoCAD: sus comandos
+    están en los bancos de Administrar botones (3.65.0, Fernando: «sacar del menú
+    principal» esos cuatro); con ``completo`` van, para armar los bancos."""
     est = modulos.estado(PROGRAMA)
     tools, menu, toolbar, aliases = {}, [], [], {}
     commands = {
@@ -330,7 +333,7 @@ def construir_spec() -> PluginSpec:
             )),
             SEPARATOR,
         ]
-    menu += [
+    bancos = [
         Submenu("Drawing", (
             MenuItem("Relative angles on/off (ANGREL)", "ANGREL"),
             MenuItem("Right button = Enter on/off", "RIGHTCLICK"),
@@ -358,7 +361,7 @@ def construir_spec() -> PluginSpec:
         SEPARATOR,
     ]
     if est["bloques"]:
-        menu += [
+        bancos += [
             Submenu("Blocks", (
                 MenuItem("Create block (BLOCK)", "BLOCK"),
                 MenuItem("Insert block (INSERT)", "INSERT"),
@@ -373,7 +376,7 @@ def construir_spec() -> PluginSpec:
             SEPARATOR,
         ]
     if est["impresion"]:
-        menu += [
+        bancos += [
             Submenu("Printing", (
                 MenuItem("Print preview (PREVIEW)", "GEOPREVIEW", _icon("vista_previa")),
                 MenuItem("Plot style table editor (pens)", "GEOPLOTSTYLES", _icon("plumas")),
@@ -381,7 +384,7 @@ def construir_spec() -> PluginSpec:
             SEPARATOR,
         ]
     if est["cotas"]:
-        menu += [
+        bancos += [
             Submenu("Dimensions", (
                 MenuItem("Create dimension style (DIMSETUP)", "GEODIMSETUP", _icon("crear_cota")),
                 SEPARATOR,
@@ -391,6 +394,8 @@ def construir_spec() -> PluginSpec:
             )),
             SEPARATOR,
         ]
+    if completo:
+        menu += bancos
     menu += [
         MenuItem("Modules...", "GEOCADMODULES"),
         MenuItem("Manage buttons...", "GEOBUTTONS"),
@@ -402,7 +407,7 @@ def construir_spec() -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.64.1",
+        version="3.65.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

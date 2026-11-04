@@ -384,6 +384,61 @@ assert [a.nombre for a in nuevas[-1].actions()] == ["capas:laymcur"]
 BB.restaurar(win)
 assert {b.titulo: b.actions() for _n, b in fabs} == antes
 print("ok bancos de respaldo")
+
+# 3.65.0: tres bancos por tema, iguales en IngeCAD y QGIS (Fernando, 04/11/2026: «meter
+# todo en estos tres grupos, así no quedan tan extensos»); cada botón en uno solo
+import re
+assert BT.BANCOS == ("Configuración", "Edición", "Dibujo")
+for prog, temas in BT.TEMA_BANCO.items():
+    assert set(temas) == set(BT.BANCOS), prog
+    todos = [b for t in BT.BANCOS for b in temas[t]]
+    assert len(todos) == len(set(todos)), (prog, [b for b in todos if todos.count(b) > 1])
+assert BT.banco_de("ingecad", "FILLET") == "Edición" and BT.banco_de("ingecad", "RECTANG") == "Dibujo"
+assert BT.banco_de("ingecad", "ANGREL") == "Configuración" and BT.banco_de("qgis", "otro:x") == "Configuración"
+r = BT.bancos("ingecad", [boton(x) for x in ("RECTANG", "FILLET", "NUEVO", "ANGREL", "SELECT", "FILLET")], idb)
+assert [(n, [idb(a) for a in f]) for n, f in r] == [
+    ("banco:Configuración", ["ANGREL", "NUEVO"]), ("banco:Edición", ["SELECT", "FILLET"]),
+    ("banco:Dibujo", ["RECTANG"])], r
+assert BT.bancos("ingecad", [Accion("sin")], idb) == []
+# todo lo de GeoCAD tiene banco a propósito (nada cae en Configuración por descuido)
+fuente_i = (RAIZ / "INGECAD/codigo/geocad/__init__.py").read_text(encoding="utf-8")
+ordenes_i = set(re.findall(r'(?:MenuItem|ToolbarItem)\(\s*"[^"]*",\s*"(\w+)"', fuente_i))
+ordenes_i |= {o for o, _m, _b in Y.HERRAMIENTAS}
+assert len(ordenes_i) > 50, len(ordenes_i)
+listados = {b for t in BT.BANCOS for b in BT.TEMA_BANCO["ingecad"][t]}
+assert ordenes_i == listados, (ordenes_i - listados, listados - ordenes_i)
+q = RAIZ / "QGIS/codigo/geocad"
+ids_q = {"dibujo:" + x for x in re.findall(r"_action\(\s*'(\w+)'", (q / "dibujo/plugin.py").read_text(encoding="utf-8"))}
+ids_q |= {"dibujo:" + x for x in re.findall(r"_lista\([^,]+,\s*'(\w+)'", (q / "dibujo/plugin.py").read_text(encoding="utf-8"))}
+edit = (q / "dibujo/edit_commands.py").read_text(encoding="utf-8").split("EDIT_COMMANDS = [", 1)[1]
+ids_q |= {"dibujo:" + x for x in re.findall(r"'(\w+)'\),\s*$", edit.split("\n]", 1)[0], re.M)}
+ids_q |= {"dibujo:" + x for x in re.findall(r"\('(zoom\w*|pan|regen)', '", (q / "dibujo/plugin.py").read_text(encoding="utf-8"))}
+ids_q |= {"capas:" + x for x in re.findall(r"_action\(\s*'(\w+)'", (q / "capas/plugin.py").read_text(encoding="utf-8"))}
+ids_q |= {"capas:" + x for x in ("capa", "color", "linetype", "lineweight", "fill", "filltr")}
+fuente_q = (q / "plugin.py").read_text(encoding="utf-8")
+ids_q |= {"geocad:" + x for x in re.findall(r'add\("(\w+)"', fuente_q) if x != "send"}
+ids_q |= {"geocad:" + x for x in re.findall(r'\("(ge_\w+)"', fuente_q)} | {"puente:send"}
+listados_q = {b for t in BT.BANCOS for b in BT.TEMA_BANCO["qgis"][t]}
+assert ids_q <= listados_q, ids_q - listados_q
+assert '"puente:send" if key == "send" else "geocad:" + key' in fuente_q
+# IngeCAD: los bancos con la ventana; lo que sólo está en el menú, con un botón propio
+hechos = []
+def _propia(window, item):
+    hechos.append(item.command)
+    a = Accion(item.command)
+    a.setProperty("geocad_orden", item.command)
+    return a
+C._accion_menu, original = _propia, C._accion_menu
+vent = types.SimpleNamespace(_plugin_toolbars={})
+bi = C.bancos(vent)
+assert [n for n, _f in bi] == ["banco:" + t for t in BT.BANCOS], bi
+en_bancos = [C.id_de(a) for _n, f in bi for a in f]
+assert "GEOCADMODULES" in en_bancos and "ANGREL" in en_bancos and len(en_bancos) == len(set(en_bancos))
+assert C.bancos(vent) and len(hechos) == len(set(hechos))          # los propios se hacen una vez
+C._accion_menu = lambda *a: (_ for _ in ()).throw(ImportError("sin Qt"))
+assert C.bancos(types.SimpleNamespace(_plugin_toolbars={})) == []   # sin Qt: sólo el menú
+C._accion_menu = original
+print("ok bancos por tema (3.65.0)")
 print("ok ingecad")
 
 # ---- 5. QGIS: en el menú GeoCAD; los botones con nombre propio --------------------------
@@ -408,6 +463,13 @@ assert textos_q.index("Administrar botones...") == textos_q.index("Módulos...")
 assert "Dibujo CAD" not in textos_q and "Capas CAD" not in textos_q
 assert all(BT.es_banco(n) for n, _a in P._bancos())
 assert "a.setProperty('geocad_id', 'capas:' + ico)" in (RAIZ / "QGIS/codigo/geocad/capas/plugin.py").read_text(encoding="utf-8")
+# 3.65.0: el menú GeoCAD también en los bancos; sin dibujo, ícono de letras sólo en la barra
+bq = P._bancos()
+assert bq and all(n in ["banco:" + t for t in BT.BANCOS] for n, _f in bq), bq
+ids_bq = [a.property("geocad_id") for _n, f in bq for a in f]
+assert "geocad:modules" in ids_bq and "geocad:about" in ids_bq and len(ids_bq) == len(set(ids_bq)), ids_bq
+assert P.actions["modules"].icono_en_menu is False and not P.actions["modules"].icon().isNull()
+assert BT.letras("GEOREFADD") == "B+" and BT.letras("geocad:otra") == "OTR"
 P._aplicar_botones()                     # ventana sin barras: nada, sin avisos
 assert P._fabricas() == [] and not mensajes
 fuente = (RAIZ / "QGIS/codigo/geocad/dibujo/plugin.py").read_text(encoding="utf-8")

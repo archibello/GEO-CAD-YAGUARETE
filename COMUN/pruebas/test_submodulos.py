@@ -50,17 +50,18 @@ creados = []
 class FakeSub:
     def __init__(self, iface): self.iface = iface; self.descargado = False; creados.append(self)
     def initGui(self):
-        a = types.SimpleNamespace(text=f"acción de {type(self).__name__}")
+        a = types.SimpleNamespace(text=f"acción de {type(self).__name__}",
+                                  property=lambda k, b=self.BOTON: b if k == "geocad_id" else None)
         self.iface.addPluginToMenu("&" + self.MENU, a)
         self.accion = a
         # se encuentran entre sí por el nombre de siempre
         self.vio_dibujo = qgis.utils.plugins.get("Dibujo_CAD") is not None
     def unload(self):
         self.iface.removePluginMenu("&" + self.MENU, self.accion); self.descargado = True
-class DibujoCADPlugin(FakeSub): MENU = "Dibujo CAD"
-class LayerPropertiesPlugin(FakeSub): MENU = "Capas CAD"
+class DibujoCADPlugin(FakeSub): MENU, BOTON = "Dibujo CAD", "dibujo:line"
+class LayerPropertiesPlugin(FakeSub): MENU, BOTON = "Capas CAD", "capas:layiso"
 class Rompe(FakeSub):
-    MENU = "x"
+    MENU, BOTON = "x", None
     def initGui(self): raise RuntimeError("se rompió")
 def fabrica(base, sub, iface):
     return {"DibujoCADPlugin": DibujoCADPlugin, "LayerPropertiesPlugin": LayerPropertiesPlugin}[sub.clase](iface)
@@ -120,20 +121,22 @@ for f in QTimer.shots: f()
 QTimer.shots.clear()
 titulos = lambda: [i.title for i in G.menu.items if isinstance(getattr(i, "title", None), str)
                    and i.title != "Google Earth"]          # el de Google Earth es propio (3.33.0)
-# 3.60.7 (Fernando): sin submenús Dibujo CAD y Capas CAD; son los bancos de respaldo
-# de Administrar botones
-bancos = lambda: [(n, [a.text for a in acc]) for n, acc in G._bancos()]
+# 3.60.7 (Fernando): sin submenús Dibujo CAD y Capas CAD; sus comandos van a los
+# bancos de Administrar botones (3.65.0: Configuración, Edición y Dibujo, por tema)
+bancos = lambda: [(n, [a.text for a in acc if a.text.startswith("acción de")]) for n, acc in G._bancos()]
+de_subs = lambda: [(n, t) for n, t in bancos() if t]
 assert titulos() == []
-assert bancos() == [("banco:Dibujo CAD", ["acción de DibujoCADPlugin"]),
-                    ("banco:Capas CAD", ["acción de LayerPropertiesPlugin"])], bancos()
-# apagar Dibujo desde Módulos...: se descarga (con Bloques y Papel) y sale del menú
+assert de_subs() == [("banco:Configuración", ["acción de LayerPropertiesPlugin"]),
+                     ("banco:Dibujo", ["acción de DibujoCADPlugin"])], bancos()
+# apagar Dibujo desde Módulos...: se descarga (con Bloques y Papel) y sale de los bancos
 import geocad.modulos_ui as mui
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": False})
 G.choose_modules()
-assert [n for n, _a in bancos()] == ["banco:Capas CAD"] and "Dibujo_CAD" not in qgis.utils.plugins
+assert de_subs() == [("banco:Configuración", ["acción de LayerPropertiesPlugin"])] \
+    and "Dibujo_CAD" not in qgis.utils.plugins
 assert creados[0].descargado and creados[1].descargado and len(creados) == 3   # Capas se reinicia
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": True})
-G.choose_modules(); assert [n for n, _a in bancos()] == ["banco:Dibujo CAD", "banco:Capas CAD"]
+G.choose_modules(); assert [n for n, _t in de_subs()] == ["banco:Configuración", "banco:Dibujo"]
 G.unload()
 assert "Dibujo_CAD" not in qgis.utils.plugins and "Layer_Properties" not in qgis.utils.plugins
 print("ok menú GeoCAD")

@@ -28,7 +28,7 @@ def cerca(a, b, tol=1e-9):
 
 
 # ------------------------------------------------------------- 1. orden, barra GeoCAD y menú
-spec = plugin.construir_spec()
+spec = plugin.construir_spec(completo=True)
 assert spec.tools["GEOPASTEIMAGE"] is PI.PegarImagenTool
 assert spec.aliases["PASTEIMAGE"] == "GEOPASTEIMAGE"
 assert "GEOPASTEIMAGE" in {i.command for i in spec.toolbar}                 # barra GeoCAD
@@ -42,7 +42,7 @@ import json
 es = json.loads((Path(plugin.__file__).parent / "i18n" / "es" / "commands.json").read_text("utf-8"))
 assert es["GEOPASTEIMAGE"]["name"] == "PEGARIMAGEN"
 mods.poner("ingecad", "georref", False)
-s2 = plugin.construir_spec()
+s2 = plugin.construir_spec(completo=True)
 assert "GEOPASTEIMAGE" not in s2.tools and "GEOPASTEIMAGE" not in {i.command for i in s2.toolbar}
 mods.poner("ingecad", "georref", True)
 print("ok botones")
