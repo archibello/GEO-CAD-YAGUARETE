@@ -51,6 +51,15 @@ iface.mapCanvas.return_value = canvas
 iface.cadDockWidget.return_value = QgsAdvancedDigitizingDockWidget(canvas)
 iface.addToolBar.side_effect = lambda nombre: ventana().addToolBar(nombre)
 iface.addDockWidget.side_effect = lambda area, dock: ventana().addDockWidget(area, dock)
+# el menú Edición y sus acciones, de verdad: «Pegar en el lugar» (3.66.0) se cuelga de ellos
+from qgis.PyQt.QtWidgets import QAction, QMenu
+_editar = QMenu("Edición", ventana())
+_copiar, _pegar = QAction("Copiar objetos espaciales", ventana()), QAction("Pegar objetos espaciales", ventana())
+_editar.addAction(_copiar)
+_editar.addAction(_pegar)
+iface.editMenu.return_value = _editar
+iface.actionCopyFeatures.return_value = _copiar
+iface.actionPasteFeatures.return_value = _pegar
 QApplication.processEvents()
 
 # como QGIS: su gancho de import anota los módulos de cada complemento, y
@@ -142,7 +151,7 @@ comprobar([n for n, _f in vistos["fabrica"] if botones.es_banco(n)] == ["banco:"
 en_bancos = [b for f in bancos.values() for b in f]
 comprobar(len(en_bancos) == len(set(en_bancos)), "cada botón en un solo banco")
 comprobar("capas:layiso" in bancos.get("banco:Configuración", ()) and "dibujo:line" in bancos.get("banco:Dibujo", ())
-          and "dibujo:fillet" in bancos.get("banco:Edición", ()) and "geocad:modules" in bancos.get("banco:Configuración", ()),
+          and "dibujo:fillet" in bancos.get("banco:Edición", ()) and "geocad:pegarorig" in bancos.get("banco:Edición", ()) and "geocad:modules" in bancos.get("banco:Configuración", ()),
           "LAYISO y Módulos en Configuración, EMPALME en Edición, LÍNEA en Dibujo")
 comprobar(all(b in en_bancos for n, f in vistos["fabrica"] if not botones.es_banco(n) for b in f),
           "todos los botones de las barras están en algún banco")

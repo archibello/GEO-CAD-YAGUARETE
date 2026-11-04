@@ -124,7 +124,7 @@ TEMA_BANCO = {
             "GEOCADABOUT"),
         "Edición": (
             "SELECT", "GEOFILTER", "STRETCH", "FILLET", "CHAMFER", "BREAKATPOINT",
-            "MATCHPROP", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
+            "MATCHPROP", "GEOPASTEORIG", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
             "GEOREFADD", "GEOREFREMOVE", "GEOREFSAVE", "GEOREFDISCARD", "GEORREF",
             "ASPECTOIMAGEN", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO", "SHPATTR"),
         "Dibujo": (
@@ -150,8 +150,8 @@ TEMA_BANCO = {
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
             "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:breakpt",
             "dibujo:break", "dibujo:explode", "dibujo:divide", "dibujo:measure",
-            "dibujo:copybase", "dibujo:pastebase", "dibujo:aligncopy", "dibujo:matchprop",
-            "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
+            "dibujo:copybase", "dibujo:pastebase", "geocad:pegarorig", "dibujo:aligncopy",
+            "dibujo:matchprop", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
             "dibujo:textcolor", "geocad:copiartabla"),
         "Dibujo": (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",

@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.65.0"
+VERSION = "3.66.2"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -120,6 +120,7 @@ class GeoCAD:
         self.subs = None
         self.tablas = None          # módulo «Tablas»: Pegar tabla en las composiciones
         self.referencias = None     # módulo «Referencias»: Shift + clic derecho al digitalizar
+        self.pegar_lugar = None     # módulo «Pegar en el lugar»: Edición > Pegar en el lugar (3.66.0)
         self._cargando = False
         self._submenus = []
 
@@ -175,6 +176,10 @@ class GeoCAD:
                 self.tablas.pegar_menu, self.tablas.icono())
             add("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
                 self.tablas.copiar_menu, self.tablas.icono_copiar())
+        if self.pegar_lugar is not None:
+            self.menu.addSeparator()
+            add("pegarorig", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)", self.pegar_lugar.pegar,
+                QIcon(str(Path(__file__).parent / "iconos" / "pegar_lugar.png")))
         if modulos.activo(PROGRAMA, "googleearth"):
             self.menu.addSeparator()
             from . import googleearth_qgis as GEQ
@@ -269,6 +274,30 @@ class GeoCAD:
         elif not quiere and self.tablas is not None:
             self._quitar_tablas()
         self._sync_referencias()
+        self._sync_pegar_lugar()
+
+    def _sync_pegar_lugar(self) -> None:
+        """Edición > Pegar en el lugar (Ctrl+Alt+V) y la copia para IngeCAD, según el módulo."""
+        quiere = modulos.activo(PROGRAMA, "pegar_lugar")
+        if quiere and self.pegar_lugar is None:
+            try:
+                from .pegar_lugar_qgis import PegarLugarQgis
+                self.pegar_lugar = PegarLugarQgis(self.iface)
+            except Exception as exc:  # noqa: BLE001
+                self.pegar_lugar = None
+                self._bar(f"No se pudo iniciar Pegar en el lugar: {type(exc).__name__}: {exc}", "warn", 10)
+        elif not quiere and self.pegar_lugar is not None:
+            self._quitar_pegar_lugar()
+            from . import pegar_lugar
+            pegar_lugar.borrar_copia()
+
+    def _quitar_pegar_lugar(self) -> None:
+        if self.pegar_lugar is not None:
+            try:
+                self.pegar_lugar.unload()
+            except Exception:  # noqa: BLE001
+                pass
+            self.pegar_lugar = None
 
     def _sync_referencias(self) -> None:
         """Shift + clic derecho al digitalizar, según el módulo «Referencias»."""
@@ -328,6 +357,7 @@ class GeoCAD:
         self._restaurar_botones()
         self._quitar_tablas()
         self._quitar_referencias()
+        self._quitar_pegar_lugar()
         from . import googleearth_qgis
         googleearth_qgis.apagar()
         if self.subs is not None:

@@ -77,5 +77,7 @@
   "Google Earth": "Google Earth",
   "Open Google Earth with GeoCAD": "Abrir Google Earth con GeoCAD",
   "Capture view (Ctrl+Alt+G)": "Capturar vista (Ctrl+Alt+G)",
-  "Capture settings...": "Configurar captura..."
+  "Capture settings...": "Configurar captura...",
+  "Paste in Place": "Pegar en el lugar",
+  "Paste in Place (PASTEORIG)": "Pegar en el lugar (PEGARORIG)"
 }

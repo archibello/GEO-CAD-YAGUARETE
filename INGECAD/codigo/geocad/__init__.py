@@ -34,7 +34,7 @@ sqlite_win.asegurar()     # Windows: IngeCAD empaquetado no trae sqlite3 (GeoPac
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, categorias, config, dibujo, modulos, nombre, ventanas
-from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
+from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, pegar_lugar_ingecad, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.65.0"
+VERSION = "3.66.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -120,6 +120,7 @@ def _document_open(ctx, document):
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
     teclado_ingecad.aplicar(ctx.host)
+    pegar_lugar_ingecad.aplicar(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
         puente.ensure_started(ctx.host)
     if not modulos.elegido(PROGRAMA) or modulos.nuevos(PROGRAMA):
@@ -208,6 +209,13 @@ def construir_spec(completo: bool = False) -> PluginSpec:
                       "GEOREFEDIT": bloques.EditarEnSitioTool, "GEOBLOCKBASE": bloques.PuntoBaseTool,
                       "GEOREFADD": bloques.AgregarTool, "GEOREFREMOVE": bloques.QuitarTool})
         commands.update({"GEOREFSAVE": bloques.cmd_guardar, "GEOREFDISCARD": bloques.cmd_descartar})
+    if est["pegar_lugar"]:
+        # 3.66.0 (Fernando: «ESO ES PEGAR EN EL LUGAR», Ctrl+Alt+V): también en Edit
+        tools["GEOPASTEORIG"] = pegar_lugar_ingecad.PegarLugarTool
+        aliases.update({"PASTEORIG": "GEOPASTEORIG", "PEGARENLUGAR": "GEOPASTEORIG"})
+        menu += [MenuItem("Paste in Place (PASTEORIG)", "GEOPASTEORIG", _icon("pegar_lugar")),
+                 SEPARATOR]
+        toolbar.append(ToolbarItem("Paste in Place (PASTEORIG)", "GEOPASTEORIG", _icon("pegar_lugar")))
     if est["seleccion"] and seleccion.SelTool is not None:
         tools["SELECT"] = seleccion.SelTool
         aliases["SEL"] = "SELECT"           # en español la orden se llama SELECCIONA
@@ -407,7 +415,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.65.0",
+        version="3.66.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -440,6 +448,7 @@ def aplicar_modulos(window) -> None:
     seleccion.aplicar_autocompletar(window)
     propiedades.refrescar(window)
     teclado_ingecad.aplicar(window)
+    pegar_lugar_ingecad.aplicar(window)
     papel.preparar_combo(window)
     if not modulos.activo(PROGRAMA, "googleearth"):
         googleearth_cmd.apagar()            # ventanita, servidor, atajo y enlace fuera
@@ -469,6 +478,7 @@ uniones.instalar()
 guias_ingecad.instalar()
 pegartabla.instalar()
 pegarimagen.instalar()
+pegar_lugar_ingecad.instalar()
 barra.instalar()
 PLUGIN = construir_spec()
 # los textos se esconden según su tamaño (3.26.4): antes de abrir un dibujo,

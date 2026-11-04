@@ -119,6 +119,7 @@ DESCRIPCIONES = {
     "GEOEXPORTSHP": "Exporta lo elegido como shapefiles (por capa y tipo o por tipo con LAYER), con .prj, en el sistema que elija.",
     "GEOIMPORTKML": "Importa un KML o KMZ de Google Earth al sistema del dibujo: una capa por carpeta, colores, nombres como rótulos y datos extendidos como atributos.",
     "GEOEXPORTKML": "Exporta lo elegido a un KMZ para Google Earth (WGS 84): una carpeta por capa, colores, grosores, relleno y atributos.",
+    "GEOPASTEORIG": "Pega lo copiado en IngeCAD o en QGIS en sus mismas coordenadas, con su capa, color, tipo y grosor.",
     "GEODRAWFRONT": "Lo elegido se dibuja encima de todo: líneas, sombreados, textos, bloques.",
     "GEODRAWBACK": "Lo elegido se dibuja debajo de todo: líneas, sombreados, textos, bloques.",
     "BLOCK": "Crea un bloque con los objetos elegidos y su punto base.",

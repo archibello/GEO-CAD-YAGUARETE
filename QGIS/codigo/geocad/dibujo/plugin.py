@@ -339,6 +339,24 @@ class DibujoCADPlugin:
                                       'fuente y negrita) de un objeto a otros'))
         self._action('matchprop', 'Igualar propiedades (IGUALARPROP / MA) — de un objeto de origen a los '
                      'designados', lambda: self.run_command('IGUALARPROP'), toolbar=False)
+        # PEGAR EN EL LUGAR (3.66.0, Fernando: «ESO ES PEGAR EN EL LUGAR»): por teclado; el menú
+        # Edición y el botón son del módulo «Pegar en el lugar» (pegar_lugar_qgis.py)
+        self.mgr.register(CommandSpec('PASTEORIG', ('PEGARORIG', 'PEGARENLUGAR', 'PASTEORIG'),
+                                      self._pegar_en_el_lugar, title='PEGARORIG', group='edición',
+                                      description='Pega lo copiado en IngeCAD o en QGIS en sus '
+                                                  'coordenadas originales, en la capa activa'))
+
+    def _pegar_en_el_lugar(self):
+        from .. import modulos
+        if not modulos.activo('qgis', 'pegar_lugar'):
+            self.cmdline.echo('PEGARORIG: el módulo «Pegar en el lugar» está apagado '
+                              '(GeoCAD Yaguareté > Módulos...).')
+            return
+        from ..pegar_lugar_qgis import mensaje_en_portapapeles, pegar
+        msg = mensaje_en_portapapeles()
+        self.cmdline.echo(pegar(self.iface, msg) if msg is not None else
+                          'PEGARORIG: el portapapeles no tiene objetos copiados con GeoCAD. Copie '
+                          '(Ctrl+C) en IngeCAD o en QGIS y vuelva a pegar.')
 
     def _build_view_commands(self):
         """ZOOM (Z), ENCUADRE (P), REGEN (RE) y REDIBUJA (R) de IngeCAD (3.61.0). Los botones

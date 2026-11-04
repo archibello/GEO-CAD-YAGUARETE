@@ -1,0 +1,12 @@
+GeoCAD - versión 3.66.1
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Fernando, 04/11/2026, al pegar de IngeCAD a QGIS: «TypeError:
+QgsMessageBar.pushMessage(): arguments did not match any overloaded call».
+
+Cambios
+- Pegar en el lugar de QGIS: al terminar de pegar salía esa ventana de error en
+  vez del aviso. Lo pegado quedaba bien; lo que fallaba era el aviso (también
+  el de «el portapapeles no tiene objetos» y los demás). Ahora se ve en la barra
+  de mensajes de QGIS.

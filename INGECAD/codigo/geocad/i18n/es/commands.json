@@ -161,5 +161,8 @@
   },
   "GEOCADDIAG": {
     "name": "DIAGNOSTICOGEOCAD"
+  },
+  "GEOPASTEORIG": {
+    "name": "PEGARORIG"
   }
 }

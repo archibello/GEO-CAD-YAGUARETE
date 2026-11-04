@@ -1,0 +1,18 @@
+GeoCAD - versión 3.66.2
+=======================
+CORRECCIÓN (IngeCAD y QGIS). Hay que actualizar los dos programas.
+
+Fernando, 04/11/2026, al copiar en QGIS y pegar en IngeCAD: «Portapapeles vacío»;
+al pegar en un editor de texto: «No pega nada»; y en QGIS, «el portapapeles no
+tiene objetos copiados con GeoCAD».
+
+Cambios
+- Pegar en el lugar: en GNOME 48 con Wayland, GeoCAD volvía a escribir el
+  portapapeles justo después de copiar y lo dejaba vacío. Se perdía también la copia
+  normal de QGIS hacia otros programas. Ahora el portapapeles queda como lo dejó
+  cada programa.
+- Lo que viaja entre los dos programas se guarda aparte, en
+  ~/.config/geocad/pegar_lugar.json, y sólo se usa si coincide con lo que está en el
+  portapapeles: una copia vieja no se pega. Con el módulo apagado, el archivo se borra.
+- Hay que tener esta versión en los dos programas: no se entiende con la 3.66.0 ni
+  con la 3.66.1.

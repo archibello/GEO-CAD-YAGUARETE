@@ -1,0 +1,34 @@
+GeoCAD - versión 3.66.0
+=======================
+NUEVO (IngeCAD y QGIS). Hay que actualizar los dos.
+
+Fernando, 04/11/2026: «copiar en una las entidades seleccionadas y pegarlas en
+la otra»; «ESO ES PEGAR EN EL LUGAR»; atajo «CTRL+ALT+V»; «si no está
+configurado el sistema de representación de coordenadas, esta acción va a crear
+el mismo de forma automática».
+
+Cambios
+- Pegar en el lugar (PEGARORIG / PASTEORIG, Ctrl+Alt+V), módulo nuevo: pega lo
+  copiado con Ctrl+C en IngeCAD o en QGIS en sus mismas coordenadas, dentro del
+  mismo programa o de uno al otro.
+- IngeCAD: en el menú Edit, debajo de Paste; también en el menú y la barra
+  GeoCAD y en Administrar botones (banco Edición). Lo copiado en QGIS llega con
+  sus capas, colores, tipos y grosores. U lo deshace todo junto.
+- QGIS: en el menú Edición, debajo de Pegar objetos espaciales; también en el
+  menú GeoCAD, en Administrar botones (banco Edición) y como comando en la línea
+  de comandos. Pega en la capa activa, con su capa CAD (LAYER_CODE), CAD_COLOR,
+  CAD_LTYPE y CAD_LW; las capas CAD nuevas aparecen en Yaguá Capas con el aspecto
+  que traen. La capa entra en edición si no lo estaba.
+- Sistema de coordenadas: si el destino no tiene, toma el del origen; si tiene
+  otro, lo pegado se reproyecta.
+- El Ctrl+C y el Ctrl+V de cada programa siguen como estaban.
+
+Lo que no viaja
+- Los textos no viajan: se cuentan en el aviso al pegar. Tampoco lo que no se
+  pueda convertir en geometría.
+- En QGIS sólo se pega lo del tipo de la capa activa (puntos, líneas o
+  polígonos); lo demás se cuenta en el aviso.
+- Las curvas de QGIS viajan como líneas de muchos tramos.
+
+Se apaga en GeoCAD > Módulos... en cada programa: apagado, no queda ni el ítem
+ni el mensaje en el portapapeles.

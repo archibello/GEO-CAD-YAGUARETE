@@ -138,6 +138,12 @@ CATALOGO = {
                "combinadas, letras, colores y espesor de los bordes), ubicada con dos puntos "
                "que le dan la escala, en el modelo o en el papel; o como dibujo y textos "
                "(la geometría de QGIS en su lugar, con rótulos)."),
+        Modulo("pegar_lugar", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)",
+               "En el menú Edit, debajo de Paste: pega lo copiado (Ctrl+C) en IngeCAD o en "
+               "QGIS en sus mismas coordenadas, con su capa, color, tipo y grosor. Si el dibujo "
+               "no tiene sistema de coordenadas toma el de QGIS. Al copiar en IngeCAD, lo "
+               "copiado queda también listo para pegarlo en el lugar en QGIS.",
+               cambia_programa=True),
         Modulo("intercambio", "Intercambio: sistema de coordenadas, Importar y Exportar SHP",
                "Menú GeoCAD > Sistema de coordenadas (SISTEMAGEO declara en qué sistema está "
                "el dibujo, sin mover nada; REPROYECTAR lo convierte a otro con PROJ), "
@@ -215,6 +221,12 @@ CATALOGO = {
                "Nearest, Origin, None) para el punto siguiente, como en AutoCAD. Perpendicular y "
                "Apparent Intersection prolongan las líneas con trazo de puntos.",
                cambia_programa=True),
+        Modulo("pegar_lugar", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)",
+               "En el menú Edición, debajo de Pegar objetos espaciales: pega en la capa activa "
+               "lo copiado (Ctrl+C) en IngeCAD o en QGIS en sus mismas coordenadas, con su capa "
+               "CAD (LAYER_CODE), color, tipo y grosor. Si el proyecto no tiene sistema de "
+               "coordenadas toma el del dibujo. El Ctrl+C de QGIS deja lo copiado listo para "
+               "pegarlo en el lugar en IngeCAD.", cambia_programa=True),
         Modulo("tablas", "Tablas: Pegar tabla en las composiciones",
                "Botón «Pegar tabla» en la ventana de cada composición (y en el menú GeoCAD): "
                "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "
