@@ -16,7 +16,7 @@ lp = load_plugin(ROOT / "INGECAD" / "codigo" / "geocad", bundled=False); assert 
 M = import_module("ingecad_plugin_geocad.modulos")
 cfg = import_module("ingecad_plugin_geocad.config")
 assert not M.elegido("ingecad") and not M.elegido("qgis")
-assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "googleearth": True, "referencias": True, "angulos_relativos": True, "teclado": True, "pegar_lugar": True}
+assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "googleearth": True, "referencias": True, "angulos_relativos": True, "teclado": True, "pegar_lugar": True, "agarres": True}
 assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False, "capas": False, "referencias": True, "tablas": True, "googleearth": True, "teclado": True, "cursor_geocad": True, "apilados": True, "agarres": True, "boton_derecho": True, "pegar_lugar": True}
 M.guardar("qgis", {"dibujo": False, "capas": False, "inventado": True})          # (Dibujo y Capas: test_submodulos)
 assert M.estado("qgis")["bloques"] is False                                      # Bloques necesita Dibujo
@@ -48,7 +48,8 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Google Earth: captura georreferenciada y mosaico, "
                                 "Perpendicular y Apparent Intersection con guías de puntos, "
                                 "Ángulos relativos al tramo anterior, "
-                                "Teclado siempre a la línea de comandos")
+                                "Teclado siempre a la línea de comandos, "
+                                "Agarres de vértices")
 print("ok catálogo")
 
 # ---- 2. la configuración del Puente 1.x se trae sola ------------------------------
@@ -197,7 +198,7 @@ data["qgis"] = {"puente": True, "dibujo": False, "capas": False}       # lo que 
 Mq.archivo().write_text(json.dumps(data))
 assert Mq.nuevos("qgis") == ["dibujo", "bloques", "boton_derecho", "teclado", "cursor_geocad", "apilados", "agarres", "papel", "capas", "referencias", "pegar_lugar", "tablas", "googleearth"]
 assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False, "capas": False, "referencias": True, "tablas": True, "googleearth": True, "teclado": True, "cursor_geocad": True, "apilados": True, "agarres": True, "boton_derecho": True, "pegar_lugar": True}
-assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "pegar_lugar", "intercambio", "dwg", "googleearth", "referencias", "teclado"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1), Google Earth (3.33), Teclado (3.59), Pegar en el lugar (3.66)
+assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "pegar_lugar", "intercambio", "dwg", "googleearth", "referencias", "teclado", "agarres"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1), Google Earth (3.33), Teclado (3.59), Pegar en el lugar (3.66)
 QDialog.abiertos.clear(); QDialog.respuesta = 0                          # Cancelar: quedan sus valores por defecto
 G._primer_inicio()
 assert QDialog.abiertos and Mq.nuevos("qgis") == [] and not Mq.activo("qgis", "capas")

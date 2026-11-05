@@ -1,0 +1,28 @@
+GeoCAD - versión 3.70.0
+=======================
+FUNCIÓN NUEVA (IngeCAD). Hay que actualizar IngeCAD; QGIS sólo cambia de número.
+
+Pedido de Fernando: dotar a IngeCAD de lo que se agregó a QGIS en la 3.69.0.
+
+Medido con la ventana real en IngeCAD 0.6.7, 0.6.8.2 y 0.7.0: sus agarres ya responden a las
+referencias, ORTO, F3, F8, Esc y deshacer, y los clics repetidos ya pasan de un objeto tapado a
+otro. Eso sigue siendo de IngeCAD: GeoCAD no lo toca.
+
+Módulo nuevo «Agarres de vértices» en IngeCAD, prendido; se apaga en GeoCAD > Módulos...
+- Con un agarre tomado se puede escribir el punto, sin hacer clic en la línea de comandos: @dx,dy,
+  @d<ángulo, una coordenada o una distancia hacia el cursor (con ORTO, sobre el eje), y las
+  referencias de una vez (END, MED...). Vale en cualquier agarre, no sólo en los vértices. Intro o
+  Esc cancelan. Antes, lo escrito iba a la línea de comandos: una «L» abría LINE con el agarre
+  todavía en la mano; ahora se avisa y el agarre sigue tomado.
+- Mayús + clic marca varios agarres de vértices o extremos (en rojo). Clic en un marcado y se
+  mueven todos juntos; clic en otro: se mueve él solo y se desmarcan.
+- Ctrl + clic en el agarre del medio de una polilínea agrega un vértice, que queda tomado. El clic
+  solo sigue moviendo el tramo, como en IngeCAD y AutoCAD. No se agrega en un tramo curvo ni en una
+  línea: lo dice.
+- Supr con agarres marcados borra esos vértices; sin marcados, borra el objeto, como siempre. No
+  se borra lo que dejaría a la polilínea sin forma, y sólo se borran vértices de polilíneas.
+- Los objetos designados con un agarre en el mismo lugar (un vértice o un tramo) se mueven juntos,
+  se les agrega y se les borra el vértice juntos. Antes se movía sólo el primero. Los no designados
+  no se tocan. También los dos extremos de un anillo sin cerrar.
+- Cada operación es un solo deshacer, aunque cambie varios objetos.
+- Con un agarre tomado, Supr no hace nada: IngeCAD borraba el objeto.

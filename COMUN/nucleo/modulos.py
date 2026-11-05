@@ -179,6 +179,14 @@ CATALOGO = {
                "también con un comando en marcha. No se toca en campos de texto, la tabla "
                "de atributos, diálogos ni con Ctrl o Alt.",
                cambia_programa=True),
+        Modulo("agarres", "Agarres de vértices",
+               "Con un agarre tomado se puede escribir el punto: @dx,dy, @d<ángulo, una "
+               "coordenada o una distancia hacia el cursor, y Mayús + botón derecho abre el menú "
+               "de referencias. Mayús + clic marca varios agarres, "
+               "que se mueven juntos; Ctrl + clic en el agarre del medio de una polilínea agrega "
+               "un vértice, y Supr borra los marcados. Los objetos designados con un agarre en "
+               "el mismo lugar se mueven juntos. Apagado, los agarres quedan como en IngeCAD.",
+               cambia_programa=True),
     ),
     "qgis": (
         Modulo("puente", "Puente con IngeCAD",

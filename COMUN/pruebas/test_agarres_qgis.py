@@ -12,7 +12,7 @@ from geocad import agarres as A, modulos
 # ================================================================ el módulo
 m = [x for x in modulos.catalogo("qgis") if x.clave == "agarres"]
 assert m and m[0].defecto and m[0].cambia_programa and m[0].requiere == "dibujo"
-assert not [x for x in modulos.catalogo("ingecad") if x.clave == "agarres"]     # sólo QGIS
+assert [x for x in modulos.catalogo("ingecad") if x.clave == "agarres"]         # desde 3.70, también IngeCAD (test_agarres_ingecad)
 modulos.guardar("qgis", {"dibujo": False})
 assert not modulos.activo("qgis", "agarres")
 modulos.guardar("qgis", {"dibujo": True, "agarres": False})

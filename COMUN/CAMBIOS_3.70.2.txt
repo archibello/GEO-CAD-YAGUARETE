@@ -1,0 +1,12 @@
+GeoCAD - versión 3.70.2
+=======================
+CORRECCIÓN (IngeCAD). Hay que actualizar IngeCAD; QGIS sólo cambia de número.
+
+Observación de Fernando, probando la 3.70.1: el menú de ayudas al dibujo se despliega y deja elegir,
+y el vértice engancha, pero no se puede verificar a simple vista.
+
+Módulo «Agarres de vértices»
+- Con uno o varios agarres tomados se ve la marca de la referencia en el punto donde va a enganchar,
+  la misma de los comandos, con cada referencia: la elegida en el menú, la escrita y las de siempre.
+- También se ve la guía de ORTO, POLAR y el rastreo de referencias.
+  IngeCAD las pinta sólo con un comando en marcha: los agarres enganchaban sin mostrarlo.

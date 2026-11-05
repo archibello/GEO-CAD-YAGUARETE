@@ -1,0 +1,13 @@
+GeoCAD - versión 3.70.1
+=======================
+CORRECCIÓN (IngeCAD). Hay que actualizar IngeCAD; QGIS sólo cambia de número.
+
+Pedido de Fernando, probando la 3.70.0: no se podía desplegar el menú de ayudas al dibujo mientras
+se desplazan uno o varios vértices.
+
+Módulo «Agarres de vértices»
+- Con uno o varios agarres tomados, Mayús + botón derecho (o Ctrl + botón derecho) abre el menú de
+  referencias a objetos y el agarre sigue tomado. La referencia elegida vale para un punto. IngeCAD
+  lo soltaba con cualquier botón derecho y abría el menú sólo con un comando en marcha.
+- «Desde» y «Medio entre 2 puntos» se ven apagados: necesitan un comando en marcha.
+- El botón derecho solo sigue cancelando el agarre, como en IngeCAD.

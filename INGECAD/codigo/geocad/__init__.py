@@ -34,7 +34,7 @@ sqlite_win.asegurar()     # Windows: IngeCAD empaquetado no trae sqlite3 (GeoPac
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, categorias, config, dibujo, modulos, nombre, ventanas
-from . import aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, pegar_lugar_ingecad, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
+from . import agarres_ingecad, aspecto, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, pegar_lugar_ingecad, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.69.0"
+VERSION = "3.70.2"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -121,6 +121,7 @@ def _document_open(ctx, document):
     papel.preparar_combo(ctx.host)
     teclado_ingecad.aplicar(ctx.host)
     pegar_lugar_ingecad.aplicar(ctx.host)
+    agarres_ingecad.aplicar(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
         puente.ensure_started(ctx.host)
     if not modulos.elegido(PROGRAMA) or modulos.nuevos(PROGRAMA):
@@ -415,7 +416,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.69.0",
+        version="3.70.2",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -449,6 +450,7 @@ def aplicar_modulos(window) -> None:
     propiedades.refrescar(window)
     teclado_ingecad.aplicar(window)
     pegar_lugar_ingecad.aplicar(window)
+    agarres_ingecad.aplicar(window)
     papel.preparar_combo(window)
     if not modulos.activo(PROGRAMA, "googleearth"):
         googleearth_cmd.apagar()            # ventanita, servidor, atajo y enlace fuera
