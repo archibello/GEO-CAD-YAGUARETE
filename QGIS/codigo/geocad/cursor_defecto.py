@@ -9,9 +9,10 @@ deseleccionar objetos». Acordado:
 - queda activo al abrir QGIS, al abrir o crear un proyecto y cuando el mapa se
   queda sin herramienta; la que se elige a propósito se respeta;
 - Esc, en reposo, deselecciona todas las capas, también con el foco en el panel
-  de capas, y con Desplazar, las de acercar, Identificar o Seleccionar vuelve
-  al cursor;
-- Agregar entidad, Vértices, Medir y demás conservan su Esc sobre el mapa;
+  de capas, y con Desplazar, las de acercar, Identificar, Seleccionar o Vértices
+  vuelve al cursor;
+- en la herramienta de vértices de QGIS (3.69), también: cancela lo que se esté moviendo;
+- Agregar entidad, Medir y demás conservan su Esc sobre el mapa;
 - nunca en campos de texto, tablas que se editan al teclear, ni diálogos.
 
 Los módulos de Qt y lo propio de QGIS entran por parámetro, como en teclado.py.
@@ -23,7 +24,8 @@ from .teclado import _ESC, Teclado, con_modificadores, nombre_tecla, protegido
 #: las herramientas de QGIS desde las que Esc vuelve al cursor
 _VUELVEN = ("actionPan", "actionZoomIn", "actionZoomOut", "actionIdentify",
             "actionSelect", "actionSelectRectangle", "actionSelectPolygon",
-            "actionSelectFreehand", "actionSelectRadius")
+            "actionSelectFreehand", "actionSelectRadius",
+            "actionVertexTool", "actionVertexToolActiveLayer")
 
 
 class EscReposo(Teclado):
@@ -63,7 +65,7 @@ class CursorDefecto:
     """iface, mgr (el de los comandos), cmdline y las herramientas de GeoCAD;
     capas() da las capas vectoriales del proyecto."""
 
-    def __init__(self, iface, mgr, cmdline, herramientas, capas, QtCore, QtWidgets):
+    def __init__(self, iface, mgr, cmdline, herramientas, capas, QtCore, QtWidgets, QtGui=None):
         self.iface = iface
         self.canvas = iface.mapCanvas()
         self.mgr = mgr
@@ -71,6 +73,7 @@ class CursorDefecto:
         self.herramientas = herramientas
         self.capas = capas
         self.QtCore = QtCore
+        self.QtGui = QtGui
         self.vivo = False
         self.esc = EscReposo(QtCore, QtWidgets, iface.mainWindow, lambda: cmdline.input,
                              lambda w: w is self.canvas or w is self.canvas.viewport(),
@@ -125,7 +128,19 @@ class CursorDefecto:
         if hubo:
             self.cmdline.echo('*Cancelar*')
         if not self.es_nuestra() and self.vuelve():
+            self._cancelar_herramienta()
             self.activar()
+
+    def _cancelar_herramienta(self) -> None:
+        """Esc primero a la herramienta: la de vértices, sacada a mitad de un arrastre, queda
+        sin responder la próxima vez (medido en QGIS 4.2.2)."""
+        tool = self.canvas.mapTool()
+        if tool is None or self.QtGui is None:
+            return
+        T = getattr(self.QtCore.QEvent, "Type", self.QtCore.QEvent)
+        Key = getattr(self.QtCore.Qt, "Key", self.QtCore.Qt)
+        M = getattr(self.QtCore.Qt, "KeyboardModifier", self.QtCore.Qt)
+        tool.keyPressEvent(self.QtGui.QKeyEvent(T.KeyPress, Key.Key_Escape, M.NoModifier))
 
     # ---------------------------------------------------------------- instalar
     def instalar(self) -> None:

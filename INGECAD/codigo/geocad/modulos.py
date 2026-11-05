@@ -207,15 +207,23 @@ CATALOGO = {
                "El cursor de GeoCAD queda activo al abrir QGIS y al abrir o crear un proyecto; "
                "la herramienta que elegís a propósito se respeta. Esc deselecciona todas las "
                "capas, también con el foco en el panel de capas, y con Desplazar, las de acercar, "
-               "Identificar o Seleccionar vuelve al cursor. Con este cursor el botón izquierdo "
-               "designa: el mapa se mueve con el botón del medio o la rueda. Agregar entidad, "
-               "Vértices y Medir conservan su Esc.",
+               "Identificar, Seleccionar o Vértices vuelve al cursor. Con este cursor el botón "
+               "izquierdo designa: el mapa se mueve con el botón del medio o la rueda. Agregar "
+               "entidad y Medir conservan su Esc.",
                requiere="dibujo", cambia_programa=True),
         Modulo("apilados", "Objetos tapados (clic repetido)",
                "Con objetos superpuestos en la capa activa, cada clic en el mismo punto pasa al "
                "objeto siguiente y lo resalta encima de todo, sin tocar los datos ni el estilo de "
                "la capa. Con el cursor en reposo y al designar objetos (BORRA, DESPLAZA...). "
                "Mayús + clic quita el designado, aunque esté tapado.",
+               requiere="dibujo", cambia_programa=True),
+        Modulo("agarres", "Agarres de vértices",
+               "Lo designado con el cursor de GeoCAD muestra agarres. Clic en uno y se mueve con "
+               "las referencias, F3, F8 y lo escrito (@dx,dy, @d<ángulo o una distancia). "
+               "Mayús + clic marca varios, el agarre del medio de un tramo agrega un vértice y "
+               "Supr borra los marcados. Con la edición topológica de QGIS, también cambian los "
+               "objetos que comparten el vértice. Los cambios quedan en la edición de la capa, "
+               "con deshacer, hasta guardarlos.",
                requiere="dibujo", cambia_programa=True),
         # 3.60.6: apagado de fábrica, como Capas: sus pestañas son una barra más
         Modulo("papel", "Espacio papel",

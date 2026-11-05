@@ -203,6 +203,9 @@ class CadMapTool(QgsMapTool):
 
     def keyPressEvent(self, ev):
         if ev.key() == qt('Key', 'Key_Delete') and self.mgr.command is None:
+            if self.mgr.agarres is not None and self.mgr.agarres.borrar_marcados():
+                ev.accept()
+                return
             lyr = self.mgr.iface.activeLayer()
             if lyr is not None and hasattr(lyr, 'selectedFeatureCount') and lyr.selectedFeatureCount():
                 self.mgr.cmdline.echo('Comando: BORRA')

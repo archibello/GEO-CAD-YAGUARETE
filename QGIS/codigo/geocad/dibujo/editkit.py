@@ -45,6 +45,9 @@ class GeomIO:
             g.transform(self.to_l)
         return g
 
+    def point_to_canvas(self, p):
+        return QgsPointXY(p) if self.same else self.to_c.transform(p)
+
     def point_to_layer(self, p):
         return QgsPointXY(p) if self.same else self.to_l.transform(p)
 

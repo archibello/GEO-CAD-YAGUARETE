@@ -146,7 +146,7 @@ class DibujoCADPlugin:
         self.teclado.instalar()
 
     def _iniciar_cursor(self):
-        from qgis.PyQt import QtCore, QtWidgets
+        from qgis.PyQt import QtCore, QtGui, QtWidgets
         from qgis.core import QgsProject, QgsVectorLayer
         from ..cursor_defecto import CursorDefecto
 
@@ -155,7 +155,7 @@ class DibujoCADPlugin:
                     if isinstance(c, QgsVectorLayer)]
 
         self.cursor_defecto = CursorDefecto(self.iface, self.mgr, self.cmdline,
-                                            self.key_guard.tools, capas, QtCore, QtWidgets)
+                                            self.key_guard.tools, capas, QtCore, QtWidgets, QtGui)
         self.cursor_defecto.instalar()
 
     # ------------------------------------------------------------ GUI
@@ -284,6 +284,13 @@ class DibujoCADPlugin:
         if _modulo('apilados'):
             from ..pila import Pila
             self.mgr.pila = Pila()
+
+        # ---- agarres en lo designado con el cursor («Agarres de vértices»)
+        self.agarres = None
+        if _modulo('agarres'):
+            from .agarres import Agarres
+            self.agarres = Agarres(self.iface, self.mgr)
+            self.agarres.instalar()
 
         # ---- el cursor de GeoCAD por defecto; Esc deselecciona todo («Cursor de GeoCAD»)
         self.cursor_defecto = None
@@ -720,6 +727,10 @@ class DibujoCADPlugin:
             QgsProject.instance().projectSaved.disconnect(self._on_project_saved)
         except (TypeError, RuntimeError, AttributeError):
             pass
+        ag = getattr(self, 'agarres', None)
+        if ag is not None:
+            ag.quitar()
+            self.agarres = None
         cur = getattr(self, 'cursor_defecto', None)
         if cur is not None:
             cur.quitar()

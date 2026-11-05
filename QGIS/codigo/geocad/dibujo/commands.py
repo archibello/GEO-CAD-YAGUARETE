@@ -95,6 +95,7 @@ class CommandManager(QObject):
         self.prev_tool = None
         self.esc_en_reposo = None         # módulo «Cursor de GeoCAD»
         self.pila = None                  # módulo «Objetos tapados»
+        self.agarres = None               # módulo «Agarres de vértices»
         self._switching = False
         self._deactivating = False
         self.idle_win = None
@@ -293,6 +294,8 @@ class CommandManager(QObject):
 
     def end_command(self):
         self.pila_olvidar()
+        if self.agarres is not None:
+            self.agarres.luego()
         cmd = self.command
         self.command = None
         self.cmdline.raw_mode = False
@@ -463,6 +466,8 @@ class CommandManager(QObject):
         if not isinstance(layer, QgsVectorLayer) or not layer.isSpatial():
             return
         from .editkit import GeomIO, query_rect
+        if self.idle_win is None and self.agarres is not None and self.agarres.clic(pt, shift):
+            return
         io = GeomIO(self.canvas, layer)
         if self.idle_win is None:
             fid, soltar = self.elegir_en_punto(io, layer, pt, shift, layer.selectedFeatureIds())

@@ -203,8 +203,9 @@ linea = W("QLineEdit", ventana)
 campo = W("QLineEdit", ventana)
 otra = W("QDialog")
 
-a_pan, a_ident, a_sel, a_add, a_medir = Accion(), Accion(), Accion(), Accion(), Accion()
-tools = {a: Tool(a) for a in (a_pan, a_ident, a_sel, a_add, a_medir)}
+a_pan, a_ident, a_sel, a_add, a_medir, a_vert = (Accion(), Accion(), Accion(), Accion(), Accion(),
+                                                 Accion())
+tools = {a: Tool(a) for a in (a_pan, a_ident, a_sel, a_add, a_medir, a_vert)}
 cad, texto = Tool(), Tool()
 
 
@@ -227,6 +228,9 @@ class Iface:
 
     def actionSelect(self):
         return a_sel
+
+    def actionVertexTool(self):
+        return a_vert
 
 
 class Mgr:
@@ -328,7 +332,7 @@ def apretar(receptor, foco=None, **kw):
     return c.esc.filtrar(receptor, ev), ev
 
 
-for herramienta in (a_pan, a_ident, a_sel):
+for herramienta in (a_pan, a_ident, a_sel, a_vert):
     canvas.setMapTool(tools[herramienta])
     for w in (canvas, canvas.vp, panel):
         tomada, ev = apretar(w)

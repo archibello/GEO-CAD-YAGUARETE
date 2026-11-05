@@ -1,0 +1,27 @@
+GeoCAD - versión 3.69.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Pedido de Fernando: la herramienta de vértices de QGIS no responde a las ayudas al dibujo ni a las
+medidas escritas, y no se va con Esc.
+
+Módulo nuevo «Agarres de vértices», prendido; se apaga en GeoCAD > Módulos...
+- Lo designado con el cursor de GeoCAD muestra agarres: azules llenos en los vértices y azules
+  vacíos en el medio de cada tramo.
+- Clic en un agarre y el vértice se mueve con las referencias a objetos, F3, F8 (ORTO), los ángulos
+  relativos y lo escrito en la línea de comandos: @dx,dy, @d<ángulo, una coordenada o una
+  distancia hacia el cursor. Esc o Intro cancelan.
+- Mayús + clic marca varios agarres (en rojo) y se mueven juntos. Dos objetos designados con un
+  vértice en el mismo lugar se mueven juntos.
+- El agarre del medio de un tramo agrega un vértice.
+- Supr con agarres marcados borra esos vértices; sin marcados, BORRA el objeto, como siempre. No se
+  borra lo que dejaría al objeto sin forma, ni el vértice de cierre de una línea cerrada.
+- Con la edición topológica de QGIS, también cambian los objetos que comparten el vértice o el
+  tramo, en las capas que estén en edición.
+- La capa entra en edición al mover o borrar: los cambios se guardan con «Guardar cambios de la
+  capa» y se deshacen con Ctrl+Z. Designar no abre la edición.
+- Hasta 200 objetos designados y 3000 agarres; con más, no se muestran.
+
+Módulo «Cursor de GeoCAD por defecto»
+- En la herramienta de vértices de QGIS, un Esc cancela lo que se esté moviendo, deselecciona y
+  vuelve al cursor.
