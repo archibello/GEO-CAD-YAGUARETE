@@ -237,12 +237,16 @@ def pegar(iface, msg, layer=None) -> str:
     from .dibujo.editkit import conform
 
     layer.beginEditCommand("Pegar en el lugar")
-    validos, otro_tipo = [], 0
+    validos, otro_tipo, contornos = [], 0, 0
     for obj in msg.get("objetos", []):
         g = QgsGeometry.fromWkt(obj.get("wkt", ""))
         if g is None or g.isNull() or g.isEmpty():
             continue
-        if _tipo_geometria(g) != tipo:
+        if _tipo_geometria(g) == "poligono" and tipo == "linea":
+            # lo cerrado de IngeCAD (polilínea, círculo) viaja como polígono: va su contorno
+            g = QgsGeometry(g.constGet().boundary())
+            contornos += 1
+        elif _tipo_geometria(g) != tipo:
             otro_tipo += 1
             continue
         validos.append((obj, g))
@@ -285,6 +289,8 @@ def pegar(iface, msg, layer=None) -> str:
         _refrescar_capas(layer)
     layer.triggerRepaint()
     texto = "Pegado en el lugar en «%s»: %s." % (layer.name(), pegar_lugar.resumen(msg))
+    if contornos:
+        texto += " %d cerrado(s), como contorno." % contornos
     if otro_tipo:
         texto += " %d de otro tipo de geometría no van en esta capa." % otro_tipo
     if nuevas_cad:

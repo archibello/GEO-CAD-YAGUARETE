@@ -114,6 +114,19 @@ def de_ingecad():
     pegados = list(lay.getFeatures())
     check("en sus coordenadas", len(pegados) == 1 and pegados[0].geometry().asWkt(0).startswith("LineString (5500000 6100000"))
     check("con su capa CAD", len(pegados) == 1 and pegados[0]["LAYER_CODE"] == "Muros")
+    # lo cerrado de IngeCAD en una capa de líneas (3.66.3): su contorno, también con agujero
+    objetos = [{"wkt": "POLYGON ((0 0, 10 0, 10 10, 0 0), (2 1, 4 1, 4 3, 2 1))", "capa": "Pisos", "color": None,
+                "aci": None, "tipo_linea": None, "grosor": None}]
+    datos = QMimeData()
+    datos.setData("application/x-ingecad-clip-id", b"banco:2")
+    QApplication.clipboard().setMimeData(datos)
+    pegar_lugar.dejar_copia(pegar_lugar.empaquetar("ingecad", "EPSG:22185", objetos, {}),
+                            datos, "application/x-ingecad-clip-id")
+    eventos()
+    texto = mod.pegar()
+    check("lo cerrado va como contorno", "como contorno" in texto, texto)
+    pisos = [x for x in lay.getFeatures() if x["LAYER_CODE"] == "Pisos"]
+    check("anillo y agujero, dos líneas", len(pisos) == 2 and all(x.geometry().type() == 1 for x in pisos))
     iface.setActiveLayer(capa("puntos", "EPSG:22185", "Point"))
     check("otro tipo: lo avisa", "nada para pegar" in mod.pegar())
     mod.unload()

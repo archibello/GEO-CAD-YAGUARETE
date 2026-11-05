@@ -160,8 +160,10 @@ comprobar(QgsProject.instance().crs().authid() == crs_ingecad,
           "el proyecto sin sistema toma el del dibujo (%s)" % QgsProject.instance().crs().authid())
 comprobar(destino.isEditable(), "la capa entró en edición")
 feats = list(destino.getFeatures())
-comprobar(len(feats) == 2, "2 líneas pegadas; el polígono no va en una capa de líneas (%d)" % len(feats))
-comprobar("1 de otro tipo" in texto and "1 texto(s)" in texto, "lo que no entra se cuenta")
+comprobar(len(feats) == 3, "2 líneas y el contorno del polígono (%d)" % len(feats))
+comprobar("1 cerrado(s), como contorno" in texto and "1 texto(s)" in texto, "el contorno y los textos se cuentan")
+comprobar(sum(f.geometry().asPolyline()[0] == f.geometry().asPolyline()[-1] for f in feats) == 1,
+          "el contorno queda cerrado")
 f0 = next(f for f in feats if f["LAYER_CODE"] == "Muros")
 comprobar([(p.x(), p.y()) for p in f0.geometry().asPolyline()] ==
           [(5500000, 6900000), (5500010, 6900000), (5500010, 6900010)], "en sus mismas coordenadas")
@@ -181,7 +183,7 @@ QgsProject.instance().addMapLayer(geo)
 iface.activeLayer.return_value = geo
 texto = P.pegar()
 fs = list(geo.getFeatures())
-comprobar(len(fs) == 2 and fs[0].geometry().isMultipart(), "capa multi: entra como multi (%s)" % texto)
+comprobar(len(fs) == 3 and all(f.geometry().isMultipart() for f in fs), "capa multi: entra como multi (%s)" % texto)
 pt = fs[0].geometry().asMultiPolyline()[0][0] if fs else None
 comprobar(pt is not None and -80 < pt.x() < -50 and -45 < pt.y() < -20,
           "llevado a grados (EPSG:4326): %r" % ((pt and (round(pt.x(), 4), round(pt.y(), 4))),))
@@ -197,13 +199,16 @@ if de_ingecad is not None:
     iface.activeLayer.return_value = real
     texto = P.pegar()
     fs = list(real.getFeatures())
-    lineas = [x for x in dm["objetos"] if x["wkt"].upper().startswith("LINESTRING")]
-    comprobar(len(fs) == len(lineas) and len(fs) > 0, "las líneas de IngeCAD (%d): %s" % (len(fs), texto))
+    # las líneas y el contorno de lo cerrado (3.66.3); el punto no va en una capa de líneas
+    lineas = [x for x in dm["objetos"] if x["wkt"].upper().startswith(("LINESTRING", "POLYGON"))]
+    comprobar(len(fs) == len(lineas) and len(fs) > 0, "lo de IngeCAD (%d): %s" % (len(fs), texto))
     if fs:
-        x0 = PL.partes_wkt(lineas[0]["wkt"])[1][0][0]
-        p0 = fs[0].geometry().asPolyline()[0]
-        comprobar((round(p0.x(), 6), round(p0.y(), 6)) == x0, "en sus coordenadas de IngeCAD %s" % (x0,))
-        comprobar(fs[0]["LAYER_CODE"] == lineas[0]["capa"], "con su capa CAD %s" % lineas[0]["capa"])
+        linea = next(x for x in lineas if x["wkt"].upper().startswith("LINESTRING"))
+        x0 = PL.partes_wkt(linea["wkt"])[1][0][0]
+        con_x0 = [f for f in fs if (round(f.geometry().asPolyline()[0].x(), 6),
+                                    round(f.geometry().asPolyline()[0].y(), 6)) == x0]
+        comprobar(bool(con_x0), "en sus coordenadas de IngeCAD %s" % (x0,))
+        comprobar(bool(con_x0) and con_x0[0]["LAYER_CODE"] == linea["capa"], "con su capa CAD %s" % linea["capa"])
     real.rollBack()
 
 # ---- 6. sin nada de GeoCAD en el portapapeles; módulo apagado ---------------------------------

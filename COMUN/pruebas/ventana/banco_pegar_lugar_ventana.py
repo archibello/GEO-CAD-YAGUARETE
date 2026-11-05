@@ -235,6 +235,19 @@ ver("después de rearmar los menús, sigue debajo de Paste",
     getattr(win, PI._ACCION, None) in acciones
     and acciones.index(getattr(win, PI._ACCION)) == acciones.index(pegar) + 1)
 
+# ---- 7. actualizar sin reiniciar: la conexión de la versión anterior no queda (3.66.3) --------
+board = QApplication.clipboard()
+board.dataChanged.disconnect(getattr(win, PI._ACCION + "_copia"))
+llamadas = []
+def vieja():
+    llamadas.append(1)
+board.dataChanged.connect(vieja)
+setattr(win, PI._ACCION + "_copia", vieja)
+PI.aplicar(win)
+m = QMimeData(); m.setText("otra cosa"); board.setMimeData(m)
+esperar(0.2)
+ver("la conexión vieja se reemplaza", not llamadas and getattr(win, PI._ACCION + "_copia") is not vieja)
+
 print("TODO OK" if not fallas else "FALLAS: %s" % fallas)
 sys.stdout.flush()
 os._exit(1 if fallas else 0)

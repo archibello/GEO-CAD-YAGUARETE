@@ -357,6 +357,16 @@ def _al_copiar(window) -> None:
     pegar_lugar.dejar_copia(extra, data, clipboard.ID_MIME)
 
 
+def _soltar_copia(window, board) -> None:
+    conexion = getattr(window, _ACCION + "_copia", None)
+    if conexion is not None and board is not None:
+        try:
+            board.dataChanged.disconnect(conexion)
+        except Exception:  # noqa: BLE001
+            pass
+        setattr(window, _ACCION + "_copia", None)
+
+
 def aplicar(window) -> None:
     """Pone o quita «Pegar en el lugar» en el menú Edit (debajo de Paste, Ctrl+Alt+V)
     y la copia para QGIS, según el módulo (al abrir y al cambiar los módulos)."""
@@ -378,13 +388,7 @@ def aplicar(window) -> None:
                     pass
             accion.deleteLater()
             setattr(window, _ACCION, None)
-        conexion = getattr(window, _ACCION + "_copia", None)
-        if conexion is not None and board is not None:
-            try:
-                board.dataChanged.disconnect(conexion)
-            except Exception:  # noqa: BLE001
-                pass
-            setattr(window, _ACCION + "_copia", None)
+        _soltar_copia(window, board)
         pegar_lugar.borrar_copia()
         return
     if accion is None:
@@ -403,7 +407,10 @@ def aplicar(window) -> None:
         if viewport is not None:
             viewport.addAction(accion)
         window.addAction(accion)
-    if board is not None and getattr(window, _ACCION + "_copia", None) is None:
+    if board is not None:
+        # siempre de nuevo: al actualizar sin reiniciar, la ventana conserva la de la versión anterior
+        _soltar_copia(window, board)
+
         def conexion(w=window):
             _al_copiar(w)
         board.dataChanged.connect(conexion)

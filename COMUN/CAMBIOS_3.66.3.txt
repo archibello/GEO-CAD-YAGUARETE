@@ -1,0 +1,13 @@
+GeoCAD - versión 3.66.3
+=======================
+CORRECCIÓN (IngeCAD y QGIS). Hay que actualizar los dos programas.
+
+Fernando, 04/11/2026, al pegar de IngeCAD en QGIS: «nada para pegar [...] (1 objeto(s) de
+otro tipo de geometría)».
+
+Cambios
+- Pegar en el lugar de QGIS: lo cerrado de IngeCAD (polilíneas cerradas, círculos) viaja
+  como polígono y una capa de líneas lo rechazaba. Ahora se pega su contorno, en las
+  mismas coordenadas y con su capa CAD; el aviso dice cuántos fueron «como contorno».
+- Pegar en el lugar de IngeCAD: al actualizar GeoCAD sin reiniciar, la ventana seguía
+  usando la copia de la versión anterior. Ahora se reemplaza.
