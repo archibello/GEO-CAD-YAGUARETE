@@ -145,6 +145,19 @@ class DibujoCADPlugin:
             propio, entregar)
         self.teclado.instalar()
 
+    def _iniciar_cursor(self):
+        from qgis.PyQt import QtCore, QtWidgets
+        from qgis.core import QgsProject, QgsVectorLayer
+        from ..cursor_defecto import CursorDefecto
+
+        def capas():
+            return [c for c in QgsProject.instance().mapLayers().values()
+                    if isinstance(c, QgsVectorLayer)]
+
+        self.cursor_defecto = CursorDefecto(self.iface, self.mgr, self.cmdline,
+                                            self.key_guard.tools, capas, QtCore, QtWidgets)
+        self.cursor_defecto.instalar()
+
     # ------------------------------------------------------------ GUI
     def initGui(self):
         from . import crashlog
@@ -266,6 +279,11 @@ class DibujoCADPlugin:
         self.clic_derecho = None
         if _modulo('boton_derecho'):
             self.clic_derecho = ClicDerecho(self.iface.mapCanvas(), self.mgr, self.key_guard.tools)
+
+        # ---- el cursor de GeoCAD por defecto; Esc deselecciona todo («Cursor de GeoCAD»)
+        self.cursor_defecto = None
+        if _modulo('cursor_geocad'):
+            _safe(self._iniciar_cursor)
 
         self.cmdline.echo('GeoCAD Yaguareté %s · Dibujo CAD listo. Escriba AYUDA para ver los comandos disponibles.'
                           % _version())
@@ -697,6 +715,10 @@ class DibujoCADPlugin:
             QgsProject.instance().projectSaved.disconnect(self._on_project_saved)
         except (TypeError, RuntimeError, AttributeError):
             pass
+        cur = getattr(self, 'cursor_defecto', None)
+        if cur is not None:
+            cur.quitar()
+            self.cursor_defecto = None
         try:
             self.iface.projectRead.disconnect(self._adopt_texts_later)
         except (TypeError, RuntimeError, AttributeError):

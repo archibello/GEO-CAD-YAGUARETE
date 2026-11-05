@@ -39,7 +39,7 @@ print("ok ángulos iguales en el núcleo y en Dibujo CAD")
 # ---- 2. catálogo: Bloques y Papel dependen de Dibujo ----------------------------------
 assert modulos.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False,
                                   "capas": False, "referencias": True, "tablas": True, "googleearth": True,
-                                  "teclado": True, "boton_derecho": True, "pegar_lugar": True}       # Papel y Capas, opcionales (3.60.6)
+                                  "teclado": True, "cursor_geocad": True, "boton_derecho": True, "pegar_lugar": True}       # Papel y Capas, opcionales (3.60.6)
 modulos.guardar("qgis", {"dibujo": False, "papel": True, "capas": True})
 e = modulos.estado("qgis"); assert not e["bloques"] and not e["papel"] and e["capas"]
 modulos.guardar("qgis", {"dibujo": True})

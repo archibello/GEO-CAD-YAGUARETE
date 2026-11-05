@@ -203,6 +203,14 @@ CATALOGO = {
                "de atributos, diálogos ni con Ctrl o Alt; con la Digitalización avanzada "
                "de QGIS prendida, las letras sobre el mapa quedan para QGIS.",
                requiere="dibujo", cambia_programa=True),
+        Modulo("cursor_geocad", "Cursor de GeoCAD por defecto",
+               "El cursor de GeoCAD queda activo al abrir QGIS y al abrir o crear un proyecto; "
+               "la herramienta que elegís a propósito se respeta. Esc deselecciona todas las "
+               "capas, también con el foco en el panel de capas, y con Desplazar, las de acercar, "
+               "Identificar o Seleccionar vuelve al cursor. Con este cursor el botón izquierdo "
+               "designa: el mapa se mueve con el botón del medio o la rueda. Agregar entidad, "
+               "Vértices y Medir conservan su Esc.",
+               requiere="dibujo", cambia_programa=True),
         # 3.60.6: apagado de fábrica, como Capas: sus pestañas son una barra más
         Modulo("papel", "Espacio papel",
                "Presentaciones, VENTANAS, BLOQVENT y TRAZAR, con las pestañas Modelo / "

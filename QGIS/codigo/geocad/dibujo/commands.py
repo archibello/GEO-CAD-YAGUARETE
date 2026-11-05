@@ -93,6 +93,7 @@ class CommandManager(QObject):
         self.command = None
         self.last_cmd = None
         self.prev_tool = None
+        self.esc_en_reposo = None         # módulo «Cursor de GeoCAD»
         self._switching = False
         self._deactivating = False
         self.idle_win = None
@@ -324,6 +325,10 @@ class CommandManager(QObject):
     def cancel(self):
         if self.command is None:
             self.idle_win = None
+            if self.esc_en_reposo is not None:
+                self.esc_en_reposo()
+                self.refresh()
+                return
             layer = self.iface.activeLayer()
             if isinstance(layer, QgsVectorLayer) and layer.selectedFeatureCount():
                 layer.removeSelection()

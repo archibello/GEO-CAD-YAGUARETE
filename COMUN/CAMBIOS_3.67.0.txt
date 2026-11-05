@@ -1,0 +1,19 @@
+GeoCAD - versión 3.67.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Pedido de Fernando: «la opción por defecto del cursor, en todo momento, sea la del cursor de
+geocad, dado que es la única que acepta ESC para deseleccionar objetos».
+
+Módulo nuevo «Cursor de GeoCAD por defecto», prendido; se apaga en GeoCAD > Módulos...
+- El cursor de GeoCAD queda activo al abrir QGIS, al abrir o crear un proyecto y cuando el
+  mapa se queda sin herramienta. Antes QGIS abría en Desplazar.
+- La herramienta que elegís a propósito se respeta. Con Desplazar, Acercar, Alejar,
+  Identificar o Seleccionar, Esc deselecciona y vuelve al cursor.
+- Esc deselecciona TODAS las capas (antes, sólo la activa), también con el foco en el panel de
+  capas (antes no funcionaba ahí). Si hay un comando en marcha, primero cancela el comando.
+- Agregar entidad, Vértices y Medir conservan su Esc sobre el mapa. Esc no se toca en campos
+  de texto, en la tabla de atributos ni en los diálogos.
+- Con el cursor, el botón izquierdo designa y Espacio repite el último comando: el mapa se
+  mueve con el botón del medio o la rueda.
+- Apagado, QGIS queda como venía: abre en Desplazar y Esc hace lo de antes.
