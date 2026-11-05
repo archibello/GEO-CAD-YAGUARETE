@@ -202,6 +202,9 @@ def _refrescar_capas(layer):
             ctrl.attach(layer)
             ctrl.ensure_initialized()
             ctrl.refresh()
+            # los símbolos usan CAD_COLOR, CAD_LTYPE y CAD_LW sólo si el campo ya existía al
+            # armarlos: recién creados, lo pegado salía con el aspecto de la capa
+            ctrl._apply_all()
     except Exception:  # noqa: BLE001 -- sin Capas CAD quedan los campos
         pass
 

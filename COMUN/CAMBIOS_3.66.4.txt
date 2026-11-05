@@ -1,0 +1,12 @@
+GeoCAD - versión 3.66.4
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Fernando, 04/11/2026: «estaria bueno que las copias lleguen con los formatos de origen».
+
+Cambios
+- Pegar en el lugar de QGIS: lo pegado se ve con su color, su tipo de línea y su grosor
+  propios (hace falta Yaguá Capas prendido). Los datos llegaban a los campos CAD_COLOR,
+  CAD_LTYPE y CAD_LW, pero la capa se seguía dibujando con el aspecto que tenía antes.
+- Yaguá Capas: en las capas con el campo CAD_LTYPE, las líneas finas PorCapa ya no salen
+  cortadas en rayas.

@@ -1433,16 +1433,17 @@ class CadLayerController(QObject):
                                        'ELSE %s END' % (screen_w, lw)))
         # Tipo de línea propio
         if has('CAD_LTYPE') and kind != 'point':
-            fmt = lambda pat: ';'.join('%g' % v for v in pat) if pat else '10;0'  # noqa: E731
+            # continua, una raya muy larga: con líneas finas Qt cortaba la de 10 mm en rayas
+            fmt = lambda pat: ';'.join('%g' % v for v in pat) if pat else '100000;0'  # noqa: E731
             whens = ' '.join("WHEN \"CAD_LTYPE\" = %s THEN '%s'" % (
                 QgsExpression.quotedString(name), fmt([v * self.ltscale for v in lt['pattern']]))
                 for name, lt in LINETYPES.items())
             sl.setUseCustomDashPattern(True)
             if not pattern:
-                sl.setCustomDashVector([10.0, 0.0])
+                sl.setCustomDashVector([100000.0, 0.0])
                 sl.setCustomDashPatternUnit(mm)
             sl.setDataDefinedProperty(symbol_property('CustomDash'), QgsProperty.fromExpression(
-                "CASE WHEN coalesce(\"CAD_LTYPE\", '') = '' THEN '%s' %s ELSE '10;0' END" % (fmt(pattern), whens)))
+                "CASE WHEN coalesce(\"CAD_LTYPE\", '') = '' THEN '%s' %s ELSE '100000;0' END" % (fmt(pattern), whens)))
         # Relleno de los polígonos (3.64.0): sólo si la capa CAD o algún objeto lo tiene,
         # así los dibujos de antes se dibujan igual que siempre
         fill = None

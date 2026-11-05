@@ -145,6 +145,7 @@ q = (ROOT / "QGIS/codigo/geocad/pegar_lugar_qgis.py").read_text(encoding="utf-8"
 assert "iface.actionPasteFeatures()" in q and "self.menu.insertAction(siguiente, self.accion)" in q
 assert "iface.actionCopyFeatures()" in q and "proyecto.setCrs(nuevo)" in q
 assert "QKeySequence(pegar_lugar.ATAJO)" in q
+assert "ctrl._apply_all()" in q     # lo pegado, con su formato: ventana/banco_formatos_qgis_real.py
 qp = (ROOT / "QGIS/codigo/geocad/plugin.py").read_text(encoding="utf-8")
 assert "self._sync_pegar_lugar()" in qp and "self._quitar_pegar_lugar()" in qp
 assert 'add("pegarorig", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)"' in qp
