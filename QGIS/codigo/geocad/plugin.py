@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.66.4"
+VERSION = "3.66.5"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -102,6 +102,19 @@ def _same(ref: dict, src) -> bool:
     fmt, path, table = src
     return (ref.get("ruta") == path
             and (ref.get("tabla") or "").lower() == (table or "").lower())
+
+
+def _juntar_estilo(ref: dict, pres: dict) -> None:
+    """Suma a ``ref`` la presentación de otra capa del mismo archivo: lo de cada
+    objeto se junta; de lo demás (tabla de capas, temático) queda lo de la primera."""
+    if not pres:
+        return
+    estilo = ref.setdefault("estilo", {})
+    for clave, valor in pres.items():
+        if clave in ("objetos", "simbolos", "rotulos", "rotulos_sig") and clave in estilo:
+            estilo[clave].update(valor)
+        else:
+            estilo.setdefault(clave, valor)
 
 
 # -- el complemento ---------------------------------------------------------------------
@@ -733,7 +746,7 @@ class GeoCAD:
         opts = opts or self._options_saved(mode)
         extra = self._send_context(opts, layers, mode)
         refs, skipped, notes, first, count = [], [], [], None, 0
-        gpkg_sin_sqlite = []
+        gpkg_sin_sqlite, juntadas = [], []
         sin_gpkg = buzon.is_alive("ingecad") and not buzon.puede("ingecad", "gpkg")
         home = Path.home().resolve()
         for layer in layers:
@@ -761,7 +774,17 @@ class GeoCAD:
                 if not layer.commitChanges():
                     skipped.append(f"{layer.name()} (QGIS no pudo guardarla)")
                     continue
-            if any(_same(r, src) for r in refs):
+            previa = next((r for r in refs if _same(r, src)), None)
+            if previa is not None:
+                if mode == "seleccion":                # copias del mismo archivo: una sola conexión
+                    nuevos = sorted(set(int(i) for i in layer.selectedFeatureIds())
+                                    - set(previa["fids"]))
+                    if nuevos:
+                        previa["fids"] = sorted(previa["fids"] + nuevos)
+                        count += len(nuevos)
+                        _juntar_estilo(previa, self._presentacion(layer, {"fids": nuevos},
+                                                                  opts, extra))
+                        juntadas.append(layer.name())
                 continue
             ref = buzon.layer_ref(*src)
             if mode == "seleccion":
@@ -793,6 +816,8 @@ class GeoCAD:
                 "pantalla": f"lo que está en pantalla de {len(refs)} capa(s)"}.get(
                     mode, f"{len(refs)} capa(s) completas")
         text = f"Enviado a IngeCAD: {what}."
+        if juntadas:
+            text += " Juntado con otra capa del mismo archivo: " + ", ".join(juntadas) + "."
         if skipped:
             text += " No se enviaron: " + "; ".join(skipped)
         notes = notes if os.name != "nt" else []      # Flatpak: carpetas fuera de la personal

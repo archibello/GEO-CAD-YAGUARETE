@@ -1,0 +1,13 @@
+GeoCAD - versión 3.66.5
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Hoja de ruta: «si varias capas vienen del mismo archivo (p. ej. PC_2_DE_MAYO y sus copias
+filtradas), sólo va la primera; las otras se saltean sin avisar».
+
+Cambios
+- Enviar a IngeCAD, lo seleccionado: con objetos seleccionados en varias capas del mismo
+  archivo (por ejemplo, copias con filtros distintos) llegan todos, cada uno con el color y
+  los rótulos de su capa. Antes sólo llegaban los de la primera capa y los demás se perdían
+  sin avisar. El aviso nombra las capas que se juntaron.
+- Un objeto seleccionado en dos de esas capas llega una sola vez, con el aspecto de la primera.

@@ -74,6 +74,28 @@ iface.activeLayer = lambda: lay
 P.send_default(); pedido = qbuzon.receive("ingecad"); print(bar.msgs[-1])
 assert len(pedido[0]["capas"]) == 1 and "fids" not in pedido[0]["capas"][0] and "bbox" not in pedido[0]["capas"][0], pedido
 envio_ui.remember({"modo": "seleccion", "altura": 3.0})
+# 3.66.5: lo seleccionado en dos capas del mismo archivo (copia filtrada) se junta, sin repetir
+copia = QgsVectorLayer(f"{gp}|layername=poly", "Parcelas filtradas")
+QgsProject.instance().layers[copia.id()] = copia
+pres_real = P._presentacion
+P._presentacion = lambda layer, ref, opts=None, extra=None: {
+    "campo_capa": layer.name(), "objetos": {f: layer.name() for f in ref["fids"]}}
+lay.selected = [2, 4]; copia.selected = [4, 7]; P.send_default(); print(bar.msgs[-1])
+pedido = qbuzon.receive("ingecad"); capas = pedido[0]["capas"]
+assert len(capas) == 1 and capas[0]["fids"] == [2, 4, 7], pedido
+assert "3 objeto(s) seleccionados de 1 capa(s)" in bar.msgs[-1]
+assert "mismo archivo: Parcelas filtradas" in bar.msgs[-1], bar.msgs[-1]
+est = capas[0]["estilo"]                        # el 4 está en las dos: queda el de la primera
+assert est["campo_capa"] == "Parcelas", est
+assert {int(k): v for k, v in est["objetos"].items()} == {
+    2: "Parcelas", 4: "Parcelas", 7: "Parcelas filtradas"}, est
+# seleccionado sólo en la copia: va como cualquier capa; repetido entero: no se avisa nada
+lay.selected = []; copia.selected = [7]; P.send_default()
+pedido = qbuzon.receive("ingecad"); assert pedido[0]["capas"][0]["fids"] == [7], pedido
+lay.selected = [2]; copia.selected = [2]; P.send_default()
+pedido = qbuzon.receive("ingecad"); assert pedido[0]["capas"][0]["fids"] == [2], pedido
+assert "mismo archivo" not in bar.msgs[-1] and "1 objeto(s)" in bar.msgs[-1], bar.msgs[-1]
+P._presentacion = pres_real; del QgsProject.instance().layers[copia.id()]
 lay.selected = [2, 4]; P.send_default()
 
 # --- IngeCAD ------------------------------------------------------------------
