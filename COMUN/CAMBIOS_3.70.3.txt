@@ -1,0 +1,12 @@
+GeoCAD - versión 3.70.3
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Recomendación de Fernando: cuando una capa no está en edición, no mostrar los vértices de las
+entidades seleccionadas.
+
+Módulo «Agarres de vértices» en QGIS
+- Los agarres se ven sólo con la capa activa en edición. Aparecen al prender la edición, sin volver
+  a designar, y desaparecen al guardar o cancelar la edición.
+- Sin edición, lo designado sigue designado y un clic en un vértice no arranca nada. Mover un agarre
+  ya no abre la edición por su cuenta.

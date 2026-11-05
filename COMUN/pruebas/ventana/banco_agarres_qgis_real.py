@@ -144,6 +144,7 @@ def correr():
         pump(10)
 
     def designar(*fids):
+        lay.startEditing()
         canvas.setMapTool(cad)
         lay.selectByIds(list(fids))
         pump(10)
@@ -199,6 +200,22 @@ def correr():
 
     # ---- aparecen y desaparecen
     check("sin selección, sin agarres", not ag.lista and ag.band.numberOfVertices() == 0)
+    canvas.setMapTool(cad)
+    lay.selectByIds([A])
+    pump(10)
+    check("sin edición, designado: sin agarres", not lay.isEditable() and not ag.lista and ag.band.numberOfVertices() == 0)
+    clic(100, 100)
+    check("sin edición, clic en el vértice: no arranca ni abre la edición", mgr.command is None and not lay.isEditable())
+    lay.selectByIds([A])
+    pump(10)
+    lay.startEditing()
+    pump(10)
+    check("al prender la edición aparecen, sin volver a designar", len(ag.lista) == 8 and ag.band.numberOfVertices() > 0, str(len(ag.lista)))
+    lay.rollBack()
+    pump(10)
+    check("al apagarla desaparecen", not ag.lista and ag.band.numberOfVertices() == 0 and lay.selectedFeatureCount() == 1)
+    lay.removeSelection()
+    pump(10)
     designar(A)
     vert = [a for a in ag.lista if not a.medio]
     medios = [a for a in ag.lista if a.medio]
@@ -212,11 +229,10 @@ def correr():
     pump(10)
     check("al deseleccionar, sin agarres", not ag.lista)
     designar(A)
-    check("elegir no abre la edición", not lay.isEditable())
 
     # ---- mover con clic y cancelar
     clic(100, 100)
-    check("clic en el agarre: comando y edición", mgr.command is not None and lay.isEditable(), str(mgr.command))
+    check("clic en el agarre: comando", mgr.command is not None and lay.isEditable(), str(mgr.command))
     check("el teclado va a la línea", QApplication.focusWidget() is cl.input, type(QApplication.focusWidget()).__name__)
     mover(120, 130)
     pump(5)
@@ -436,6 +452,7 @@ def correr():
     pump(10)
     L, K = [f.id() for f in lin.getFeatures()]
     canvas.setMapTool(cad)
+    lin.startEditing()
     lin.selectByIds([L])
     pump(10)
     check("línea: 3 vértices y 2 medios", len([a for a in ag.lista if not a.medio]) == 3 and len([a for a in ag.lista if a.medio]) == 2)
@@ -469,6 +486,7 @@ def correr():
     iface.setActiveLayer(pun)
     pump(10)
     canvas.setMapTool(cad)
+    pun.startEditing()
     pun.selectAll()
     pump(10)
     check("punto: 1 agarre y sin medios", len(ag.lista) == 1)
@@ -477,6 +495,8 @@ def correr():
     p = next(pun.getFeatures()).geometry().asPoint()
     check("punto: se mueve", abs(p.x() - 60) < 1e-6, str(p))
     pun.rollBack()
+    pump(10)
+    check("punto: sin edición, sin agarres", not ag.lista)
     pun.removeSelection()
     iface.setActiveLayer(lay)
     pump(10)

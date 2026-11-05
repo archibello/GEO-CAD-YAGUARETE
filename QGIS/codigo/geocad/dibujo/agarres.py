@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Agarres de vértices en el cursor de GeoCAD (módulo «Agarres de vértices», 3.69).
 
-Lo designado muestra agarres. Un clic arranca un comando normal, así que mover un vértice
+Lo designado, con la capa en edición, muestra agarres. Un clic arranca un comando normal, así que mover un vértice
 tiene las referencias, F3, F8, los ángulos relativos y lo escrito (@dx,dy, @d<ángulo, una
 distancia) de todos los comandos. Los cambios van a la edición de la capa, con deshacer.
 """
@@ -139,17 +139,19 @@ class Agarres:
                 pass
 
     def _seguir(self, layer):
-        """Los agarres siguen a la capa activa: Deshacer también los mueve."""
+        """Los agarres siguen a la capa activa: Deshacer los mueve, y sólo se ven con la capa en
+        edición (Fernando, 05/11/2026)."""
         if self._conectada is layer:
             return
-        if self._conectada is not None:
-            try:
-                self._conectada.geometryChanged.disconnect(self.luego)
-            except (TypeError, RuntimeError):
-                pass
+        for capa, accion in ((self._conectada, 'disconnect'), (layer, 'connect')):
+            if capa is None:
+                continue
+            for senal in (capa.geometryChanged, capa.editingStarted, capa.editingStopped):
+                try:
+                    getattr(senal, accion)(self.luego)
+                except (TypeError, RuntimeError):
+                    pass
         self._conectada = layer
-        if layer is not None:
-            layer.geometryChanged.connect(self.luego)
 
     # ---------------------------------------------------------------- calcular y dibujar
     def luego(self, *_args):
@@ -161,6 +163,7 @@ class Agarres:
         layer = self.iface.activeLayer()
         if (self.canvas.mapTool() is not self.mgr.tool or self.mgr.command is not None
                 or not isinstance(layer, QgsVectorLayer) or not layer.isSpatial()
+                or not layer.isEditable()
                 or layer.customProperty('dibujo_cad/block_geom') == '1'):
             return None
         return layer
@@ -340,9 +343,6 @@ class Agarres:
         if not isinstance(layer, QgsVectorLayer):
             return False
         cl = self.mgr.cmdline
-        if not layer.isEditable() and not layer.startEditing():
-            cl.echo('No se puede editar la capa "%s".' % layer.name())
-            return True
         agarres = [a for a in self.lista if (a.x, a.y) in self.marcas]
         rechazados = []
 

@@ -226,7 +226,7 @@ CATALOGO = {
                "Mayús + clic quita el designado, aunque esté tapado.",
                requiere="dibujo", cambia_programa=True),
         Modulo("agarres", "Agarres de vértices",
-               "Lo designado con el cursor de GeoCAD muestra agarres. Clic en uno y se mueve con "
+               "Con la capa en edición, lo designado con el cursor de GeoCAD muestra agarres. Clic en uno y se mueve con "
                "las referencias, F3, F8 y lo escrito (@dx,dy, @d<ángulo o una distancia). "
                "Mayús + clic marca varios, el agarre del medio de un tramo agrega un vértice y "
                "Supr borra los marcados. Con la edición topológica de QGIS, también cambian los "

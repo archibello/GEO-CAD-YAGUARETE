@@ -59,4 +59,6 @@ assert "self.mgr.last_cmd = ultimo" in ag               # Intro repite el últim
 cu = (RAIZ / "QGIS/codigo/geocad/cursor_defecto.py").read_text(encoding="utf-8")
 assert '"actionVertexTool"' in cu                       # Esc vuelve desde Vértices
 
+assert "or not layer.isEditable()" in ag and "capa.editingStopped" in ag  # sólo en edición (3.70.3)
+
 print("TODO OK test_agarres_qgis")
