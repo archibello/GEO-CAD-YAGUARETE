@@ -103,6 +103,32 @@ def pick_feature(canvas, io, layer, p, exclude=()):
     return best
 
 
+def pick_stack(canvas, io, layer, p):
+    """Todos los objetos en el punto p, de más cerca a más lejos; con la misma distancia,
+    en el orden de la capa: el primero es el que elige pick_feature."""
+    tol = search_radius(canvas)
+    r = QgsRectangle(p.x() - tol, p.y() - tol, p.x() + tol, p.y() + tol)
+    rl = io.rect_to_layer(r)
+    pg = QgsGeometry.fromPointXY(io.point_to_layer(p))
+    tol_l = max(rl.width(), rl.height()) / 2.0
+    out = []
+    blocks = _is_block(layer)
+    req = QgsFeatureRequest() if blocks else QgsFeatureRequest().setFilterRect(rl)
+    for f in layer.getFeatures(req):
+        if not f.hasGeometry():
+            continue
+        d = _pick_geom(layer, f, blocks).distance(pg)
+        if d <= tol_l:
+            out.append((d, f.id()))
+    out.sort(key=lambda x: x[0])
+    return [fid for _d, fid in out]
+
+
+def pick_geometry(io, layer, fid):
+    """Geometría de designación de un objeto, en el SRC del mapa."""
+    return io.to_canvas(_pick_geom(layer, layer.getFeature(fid), _is_block(layer)))
+
+
 def query_rect(io, layer, a, b, crossing):
     """Ventana (contiene) o captura (interseca) entre las esquinas a y b."""
     r = QgsRectangle(a, b)
@@ -476,9 +502,9 @@ class EditCommand(_DrawCommand):
         mode = self.sel_mode
         if self.win is None:
             if mode == 'auto':
-                fid, _f = pick_feature(self.canvas, self.io, self.layer, p)
+                fid, soltar = self.mgr.elegir_en_punto(self.io, self.layer, p, remove, self.sel)
                 if fid is not None:
-                    self._add([fid], remove)
+                    self._add([fid], remove, soltar)
                     return
             self.win = p
             self.prompt()
@@ -523,10 +549,12 @@ class EditCommand(_DrawCommand):
     def on_window(self, a, b, crossing, polygon=None):
         pass
 
-    def _add(self, fids, remove=False):
+    def _add(self, fids, remove=False, soltar=None):
         self._sel_init()
         before = len(self.sel)
         self.sel_undo.append(list(self.sel))
+        if soltar is not None:
+            self.sel = [f for f in self.sel if f != soltar]
         if remove:
             drop = set(fids)
             self.sel = [f for f in self.sel if f not in drop]

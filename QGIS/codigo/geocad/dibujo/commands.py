@@ -94,6 +94,7 @@ class CommandManager(QObject):
         self.last_cmd = None
         self.prev_tool = None
         self.esc_en_reposo = None         # módulo «Cursor de GeoCAD»
+        self.pila = None                  # módulo «Objetos tapados»
         self._switching = False
         self._deactivating = False
         self.idle_win = None
@@ -198,6 +199,7 @@ class CommandManager(QObject):
             return
         if self.command is not None:
             self.cancel()
+        self.pila_olvidar()
         self.last_cmd = spec.name
         if spec.kind != 'interactive':
             try:
@@ -290,6 +292,7 @@ class CommandManager(QObject):
             return layer
 
     def end_command(self):
+        self.pila_olvidar()
         cmd = self.command
         self.command = None
         self.cmdline.raw_mode = False
@@ -308,6 +311,7 @@ class CommandManager(QObject):
 
     def tool_deactivated(self):
         self.idle_win = None
+        self.pila_olvidar()
         if self._switching or self.command is None:
             return
         cmd = self.command
@@ -323,6 +327,7 @@ class CommandManager(QObject):
         self.cmdline.set_info('')
 
     def cancel(self):
+        self.pila_olvidar()
         if self.command is None:
             self.idle_win = None
             if self.esc_en_reposo is not None:
@@ -420,19 +425,53 @@ class CommandManager(QObject):
         self.cursor, self.cursor_snapped, self.shift = pt, snapped, shift
         self.refresh()
 
+    def elegir_en_punto(self, io, layer, pt, quitar, seleccion):
+        """El objeto de un clic: (a elegir, a soltar). Sin el módulo «Objetos tapados», el
+        más cercano. Nada de esto escribe en la capa: sólo cambia lo que se designa."""
+        from .editkit import pick_feature, pick_geometry, pick_stack, search_radius
+        if self.pila is None:
+            return pick_feature(self.canvas, io, layer, pt)[0], None
+        apilados = pick_stack(self.canvas, io, layer, pt)
+        if quitar:
+            self.tool.show_pila(None)
+            return self.pila.quitar(apilados, seleccion), None
+        fid, soltar = self.pila.clic(layer.id(), pt.x(), pt.y(), search_radius(self.canvas),
+                                     apilados, seleccion)
+        if self.pila.activa():
+            self.tool.show_pila(pick_geometry(io, layer, fid))
+            self.cmdline.echo('Objeto %d de %d en este punto. Otro clic aquí: el siguiente.'
+                              % (self.pila.i + 1, len(self.pila.fids)))
+        else:
+            self.tool.show_pila(None)
+        return fid, soltar
+
+    def pila_olvidar(self):
+        if self.pila is not None:
+            self.pila.olvidar()
+            self.tool.show_pila(None)
+
+    def _pila_vigente(self):
+        """Otra capa, o lo elegido se deseleccionó por otro lado: el resaltado ya no vale."""
+        layer = self.iface.activeLayer()
+        if (not isinstance(layer, QgsVectorLayer) or layer.id() != self.pila.capa
+                or self.pila.actual() not in layer.selectedFeatureIds()):
+            self.pila_olvidar()
+
     def idle_click(self, pt, shift):
         """Designación en reposo (preselección para DESPLAZA, COPIA, GIRA...)."""
         layer = self.iface.activeLayer()
         if not isinstance(layer, QgsVectorLayer) or not layer.isSpatial():
             return
-        from .editkit import GeomIO, pick_feature, query_rect
+        from .editkit import GeomIO, query_rect
         io = GeomIO(self.canvas, layer)
         if self.idle_win is None:
-            fid, _f = pick_feature(self.canvas, io, layer, pt)
+            fid, soltar = self.elegir_en_punto(io, layer, pt, shift, layer.selectedFeatureIds())
             if fid is not None:
                 if shift:
                     layer.deselect(fid)
                 else:
+                    if soltar is not None:
+                        layer.deselect(soltar)
                     layer.select(fid)
                 self.cmdline.set_info('%d objeto(s) designado(s)' % layer.selectedFeatureCount())
                 return
@@ -507,6 +546,8 @@ class CommandManager(QObject):
         cur = self.effective_cursor() if self.command else self.cursor
         if self.command is None:
             self.tool.clear()
+            if self.pila is not None and self.pila.activa():
+                self._pila_vigente()
             win = getattr(self, 'idle_win', None)
             if win is not None and cur is not None:
                 rect = [win, QgsPointXY(cur.x(), win.y()), cur, QgsPointXY(win.x(), cur.y()), win]

@@ -280,6 +280,11 @@ class DibujoCADPlugin:
         if _modulo('boton_derecho'):
             self.clic_derecho = ClicDerecho(self.iface.mapCanvas(), self.mgr, self.key_guard.tools)
 
+        # ---- clic repetido en el mismo punto: el objeto tapado («Objetos tapados»)
+        if _modulo('apilados'):
+            from ..pila import Pila
+            self.mgr.pila = Pila()
+
         # ---- el cursor de GeoCAD por defecto; Esc deselecciona todo («Cursor de GeoCAD»)
         self.cursor_defecto = None
         if _modulo('cursor_geocad'):

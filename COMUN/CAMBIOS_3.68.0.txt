@@ -1,0 +1,18 @@
+GeoCAD - versión 3.68.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Pedido de Fernando: seleccionar objetos tapados por otros, sin modificar las bases de datos.
+
+Módulo nuevo «Objetos tapados (clic repetido)», prendido; se apaga en GeoCAD > Módulos...
+- Con objetos superpuestos en la capa activa, cada clic en el mismo punto pasa al objeto
+  siguiente y suelta el anterior; al llegar al último, da la vuelta. El mensaje dice cuál es
+  («Objeto 2 de 3 en este punto»).
+- El elegido se resalta con su contorno encima de todo: el amarillo de QGIS queda tapado con él.
+- Funciona con el cursor en reposo y al designar objetos (BORRA, DESPLAZA, COPIA...). Los comandos
+  que piden un objeto puntual, como EMPALME, siguen como estaban.
+- Lo designado en otro lugar se conserva. Mayús + clic quita el designado, aunque esté tapado.
+  Esc limpia y saca el resaltado.
+- Elegir no escribe nada: ni el archivo, ni el modo edición, ni el estilo de la capa. El orden de
+  dibujo no cambia. Un comando de edición que lo use abre la edición, como siempre.
+- Apagado, repetir el clic da siempre el mismo objeto, como antes.

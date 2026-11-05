@@ -211,6 +211,12 @@ CATALOGO = {
                "designa: el mapa se mueve con el botón del medio o la rueda. Agregar entidad, "
                "Vértices y Medir conservan su Esc.",
                requiere="dibujo", cambia_programa=True),
+        Modulo("apilados", "Objetos tapados (clic repetido)",
+               "Con objetos superpuestos en la capa activa, cada clic en el mismo punto pasa al "
+               "objeto siguiente y lo resalta encima de todo, sin tocar los datos ni el estilo de "
+               "la capa. Con el cursor en reposo y al designar objetos (BORRA, DESPLAZA...). "
+               "Mayús + clic quita el designado, aunque esté tapado.",
+               requiere="dibujo", cambia_programa=True),
         # 3.60.6: apagado de fábrica, como Capas: sus pestañas son una barra más
         Modulo("papel", "Espacio papel",
                "Presentaciones, VENTANAS, BLOQVENT y TRAZAR, con las pestañas Modelo / "

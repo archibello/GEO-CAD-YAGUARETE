@@ -63,6 +63,10 @@ class CadMapTool(QgsMapTool):
         self.own_marker.setIconSize(12)
         self.own_marker.setPenWidth(2)
         self.own_marker.hide()
+        self.rb_pila = _band(canvas, QColor(255, 0, 255), 3)            # objeto tapado elegido
+        self.rb_pila_pts = QgsRubberBand(canvas, point_geometry_type())
+        self.rb_pila_pts.setColor(QColor(255, 0, 255))
+        self.rb_pila_pts.setIconSize(12)
 
     # ------------------------------------------------------------ dibujo temporal
     @staticmethod
@@ -113,6 +117,21 @@ class CadMapTool(QgsMapTool):
         else:
             self.rb_ghost_pts.reset(point_geometry_type())
 
+    def show_pila(self, g):
+        """Resalta encima de todo el objeto elegido: el amarillo de QGIS queda tapado con él."""
+        self.rb_pila.reset(line_geometry_type())
+        self.rb_pila_pts.reset(point_geometry_type())
+        if g is None or g.isEmpty():
+            return
+        crs = QgsCoordinateReferenceSystem()
+        gt = g.type()
+        if gt == point_geometry_type():
+            self.rb_pila_pts.setToGeometry(g, crs)
+        elif gt == line_geometry_type():
+            self.rb_pila.setToGeometry(g, crs)
+        else:
+            self.rb_pila.setToGeometry(QgsGeometry(g.constGet().boundary()), crs)
+
     def clear(self):
         self.show_ghost(None)
         for rb in (self.rb_path, self.rb_temp, self.rb_guide):
@@ -123,7 +142,7 @@ class CadMapTool(QgsMapTool):
     def remove_items(self):
         scene = self.canvas_.scene()
         for item in (self.rb_path, self.rb_temp, self.rb_guide, self.rb_ghost,
-                     self.rb_ghost_pts, self.own_marker):
+                     self.rb_ghost_pts, self.own_marker, self.rb_pila, self.rb_pila_pts):
             try:
                 scene.removeItem(item)
             except Exception:
