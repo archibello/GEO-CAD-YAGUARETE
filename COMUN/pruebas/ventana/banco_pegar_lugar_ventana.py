@@ -156,6 +156,14 @@ ver("Ctrl+Alt+V también", len(objetos()) == antes + 3, str(len(objetos()) - ant
 win._cmd_undo(); esperar(0.2)
 ver("U lo quita", len(objetos()) == antes)
 
+# 3.70.6: con lo copiado en IngeCAD, Ctrl+V sigue pidiendo el punto: no pega en el lugar
+antes = len(objetos())
+win.viewport.setFocus(); esperar(0.1)
+QTest.keyClick(win.viewport, Qt.Key_V, Qt.ControlModifier)
+esperar(0.5)
+ver("Ctrl+V de lo de IngeCAD: pide el punto", len(objetos()) == antes, str(len(objetos()) - antes))
+QTest.keyClick(win.viewport, Qt.Key_Escape); esperar(0.2)
+
 # ---- 4. lo copiado en QGIS: capas, aspecto y sistema de coordenadas -------------------------
 desde_qgis = Path(CARPETA, "desde_qgis.json") if CARPETA else None
 if desde_qgis is not None and desde_qgis.exists():
@@ -197,6 +205,13 @@ for nombre, props in esperado["capas"].items():
     ver("capa %s con su color" % nombre, color_ok, str(lay and (lay.dxf.color, lay.rgb)))
 win._cmd_undo(); esperar(0.2)
 ver("U quita lo pegado y el sistema", len(objetos()) == antes and IC.sistema_del_dibujo(win.document.doc) == "")
+# 3.70.6: el Ctrl+V de IngeCAD, con la tecla de verdad, pega lo de QGIS en el lugar
+win.viewport.setFocus(); esperar(0.1)
+QTest.keyClick(win.viewport, Qt.Key_V, Qt.ControlModifier)
+esperar(0.5)
+ver("Ctrl+V pega lo de QGIS", len(objetos()) - antes == len(nuevos), str(len(objetos()) - antes))
+win._cmd_undo(); esperar(0.2)
+ver("U quita lo de Ctrl+V", len(objetos()) == antes)
 
 # ---- 5. con sistema ya puesto y distinto: se reproyecta --------------------------------------
 if esperado["crs"]:
@@ -223,6 +238,19 @@ esperar_que(lambda: clipboard.current_id() is not None
             and clipboard.current_id() != "x", 3)
 esperar(0.5)
 ver("apagado: Ctrl+C sin el mensaje", tiene(clipboard.MIME) and PI.mensaje_en_portapapeles() is None)
+# 3.70.6: apagado, el Ctrl+V de IngeCAD no pega lo de QGIS, aunque el mensaje esté
+mime = QMimeData()
+mime.setText("wkt_geom\tid\n...")
+QApplication.clipboard().setMimeData(mime)
+esperar(0.2)
+PL.dejar_copia(datos, mime, PL.FORMATO_TEXTO)
+antes = len(objetos())
+win.viewport.setFocus(); esperar(0.1)
+QTest.keyClick(win.viewport, Qt.Key_V, Qt.ControlModifier)
+esperar(0.5)
+ver("apagado: Ctrl+V no pega lo de QGIS", len(objetos()) == antes, str(len(objetos()) - antes))
+QTest.keyClick(win.viewport, Qt.Key_Escape); esperar(0.2)
+PL.borrar_copia()
 mods.poner("ingecad", "pegar_lugar", True)
 PI.aplicar(win)
 menu, pegar = PI._menu_editar(win)

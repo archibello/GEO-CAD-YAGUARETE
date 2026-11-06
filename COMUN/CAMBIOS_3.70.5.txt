@@ -1,0 +1,16 @@
+GeoCAD - versión 3.70.5
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Pedido de Fernando: copiar y pegar en QGIS «si nos manejamos por menú funcionan perfectamente»;
+revisar el teclado, con IngeCAD, en los dos sentidos.
+
+Módulo «Pegar en el lugar» en QGIS
+- Ctrl+C por teclado deja lo copiado listo para IngeCAD. Antes sólo lo hacía Copiar desde el menú.
+- Ctrl+V pega también lo copiado en IngeCAD, en sus coordenadas, en la capa activa. Antes no pegaba nada.
+  Lo copiado en QGIS se pega como siempre.
+- Ctrl+Alt+V ya no choca con «Pegar como capa temporal» de QGIS: con los dos habilitados no se hacía
+  ninguno. Esa acción de QGIS sigue en el menú, sin atajo mientras el módulo esté prendido. Al apagar el
+  módulo recupera Ctrl+Alt+V. Si el atajo fue cambiado en la configuración de QGIS, no se toca.
+- Ctrl+C y Ctrl+V andan también con el foco en la línea de comandos vacía y en Yaguá Capas. En la línea,
+  con algo escrito o con texto común en el portapapeles, siguen copiando y pegando texto.

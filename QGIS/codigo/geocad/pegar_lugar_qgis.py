@@ -16,6 +16,14 @@ el menú EDIT debajo de PASTE y lo mismo en QGIS»; «ESO ES PEGAR EN EL LUGAR»
 * El Ctrl+C de QGIS (Copiar objetos espaciales) deja además en el portapapeles
   el mensaje de pegar_lugar.py para que IngeCAD lo pegue en el lugar. Lo de
   QGIS no cambia: su Pegar sigue igual.
+* Por teclado (3.70.5; Fernando: «si nos manejamos por menú funcionan perfectamente»):
+  el Ctrl+C y el Ctrl+V de QGIS no pasan por las acciones del menú: son QShortcut
+  del mapa y del panel de capas, y hay que engancharse a ellos. Ctrl+V pega también
+  lo copiado en IngeCAD. Esos atajos no llegan a la línea de comandos ni a Yaguá
+  Capas: ahí los atiende AtajosFuera, sin quitar el pegado de texto en la línea.
+* Ctrl+Alt+V es también de QGIS («Pegar como capa temporal»); con los dos habilitados
+  no se dispara ninguno. Se le saca mientras dura el módulo, sin guardarlo en los
+  atajos del usuario, y se le devuelve al apagarlo. Esa acción sigue en el menú.
 """
 from __future__ import annotations
 
@@ -25,17 +33,21 @@ from types import SimpleNamespace
 
 from qgis.core import (Qgis, QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsField,
                        QgsGeometry, QgsProject, QgsVectorLayer, QgsVectorLayerUtils, QgsWkbTypes)
-from qgis.PyQt.QtCore import QTimer
+from qgis.PyQt.QtCore import QEvent, QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QKeySequence
-from qgis.PyQt.QtWidgets import QAction, QApplication
+from qgis.PyQt.QtWidgets import (QAbstractSpinBox, QAction, QApplication, QDockWidget, QLineEdit,
+                                 QPlainTextEdit, QTextEdit)
 
 from . import pegar_lugar
-from .capas.compat import geometry_kind, string_field
+from .capas.compat import QShortcut, geometry_kind, string_field
 
 CAMPO_CAPA = "LAYER_CODE"
 CAMPOS = (("color", "CAD_COLOR"), ("tipo_linea", "CAD_LTYPE"), ("grosor", "CAD_LW"))
 PROP_KEY = "cad_layer_manager/config"           # la configuración de Yaguá Capas
 ES_TEXTO = "dibujo_cad/text_layer"
+ACCION_QGIS_MISMO_ATAJO = "mActionPasteAsNewMemoryVector"     # Pegar como capa temporal
+LINEA_COMANDOS = "CadCmdInput"
+PANEL_CAPAS = "YaguaCapasDock"
 
 
 # ------------------------------------------------------------------ colores
@@ -313,6 +325,39 @@ def dejar_copia(extra: bytes) -> None:
         pegar_lugar.dejar_copia(extra, data, pegar_lugar.FORMATO_TEXTO)
 
 
+class AtajosFuera(QObject):
+    """Ctrl+C y Ctrl+V de objetos con el foco en la línea de comandos vacía o en Yaguá Capas,
+    donde no llegan los QShortcut de QGIS. El resto de las teclas sigue su camino."""
+
+    def __init__(self, modulo):
+        super().__init__()
+        self.modulo = modulo
+        self._press = getattr(QEvent, "Type", QEvent).KeyPress
+        self._key = getattr(Qt, "Key", Qt)
+        self._ctrl = getattr(Qt, "KeyboardModifier", Qt).ControlModifier
+
+    def _atendible(self, w) -> bool:
+        if w.objectName() == LINEA_COMANDOS:
+            return not w.text()                 # con algo escrito, es texto
+        if isinstance(w, (QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox)):
+            return False
+        dock = self.modulo.iface.mainWindow().findChild(QDockWidget, PANEL_CAPAS)
+        return dock is not None and dock.isAncestorOf(w)
+
+    def eventFilter(self, obj, ev):  # noqa: N802
+        try:
+            if ev.type() != self._press or ev.modifiers() != self._ctrl:
+                return False
+            if ev.key() not in (self._key.Key_C, self._key.Key_V):
+                return False
+            if obj is not QApplication.focusWidget() or not self._atendible(obj):
+                return False
+            return self.modulo.copiar_objetos() if ev.key() == self._key.Key_C \
+                else self.modulo.pegar_objetos()
+        except Exception:  # noqa: BLE001 -- nunca romper el teclado
+            return False
+
+
 class PegarLugarQgis:
     """«Pegar en el lugar» en el menú Edición y la copia para IngeCAD en el Ctrl+C."""
 
@@ -336,6 +381,61 @@ class PegarLugarQgis:
         mw.addAction(self.accion)
         self.copiar = iface.actionCopyFeatures()
         self.copiar.triggered.connect(self._al_copiar)
+        self.pegar_qgis = pegar_qgis
+        self._atajos = self._enganchar_atajos()
+        self._accion_sin_atajo = self._liberar_atajo()
+        self._filtro = AtajosFuera(self)
+        QApplication.instance().installEventFilter(self._filtro)
+
+    def _enganchar_atajos(self) -> list:
+        """El Ctrl+C y el Ctrl+V de QGIS, que no pasan por las acciones del menú."""
+        mw = self.iface.mainWindow()
+        dueños = (self.iface.mapCanvas(), self.iface.layerTreeView())
+        tablas = ((QKeySequence("Ctrl+C"), self._al_copiar), (QKeySequence("Ctrl+V"), self._al_pegar_atajo))
+        atajos = []
+        for atajo in mw.findChildren(QShortcut):
+            if atajo.parent() not in dueños:
+                continue
+            for tecla, funcion in tablas:
+                if atajo.key() == tecla:
+                    atajo.activated.connect(funcion)
+                    atajos.append((atajo, funcion))
+        return atajos
+
+    def _liberar_atajo(self):
+        """Saca Ctrl+Alt+V a la acción de QGIS que lo comparte. No se guarda en los atajos del usuario."""
+        accion = self.iface.mainWindow().findChild(QAction, ACCION_QGIS_MISMO_ATAJO)
+        if accion is None or accion.shortcut() != QKeySequence(pegar_lugar.ATAJO):
+            return None                         # el usuario lo cambió, o esta QGIS no la tiene
+        accion.setShortcut(QKeySequence())
+        return accion
+
+    def copiar_objetos(self) -> bool:
+        layer = self.iface.activeLayer()
+        if (not isinstance(layer, QgsVectorLayer) or not layer.selectedFeatureCount()
+                or not self.copiar.isEnabled()):
+            return False
+        self.copiar.trigger()
+        return True
+
+    def pegar_objetos(self) -> bool:
+        """Sólo si hay objetos copiados; si no, Ctrl+V sigue siendo pegar texto."""
+        msg = mensaje_en_portapapeles()
+        if msg is None:
+            return False
+        if msg.get("origen") == "ingecad":
+            self.pegar()
+            return True
+        if not self.pegar_qgis.isEnabled():
+            return False
+        self.pegar_qgis.trigger()
+        return True
+
+    def _al_pegar_atajo(self, *_a):
+        """QGIS no entiende lo copiado en IngeCAD: su Ctrl+V no pega nada y va éste."""
+        msg = mensaje_en_portapapeles()
+        if msg is not None and msg.get("origen") == "ingecad":
+            self.pegar()
 
     def _al_copiar(self, *_a):
         layer = self.iface.activeLayer()
@@ -365,6 +465,22 @@ class PegarLugarQgis:
             self.copiar.triggered.disconnect(self._al_copiar)
         except Exception:  # noqa: BLE001
             pass
+        for atajo, funcion in self._atajos:
+            try:
+                atajo.activated.disconnect(funcion)
+            except Exception:  # noqa: BLE001
+                pass
+        self._atajos = []
+        try:
+            QApplication.instance().removeEventFilter(self._filtro)
+        except Exception:  # noqa: BLE001
+            pass
+        if self._accion_sin_atajo is not None:
+            try:
+                self._accion_sin_atajo.setShortcut(QKeySequence(pegar_lugar.ATAJO))
+            except Exception:  # noqa: BLE001
+                pass
+            self._accion_sin_atajo = None
         try:
             self.menu.removeAction(self.accion)
             self.iface.mainWindow().removeAction(self.accion)

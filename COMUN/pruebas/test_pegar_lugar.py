@@ -185,4 +185,19 @@ assert not PL.archivo_copia().exists()
 for f in ("QGIS/codigo/geocad/pegar_lugar_qgis.py", "INGECAD/codigo/geocad/pegar_lugar_ingecad.py"):
     assert "setMimeData" not in (ROOT / f).read_text(encoding="utf-8"), f
 print("ok la copia guardada y su huella")
+# 3.70.5, por teclado: lo que busca el módulo existe con ese nombre; lo prueba con teclas de
+# verdad ventana/banco_atajos_qgis_real.py
+codigo = (ROOT / "QGIS/codigo/geocad/pegar_lugar_qgis.py").read_text(encoding="utf-8")
+assert 'LINEA_COMANDOS = "CadCmdInput"' in codigo
+assert "setObjectName('CadCmdInput')" in (ROOT / "QGIS/codigo/geocad/dibujo/cmdline.py").read_text(encoding="utf-8")
+assert 'PANEL_CAPAS = "YaguaCapasDock"' in codigo
+assert "setObjectName('YaguaCapasDock')" in (ROOT / "QGIS/codigo/geocad/capas/panel.py").read_text(encoding="utf-8")
+print("ok los nombres que usan los atajos")
+# 3.70.6: el Ctrl+V de IngeCAD pega lo copiado en QGIS, nada más que eso
+assert PI.ctrl_v_de_qgis({"origen": "qgis"}, False, False)
+assert not PI.ctrl_v_de_qgis({"origen": "ingecad"}, False, False)
+assert not PI.ctrl_v_de_qgis(None, False, False)
+assert not PI.ctrl_v_de_qgis({"origen": "qgis"}, True, False)      # la copia de IngeCAD es la última
+assert not PI.ctrl_v_de_qgis({"origen": "qgis"}, False, True)      # se está escribiendo la de esta ventana
+print("ok el Ctrl+V de IngeCAD")
 print("TODO OK test_pegar_lugar")

@@ -280,14 +280,21 @@ class PegarImagenTool(Tool):
 def _envolver_paste(original):
     def paste(self):
         try:
-            if modulos.activo(PROGRAMA, "georref"):
-                from PySide6.QtWidgets import QApplication
-                from views import clipboard
+            from PySide6.QtWidgets import QApplication
+            from views import clipboard
 
-                board = QApplication.clipboard()
-                data = board.mimeData() if board is not None else None
-                propia = bool(getattr(self, "_clip_writers", None)) \
-                    or getattr(self, "_clip_pending", None) is not None
+            board = QApplication.clipboard()
+            data = board.mimeData() if board is not None else None
+            propia = bool(getattr(self, "_clip_writers", None)) \
+                or getattr(self, "_clip_pending", None) is not None
+            if modulos.activo(PROGRAMA, "pegar_lugar"):
+                # lo copiado en QGIS: IngeCAD no lo entiende y se pega en sus coordenadas
+                from . import pegar_lugar_ingecad as lugar
+                if lugar.ctrl_v_de_qgis(lugar.mensaje_en_portapapeles(),
+                                        data is not None and data.hasFormat(clipboard.MIME), propia):
+                    self.start_tool(lugar.NOMBRE)
+                    return None
+            if modulos.activo(PROGRAMA, "georref"):
                 if ctrl_v_es_imagen(_hay_imagen(data),
                                     data is not None and data.hasFormat(clipboard.MIME), propia):
                     self.start_tool("GEOPASTEIMAGE")

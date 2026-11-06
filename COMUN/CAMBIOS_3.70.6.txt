@@ -1,0 +1,11 @@
+GeoCAD - versión 3.70.6
+=======================
+CORRECCIÓN (IngeCAD). Hay que actualizar IngeCAD; QGIS sólo cambia de número. Incluye la 3.70.5.
+
+Pedido de Fernando: que el teclado copie y pegue entre QGIS e IngeCAD en los dos sentidos.
+
+Módulo «Pegar en el lugar» en IngeCAD
+- Ctrl+V pega lo copiado en QGIS, en sus coordenadas, con su capa, color, tipo y grosor. Antes no pegaba
+  nada. Lo mismo el Paste del menú Edit.
+- Lo copiado en IngeCAD sigue igual: Ctrl+V pide el punto de inserción. La captura de pantalla, también.
+- Con el módulo apagado, Ctrl+V queda como venía.

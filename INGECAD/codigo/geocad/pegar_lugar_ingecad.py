@@ -199,6 +199,13 @@ def _hay_copia_ingecad() -> bool:
     return data is not None and data.hasFormat(clipboard.MIME)
 
 
+def ctrl_v_de_qgis(msg, hay_copia_ingecad: bool, copia_propia_en_curso: bool) -> bool:
+    """¿Ctrl+V pega en el lugar lo copiado en QGIS? (3.70.6; Fernando: en los dos sentidos.)
+    La copia de esta ventana que todavía se escribe es la última: el portapapeles aún no la muestra."""
+    return (msg is not None and msg.get("origen") == "qgis" and not hay_copia_ingecad
+            and not copia_propia_en_curso)
+
+
 # ------------------------------------------------------------------ PEGARORIG
 class PegarLugarTool(Tool):
     """PEGARORIG: lo copiado, en sus coordenadas originales."""
@@ -206,7 +213,7 @@ class PegarLugarTool(Tool):
     def start(self) -> None:
         self.name = NOMBRE
         msg = mensaje_en_portapapeles()
-        if msg is not None and msg.get("origen") == "qgis" and not _hay_copia_ingecad():
+        if ctrl_v_de_qgis(msg, _hay_copia_ingecad(), False):
             self._de_qgis(msg)
         else:
             self._de_ingecad()
