@@ -60,5 +60,6 @@ cu = (RAIZ / "QGIS/codigo/geocad/cursor_defecto.py").read_text(encoding="utf-8")
 assert '"actionVertexTool"' in cu                       # Esc vuelve desde Vértices
 
 assert "or not layer.isEditable()" in ag and "capa.editingStopped" in ag  # sólo en edición (3.70.3)
+assert "except RuntimeError:    # la capa ya se quitó" in ag      # la capa seguida puede ya no existir (3.70.4)
 
 print("TODO OK test_agarres_qgis")

@@ -146,7 +146,11 @@ class Agarres:
         for capa, accion in ((self._conectada, 'disconnect'), (layer, 'connect')):
             if capa is None:
                 continue
-            for senal in (capa.geometryChanged, capa.editingStarted, capa.editingStopped):
+            try:
+                senales = (capa.geometryChanged, capa.editingStarted, capa.editingStopped)
+            except RuntimeError:    # la capa ya se quitó del proyecto: sus conexiones se fueron con ella
+                continue
+            for senal in senales:
                 try:
                     getattr(senal, accion)(self.luego)
                 except (TypeError, RuntimeError):

@@ -1,0 +1,10 @@
+GeoCAD - versión 3.70.4
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo cambia de número.
+
+Error informado por Fernando: «wrapped C/C++ object of type QgsVectorLayer has been deleted».
+
+Módulo «Agarres de vértices» en QGIS
+- Quitar del proyecto la capa que siguen los agarres ya no da error. Antes el error aparecía al
+  cambiar de selección, de herramienta o de capa, se repetía y los agarres dejaban de actualizarse
+  hasta reiniciar QGIS. Ahora los agarres pasan a seguir a la capa activa.

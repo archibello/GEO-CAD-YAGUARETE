@@ -14,7 +14,7 @@ ya guardada en <hogar> (ver el encabezado de banco_cursor_qgis_real.py):
         org.qgis.qgis --nologo --noversioncheck --profiles-path <perfil>
         --code banco_agarres_qgis_real.py
 """
-import faulthandler, glob, hashlib, os, tempfile, time, traceback
+import faulthandler, glob, hashlib, os, sys, tempfile, time, traceback
 faulthandler.enable(open(os.environ["BANCO_SALIDA"] + ".falla", "w"))
 from qgis.core import (QgsCoordinateTransformContext, QgsFeature, QgsGeometry, QgsPointXY, QgsProject,
                        QgsRectangle, QgsSnappingConfig, QgsTolerance, QgsVectorFileWriter, QgsVectorLayer)
@@ -517,6 +517,37 @@ def correr():
     check("Vértices, después de los agarres: anda", cerca(A, 120, 130), geom(A).asWkt(0))
     lay.rollBack()
     pump(10)
+
+    # ---- quitar del proyecto la capa que siguen los agarres (3.70.4)
+    from qgis.PyQt import sip
+    errores = []
+    gancho = sys.excepthook
+    sys.excepthook = lambda *e: errores.append("".join(traceback.format_exception(*e)))
+    canvas.setMapTool(cad)
+    tmp = QgsVectorLayer("Point?crs=EPSG:3857", "se va", "memory")
+    proy.addMapLayer(tmp)
+    iface.setActiveLayer(tmp)
+    pump(10)
+    check("sigue a la capa activa", ag._conectada is tmp)
+    proy.removeMapLayer(tmp.id())
+    pump(20)
+    check("quitar la capa activa: sin error", not errores, str(errores))
+    iface.setActiveLayer(lay)
+    pump(10)
+    tmp = QgsVectorLayer("Point?crs=EPSG:3857", "se va", "memory")
+    proy.addMapLayer(tmp)
+    ag._seguir(tmp)                     # sigue a una capa que se borra antes de la próxima actualización
+    proy.removeMapLayer(tmp.id())
+    pump(20)
+    check("la capa seguida ya no existe", sip.isdeleted(tmp))
+    try:
+        ag.actualizar()
+    except RuntimeError as e:
+        errores.append(str(e))
+    pump(10)
+    sys.excepthook = gancho
+    check("capa seguida borrada: actualizar sin error", not errores, str(errores))
+    check("capa seguida borrada: sigue a la activa", ag._conectada is iface.activeLayer())
 
     # ---- apagado, como venía
     from geocad import modulos
