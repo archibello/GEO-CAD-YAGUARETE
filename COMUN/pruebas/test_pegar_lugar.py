@@ -148,7 +148,9 @@ assert "QKeySequence(pegar_lugar.ATAJO)" in q
 assert "ctrl._apply_all()" in q     # lo pegado, con su formato: ventana/banco_formatos_qgis_real.py
 qp = (ROOT / "QGIS/codigo/geocad/plugin.py").read_text(encoding="utf-8")
 assert "self._sync_pegar_lugar()" in qp and "self._quitar_pegar_lugar()" in qp
-assert 'add("pegarorig", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)"' in qp
+# 3.70.7 (Fernando): fuera del menú GeoCAD; la acción sigue para el banco Edición
+assert 'add("pegarorig"' not in qp and 'self.actions["pegarorig"] = a' in qp
+assert '"Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)", self.iface.mainWindow())' in qp
 dq = (ROOT / "QGIS/codigo/geocad/dibujo/plugin.py").read_text(encoding="utf-8")
 assert "('PEGARORIG', 'PEGARENLUGAR', 'PASTEORIG')" in dq
 assert '"geocad:pegarorig"' in (ROOT / "COMUN/nucleo/botones.py").read_text(encoding="utf-8")

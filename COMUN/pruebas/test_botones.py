@@ -341,7 +341,11 @@ textos = [i.label for i in items] if hasattr(items[0], "label") else [i.text for
 cmds = [i.command for i in items]
 assert cmds.index("GEOBUTTONS") == cmds.index("GEOCADMODULES") + 1          # junto a Módulos
 ui = json.loads((RAIZ / "INGECAD/codigo/geocad/i18n/es/ui.json").read_text(encoding="utf-8"))
-assert ui["Manage buttons..."] == "Administrar botones..."
+assert "Tool Settings..." in textos and "Manage buttons..." not in textos   # 3.70.7 (Fernando)
+assert ui["Tool Settings..."] == "Administrar Herramientas..." and "Manage buttons..." not in ui
+# 3.70.7: «Paste in Place» fuera del menú GeoCAD; de respaldo en los bancos (completo)
+assert "GEOPASTEORIG" not in cmds
+assert "GEOPASTEORIG" in [i.command for i in pkg.construir_spec(completo=True).menu if hasattr(i, "command")]
 assert set(Bar_.TEMAS.values()) | set(Y.TEMAS.values()) <= set(C.NOMBRES_TEMA)
 assert C.tema_de("FILLET") == "edicion" and C.tema_de("SHPTABLE") == "datos" and C.tema_de("X") is None
 a = Accion("x"); a.setProperty("geocad_orden", "FILLET")
@@ -457,8 +461,9 @@ iface = types.SimpleNamespace(
 P = qpkg.classFactory(iface)
 P.initGui()
 textos_q = [getattr(i, "text", "") for i in P.menu.items if not isinstance(i, str)]
-assert "Administrar botones..." in textos_q
-assert textos_q.index("Administrar botones...") == textos_q.index("Módulos...") + 1
+assert "Administrar Herramientas..." in textos_q and "Administrar botones..." not in textos_q
+assert textos_q.index("Administrar Herramientas...") == textos_q.index("Módulos...") + 1
+assert not any(t.startswith("Pegar en el lugar") for t in textos_q)      # 3.70.7: fuera del menú
 # 3.60.7: sin los submenús Dibujo CAD y Capas CAD; son bancos de Administrar botones
 assert "Dibujo CAD" not in textos_q and "Capas CAD" not in textos_q
 assert all(BT.es_banco(n) for n, _a in P._bancos())

@@ -1,0 +1,13 @@
+GeoCAD - versión 3.70.7
+=======================
+CORRECCIÓN (IngeCAD y QGIS). Hay que actualizar los dos.
+
+Pedido de Fernando: ordenar el menú GeoCAD Yaguareté en los dos programas.
+
+Menú GeoCAD Yaguareté
+- «Pegar en el lugar» ya no está en el menú, ni en IngeCAD ni en QGIS. Queda de respaldo en el banco
+  Edición de Administrar Herramientas, para ponerlo en una barra cuando haga falta. Ctrl+Alt+V, la
+  entrada de Edición/Edit y la orden PEGARORIG siguen como estaban.
+- IngeCAD: «Manage buttons...» pasa a llamarse «Tool Settings...» («Administrar Herramientas...» con
+  IngeCAD en español).
+- QGIS: «Administrar botones...» pasa a llamarse «Administrar Herramientas...».

@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.70.6"
+VERSION = "3.70.7"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -190,9 +190,13 @@ class GeoCAD:
             add("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
                 self.tablas.copiar_menu, self.tablas.icono_copiar())
         if self.pegar_lugar is not None:
-            self.menu.addSeparator()
-            add("pegarorig", "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)", self.pegar_lugar.pegar,
-                QIcon(str(Path(__file__).parent / "iconos" / "pegar_lugar.png")))
+            # 3.70.7 (Fernando): fuera del menú GeoCAD; la acción queda de respaldo
+            # en el banco Edición de Administrar Herramientas (_bancos usa self.actions)
+            a = QAction(QIcon(str(Path(__file__).parent / "iconos" / "pegar_lugar.png")),
+                        "Pegar en el lugar (PEGARORIG, Ctrl+Alt+V)", self.iface.mainWindow())
+            a.triggered.connect(self.pegar_lugar.pegar)
+            a.setProperty("geocad_id", "geocad:pegarorig")
+            self.actions["pegarorig"] = a
         if modulos.activo(PROGRAMA, "googleearth"):
             self.menu.addSeparator()
             from . import googleearth_qgis as GEQ
@@ -215,7 +219,7 @@ class GeoCAD:
                 self.actions[clave] = a
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)
-        add("botones", "Administrar botones...", self.administrar_botones)
+        add("botones", "Administrar Herramientas...", self.administrar_botones)
         add("config", "Configuración común...", self.open_config)
         add("update", "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...", self.update_bridge)
         add("about", f"Acerca de {nombre.NOMBRE} (versión {VERSION})...", self.about)

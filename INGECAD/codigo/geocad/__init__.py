@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.70.6"
+VERSION = "3.70.7"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -214,8 +214,11 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         # 3.66.0 (Fernando: «ESO ES PEGAR EN EL LUGAR», Ctrl+Alt+V): también en Edit
         tools["GEOPASTEORIG"] = pegar_lugar_ingecad.PegarLugarTool
         aliases.update({"PASTEORIG": "GEOPASTEORIG", "PEGARENLUGAR": "GEOPASTEORIG"})
-        menu += [MenuItem("Paste in Place (PASTEORIG)", "GEOPASTEORIG", _icon("pegar_lugar")),
-                 SEPARATOR]
+        # 3.70.7 (Fernando): fuera del menú GeoCAD; queda de respaldo en el banco
+        # Edición de Administrar Herramientas (los bancos se arman con ``completo``)
+        if completo:
+            menu += [MenuItem("Paste in Place (PASTEORIG)", "GEOPASTEORIG", _icon("pegar_lugar")),
+                     SEPARATOR]
         toolbar.append(ToolbarItem("Paste in Place (PASTEORIG)", "GEOPASTEORIG", _icon("pegar_lugar")))
     if est["seleccion"] and seleccion.SelTool is not None:
         tools["SELECT"] = seleccion.SelTool
@@ -407,7 +410,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         menu += bancos
     menu += [
         MenuItem("Modules...", "GEOCADMODULES"),
-        MenuItem("Manage buttons...", "GEOBUTTONS"),
+        MenuItem("Tool Settings...", "GEOBUTTONS"),
         MenuItem("Shared settings...", "SHPCONFIG"),
         MenuItem("Update GeoCAD Yaguareté (IngeCAD and QGIS)...", "QGISUPDATE"),
         MenuItem("Diagnose GeoCAD Yaguareté on this computer", "GEOCADDIAG"),
@@ -416,7 +419,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.70.6",
+        version="3.70.7",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
