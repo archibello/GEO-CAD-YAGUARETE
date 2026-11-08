@@ -1,0 +1,10 @@
+GeoCAD - versión 3.72.2
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando al probar la 3.72.1: Administrar Herramientas > Espacio de cada herramienta.
+
+Corregido
+- Con nombres largos, el selector de cada herramienta quedaba fuera de la ventana, detrás de una barra de
+  desplazamiento horizontal, y parecía que sólo se podía elegir la categoría entera. Ahora los nombres se
+  parten en renglones y cada selector queda a la vista.

@@ -1,0 +1,17 @@
+GeoCAD - versión 3.72.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando: controlar desde Administrar Herramientas el lugar de las herramientas de presentación.
+
+Ver > Herramientas GeoCAD, en las presentaciones
+- Entrada nueva debajo de Barras de herramientas, con una casilla por herramienta: muestra u oculta su
+  botón. Si todas las de una barra quedan ocultas, la barra se esconde. Lo elegido queda recordado.
+
+Administrar Herramientas > Espacio de cada herramienta...
+- Formulario con las herramientas hechas para presentaciones: Desplazar, Bloquear y Guardar imagen base,
+  Pegar tabla y Copiar tabla. En cada una se elige su lugar definitivo:
+  - Espacio Presentaciones (de fábrica): botón en la barra de la presentación y casilla en el menú Ver.
+  - Espacio Modelo: sale de la presentación y pasa a la barra «GeoCAD Herramientas de presentación» de la
+    ventana principal; desde ahí actúa sobre la presentación abierta.
+- Las demás herramientas de GeoCAD dibujan sobre el mapa de QGIS y no se ofrecen.

@@ -105,12 +105,14 @@ class Ventana:
 
 
 def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=None,
-                tema_de=None, nombres_tema=None, escondidas=()) -> bool:
+                tema_de=None, nombres_tema=None, escondidas=(), extra=None) -> bool:
     """Muestra la ventana. ``fabrica``: [(barra, [botones])]; ``etiquetas`` e
     ``iconos``: {botón: texto / QIcon}. Con ``tema_de`` aparece «Una
     categoría por tema». ``escondidas``: las categorías cuya barra escondió
-    el usuario (aparecen apagadas). True si se aceptó (lo elegido ya quedó
-    guardado)."""
+    el usuario (aparecen apagadas). ``extra``: (texto, función), un botón más
+    que recibe (nombre, [botones], etiquetas, iconos) de lo elegido (QGIS: el
+    espacio de cada herramienta). True si se aceptó (lo elegido ya
+    quedó guardado)."""
     iconos = iconos or {}
     nombre_prog = "IngeCAD" if programa == "ingecad" else "QGIS"
     modelo = botones.distribuir(fabrica, botones.leer(programa), programa)
@@ -178,6 +180,19 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
     combo = QtWidgets.QComboBox(dlg)
     fila_b.addWidget(combo, 1)
     b_pasar = boton("Pasar", fila_b)
+
+    def extra_elegido(_=False):
+        if banco[0] is not None:
+            nombre, fila = bancos[banco[0]]
+        else:
+            i = lista_cat.currentRow()
+            if not 0 <= i < len(estado.modelo):
+                return
+            nombre, fila = estado.modelo[i][0], [b for b, _v in estado.modelo[i][1]]
+        extra[1](nombre, list(fila), etiquetas, iconos)
+
+    if extra is not None:
+        boton(extra[0], der).clicked.connect(extra_elegido)
 
     armando = [False]
     banco = [None]                            # el banco elegido (o None: una categoría)

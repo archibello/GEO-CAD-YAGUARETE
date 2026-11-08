@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.71.3"
+VERSION = "3.72.2"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -135,6 +135,8 @@ class GeoCAD:
         self.referencias = None     # módulo «Referencias»: Shift + clic derecho al digitalizar
         self.pegar_lugar = None     # módulo «Pegar en el lugar»: Edición > Pegar en el lugar (3.66.0)
         self.imagen_base = None     # módulo «Imagen base»: barra en las composiciones (3.71.0)
+        self.espacios = None        # Ver > Herramientas GeoCAD y el espacio de cada una (3.72.0)
+        self._espacios_pendiente = False
         self._cargando = False
         self._submenus = []
 
@@ -232,6 +234,48 @@ class GeoCAD:
         add("config", "Configuración común...", self.open_config)
         add("update", "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...", self.update_bridge)
         add("about", f"Acerca de {nombre.NOMBRE} (versión {VERSION})...", self.about)
+        self._aplicar_espacios()
+
+    def _acciones_por_boton(self) -> dict:
+        return {self._id_boton(a): a for _n, fila in self._bancos() for a in fila if self._id_boton(a)}
+
+    def _fabrica_botones(self) -> list:
+        elems = botones_barras.elementos(self._fabricas(), self._id_boton, self.iface.mainWindow(),
+                                         bancos=self._bancos())
+        return [(n, [b for b, _a in fila]) for n, fila in elems]
+
+    def _categorias_barras(self) -> list:
+        """[(categoría, [botones])] de Administrar Herramientas, prendidas o no."""
+        fabrica = self._fabrica_botones()
+        return [(n, [b for b, _v in fila])
+                for n, fila in botones.distribuir(fabrica, botones.leer(PROGRAMA), PROGRAMA)
+                if not botones.es_banco(n)]
+
+    def _distribucion(self, fabrica):
+        """Las barras principales, sin lo que tiene su lugar en las presentaciones."""
+        from . import espacios
+        return espacios.sin_presentacion(botones.barras(PROGRAMA, fabrica), fabrica,
+                                         espacios.fuera_de_modelo(espacios.leer()))
+
+    def _aplicar_espacios(self) -> None:
+        """Una sola vez por tanda: descargar un módulo rearma el menú por cada entrada."""
+        if not self._espacios_pendiente:
+            self._espacios_pendiente = True
+            QTimer.singleShot(0, self._aplicar_espacios_ya)
+
+    def _aplicar_espacios_ya(self) -> None:
+        """Cada herramienta en el espacio elegido."""
+        self._espacios_pendiente = False
+        if self.menu is None:
+            return                  # ya descargado
+        try:
+            if self.espacios is None:
+                from .espacios import EspaciosQgis
+                self.espacios = EspaciosQgis(self.iface, self._acciones_por_boton, self._categorias_barras,
+                                             self._aplicar_botones)
+            self.espacios.aplicar()
+        except Exception as exc:  # noqa: BLE001 - quedan donde estaban
+            self._bar(f"Herramientas GeoCAD: {type(exc).__name__}: {exc}", "warn")
 
     # primera vez: retirar el Puente 1.x y elegir los módulos
     def _retirar_viejos(self) -> list:
@@ -412,6 +456,9 @@ class GeoCAD:
         if self.subs is not None:
             self.subs.descargar()
             self.subs = None
+        if self.espacios is not None:       # después: descargar los módulos rearma el menú
+            self.espacios.unload()
+            self.espacios = None
         if self.timer is not None:
             self.timer.stop()
             self.timer = None
@@ -508,8 +555,9 @@ class GeoCAD:
             if not fab:
                 return
             botones_barras.aplicar(self.iface.mainWindow(), fab, self._id_boton,
-                                   lambda fabrica: botones.barras(PROGRAMA, fabrica),
+                                   self._distribucion,
                                    self._nueva_barra, mostrar=mostrar, bancos=self._bancos())
+            self._aplicar_espacios()        # las categorías pudieron cambiar
         except Exception as exc:  # noqa: BLE001 - las barras quedan como de fábrica
             self._bar(f"Administrar botones: {type(exc).__name__}: {exc}", "warn")
 
@@ -537,8 +585,9 @@ class GeoCAD:
             for b, a in fila:
                 etiquetas[b] = a.text().split(" — ")[0].replace("&", "")
                 iconos[b] = a.icon()
+        extra = ("Espacio de cada herramienta...", self.espacios.elegir) if self.espacios is not None else None
         if botones_ui.administrar(QtWidgets, win, PROGRAMA, fabrica, etiquetas, iconos,
-                                  escondidas=botones_barras.escondidas(win)):
+                                  escondidas=botones_barras.escondidas(win), extra=extra):
             self._aplicar_botones(mostrar=True)
             self._bar("Botones de GeoCAD: categorías guardadas.", "ok")
 

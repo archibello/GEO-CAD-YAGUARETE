@@ -518,6 +518,8 @@ class ImagenBaseComposicion:
         grabar = QAction(self.icono("imagen_base_guardar.png"),
                          "Guardar la imagen recortada con la nueva georreferencia", barra)
         grabar.triggered.connect(lambda _=False, d=designer: self.guardar(d))
+        for accion, clave in ((desplazar, "imgbase_mover"), (trabar, "imgbase_bloquear"), (grabar, "imgbase_guardar")):
+            accion.setProperty("geocad_id", "geocad:" + clave)      # Ver > Herramientas GeoCAD
         barra.addActions([desplazar, trabar, grabar])
         win.addToolBar(barra)
         tool = herramienta(self, designer)

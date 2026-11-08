@@ -452,6 +452,7 @@ from geocad import plugin as qp
 assert qp.BARRAS_GEOCAD[:2] == ("DibujoCADToolbar", "EdicionCADToolbar") and "GeoCADToolbar" in qp.BARRAS_GEOCAD
 mensajes = []
 iface = types.SimpleNamespace(
+    layoutDesignerOpened=types.SimpleNamespace(connect=lambda f: None),   # 3.72.0: Ver > Herramientas GeoCAD
     mainWindow=lambda: types.SimpleNamespace(menuBar=lambda: types.SimpleNamespace(insertMenu=lambda *a: None,
                                                                                  removeAction=lambda *a: None),
                                              removeToolBar=lambda *a: None),

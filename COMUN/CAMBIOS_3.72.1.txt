@@ -1,0 +1,18 @@
+GeoCAD - versión 3.72.1
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando al probar la 3.72.0: Administrar Herramientas > Espacio de cada herramienta.
+
+Corregido
+- El formulario mostraba siempre las mismas cinco herramientas, cualquiera fuese la categoría elegida.
+  Ahora lista las herramientas de la categoría o del banco elegido, cada una con Espacio Presentaciones o
+  Espacio Modelo, y «Toda la categoría» para pasarlas juntas.
+
+Cómo queda cada espacio
+- Espacio Presentaciones: la herramienta sale de la ventana principal y va a una barra de la presentación
+  con el nombre de su categoría, con casilla en Ver > Herramientas GeoCAD. Las que dibujan sobre el mapa
+  siguen trabajando en él: su botón lleva a la ventana principal y las lanza ahí.
+- Espacio Modelo: vuelve a su categoría de la ventana principal y deja de estar en la presentación.
+- Las listas desplegables de las barras sólo pueden estar en Espacio Modelo.
+- Las herramientas ya elegidas para Espacio Presentaciones salen de las barras de la ventana principal.

@@ -740,10 +740,12 @@ class TablasComposicion:
         barra.setObjectName("GeoCADYaguareteComposicion")
         accion = QAction(self.icono(), "Pegar tabla (GenOffice, Calc, Excel o QGIS) — dos puntos", barra)
         accion.triggered.connect(lambda _=False, d=designer: self.pegar(d))
+        accion.setProperty("geocad_id", "geocad:pegartabla")        # Ver > Herramientas GeoCAD
         barra.addAction(accion)
         copiar = QAction(self.icono_copiar(), "Copiar tabla (la elegida, con su formato: para "
                          "IngeCAD, GenOffice, Calc o Excel)", barra)
         copiar.triggered.connect(lambda _=False, d=designer: self.copiar(d))
+        copiar.setProperty("geocad_id", "geocad:copiartabla")
         barra.addAction(copiar)
         win.addToolBar(barra)
         self.barras[id(designer)] = (designer, barra)
