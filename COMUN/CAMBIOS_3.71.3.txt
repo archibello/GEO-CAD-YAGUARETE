@@ -1,0 +1,13 @@
+GeoCAD - versión 3.71.3
+=======================
+CORRECCIÓN (IngeCAD). Hay que actualizar IngeCAD; QGIS sólo recibe el número de versión.
+
+Pedido de Fernando: IngeCAD mostraba una ventana de actualizar con una versión ya superada.
+
+Actualizar GeoCAD en IngeCAD
+- Con IngeCAD abierto, cada actualización hecha en QGIS abría otra ventana encima de la anterior. La que
+  quedaba debajo seguía ofreciendo la versión de cuando se abrió y «Yes» la habría instalado sobre una
+  más nueva. Ahora hay una sola ventana a la vez.
+- La versión instalada se toma del disco, no de la que quedó en memoria.
+- Al contestar se vuelve a mirar la carpeta: si esa versión ya se instaló no se hace nada, y si llegó otra
+  más nueva se ofrece ésa antes de instalar.

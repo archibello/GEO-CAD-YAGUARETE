@@ -108,6 +108,44 @@ assert host.plugins.loaded["geocad"].spec.version == "9.9.9" and "no se instaló
 qb.receive("qgis"); mod._preguntar = lambda w, t, x: True
 mod.desde_qgis(host, {"tipo": "actualizar", "carpeta": str(proj)}, log.append)
 assert host.plugins.loaded["geocad"].spec.version == "10.0.0" and qb.receive("qgis") == []
+
+# ---- avisos viejos (3.71.3): el que quedó abierto no instala una versión superada
+mod = sys.modules["ingecad_plugin_geocad.actualizacion"]
+vers = proj / "INGECAD" / "versiones"
+disco = Path(mod.__file__).with_name("__init__.py")
+assert mod._version_en_disco() == "10.0.0"
+original = disco.read_text(encoding="utf-8")
+(vers / "instalar_geocad_10.1.0.py").write_text(instalador("10.1.0"), encoding="utf-8")
+# mientras la ventana estaba abierta se instaló la que ofrecía: contestar «Sí» no reinstala
+def ya_instalada(w, t, x):
+    preguntas.append(x)
+    disco.write_text(original.replace('version="10.0.0"', 'version="10.1.0"'), encoding="utf-8")
+    return True
+preguntas.clear(); log.clear(); mod._preguntar = ya_instalada
+assert mod.actualizar_ingecad(host, log.append, str(proj), avisar_qgis=False, silencioso=True) is False
+assert len(preguntas) == 1 and host.plugins.loaded["geocad"].spec.version == "10.0.0"
+assert "ya está la 10.1.0" in log[-1] and mod.version_instalada() == "10.1.0"
+# con eso en disco ni pregunta: la memoria (10.0.0) no manda
+preguntas.clear(); mod._preguntar = lambda w, t, x: preguntas.append(x) or True
+assert mod.actualizar_ingecad(host, log.append, str(proj), avisar_qgis=False, silencioso=True) is False and preguntas == []
+disco.write_text(original, encoding="utf-8")
+# mientras estaba abierta llegó otra más nueva: se ofrece ésa antes de instalar
+def llega_otra(w, t, x):
+    preguntas.append(x)
+    (vers / "instalar_geocad_10.2.0.py").write_text(instalador("10.2.0"), encoding="utf-8")
+    return True
+preguntas.clear(); mod._preguntar = llega_otra
+assert mod.actualizar_ingecad(host, log.append, str(proj), avisar_qgis=False, silencioso=True) is True
+assert len(preguntas) == 2 and "nueva:     10.1.0" in preguntas[0] and "nueva:     10.2.0" in preguntas[1]
+assert host.plugins.loaded["geocad"].spec.version == "10.2.0"
+# con una ventana abierta, otro aviso no abre otra
+mod = sys.modules["ingecad_plugin_geocad.actualizacion"]
+(vers / "instalar_geocad_10.3.0.py").write_text(instalador("10.3.0"), encoding="utf-8")
+preguntas.clear(); mod._preguntar = lambda w, t, x: preguntas.append(x) or True
+mod._hay_aviso_abierto = lambda: True
+assert mod.actualizar_ingecad(host, log.append, str(proj), avisar_qgis=False, silencioso=True) is False and preguntas == []
+assert host.plugins.loaded["geocad"].spec.version == "10.2.0"
+qb.receive("qgis")
 print("ok IngeCAD")
 
 # ---- QGIS: se actualiza desde su menú y avisa a IngeCAD ----------------------

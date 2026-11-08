@@ -8,14 +8,31 @@ desde la misma carpeta (si QGIS está cerrado, el aviso lo espera).
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from . import actualizar, buzon, config
+
+TITULO = "Actualizar GeoCAD Yaguareté"
+
+
+def _version_en_disco():
+    """El número del plugin instalado. Un aviso abierto antes de otra instalación
+    conserva en memoria el número de cuando se abrió."""
+    try:
+        texto = Path(__file__).with_name("__init__.py").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    hallado = re.search(r'\bversion="([^"]+)"', texto)     # el mismo número que PLUGIN.version
+    return hallado.group(1) if hallado else None
 
 
 def version_instalada() -> str:
     from . import PLUGIN
 
+    disco = _version_en_disco()
+    if disco and actualizar.version_tuple(disco) > actualizar.version_tuple(PLUGIN.version):
+        return disco
     return PLUGIN.version
 
 
@@ -37,6 +54,17 @@ def _preguntar(window, titulo: str, texto: str) -> bool:
         return False
     yes, no = QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No
     return QMessageBox.question(window, titulo, texto, yes | no, yes) == yes
+
+
+def _hay_aviso_abierto() -> bool:
+    """¿Ya está abierta la ventana de actualizar? Se mira en Qt porque instalar
+    recarga este módulo: una marca propia se perdería."""
+    try:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+    except ImportError:
+        return False
+    return any(isinstance(v, QMessageBox) and v.isVisible() and v.windowTitle() == TITULO
+               for v in QApplication.topLevelWidgets())
 
 
 def _diferir(funcion) -> None:
@@ -74,7 +102,11 @@ def carpeta_de_actualizaciones(window, echo, cambiar: bool = False):
 
 def actualizar_ingecad(window, echo, carpeta: str, avisar_qgis: bool = True,
                        silencioso: bool = False) -> bool:
-    """True si se lanzó la instalación de una versión nueva."""
+    """True si se lanzó la instalación de una versión nueva. Una sola ventana a la
+    vez, y al contestarla se vuelve a mirar: mientras estuvo abierta pudo llegar otra
+    versión o instalarse (Fernando, 08/11/2026: ofrecía una versión ya superada)."""
+    if _hay_aviso_abierto():
+        return False
     actual = version_instalada()
     cand = actualizar.mas_nueva(carpeta, "ingecad", actual)
     if avisar_qgis:
@@ -87,14 +119,24 @@ def actualizar_ingecad(window, echo, carpeta: str, avisar_qgis: bool = True,
             echo(f"GeoCAD Yaguareté para IngeCAD ya está en la última versión ({actual}). "
                  f"Carpeta: {carpeta}")
         return False
-    texto = (f"Hay una versión nueva de GeoCAD Yaguareté para IngeCAD:\n\n"
-             f"    instalada: {actual}\n    nueva:     {cand.version}\n"
-             f"    archivo:   {cand.nombre}\n")
-    detalle = actualizar.cambios(cand)
-    if detalle:
-        texto += "\n" + detalle + "\n"
-    texto += "\n¿Instalarla ahora?"
-    if not _preguntar(window, "Actualizar GeoCAD Yaguareté", texto):
+    while True:
+        ofrecida = cand.version
+        texto = (f"Hay una versión nueva de GeoCAD Yaguareté para IngeCAD:\n\n"
+                 f"    instalada: {actual}\n    nueva:     {ofrecida}\n"
+                 f"    archivo:   {cand.nombre}\n")
+        detalle = actualizar.cambios(cand)
+        if detalle:
+            texto += "\n" + detalle + "\n"
+        texto += "\n¿Instalarla ahora?"
+        quiere = _preguntar(window, TITULO, texto)
+        actual = version_instalada()
+        cand = actualizar.mas_nueva(carpeta, "ingecad", actual)
+        if cand is None:
+            echo(f"Actualizar GeoCAD Yaguareté: no se instaló nada; ya está la {actual}.")
+            return False
+        if cand.version == ofrecida:
+            break
+    if not quiere:
         echo("Actualizar GeoCAD Yaguareté: no se instaló nada.")
         return False
     ruta = actualizar.extraer(cand)
