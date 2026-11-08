@@ -1,0 +1,18 @@
+GeoCAD - versión 3.71.1
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedidos de Fernando al probar la 3.71.0: Imagen base en las presentaciones.
+
+Nuevo
+- Esc, con Desplazar activo, vuelve la imagen a sus coordenadas originales; las capas vectoriales no se
+  mueven y Ctrl+Z la devuelve a donde estaba. Si está bloqueada, avisa y no la mueve.
+- La herramienta acepta cualquier imagen ráster: teselas XYZ, capturas de Google Earth o recortes
+  guardados. Antes rechazaba lo que no fuera XYZ con «Ese mapa no muestra ninguna capa de teselas XYZ».
+
+Corregido
+- Al borrar un mapa con su imagen corrida, la imagen quedaba suelta y trabada en la composición. Ahora se
+  borra con el mapa y un solo Ctrl+Z recupera los dos. Las que ya quedaron sueltas se limpian al abrir
+  la composición.
+- Separar el mapa costaba dos Ctrl+Z y, tras un Rehacer, se podía perder el último arrastre.
+- Un mapa copiado ya no se queda con la imagen del original.

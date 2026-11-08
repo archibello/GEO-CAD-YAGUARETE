@@ -1,0 +1,22 @@
+GeoCAD - versión 3.71.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando: correr la imagen de teselas XYZ (Google Earth) por debajo de las capas vectoriales,
+desde la presentación, y guardar el recorte con la georreferencia lograda.
+
+Imagen base en las presentaciones (módulo nuevo, prendido por defecto; se apaga en GeoCAD > Módulos)
+- Barra de tres botones en la ventana de cada composición. No está en el menú GeoCAD: queda además de
+  respaldo en el banco Edición de Administrar Herramientas.
+- Desplazar imagen: se arrastra sobre el mapa y sólo se corre la imagen, con vista previa. El botón
+  derecho cancela el arrastre y Ctrl+Z lo deshace.
+- Bloquear imagen: la deja fija en esa posición; se guarda con el proyecto. El mismo botón la destraba.
+- Guardar recorte: GeoTIFF en el sistema de coordenadas del mapa, a la resolución de la composición,
+  con la nueva georreferencia y un 25 % más de área que el recorte, centrado. La fuente no se toca.
+
+A tener en cuenta
+- Al primer arrastre el mapa se divide en dos: abajo un mapa nuevo con la imagen («Imagen base de...») y
+  arriba el original con las capas vectoriales. La imagen sigue al mapa en escala, extensión, posición y giro.
+- Desde ese momento el mapa de arriba tiene su lista de capas fija: las capas que se prendan, se apaguen
+  o se agreguen en el proyecto no le cambian. Se ajustan en las propiedades del mapa.
+- Si se borra el mapa de arriba, la imagen queda sola y trabada: se destraba en el panel Elementos.

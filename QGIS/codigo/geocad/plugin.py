@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.70.7"
+VERSION = "3.71.2"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -134,6 +134,7 @@ class GeoCAD:
         self.tablas = None          # módulo «Tablas»: Pegar tabla en las composiciones
         self.referencias = None     # módulo «Referencias»: Shift + clic derecho al digitalizar
         self.pegar_lugar = None     # módulo «Pegar en el lugar»: Edición > Pegar en el lugar (3.66.0)
+        self.imagen_base = None     # módulo «Imagen base»: barra en las composiciones (3.71.0)
         self._cargando = False
         self._submenus = []
 
@@ -197,6 +198,14 @@ class GeoCAD:
             a.triggered.connect(self.pegar_lugar.pegar)
             a.setProperty("geocad_id", "geocad:pegarorig")
             self.actions["pegarorig"] = a
+        if self.imagen_base is not None:
+            # 3.71.0 (Fernando): sólo en la presentación y de respaldo en el banco
+            # Edición de Administrar Herramientas; nunca en el menú GeoCAD
+            for clave, texto, orden, icono in self.imagen_base.respaldo():
+                a = QAction(self.imagen_base.icono(icono), texto, self.iface.mainWindow())
+                a.triggered.connect(orden)
+                a.setProperty("geocad_id", "geocad:" + clave)
+                self.actions[clave] = a
         if modulos.activo(PROGRAMA, "googleearth"):
             self.menu.addSeparator()
             from . import googleearth_qgis as GEQ
@@ -292,6 +301,28 @@ class GeoCAD:
             self._quitar_tablas()
         self._sync_referencias()
         self._sync_pegar_lugar()
+        self._sync_imagen_base()
+
+    def _sync_imagen_base(self) -> None:
+        """La barra de imagen base de las composiciones, según el módulo."""
+        quiere = modulos.activo(PROGRAMA, "imagen_base")
+        if quiere and self.imagen_base is None:
+            try:
+                from .imagen_base import ImagenBaseComposicion
+                self.imagen_base = ImagenBaseComposicion(self.iface)
+            except Exception as exc:  # noqa: BLE001
+                self.imagen_base = None
+                self._bar(f"No se pudo iniciar Imagen base: {type(exc).__name__}: {exc}", "warn", 10)
+        elif not quiere and self.imagen_base is not None:
+            self._quitar_imagen_base()
+
+    def _quitar_imagen_base(self) -> None:
+        if self.imagen_base is not None:
+            try:
+                self.imagen_base.unload()
+            except Exception:  # noqa: BLE001
+                pass
+            self.imagen_base = None
 
     def _sync_pegar_lugar(self) -> None:
         """Edición > Pegar en el lugar (Ctrl+Alt+V) y la copia para IngeCAD, según el módulo."""
@@ -375,6 +406,7 @@ class GeoCAD:
         self._quitar_tablas()
         self._quitar_referencias()
         self._quitar_pegar_lugar()
+        self._quitar_imagen_base()
         from . import googleearth_qgis
         googleearth_qgis.apagar()
         if self.subs is not None:

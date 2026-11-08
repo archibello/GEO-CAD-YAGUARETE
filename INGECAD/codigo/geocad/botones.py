@@ -152,7 +152,8 @@ TEMA_BANCO = {
             "dibujo:break", "dibujo:explode", "dibujo:divide", "dibujo:measure",
             "dibujo:copybase", "dibujo:pastebase", "geocad:pegarorig", "dibujo:aligncopy",
             "dibujo:matchprop", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
-            "dibujo:textcolor", "geocad:copiartabla"),
+            "dibujo:textcolor", "geocad:copiartabla", "geocad:imgbase_mover",
+            "geocad:imgbase_bloquear", "geocad:imgbase_guardar"),
         "Dibujo": (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
             "dibujo:rumbos", "dibujo:perp", "dibujo:gmsblocks", "dibujo:dtext",

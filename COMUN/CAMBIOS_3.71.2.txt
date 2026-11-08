@@ -1,0 +1,11 @@
+GeoCAD - versión 3.71.2
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando al probar la 3.71.1: Imagen base en las presentaciones.
+
+Corregido
+- El primer arrastre sobre un mapa ya dibujado no se veía hasta alejar la lámina o regenerar: el mapa de
+  las capas seguía mostrando su dibujo guardado, con la imagen, y tapaba a la que se movía debajo. Ahora,
+  al dividirse el mapa en el primer arrastre, se regeneran los dos. Si las teselas vienen por internet,
+  la imagen puede tardar lo que demore en bajar.

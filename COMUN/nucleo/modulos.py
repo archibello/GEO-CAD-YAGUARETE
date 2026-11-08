@@ -262,6 +262,10 @@ CATALOGO = {
                "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "
                "tabla de QGIS con el formato de la planilla (anchos, combinadas, letras, "
                "colores), ubicada con dos puntos: la esquina inferior derecha sigue al cursor."),
+        Modulo("imagen_base", "Imagen base en las presentaciones",
+               "Barra de tres botones en la ventana de cada composición: desplaza la imagen "
+               "(teselas XYZ como Google Earth, o un ráster) por debajo de las capas vectoriales, la bloquea en la "
+               "posición lograda y guarda el recorte como GeoTIFF con la nueva georreferencia."),
         Modulo("googleearth", "Google Earth: captura georreferenciada y mosaico",
                "Captura georreferenciada de lo que se ve en Google Earth Pro, en planas, desde "
                "el menú GeoCAD > Google Earth: ventanita «GeoCAD Yaguareté» con el botón CAPTURAR "
