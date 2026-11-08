@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.72.2"
+VERSION = "3.73.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -419,7 +419,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.72.2",
+        version="3.73.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

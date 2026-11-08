@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.72.2"
+VERSION = "3.73.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -135,6 +135,7 @@ class GeoCAD:
         self.referencias = None     # módulo «Referencias»: Shift + clic derecho al digitalizar
         self.pegar_lugar = None     # módulo «Pegar en el lugar»: Edición > Pegar en el lugar (3.66.0)
         self.imagen_base = None     # módulo «Imagen base»: barra en las composiciones (3.71.0)
+        self.capa_seleccion = None  # módulo «Crear capa a partir de elementos seleccionados» (3.73.0)
         self.espacios = None        # Ver > Herramientas GeoCAD y el espacio de cada una (3.72.0)
         self._espacios_pendiente = False
         self._cargando = False
@@ -187,11 +188,17 @@ class GeoCAD:
         # quedan como bancos de respaldo en Administrar botones (_bancos)
         self._submenus = []
         if self.tablas is not None:
-            self.menu.addSeparator()
-            add("pegartabla", "Pegar tabla en la composición (GenOffice, Calc, Excel, QGIS)...",
-                self.tablas.pegar_menu, self.tablas.icono())
-            add("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
-                self.tablas.copiar_menu, self.tablas.icono_copiar())
+            # Fernando: fuera del menú GeoCAD; siguen en la barra de cada composición
+            # y de respaldo en Administrar Herramientas (_bancos usa self.actions)
+            for clave, texto, orden, icono in (
+                    ("pegartabla", "Pegar tabla en la composición (GenOffice, Calc, Excel, QGIS)...",
+                     self.tablas.pegar_menu, self.tablas.icono()),
+                    ("copiartabla", "Copiar la tabla elegida de la composición (con su formato)...",
+                     self.tablas.copiar_menu, self.tablas.icono_copiar())):
+                a = QAction(icono, texto, self.iface.mainWindow())
+                a.triggered.connect(orden)
+                a.setProperty("geocad_id", "geocad:" + clave)
+                self.actions[clave] = a
         if self.pegar_lugar is not None:
             # 3.70.7 (Fernando): fuera del menú GeoCAD; la acción queda de respaldo
             # en el banco Edición de Administrar Herramientas (_bancos usa self.actions)
@@ -200,6 +207,14 @@ class GeoCAD:
             a.triggered.connect(self.pegar_lugar.pegar)
             a.setProperty("geocad_id", "geocad:pegarorig")
             self.actions["pegarorig"] = a
+        if self.capa_seleccion is not None:
+            # 3.73.0 (Fernando): menú Vectorial y clic derecho sobre la capa, no en el
+            # menú GeoCAD; de respaldo en el banco Edición de Administrar Herramientas
+            a = QAction(self.capa_seleccion.icono(), "Crear capa a partir de elementos seleccionados",
+                        self.iface.mainWindow())
+            a.triggered.connect(self.capa_seleccion.crear)
+            a.setProperty("geocad_id", "geocad:capaseleccion")
+            self.actions["capaseleccion"] = a
         if self.imagen_base is not None:
             # 3.71.0 (Fernando): sólo en la presentación y de respaldo en el banco
             # Edición de Administrar Herramientas; nunca en el menú GeoCAD
@@ -346,6 +361,33 @@ class GeoCAD:
         self._sync_referencias()
         self._sync_pegar_lugar()
         self._sync_imagen_base()
+        self._sync_capa_seleccion()
+
+    def _sync_capa_seleccion(self) -> None:
+        """Crear capa a partir de elementos seleccionados, según su módulo."""
+        quiere = modulos.activo(PROGRAMA, "capa_seleccion")
+        if quiere and self.capa_seleccion is None:
+            try:
+                from .capa_seleccion_qgis import CapaSeleccionQgis
+                self.capa_seleccion = CapaSeleccionQgis(self.iface)
+            except Exception as exc:  # noqa: BLE001
+                self.capa_seleccion = None
+                self._bar(f"No se pudo iniciar Crear capa: {type(exc).__name__}: {exc}", "warn", 10)
+                return
+            # recién con la herramienta propia andando; apagada, el complemento suelto no se toca
+            if submodulos.retirar_viejos("capa_seleccion", Path(__file__).resolve().parent.parent):
+                self._bar("Crear capa a partir de elementos seleccionados ya es parte de GeoCAD Yaguareté: se retiró "
+                          "el complemento suelto (queda una copia como .anterior-<nombre>).", "ok", 10)
+        elif not quiere and self.capa_seleccion is not None:
+            self._quitar_capa_seleccion()
+
+    def _quitar_capa_seleccion(self) -> None:
+        if self.capa_seleccion is not None:
+            try:
+                self.capa_seleccion.unload()
+            except Exception:  # noqa: BLE001
+                pass
+            self.capa_seleccion = None
 
     def _sync_imagen_base(self) -> None:
         """La barra de imagen base de las composiciones, según el módulo."""
@@ -451,6 +493,7 @@ class GeoCAD:
         self._quitar_referencias()
         self._quitar_pegar_lugar()
         self._quitar_imagen_base()
+        self._quitar_capa_seleccion()
         from . import googleearth_qgis
         googleearth_qgis.apagar()
         if self.subs is not None:

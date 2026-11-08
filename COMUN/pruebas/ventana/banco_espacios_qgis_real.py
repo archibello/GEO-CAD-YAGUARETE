@@ -57,6 +57,17 @@ def correr():
     d = composicion("uno")
     win = d.window()
 
+    # 3.72.3 (Fernando): Pegar y Copiar tabla, fuera del menú y a mano en la composición
+    menu_geocad = [a.text() for a in plug.menu.actions()]
+    check("módulo Tablas activo", plug.tablas is not None)
+    check("sin Pegar ni Copiar tabla en el menú GeoCAD",
+          not any(t.startswith(("Pegar tabla", "Copiar la tabla")) for t in menu_geocad), menu_geocad)
+    ids_bancos = [a.property("geocad_id") for _n, fila in plug._bancos() for a in fila]
+    check("Pegar y Copiar tabla de respaldo en los bancos",
+          "geocad:pegartabla" in ids_bancos and "geocad:copiartabla" in ids_bancos)
+    check("Pegar tabla sigue en la composición",
+          any(a.text().startswith("Pegar tabla") for b in win.findChildren(QToolBar) for a in b.actions()))
+
     def boton(clave):
         return plug.espacios._botones(win)["geocad:" + clave]
 

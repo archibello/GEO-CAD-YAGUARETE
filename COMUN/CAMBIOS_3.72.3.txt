@@ -1,0 +1,9 @@
+GeoCAD - versión 3.72.3
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando: ordenar el menú GeoCAD Yaguareté en QGIS.
+
+Menú GeoCAD Yaguareté
+- «Pegar tabla en la composición» y «Copiar la tabla elegida de la composición» ya no están en el menú.
+  Siguen en la barra GeoCAD Yaguareté de cada composición y quedan de respaldo en Administrar Herramientas.

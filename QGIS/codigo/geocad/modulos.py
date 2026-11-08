@@ -257,6 +257,10 @@ CATALOGO = {
                "CAD (LAYER_CODE), color, tipo y grosor. Si el proyecto no tiene sistema de "
                "coordenadas toma el del dibujo. El Ctrl+C de QGIS deja lo copiado listo para "
                "pegarlo en el lugar en IngeCAD.", cambia_programa=True),
+        Modulo("capa_seleccion", "Crear capa a partir de elementos seleccionados",
+               "En el menú Vectorial y en el clic derecho sobre la capa, antes de Duplicar capa: "
+               "de cada capa elegida con selección sale una capa nueva, con su estilo, que "
+               "muestra sólo esos elementos. Es un filtro: no crea archivos ni escribe en la fuente."),
         Modulo("tablas", "Tablas: Pegar tabla en las composiciones",
                "Botón «Pegar tabla» en la ventana de cada composición (y en el menú GeoCAD): "
                "pega lo copiado en GenOffice, Calc, Excel o la tabla de atributos de QGIS como "

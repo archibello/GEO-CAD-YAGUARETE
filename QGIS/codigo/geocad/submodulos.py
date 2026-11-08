@@ -36,13 +36,15 @@ SUBS = (
 # complementos sueltos que reemplaza cada módulo: el de antes y los de
 # Fernando que fueron entrando en Dibujo (3.40.0: Trim, Extend, F3/F8;
 # 3.41.0: Fillet y Offset; 3.42.0: Perpendicular; 3.43.0: digitalizadores GMS;
-# 3.44.0: CAD Copiar/Mover y Alinear y Duplicar; 3.45.0: Bloques GMS)
+# 3.44.0: CAD Copiar/Mover y Alinear y Duplicar; 3.45.0: Bloques GMS;
+# 3.73.0: crear capa desde la selección, que no es un submódulo: plugin.py)
 VIEJOS = {
     "dibujo": ("Dibujo_CAD", "Trim_Tool", "Extend_Tool", "autocad_shortcuts",
                "Fillet_Tools_Independiente", "Fillet_Tools", "Offset_tool",
                "tool_perpendicular", "lineaGSM", "digitalizador_gms",
                "cad_copy_move", "align_duplicate_plugin", "Bloques_GMS"),
     "capas": ("Layer_Properties",),
+    "capa_seleccion": ("create_layer_from_selected_features",),     # 3.73.0
 }
 
 

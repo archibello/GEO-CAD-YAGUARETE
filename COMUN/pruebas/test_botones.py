@@ -465,6 +465,22 @@ textos_q = [getattr(i, "text", "") for i in P.menu.items if not isinstance(i, st
 assert "Administrar Herramientas..." in textos_q and "Administrar botones..." not in textos_q
 assert textos_q.index("Administrar Herramientas...") == textos_q.index("Módulos...") + 1
 assert not any(t.startswith("Pegar en el lugar") for t in textos_q)      # 3.70.7: fuera del menú
+# Fernando: Pegar y Copiar tabla fuera del menú GeoCAD; de respaldo en los bancos (self.actions)
+qp_txt = (RAIZ / "QGIS/codigo/geocad/plugin.py").read_text(encoding="utf-8")
+assert 'add("pegartabla"' not in qp_txt and 'add("copiartabla"' not in qp_txt
+assert '("pegartabla", "Pegar tabla en la composición' in qp_txt and '("copiartabla", "Copiar la tabla elegida' in qp_txt
+tablas_antes = P.tablas
+P.tablas = types.SimpleNamespace(pegar_menu=lambda: None, copiar_menu=lambda: None,
+                                 icono=lambda: None, icono_copiar=lambda: None)
+P._build_menu()
+con_tablas = [getattr(i, "text", "") for i in P.menu.items if not isinstance(i, str)]
+assert not any(t.startswith(("Pegar tabla", "Copiar la tabla")) for t in con_tablas), con_tablas
+assert P.actions["pegartabla"].property("geocad_id") == "geocad:pegartabla"
+assert P.actions["copiartabla"].property("geocad_id") == "geocad:copiartabla"
+ids_tablas = [a.property("geocad_id") for _n, f in P._bancos() for a in f]
+assert "geocad:pegartabla" in ids_tablas and "geocad:copiartabla" in ids_tablas
+P.tablas = tablas_antes
+P._build_menu()
 # 3.60.7: sin los submenús Dibujo CAD y Capas CAD; son bancos de Administrar botones
 assert "Dibujo CAD" not in textos_q and "Capas CAD" not in textos_q
 assert all(BT.es_banco(n) for n, _a in P._bancos())

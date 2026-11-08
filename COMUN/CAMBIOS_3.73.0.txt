@@ -1,0 +1,22 @@
+GeoCAD - versión 3.73.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando: que GeoCAD haga por sí mismo lo que hacía el complemento externo «Create Layer From Selected Features», y reemplazarlo por completo.
+
+Crear capa a partir de elementos seleccionados (módulo nuevo; se apaga en GeoCAD Yaguareté > Módulos)
+- Está en el menú Vectorial y en el clic derecho sobre la capa, antes de «Duplicar capa». De respaldo, en el banco Edición de Administrar Herramientas.
+- De cada capa elegida en el panel que tenga elementos seleccionados sale una capa nueva, con su estilo, que muestra sólo esos elementos. Se llama <capa>_filtered, o _filtered_1, _filtered_2... si ya existe.
+- Es un filtro sobre la misma fuente: no crea archivos ni escribe en la fuente. La capa original queda como estaba.
+- Funciona con capas temporales, GeoPackage, shapefile, texto delimitado y PostGIS o SpatiaLite con clave primaria simple.
+
+Más seguro que el complemento
+- La capa nueva sólo entra al proyecto si muestra exactamente lo elegido. Si no, se avisa el motivo y no queda ninguna capa a medias.
+- Lo agregado sin guardar no se puede filtrar: no entra, y se avisa cuántos quedaron afuera.
+- Dos capas con el mismo nombre ya no se mezclan.
+
+Complemento externo
+- Al activar el módulo se retira: se descarga y su carpeta queda como .anterior-create_layer_from_selected_features en la carpeta de complementos. GeoCAD no lo importa ni lo llama. Con el módulo apagado no se toca.
+
+Límite conocido
+- Un shapefile con un campo propio llamado FID no se puede filtrar de forma segura: se avisa y no se crea la capa.
