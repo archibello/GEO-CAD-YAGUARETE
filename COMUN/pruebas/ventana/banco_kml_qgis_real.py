@@ -91,7 +91,9 @@ def correr():
     check("nada de KML en el menú GeoCAD", not [t for t in textos if "KML" in t or "Ver en Google" in t], str(textos))
     ids = {a.property("geocad_id") for _n, fila in plug._bancos() for a in fila}
     check("exportar y ver en el banco", {"geocad:ge_exportar", "geocad:ge_ver"} <= ids)
-    check("con ícono", not plug.actions["ge_exportar"].icon().isNull())
+    check("con ícono", not plug.actions["ge_exportar"].icon().isNull() and not plug.actions["ge_ver"].icon().isNull())
+    check("cada herramienta con su ícono",
+          plug.actions["ge_exportar"].icon().pixmap(24, 24).toImage() != plug.actions["ge_ver"].icon().pixmap(24, 24).toImage())
 
     ct = QgsCoordinateTransform(QgsCoordinateReferenceSystem("EPSG:4326"), QgsCoordinateReferenceSystem("EPSG:5348"),
                                 QgsProject.instance())

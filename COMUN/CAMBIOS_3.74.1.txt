@@ -1,0 +1,9 @@
+GeoCAD - versión 3.74.1
+=======================
+CORRECCIÓN (QGIS). Hay que actualizar QGIS; IngeCAD sólo recibe el número de versión.
+
+Pedido de Fernando al poner las dos herramientas en una barra: se veían iguales.
+
+Administrar Herramientas
+- «Ver en Google Earth (capas visibles)» tiene ícono propio: un ojo ámbar.
+  «Exportar a Google Earth (KML/KMZ)...» sigue con la flecha verde.

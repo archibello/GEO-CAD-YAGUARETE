@@ -52,4 +52,9 @@ fuente = (RAIZ / "QGIS" / "codigo" / "geocad" / "plugin.py").read_text(encoding=
 bloque = fuente[fuente.index('("ge_exportar"'):fuente.index('add("modules"')]
 assert "addAction" not in bloque, "las herramientas KML van sólo al banco"
 
+# 3.74.1: cada herramienta con su ícono, y los dos archivos existen y son distintos
+iconos = RAIZ / "QGIS" / "codigo" / "geocad" / "iconos"
+assert (iconos / "exportar_kml.png").read_bytes() != (iconos / "ver_google_earth.png").read_bytes()
+assert '"ver_google_earth.png"' in bloque and '"exportar_kml.png"' in bloque
+
 print("TODO OK test_kmlformato")
