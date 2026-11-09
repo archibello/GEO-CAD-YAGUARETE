@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.73.0"
+VERSION = "3.74.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -169,6 +169,15 @@ class GeoCAD:
         self.timer.start()
         QTimer.singleShot(0, self._primer_inicio)
 
+    def _kml(self, orden: str):
+        """Exportar a Google Earth (3.74.0); el módulo se carga recién al usarlo."""
+        try:
+            from . import kml_qgis as KQ
+            return getattr(KQ.KmlQgis(self.iface), orden)()
+        except Exception as exc:  # noqa: BLE001 - nunca tira abajo a QGIS
+            self._bar(f"Exportar a Google Earth: {type(exc).__name__}: {exc}", "warn", 10)
+            return None
+
     def _puente(self) -> bool:
         return modulos.activo(PROGRAMA, "puente")
 
@@ -242,6 +251,14 @@ class GeoCAD:
                 a.setProperty("geocad_id", "geocad:" + clave)
                 self._icono_banco(a)
                 sub.addAction(a)
+                self.actions[clave] = a
+            # 3.74.0 (Fernando: «no agregues al menú GeoCAD nada, todo va al banco de
+            # herramientas»): sin entrada de menú, sólo en Administrar Herramientas
+            for clave, texto, orden in (("ge_exportar", "Exportar a Google Earth (KML/KMZ)...", "exportar"),
+                                        ("ge_ver", "Ver en Google Earth (capas visibles)", "ver")):
+                a = QAction(QIcon(str(iconos / "exportar_kml.png")), texto, self.iface.mainWindow())
+                a.triggered.connect(lambda _marcado=False, o=orden: self._kml(o))
+                a.setProperty("geocad_id", "geocad:" + clave)
                 self.actions[clave] = a
         self.menu.addSeparator()
         add("modules", "Módulos...", self.choose_modules)

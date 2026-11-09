@@ -1,0 +1,33 @@
+GeoCAD - versión 3.74.0
+=======================
+FUNCIÓN NUEVA (QGIS). Hay que actualizar QGIS. En IngeCAD no cambia nada visible.
+
+Pedido de Fernando: analizar KML Tools y llevar a GeoCAD la exportación a Google Earth, en español
+y más automática con los sistemas de coordenadas. Decidido: extender el motor KML de IngeCAD a QGIS
+(propuesta_kml/INFORME_KML_TOOLS.md). Primera entrega: exportar.
+
+Dos herramientas nuevas (módulo Google Earth). Sólo en Administrar Herramientas: nada en el menú GeoCAD.
+- Exportar a Google Earth (KML/KMZ)...: elige capas (de entrada, las visibles), archivo y si se abre al terminar.
+- Ver en Google Earth (capas visibles): un clic, sin preguntar el archivo.
+
+Control del sistema de coordenadas
+- Capa sin sistema: pregunta y propone la faja según las X. Se puede saltear.
+- X de otra faja que la declarada: avisa y ofrece corregir (antes de esto, caía a cientos de kilómetros).
+- Lo que se elige vale para esa exportación: la capa no se toca.
+- Si la conversión es poco precisa (Campo Inchauspe, unos 9 m) lo dice el aviso final.
+
+Qué lleva cada objeto
+- Una carpeta por capa, con el grupo en el nombre («Obra - Calles»).
+- Color, grosor, relleno y opacidad como los dibuja QGIS: símbolo único, categorizado, por expresión, graduado y por reglas.
+- Nombre: el rótulo de la capa o un campo «nombre». Todos los atributos en el globo; un 0 se exporta como 0.
+- Curvas a tramos, multipartes y huecos.
+- Lo que no se pudo exportar se informa con el motivo. Si falla, el archivo anterior queda como estaba.
+
+Interno
+- La escritura KML/KMZ y el control de faja pasan al núcleo (kmlformato.py y crs.py). EXPORTARKML sigue igual.
+
+Límites conocidos
+- Todo va pegado al suelo: sin altura Z (prevista para 3.76.0).
+- Los grupos van en el nombre de la carpeta, no como carpetas anidadas.
+- No lleva imágenes ráster.
+- Importar KML/KMZ en QGIS llega en 3.75.0.

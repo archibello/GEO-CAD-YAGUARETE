@@ -143,7 +143,8 @@ TEMA_BANCO = {
             "capas:laythw", "capas:lwdisplay",
             "puente:send", "geocad:reload", "geocad:status", "dibujo:plot", "dibujo:layout",
             "dibujo:mview", "dibujo:purge", "geocad:ge_abrir", "geocad:ge_capturar",
-            "geocad:ge_configurar", "geocad:modules", "geocad:botones", "geocad:config",
+            "geocad:ge_configurar", "geocad:ge_exportar", "geocad:ge_ver",
+            "geocad:modules", "geocad:botones", "geocad:config",
             "geocad:update", "geocad:about"),
         "Edición": (
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",

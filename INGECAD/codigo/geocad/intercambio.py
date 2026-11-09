@@ -289,41 +289,9 @@ def este_de(entidades) -> list[float]:
             if c.has_data]
 
 
-def faja_de_x(xs) -> Optional[int]:
-    """La faja Gauss-Krüger argentina que dicen las X: el millón de la
-    coordenada Este (6.620.549 = faja 6, falso Este 6.500.000). La de la
-    mayoría de los objetos, si son más de la mitad (un bloque suelto en 0,0
-    no cuenta); None si no se puede decir."""
-    cuenta = Counter(int(x // 1_000_000) for x in xs)
-    if not cuenta:
-        return None
-    faja, n = cuenta.most_common(1)[0]
-    return faja if 1 <= faja <= 7 and n * 2 > len(xs) else None
-
-
-def faja_de(code: str) -> Optional[tuple[int, int]]:
-    """(faja, EPSG de la faja 1 de su datum) de un sistema Gauss-Krüger."""
-    n = _epsg(code) or 0
-    for _nombre, base, _geo in crs_mod.DATUMS:
-        if base <= n < base + 7:
-            return n - base + 1, base
-    return None
-
-
-def faja_sugerida(code: str, xs) -> str:
-    """El sistema que corresponde a las X si no es el declarado: el mismo
-    datum en la faja que dicen las X (POSGAR 2007 si el dibujo no tiene
-    sistema). "" si concuerdan o no se puede decir (UTM, geográficas, X
-    mezcladas)."""
-    faja = faja_de_x(xs)
-    if faja is None:
-        return ""
-    if not code:
-        return f"EPSG:{crs_mod.DATUMS[0][1] + faja - 1}"
-    actual = faja_de(code)
-    if actual is None or actual[0] == faja:
-        return ""
-    return f"EPSG:{actual[1] + faja - 1}"
+faja_de_x = crs_mod.faja_de_x          # 3.74.0: en el núcleo, también los usa QGIS
+faja_de = crs_mod.faja_de
+faja_sugerida = crs_mod.faja_sugerida
 
 
 def faja_de_lon(lon: float) -> Optional[int]:
