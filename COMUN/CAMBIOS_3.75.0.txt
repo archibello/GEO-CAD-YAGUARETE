@@ -1,0 +1,27 @@
+GeoCAD - versión 3.75.0
+=======================
+FUNCIÓN NUEVA (IngeCAD y QGIS). Hay que actualizar los dos.
+
+Pedido de Fernando (11/11/2026): los usuarios de Windows son la mayoría y la
+captura de imágenes de Google Earth sólo andaba en Linux (usaba X11).
+
+Google Earth > Capturar imagen, en Windows
+- Pantalla, Mosaico y «Lo que veo» funcionan también en Windows, con Google
+  Earth Pro para Windows (googleearth.exe).
+- La foto se saca de la ventana de Google Earth aunque esté tapada; si la
+  vista 3D sale negra (algunas placas de video), se saca de la pantalla: en
+  ese caso Google Earth tiene que quedar a la vista mientras se captura.
+- El video de la ventanita (la vista 3D) y el atajo Ctrl+Alt+G, también en
+  Windows. Si otro programa ya usa Ctrl+Alt+G, la ventanita lo avisa.
+- Con la pantalla escalada (125 %, 150 %) la foto sale en píxeles reales.
+- En Linux no cambia nada.
+
+Comprobado
+- El enlace de red KML y el servidor local (127.0.0.1) ya eran iguales en
+  Windows y en Linux.
+
+Pruebas
+- test_googleearth_windows: un Windows simulado (user32, gdi32, kernel32 y una
+  pantalla) que controla cada llamada contra las firmas que declara GeoCAD.
+  Corre también en Linux. La prueba con el Google Earth real de Windows queda
+  en 02_PRUEBAS_MANUALES.txt.

@@ -164,5 +164,11 @@
   },
   "GEOPASTEORIG": {
     "name": "PEGARORIG"
+  },
+  "GEOCADMANUAL": {
+    "name": "MANUALGEOCAD"
+  },
+  "GEOEARTHMANUAL": {
+    "name": "MANUALGE"
   }
 }

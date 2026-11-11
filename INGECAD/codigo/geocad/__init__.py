@@ -46,7 +46,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.74.1"
+VERSION = "3.76.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -155,6 +155,34 @@ def cmd_acerca(ctx, *args) -> None:
         nombre.mostrar_acerca(QtWidgets, window, PROGRAMA, VERSION, resumen)
 
 
+def _abrir_url(url: str) -> bool:
+    try:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+    except Exception:  # noqa: BLE001 -- sin Qt: webbrowser
+        return False
+    return QDesktopServices.openUrl(QUrl(url))
+
+
+def _manual(ctx, clave: str) -> None:
+    url, abierto = nombre.abrir_manual(clave, _abrir_url)
+    titulo = nombre.CAPITULOS[clave][1]
+    if abierto:
+        ctx.echo(f"Manual de usuario, {titulo}: {url}")
+    else:
+        ctx.echo(f"No se pudo abrir el navegador. {titulo}: {url}")
+
+
+def cmd_manual(ctx, *args) -> None:
+    """GEOCADMANUAL: el manual de usuario en GitHub, en el capítulo de IngeCAD (3.76.0)."""
+    _manual(ctx, "ingecad")
+
+
+def cmd_manual_ge(ctx, *args) -> None:
+    """GEOEARTHMANUAL: el capítulo 3 del manual, Google Earth (3.76.0)."""
+    _manual(ctx, "googleearth")
+
+
 def cmd_diagnostico(ctx, *args) -> None:
     """GEOCADDIAG: qué tiene este equipo para GeoCAD (sistema, Python, sqlite3,
     módulos, carpetas). Sirve sobre todo para el IngeCAD de Windows."""
@@ -177,6 +205,8 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         "GEOCADMODULES": cmd_modulos,
         "GEOCADABOUT": cmd_acerca,
         "GEOCADDIAG": cmd_diagnostico,
+        "GEOCADMANUAL": cmd_manual,
+        "GEOEARTHMANUAL": cmd_manual_ge,
         "GEOBUTTONS": categorias.cmd_administrar,
     }
     tools["SHPCONFIG"] = TOOL_CLASSES["SHPCONFIG"]
@@ -342,6 +372,8 @@ def construir_spec(completo: bool = False) -> PluginSpec:
                 MenuItem("Open Google Earth with GeoCAD", "GEOEARTHOPEN", _icon("google_earth")),
                 MenuItem("Capture view (Ctrl+Alt+G)", "GEOEARTHCAPTURE", _icon("capturar_ge")),
                 MenuItem("Capture settings...", "GEOEARTHSETUP"),
+                SEPARATOR,
+                MenuItem("Google Earth manual (chapter 3)...", "GEOEARTHMANUAL"),
             )),
             SEPARATOR,
         ]
@@ -414,12 +446,13 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         MenuItem("Shared settings...", "SHPCONFIG"),
         MenuItem("Update GeoCAD Yaguareté (IngeCAD and QGIS)...", "QGISUPDATE"),
         MenuItem("Diagnose GeoCAD Yaguareté on this computer", "GEOCADDIAG"),
+        MenuItem("User manual (IngeCAD)...", "GEOCADMANUAL"),
         MenuItem("About GEO-CAD-YAGUARETÉ...", "GEOCADABOUT"),
     ]
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.74.1",
+        version="3.76.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

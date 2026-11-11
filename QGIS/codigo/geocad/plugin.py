@@ -39,7 +39,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.74.1"
+VERSION = "3.76.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -252,6 +252,12 @@ class GeoCAD:
                 self._icono_banco(a)
                 sub.addAction(a)
                 self.actions[clave] = a
+            # 3.76.0 (Fernando): el capítulo 3 del manual, al pie del submenú
+            sub.addSeparator()
+            a = QAction("Manual de Google Earth (capítulo 3)...", self.iface.mainWindow())
+            a.triggered.connect(lambda: self.open_manual("googleearth"))
+            sub.addAction(a)
+            self.actions["manual_ge"] = a
             # 3.74.0 (Fernando: «no agregues al menú GeoCAD nada, todo va al banco de
             # herramientas»): sin entrada de menú, sólo en Administrar Herramientas
             for clave, texto, orden, icono in (
@@ -266,6 +272,8 @@ class GeoCAD:
         add("botones", "Administrar Herramientas...", self.administrar_botones)
         add("config", "Configuración común...", self.open_config)
         add("update", "Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)...", self.update_bridge)
+        # 3.76.0 (Fernando): el manual en GitHub, en el capítulo de QGIS
+        add("manual", "Manual de usuario (QGIS)...", lambda: self.open_manual("qgis"))
         add("about", f"Acerca de {nombre.NOMBRE} (versión {VERSION})...", self.about)
         self._aplicar_espacios()
 
@@ -1197,6 +1205,17 @@ class GeoCAD:
         self._bar(f"GeoCAD Yaguareté {cand.version} instalado; recargando el complemento...", "ok")
         QTimer.singleShot(0, self._reinstalar)
         return True
+
+    def open_manual(self, clave: str = "qgis") -> None:
+        """Abre en el navegador el capítulo del manual (3.76.0)."""
+        from qgis.PyQt.QtCore import QUrl
+        from qgis.PyQt.QtGui import QDesktopServices
+
+        url, abierto = nombre.abrir_manual(clave, lambda u: QDesktopServices.openUrl(QUrl(u)))
+        if abierto:
+            self._bar(f"Manual de usuario: {url}", "ok", 6)
+        else:
+            self._bar(f"No se pudo abrir el navegador. El manual está en {url}", "warn", 15)
 
     def about(self) -> None:
         from qgis.PyQt import QtWidgets

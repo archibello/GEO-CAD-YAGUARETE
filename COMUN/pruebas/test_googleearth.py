@@ -489,7 +489,8 @@ assert mods.estado("ingecad")["googleearth"] is True                        # nu
 spec = plugin.construir_spec()
 assert {"GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP", "GEOEARTHINSERT"} <= ordenes(spec)
 sub = submenu_ge(spec)
-assert [i.command for i in sub.items] == ["GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP"]
+assert [i.command for i in sub.items if not isinstance(i, str)] == [
+    "GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP", "GEOEARTHMANUAL"]     # 3.76.0: el manual al pie
 assert sub.items[0].icon and sub.items[1].icon
 import json as _json
 _es = Path(HERE).parents[1] / "INGECAD" / "codigo" / "geocad" / "i18n" / "es"

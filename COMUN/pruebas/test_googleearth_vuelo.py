@@ -318,7 +318,7 @@ print("ok nombres: GE_fecha-hora_coordenadas_img-fecha, sólo ASCII")
 
 # --- la ventanita: video, fotogramas, enlace que sigue al cerrarla
 UI = (NUCLEO / "googleearth_ui.py").read_text(encoding="utf-8")
-assert "V.VideoX11()" in UI and "self.reloj_video.start(40)" in UI      # ~25 cuadros por segundo
+assert "V.Video()" in UI and "self.reloj_video.start(40)" in UI      # ~25 cuadros por segundo
 assert "QScrollArea" in UI and "self.fotogramas.poner(cap.estados)" in UI
 assert UIM.resumen_fotogramas(["ok", "falla", "actual", ""]) == "1 de 4 listos · 1 a repetir"
 assert UIM.COLOR_FOTOGRAMA["ok"] and UIM.COLOR_FOTOGRAMA["falla"] and UIM.COLOR_FOTOGRAMA[""] is None

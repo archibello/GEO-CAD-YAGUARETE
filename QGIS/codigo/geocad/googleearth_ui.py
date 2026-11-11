@@ -361,7 +361,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
             self._carpeta = ("", "", 0.0)       # (carpeta, problema, cuándo se miró)
             self._t_captura = 0.0
             self._armar()
-            self.atajo = V.AtajoX11(self._tecla.set)
+            self.atajo = V.Atajo(self._tecla.set)
             self._atajo_ok = self.atajo.iniciar()
             self._apagando = False
             self.reloj = QtCore.QTimer(self)
@@ -537,10 +537,10 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
             if not self.srv.conectado():                # 3.33.6: el candado de un cierre de golpe
                 foto = None
                 try:
-                    foto = V.FotoX11()
+                    foto = V.Foto()
                     soltado = GE.soltar_candado(foto.ventana(visible=False) is not None)
                 except GE.GoogleEarthError:
-                    pass                                # sin X11 no se sabe si está abierto
+                    pass                                # sin X11 ni Windows no se sabe si está abierto
                 finally:
                     if foto is not None:
                         foto.cerrar()
@@ -607,8 +607,8 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
 
         def _sacar_previas(self):
             try:
-                video = V.VideoX11()
-            except Exception:  # noqa: BLE001 -- sin X11: sin video
+                video = V.Video()
+            except Exception:  # noqa: BLE001 -- sin X11 ni Windows: sin video
                 return
             n = 0
             try:
@@ -661,7 +661,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
             self.boton_llevar.setEnabled(enlazado and not ocupado)
             self.estado.setText("" if self._atajo_ok else
                                 "Ctrl+Alt+G sólo con esta ventana al frente ("
-                                + (self.atajo.error or "sin X11") + ").")
+                                + (self.atajo.error or "sin atajo global") + ").")
             v = self.srv.vista
             ph = f"la de Google Earth: {v.fecha}" if v is not None and v.fecha else \
                 "opcional: la que muestra Google Earth abajo"
@@ -797,7 +797,7 @@ def _Ventanita(QtCore, QtGui, QtWidgets, parent, programa):  # noqa: N802
 
             foto = None
             try:
-                foto = V.FotoX11()
+                foto = V.Foto()
                 if foto.ventana() is None:
                     raise GE.GoogleEarthError("No se encuentra la ventana de Google Earth Pro.")
                 cap = V.Captura(self.srv, foto.foto, aviso)

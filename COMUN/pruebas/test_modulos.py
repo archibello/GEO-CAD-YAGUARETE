@@ -185,8 +185,9 @@ assert est == {"puente": True, "dibujo": False, "bloques": False, "papel": False
               "teclado": False, "cursor_geocad": False, "apilados": False, "agarres": False, "boton_derecho": False}   # 3.59.0: nuevos, pero sin Dibujo no andan
 # Google Earth (3.33.0): su submenú con las tres entradas, sólo con el módulo
 sub_ge = [i for i in G.menu.items if getattr(i, "title", "") == "Google Earth"]
-assert len(sub_ge) == 1 and [a.text for a in sub_ge[0].items] == [
-    "Abrir Google Earth con GeoCAD", "Capturar vista (Ctrl+Alt+G)", "Configurar captura..."]
+assert len(sub_ge) == 1 and [a.text for a in sub_ge[0].items if not isinstance(a, str)] == [
+    "Abrir Google Earth con GeoCAD", "Capturar vista (Ctrl+Alt+G)", "Configurar captura...",
+    "Manual de Google Earth (capítulo 3)..."]                    # 3.76.0: el manual al pie
 Mq.guardar("qgis", {"googleearth": False}); G.aplicar_modulos()
 assert not [i for i in G.menu.items if getattr(i, "title", "") == "Google Earth"]
 Mq.guardar("qgis", {"googleearth": True}); G.aplicar_modulos()

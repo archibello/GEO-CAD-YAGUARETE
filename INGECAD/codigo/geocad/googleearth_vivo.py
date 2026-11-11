@@ -13,6 +13,9 @@
   AtajoX11   Ctrl+Alt+G mientras Google Earth tiene el foco (XGrabKey sobre
              la raíz de XWayland). No toca los atajos de GNOME: los Flatpak
              de IngeCAD y QGIS no pueden, y apagado no queda rastro.
+  FotoWin, VideoWin, AtajoWin   lo mismo en Windows, con la API de Win32
+             (PrintWindow o la pantalla, StretchBlt, RegisterHotKey).
+             Foto(), Video() y Atajo() eligen la de cada sistema.
   Captura    el recorrido: enderezar la vista, poner las cruces, esperar a
              que la imagen se aquiete, sacar la foto; en el mosaico, volar a
              cada pieza y devolver la vista a donde estaba. Nunca se vuela a
@@ -24,6 +27,7 @@ de control remoto: GeoCAD no aprieta teclas. Sin Qt (hilos de Python).
 from __future__ import annotations
 
 import ctypes
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -646,6 +650,405 @@ class AtajoX11:
         if self._hilo is not None:
             self._hilo.join(2)
             self._hilo = None
+
+
+# ================================================================== Windows
+# (Fernando, 11/11/2026: «los usuarios de Windows son la mayoría»): lo
+# mismo que FotoX11, VideoX11 y AtajoX11, con la API de Win32 por ctypes. Las
+# pruebas cambian _W["api"] por una de mentira y corren también en Linux.
+class _RECT(ctypes.Structure):
+    _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
+                ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+
+
+class _POINT(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
+
+class _BITMAPINFOHEADER(ctypes.Structure):
+    _fields_ = [("biSize", ctypes.c_uint32), ("biWidth", ctypes.c_int32),
+                ("biHeight", ctypes.c_int32), ("biPlanes", ctypes.c_uint16),
+                ("biBitCount", ctypes.c_uint16), ("biCompression", ctypes.c_uint32),
+                ("biSizeImage", ctypes.c_uint32), ("biXPelsPerMeter", ctypes.c_int32),
+                ("biYPelsPerMeter", ctypes.c_int32), ("biClrUsed", ctypes.c_uint32),
+                ("biClrImportant", ctypes.c_uint32)]
+
+
+class _MSG(ctypes.Structure):
+    _fields_ = [("hwnd", ctypes.c_void_p), ("message", ctypes.c_uint),
+                ("wParam", ctypes.c_size_t), ("lParam", ctypes.c_ssize_t),
+                ("time", ctypes.c_uint32), ("pt", _POINT), ("lPrivate", ctypes.c_uint32)]
+
+
+_ENUMPROC = getattr(ctypes, "WINFUNCTYPE", ctypes.CFUNCTYPE)(ctypes.c_int, ctypes.c_void_p,
+                                                             ctypes.c_void_p)
+_W = {"api": None}
+
+
+def _win32():
+    """user32, gdi32 y kernel32 con las firmas que se usan, o None (no es Windows)."""
+    if _W["api"] is not None:
+        return _W["api"] or None
+    if sys.platform != "win32":
+        _W["api"] = False
+        return None
+    from types import SimpleNamespace
+
+    try:
+        u = ctypes.WinDLL("user32", use_last_error=True)
+        g = ctypes.WinDLL("gdi32", use_last_error=True)
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+    except (OSError, AttributeError):
+        _W["api"] = False
+        return None
+    P, I, U = ctypes.c_void_p, ctypes.c_int, ctypes.c_uint
+    firmas = [
+        (u.EnumWindows, I, [_ENUMPROC, P]),
+        (u.EnumChildWindows, I, [P, _ENUMPROC, P]),
+        (u.IsWindowVisible, I, [P]),
+        (u.IsIconic, I, [P]),
+        (u.GetWindow, P, [P, U]),
+        (u.GetWindowThreadProcessId, ctypes.c_ulong, [P, ctypes.POINTER(ctypes.c_ulong)]),
+        (u.GetWindowTextW, I, [P, ctypes.c_wchar_p, I]),
+        (u.GetClientRect, I, [P, ctypes.POINTER(_RECT)]),
+        (u.ClientToScreen, I, [P, ctypes.POINTER(_POINT)]),
+        (u.GetDC, P, [P]),
+        (u.ReleaseDC, I, [P, P]),
+        (u.PrintWindow, I, [P, P, U]),
+        (u.RegisterHotKey, I, [P, I, U, U]),
+        (u.UnregisterHotKey, I, [P, I]),
+        (u.PeekMessageW, I, [ctypes.POINTER(_MSG), P, U, U, U]),
+        (g.CreateCompatibleDC, P, [P]),
+        (g.CreateDIBSection, P, [P, P, U, ctypes.POINTER(ctypes.c_void_p), P, ctypes.c_uint32]),
+        (g.SelectObject, P, [P, P]),
+        (g.DeleteObject, I, [P]),
+        (g.DeleteDC, I, [P]),
+        (g.SetStretchBltMode, I, [P, I]),
+        (g.StretchBlt, I, [P, I, I, I, I, P, I, I, I, I, ctypes.c_uint32]),
+        (k.OpenProcess, P, [ctypes.c_uint32, I, ctypes.c_uint32]),
+        (k.QueryFullProcessImageNameW, I, [P, ctypes.c_uint32, ctypes.c_wchar_p,
+                                           ctypes.POINTER(ctypes.c_uint32)]),
+        (k.CloseHandle, I, [P]),
+    ]
+    for f, res, args in firmas:
+        f.restype, f.argtypes = res, args
+    try:                                          # Windows 10 1607 o más nuevo
+        dpi = u.SetThreadDpiAwarenessContext
+        dpi.restype, dpi.argtypes = P, [P]
+    except AttributeError:
+        dpi = None
+
+    def pixeles_reales():
+        # con la pantalla escalada (125 %, 150 %), medidas y fotos en píxeles
+        # reales, como Google Earth: si no, la foto sale corrida o recortada
+        if dpi is not None:
+            dpi(ctypes.c_void_p(-4))              # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+
+    _W["api"] = SimpleNamespace(user32=u, gdi32=g, kernel32=k, ultimo_error=ctypes.get_last_error,
+                                pixeles_reales=pixeles_reales)
+    return _W["api"]
+
+
+def _hijas_win(api, hwnd=None):
+    """Las ventanas de primer nivel (o todas las hijas de ``hwnd``)."""
+    out = []
+
+    @_ENUMPROC
+    def juntar(h, _lp):
+        out.append(h)
+        return 1
+
+    if hwnd is None:
+        api.user32.EnumWindows(juntar, None)
+    else:
+        api.user32.EnumChildWindows(hwnd, juntar, None)
+    return out
+
+
+def _tamano_win(api, h):
+    r = _RECT()
+    if not api.user32.GetClientRect(h, ctypes.byref(r)):
+        return 0, 0
+    return max(0, r.right - r.left), max(0, r.bottom - r.top)
+
+
+def _en_pantalla(api, h):
+    p = _POINT(0, 0)
+    api.user32.ClientToScreen(h, ctypes.byref(p))
+    return p.x, p.y
+
+
+def _bitmap_win(api, ancho, alto, pintar):
+    """Un mapa de bits de 32 bits (de arriba abajo) que ``pintar(dc)`` llena:
+    arreglo BGRX (alto x ancho x 4), o None si ``pintar`` no pudo."""
+    import numpy as np
+
+    g = api.gdi32
+    bih = _BITMAPINFOHEADER(ctypes.sizeof(_BITMAPINFOHEADER), ancho, -alto, 1, 32, 0, 0, 0, 0, 0, 0)
+    bits = ctypes.c_void_p()
+    mem = g.CreateCompatibleDC(None)
+    if not mem:
+        raise GE.GoogleEarthError("Windows no dio memoria para la foto de Google Earth.")
+    bmp = g.CreateDIBSection(mem, ctypes.byref(bih), 0, ctypes.byref(bits), None, 0)
+    if not bmp or not bits.value:
+        g.DeleteDC(mem)
+        raise GE.GoogleEarthError("Windows no dio memoria para la foto de Google Earth.")
+    viejo = g.SelectObject(mem, bmp)
+    try:
+        if not pintar(mem):
+            return None
+        crudo = ctypes.string_at(bits.value, ancho * alto * 4)
+        return np.frombuffer(crudo, np.uint8).reshape(alto, ancho, 4)
+    finally:
+        g.SelectObject(mem, viejo)
+        g.DeleteObject(bmp)
+        g.DeleteDC(mem)
+
+
+def _negra(a) -> bool:
+    """¿La zona salió negra? (PrintWindow con la vista 3D de OpenGL/DirectX)."""
+    if a is None or a.size == 0:
+        return True
+    m = a[::7, ::7, :3]
+    return int((m > 12).any(axis=2).sum()) < 0.005 * m.shape[0] * m.shape[1] + 1
+
+
+class FotoWin:
+    """La foto de la ventana más grande de Google Earth Pro (googleearth.exe)
+    en Windows. Primero con PrintWindow (aunque esté tapada); si la vista 3D
+    sale negra, desde la pantalla (Google Earth tiene que estar a la vista)."""
+
+    EXE = "googleearth.exe"
+    TITULO = "Google Earth"
+    PW_CLIENTE_COMPLETO = 1 | 2           # PW_CLIENTONLY | PW_RENDERFULLCONTENT (Windows 8.1+)
+    SRCCOPY, CAPTUREBLT = 0x00CC0020, 0x40000000
+
+    def __init__(self) -> None:
+        self.api = _win32()
+        if self.api is None:
+            raise GE.GoogleEarthError("Esta captura de Google Earth es la de Windows.")
+        self.metodo = ""                  # "", "ventana" o "pantalla": se elige con la 1.ª foto
+
+    def cerrar(self) -> None:
+        pass
+
+    def _exe(self, h) -> str:
+        u, k = self.api.user32, self.api.kernel32
+        pid = ctypes.c_ulong()
+        u.GetWindowThreadProcessId(h, ctypes.byref(pid))
+        hp = k.OpenProcess(0x1000, 0, pid.value)          # PROCESS_QUERY_LIMITED_INFORMATION
+        if not hp:
+            return ""
+        try:
+            buf, n = ctypes.create_unicode_buffer(1024), ctypes.c_uint32(1024)
+            if not k.QueryFullProcessImageNameW(hp, 0, buf, ctypes.byref(n)):
+                return ""
+            return buf.value.replace("/", "\\").rsplit("\\", 1)[-1].lower()
+        finally:
+            k.CloseHandle(hp)
+
+    def _es_ge(self, h) -> bool:
+        exe = self._exe(h)
+        if exe:
+            return exe == self.EXE
+        buf = ctypes.create_unicode_buffer(256)              # sin permiso: por el título
+        self.api.user32.GetWindowTextW(h, buf, 256)
+        return buf.value.startswith(self.TITULO)
+
+    def ventana(self, visible: bool = True):
+        """(hwnd, ancho, alto) de la ventana principal de Google Earth, o None.
+        Sin ``visible`` cuenta también las minimizadas (¿está abierto?)."""
+        u = self.api.user32
+        self.api.pixeles_reales()                 # en este hilo (la captura y el video van aparte)
+        mejor = None
+        for h in _hijas_win(self.api):
+            if not u.IsWindowVisible(h) or (visible and u.IsIconic(h)) or not self._es_ge(h):
+                continue
+            an, al = _tamano_win(self.api, h)
+            if visible and an * al == 0:
+                continue
+            if mejor is None or an * al > mejor[1] * mejor[2]:
+                mejor = (h, an, al)
+        return mejor
+
+    def _vista3d(self, v=None):
+        """(hwnd, x, y, ancho, alto): la hija más grande sin hijas (la vista
+        3D) dentro de la ventana; si no hay, la ventana entera."""
+        v = v or self.ventana()
+        if v is None:
+            return None
+        w, an_v, al_v = v
+        u = self.api.user32
+        mejor = None
+        for h in _hijas_win(self.api, w):
+            if not u.IsWindowVisible(h) or u.GetWindow(h, 5):          # GW_CHILD: no es hoja
+                continue
+            an, al = _tamano_win(self.api, h)
+            if mejor is None or an * al > mejor[1] * mejor[2]:
+                mejor = (h, an, al)
+        if mejor is None or mejor[1] * mejor[2] < 0.2 * an_v * al_v:
+            return (w, 0, 0, an_v, al_v)
+        (x0, y0), (x1, y1) = _en_pantalla(self.api, w), _en_pantalla(self.api, mejor[0])
+        x, y = max(0, x1 - x0), max(0, y1 - y0)
+        return (w, x, y, min(mejor[1], an_v - x), min(mejor[2], al_v - y))
+
+    def _de_pantalla(self, w, x, y, an, al, an_d=None, al_d=None):
+        """La zona de la ventana tal como se ve en la pantalla (achicada a
+        an_d x al_d si se pide)."""
+        an_d, al_d = an_d or an, al_d or al
+        u, g = self.api.user32, self.api.gdi32
+        x0, y0 = _en_pantalla(self.api, w)
+
+        def pintar(mem):
+            pantalla = u.GetDC(None)
+            if not pantalla:
+                return False
+            try:
+                g.SetStretchBltMode(mem, 3)                          # COLORONCOLOR
+                return bool(g.StretchBlt(mem, 0, 0, an_d, al_d, pantalla, x0 + x, y0 + y, an, al,
+                                         self.SRCCOPY | self.CAPTUREBLT))
+            finally:
+                u.ReleaseDC(None, pantalla)
+
+        return _bitmap_win(self.api, an_d, al_d, pintar)
+
+    def _de_ventana(self, w, an, al):
+        return _bitmap_win(self.api, an, al,
+                           lambda mem: bool(self.api.user32.PrintWindow(w, mem, self.PW_CLIENTE_COMPLETO)))
+
+    def foto(self):
+        """La ventana como arreglo RGB (alto x ancho x 3)."""
+        import numpy as np
+
+        v = self.ventana()
+        if v is None:
+            raise GE.GoogleEarthError("No se encuentra la ventana de Google Earth Pro (¿está "
+                                      "abierta y sin minimizar?).")
+        w, an, al = v
+        a = None
+        if self.metodo != "pantalla":
+            a = self._de_ventana(w, an, al)
+            if a is not None and self.metodo == "":
+                _w, x, y, an3, al3 = self._vista3d(v)
+                if _negra(a[y:y + al3, x:x + an3]):
+                    a = None
+                    self.metodo = "pantalla"
+                    registrar("Windows: la vista 3D sale negra por PrintWindow; desde la pantalla")
+                else:
+                    self.metodo = "ventana"
+        if a is None:
+            a = self._de_pantalla(w, 0, 0, an, al)
+        if a is None:
+            raise GE.GoogleEarthError("No se pudo sacar la foto de Google Earth (¿la ventana "
+                                      "quedó tapada o minimizada?).")
+        return np.ascontiguousarray(a[..., 2::-1])                           # BGRX -> RGB
+
+
+class VideoWin(FotoWin):
+    """La vista previa como video en Windows: la vista 3D desde la pantalla,
+    ya achicada por Windows (StretchBlt), unos 25 cuadros por segundo."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._zona = None
+
+    def cuadro(self, ancho: int = 800):
+        """La vista 3D achicada a ``ancho`` píxeles (más o menos), o None."""
+        import numpy as np
+
+        for _vez in range(2):
+            if self._zona is None:
+                self._zona = self._vista3d()
+                if self._zona is None:
+                    return None
+            w, x0, y0, an, al = self._zona
+            self.api.pixeles_reales()
+            if self.api.user32.IsIconic(w) or _tamano_win(self.api, w) == (0, 0):
+                self._zona = None
+                return None
+            k = max(1, -(-an // max(1, ancho)))
+            a = self._de_pantalla(w, x0, y0, an, al, max(1, an // k), max(1, al // k))
+            if a is None:
+                self._zona = None                       # cambió de tamaño o se cerró
+                continue
+            return np.ascontiguousarray(a[..., 2::-1])
+        return None
+
+
+class AtajoWin:
+    """Ctrl+Alt+G en todo Windows (RegisterHotKey) mientras esté iniciado:
+    ``al_apretar`` se llama desde otro hilo. Apagado no queda rastro."""
+
+    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT = 0x1, 0x2, 0x4000
+    VK_G, WM_HOTKEY, ID = 0x47, 0x0312, 0x6E0C
+    YA_REGISTRADO = 1409                        # ERROR_HOTKEY_ALREADY_REGISTERED
+
+    def __init__(self, al_apretar) -> None:
+        self.al_apretar = al_apretar
+        self._hilo = None
+        self._parar = threading.Event()
+        self.error = ""
+
+    def iniciar(self) -> bool:
+        api = _win32()
+        if api is None:
+            self.error = "no es Windows"
+            return False
+        u = api.user32
+        listo, res = threading.Event(), {}
+        self._parar.clear()
+
+        def escuchar():
+            # el atajo es del hilo que lo registra: registrar y escuchar acá
+            if not u.RegisterHotKey(None, self.ID, self.MOD_ALT | self.MOD_CONTROL | self.MOD_NOREPEAT,
+                                    self.VK_G):
+                res["error"] = api.ultimo_error()
+                listo.set()
+                return
+            res["ok"] = True
+            listo.set()
+            msg = _MSG()
+            try:
+                while not self._parar.is_set():
+                    while u.PeekMessageW(ctypes.byref(msg), None, self.WM_HOTKEY, self.WM_HOTKEY, 1):
+                        if msg.message == self.WM_HOTKEY and msg.wParam == self.ID:
+                            try:
+                                self.al_apretar()
+                            except Exception:  # noqa: BLE001
+                                pass
+                    self._parar.wait(0.05)
+            finally:
+                u.UnregisterHotKey(None, self.ID)
+
+        self._hilo = threading.Thread(target=escuchar, name="geocad-ge-atajo", daemon=True)
+        self._hilo.start()
+        listo.wait(3)
+        if not res.get("ok"):
+            self.error = ("otro programa ya usa Ctrl+Alt+G" if res.get("error") == self.YA_REGISTRADO
+                          else "Windows no dejó registrar Ctrl+Alt+G")
+            self._hilo.join(1)
+            self._hilo = None
+            return False
+        return True
+
+    def detener(self) -> None:
+        self._parar.set()
+        if self._hilo is not None:
+            self._hilo.join(2)
+            self._hilo = None
+
+
+# Lo que usa la ventanita: la de Windows o la de X11 (Linux).
+def Foto():                                     # noqa: N802 -- se usa como una clase
+    return FotoWin() if sys.platform == "win32" else FotoX11()
+
+
+def Video():                                    # noqa: N802
+    return VideoWin() if sys.platform == "win32" else VideoX11()
+
+
+def Atajo(al_apretar):                          # noqa: N802
+    return AtajoWin(al_apretar) if sys.platform == "win32" else AtajoX11(al_apretar)
 
 
 # ================================================================== la captura

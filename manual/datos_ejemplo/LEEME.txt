@@ -1,0 +1,10 @@
+Datos de ejemplo del manual de GEO-CAD-YAGUARETÉ
+================================================
+parcelas.shp: 107 parcelas en 14 manzanas de Corpus (Misiones, Argentina).
+La geometría es la del catastro, llevada de Campo Inchauspe faja 6 a
+POSGAR 2007 / Argentina faja 6 (EPSG:5348). Los números de manzana, lote y
+partida y el uso son INVENTADOS: no corresponden a ninguna parcela real.
+
+Campos: MANZANA, LOTE, PARTIDA, USO, SUP_M2 (superficie calculada, m²).
+La manzana del caso práctico es la 12; el lote de la práctica de RUMBOS,
+el 006.

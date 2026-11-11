@@ -121,7 +121,7 @@ TEMA_BANCO = {
             "SHPRELEASE", "GEOIMPORTSHP", "GEOIMPORTKML", "GEOEXPORTSHP", "GEOEXPORTKML",
             "EXPORTARGEO", "QGISEXPORT", "GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP",
             "GEOCADMODULES", "GEOBUTTONS", "SHPCONFIG", "QGISUPDATE", "GEOCADDIAG",
-            "GEOCADABOUT"),
+            "GEOCADMANUAL", "GEOEARTHMANUAL", "GEOCADABOUT"),
         "Edición": (
             "SELECT", "GEOFILTER", "STRETCH", "FILLET", "CHAMFER", "BREAKATPOINT",
             "MATCHPROP", "GEOPASTEORIG", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
@@ -145,7 +145,7 @@ TEMA_BANCO = {
             "dibujo:mview", "dibujo:purge", "geocad:ge_abrir", "geocad:ge_capturar",
             "geocad:ge_configurar", "geocad:ge_exportar", "geocad:ge_ver",
             "geocad:modules", "geocad:botones", "geocad:config",
-            "geocad:update", "geocad:about"),
+            "geocad:update", "geocad:manual", "geocad:about"),
         "Edición": (
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
@@ -169,12 +169,12 @@ LETRAS = {
     "ANGREL": "REL", "RIGHTCLICK": "BD", "SHPCONNECT": "CON", "SHPSTATUS": "PEN",
     "SHPCHECKIN": "GUA", "SHPRELEASE": "DES", "GEOEARTHSETUP": "GE", "GEOCADMODULES": "MOD",
     "GEOBUTTONS": "BOT", "SHPCONFIG": "CFG", "QGISUPDATE": "ACT", "GEOCADDIAG": "DIAG",
-    "GEOCADABOUT": "?", "GEOREFADD": "B+", "GEOREFREMOVE": "B−", "GEOREFSAVE": "B✓",
+    "GEOCADABOUT": "?", "GEOCADMANUAL": "MAN", "GEOEARTHMANUAL": "MGE", "GEOREFADD": "B+", "GEOREFREMOVE": "B−", "GEOREFSAVE": "B✓",
     "GEOREFDISCARD": "B×", "SHPINFO": "i", "SHPATTR": "ATR", "SHPLABELOFF": "R×",
     "SHPTHEMEOFF": "T×",
     "geocad:reload": "REC", "geocad:status": "EST", "geocad:ge_configurar": "GE",
     "geocad:modules": "MOD", "geocad:botones": "BOT", "geocad:config": "CFG",
-    "geocad:update": "ACT", "geocad:about": "?",
+    "geocad:update": "ACT", "geocad:manual": "MAN", "geocad:about": "?",
 }
 
 

@@ -23,6 +23,41 @@ REPOSITORIO = "https://github.com/archibello/GEO-CAD-YAGUARETE"
 ISSUES = REPOSITORIO + "/issues"
 CLAUDE = "Desarrollado con la ayuda de Claude (Anthropic)."
 
+# Manual de usuario en GitHub (3.76.0, Fernando: «un enlace al manual, con el
+# capítulo que le corresponde a cada programa»).
+MANUAL = REPOSITORIO + "/blob/main/manual/"
+CAPITULOS = {
+    "qgis": ("02_qgis.md", "Capítulo 1 — GeoCAD en QGIS"),
+    "ingecad": ("03_ingecad.md", "Capítulo 2 — GeoCAD en IngeCAD"),
+    "googleearth": ("04_google_earth.md", "Capítulo 3 — GeoCAD en Google Earth"),
+}
+
+
+def url_manual(clave: str = "") -> str:
+    """La página del manual: el capítulo de ``clave`` o el índice."""
+    archivo = CAPITULOS[clave][0] if clave in CAPITULOS else "README.md"
+    return MANUAL + archivo
+
+
+def abrir_manual(clave: str = "", abrir_url=None) -> tuple[str, bool]:
+    """Abre el capítulo en el navegador. ``abrir_url`` es el QDesktopServices.openUrl
+    de cada programa (con la URL ya armada); si no puede, prueba con webbrowser.
+    Devuelve (url, si se pudo abrir), para escribir la dirección si no."""
+    url = url_manual(clave)
+    abierto = False
+    if abrir_url is not None:
+        try:
+            abierto = bool(abrir_url(url))
+        except Exception:  # noqa: BLE001 -- sin Qt o sin navegador: webbrowser
+            abierto = False
+    if not abierto:
+        try:
+            import webbrowser
+            abierto = bool(webbrowser.open(url))
+        except Exception:  # noqa: BLE001
+            abierto = False
+    return url, abierto
+
 
 def _nombre_prog(programa: str) -> str:
     return "IngeCAD" if programa == "ingecad" else "QGIS"

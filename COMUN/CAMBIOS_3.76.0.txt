@@ -1,0 +1,26 @@
+GeoCAD - versión 3.76.0
+=======================
+FUNCIÓN NUEVA (IngeCAD y QGIS). Hay que actualizar los dos. Incluye la 3.75.0
+(captura de Google Earth en Windows).
+
+Pedido de Fernando (11/11/2026): un enlace al manual de usuario en GitHub,
+«relacionado en cada caso con el capítulo que le corresponde a cada programa».
+
+Manual de usuario, en el menú GeoCAD Yaguareté
+- QGIS: «Manual de usuario (QGIS)...» abre en el navegador el capítulo 1,
+  GeoCAD en QGIS. La barra de mensajes dice la dirección.
+- IngeCAD: «Manual de usuario (IngeCAD)...» (orden MANUALGEOCAD) abre el
+  capítulo 2, GeoCAD en IngeCAD. La línea de comandos dice la dirección.
+- En los dos, Google Earth > «Manual de Google Earth (capítulo 3)...» (en
+  IngeCAD, MANUALGE) abre el capítulo 3.
+- Van justo antes de «Acerca de...» y al pie del submenú Google Earth. El
+  ítem del manual está siempre; el de Google Earth, con su módulo.
+- Si no se puede abrir el navegador, se escribe la dirección para copiarla.
+- El manual se publica con esta versión en el repositorio público, carpeta
+  manual/ (también en PDF, en Releases).
+
+Pruebas
+- test_manual_enlace: las direcciones apuntan a capítulos que existen y con
+  el título que corresponde; Qt abre, y si no, webbrowser, y si no, se
+  escribe la dirección; las órdenes, los menús y el español en IngeCAD; los
+  ítems en el menú de QGIS; nombre.py igual en los dos lados.
