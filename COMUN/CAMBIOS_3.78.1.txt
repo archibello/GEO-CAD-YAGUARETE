@@ -1,0 +1,33 @@
+GeoCAD - versión 3.78.1 (incluye la 3.78.0)
+===========================================
+IngeCAD y QGIS.
+
+El título «GeoCAD Yaguareté» en la barra de menús, con el color de su menú
+(Fernando, 12/11/2026: «para que se distinga de los del programa original»).
+- IngeCAD: bordó (#430E18); al pasar el mouse o con el menú abierto, bordó
+  más claro (#7D1C2C).
+- QGIS: verde (#1F4A26); resaltado #3F7F3A.
+- Los demás títulos de la barra quedan como vienen. El clic, Alt + letra y
+  el resaltado siguen siendo los del programa.
+- QGIS: al desactivar GeoCAD el ítem pintado se va sin dejar rastro.
+
+De la 3.78.0 (no instalada todavía): el menú GeoCAD Yaguareté y sus submenús
+bordó profundo en IngeCAD y verde bosque en QGIS; en QGIS el título
+«Puente con IngeCAD» como rótulo propio. Ver CAMBIOS_3.78.0.txt.
+
+Por dentro
+- COMUN/nucleo/color_barra.py (núcleo, sirve a los dos): Qt no deja pintar un
+  solo ítem de la barra con hoja de estilo, así que encima de nuestro ítem va
+  un rótulo hijo de la barra, transparente al mouse, que sigue su lugar
+  (cambios de tamaño, de módulos, de letra) y su resaltado. No pinta encima
+  de la barra desde un filtro: en QGIS la barra la crea C++ y PyQt no deja
+  llamar a sus funciones protegidas.
+- IngeCAD: color_menu.aplicar también pone el título; QGIS: initGui y unload.
+
+Pruebas
+- test_color_menu suma la barra; banco_color_barra_qgis_real (QGIS 4.2.2 real
+  sin pantalla): el ítem verde, Ayuda como viene, y al quitarlo, sin rastro.
+- Barra dibujada con Qt real (PyQt6, Fusion) clara y oscura: sin repintar en
+  ronda (1 pintura por segundo quieta).
+
+Para probar: CM1 a CM6 en 02_PRUEBAS_MANUALES.txt.

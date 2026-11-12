@@ -24,22 +24,30 @@ from qgis.core import (Qgis, QgsCoordinateTransform, QgsProject, QgsProviderRegi
                        QgsApplication, QgsVectorLayer)
 from qgis.PyQt.QtCore import Qt, QTimer
 from qgis.PyQt.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
-from qgis.PyQt.QtWidgets import QMenu, QMessageBox
+from qgis.PyQt.QtWidgets import QLabel, QMenu, QMessageBox, QWidgetAction
 
 try:                                    # Qt6 (QGIS 4)
     from qgis.PyQt.QtGui import QAction
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos, ventana_alta
+from . import actualizar, bloqueo, color_barra, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos, ventana_alta
 
 MENU_TITLE = nombre.NOMBRE_CORTO
+# Verde bosque (opción B), del ícono de QGIS (Fernando, 12/11/2026): sólo nuestro menú, los de QGIS quedan igual
+ESTILO_MENU = """
+QMenu { background-color: #1F4A26; color: #F2F7EE; border: 1px solid #3B6B40; }
+QMenu::item { background-color: transparent; padding: 4px 28px 4px 30px; }
+QMenu::item:selected { background-color: #3F7F3A; color: #FFFFFF; }
+QMenu::item:disabled { color: #8FAA90; }
+QMenu::separator { height: 1px; background-color: #3B6B40; margin: 4px 8px; }
+"""
 PROGRAMA = "qgis"
 VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.77.0"
+VERSION = "3.78.3"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -150,12 +158,16 @@ class GeoCAD:
                                         al_cambiar=self._subs_cambiaron)
         self.menu = QMenu(MENU_TITLE, mw)
         self.menu.setObjectName("GeoCADMenu")
+        self.menu.setStyleSheet(ESTILO_MENU)   # prueba de color (12/11/2026); los submenús lo heredan
         self._build_menu()
         menubar = mw.menuBar()
         try:
             menubar.insertMenu(self.iface.helpMenu().menuAction(), self.menu)
         except Exception:
             menubar.addMenu(self.menu)
+        # 3.78.1 (Fernando): el título en la barra, del color del menú; 3.78.3: en el tono
+        # claro, y con el menú abierto o el mouse encima, en el del menú
+        color_barra.instalar(menubar, lambda t: t == MENU_TITLE, "#3F7F3A", "#1F4A26", "#F2F7EE")
         self._sync_toolbar()
         self._export_icon()
         if self._puente():
@@ -181,13 +193,23 @@ class GeoCAD:
     def _puente(self) -> bool:
         return modulos.activo(PROGRAMA, "puente")
 
+    def _titulo_seccion(self, texto: str) -> None:
+        """Título de sección visible con el menú pintado (addSection no muestra
+        el texto cuando el menú tiene hoja de estilo)."""
+        etiqueta = QLabel(texto)
+        etiqueta.setStyleSheet("QLabel { color: #B9D97A; font-weight: bold; padding: 5px 12px 3px 12px; }")
+        accion = QWidgetAction(self.menu)
+        accion.setDefaultWidget(etiqueta)
+        accion.setEnabled(False)
+        self.menu.addAction(accion)
+
     def _build_menu(self) -> None:
         """El menú según los módulos activos (se rearma al cambiarlos)."""
         self.menu.clear()
         self.actions = {}
         add = self._add_action
         if self._puente():
-            self.menu.addSection("Puente con IngeCAD")
+            self._titulo_seccion("Puente con IngeCAD")
             # 3.50.1 (Fernando): sólo «Enviar a IngeCAD»; lo demás, en su ventana
             add("send", "Enviar a IngeCAD...", self.send_default, self._ingecad_icon())
             self.menu.addSeparator()
@@ -514,6 +536,7 @@ class GeoCAD:
         self.readonly_by_us.clear()
 
     def unload(self) -> None:
+        color_barra.quitar(self.iface.mainWindow().menuBar())
         self._restaurar_botones()
         self._quitar_tablas()
         self._quitar_referencias()

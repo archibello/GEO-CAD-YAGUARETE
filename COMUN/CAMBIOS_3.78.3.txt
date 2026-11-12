@@ -1,0 +1,19 @@
+GeoCAD - versión 3.78.3
+=======================
+IngeCAD y QGIS. Ajuste de color de la 3.78.2 (Fernando, 12/11/2026: «¿se
+puede colorear los menús superiores de geocad en el tono más claro?, en
+ambos programas ese contraste los hace más visibles»).
+
+El título «GeoCAD Yaguareté» de la barra de menús:
+- IngeCAD: bordó claro (#7D1C2C); con el menú abierto o el mouse encima,
+  el bordó del menú (#430E18).
+- QGIS: verde claro (#3F7F3A); con el menú abierto o el mouse encima, el
+  verde del menú (#1F4A26).
+- Al abrirlo, título y menú quedan del mismo tono, como una sola pieza.
+- Los menús desplegados no cambian.
+
+Pruebas
+- test_color_menu y banco_color_barra_qgis_real con los tonos nuevos.
+
+Para probar: CM5 y CM6 en 02_PRUEBAS_MANUALES.txt (ahora el título en el
+tono claro, y oscuro con el menú abierto).

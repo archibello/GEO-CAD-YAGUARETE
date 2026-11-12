@@ -1,0 +1,29 @@
+GeoCAD - versión 3.78.0
+=======================
+IngeCAD y QGIS.
+
+Color propio del menú GeoCAD Yaguareté (Fernando, 12/11/2026: eligió las
+opciones B de la propuesta de colores).
+- IngeCAD: bordó profundo (fondo #430E18, resaltado #7D1C2C), que combina
+  con el fondo negro de IngeCAD.
+- QGIS: verde bosque (fondo #1F4A26, resaltado #3F7F3A), por el ícono de QGIS.
+- Sólo nuestro menú y sus submenús; los demás menús de cada programa quedan
+  como vienen. Letra clara, desactivados en gris tenue, separadores del tono.
+- QGIS: el título «Puente con IngeCAD» es un rótulo propio en verde claro
+  (con el menú pintado, Qt no mostraba el de addSection).
+
+Por dentro
+- INGECAD/codigo/geocad/color_menu.py: busca el menú por su título en la
+  barra de IngeCAD y le pone la hoja de estilo. Se vuelve a aplicar cada vez
+  que IngeCAD rearma sus menús (envoltorio de _build_menus) y al cambiar los
+  módulos.
+- QGIS: ESTILO_MENU y _titulo_seccion en plugin.py.
+
+Pruebas
+- test_color_menu nuevo; el QGIS simulado (fake_qgis) suma setStyleSheet y
+  QWidgetAction.
+- 87/87 con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+- Menús dibujados con Qt real sin pantalla (PyQt6, Fusion): se ven los
+  colores, el resaltado y el título de sección.
+
+Para probar: CM1 a CM4 en 02_PRUEBAS_MANUALES.txt.

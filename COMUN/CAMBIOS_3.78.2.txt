@@ -1,0 +1,24 @@
+GeoCAD - versión 3.78.2
+=======================
+Corrección de la 3.78.1 (Fernando, 12/11/2026: «en qgis está teniendo
+problemas, en IngeCAD quedó muy bien»).
+
+QGIS: el título «GeoCAD Yaguareté» de la barra de menús salía tapado por un
+rectángulo blanco, más angosto que el título.
+- Causa: la barra de QGIS la crea C++. Cuando Python soltaba su envoltorio,
+  se perdía lo que GeoCAD le había colgado: el rótulo quedaba como un cuadro
+  vacío (blanco) y ya no seguía los cambios de letra y de tamaño de la barra.
+- Ahora GeoCAD guarda el rótulo por su cuenta, y cada vez que la barra se
+  pinta revisa que siga justo encima del título.
+- Al actualizar GeoCAD sin reiniciar, el rótulo de la versión anterior se
+  retira: queda uno solo.
+- IngeCAD: se ve igual que en la 3.78.1 (allí no fallaba).
+
+Pruebas
+- banco_color_barra_qgis_real (QGIS 4.2.2 real) suma la recolección de
+  basura y una letra más grande: falla con la 3.78.1 y pasa con la 3.78.2.
+  También con el estilo Breeze (el de tu QGIS 4).
+- test_color_menu: nada colgado de la barra.
+
+Para probar: CM3, CM4 y CM6 en QGIS (02_PRUEBAS_MANUALES.txt); CM5 en IngeCAD
+para ver que sigue igual.

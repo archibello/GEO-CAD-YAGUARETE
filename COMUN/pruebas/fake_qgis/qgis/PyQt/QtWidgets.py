@@ -2,12 +2,15 @@ import enum
 class QMenu:
     def __init__(self, *a): self.items = []
     def setObjectName(self, n): pass
+    def setStyleSheet(self, e): self.estilo = e
     def addSection(self, t): self.items.append("--" + t)
     def clear(self): self.items = []
     def addMenu(self, t):
         m = QMenu(t); m.title = t; self.items.append(m); return m
     def addSeparator(self): self.items.append("---")
-    def addAction(self, a): self.items.append(a)
+    def addAction(self, a):
+        # un título de sección propio (QWidgetAction con QLabel) se anota como addSection
+        self.items.append("--" + a.titulo if isinstance(a, QWidgetAction) else a)
     def menuAction(self): return self
     def deleteLater(self): pass
 class QMessageBox:
@@ -31,7 +34,12 @@ class _W:
     def setToolTip(self, t): pass
     def setEnabled(self, b): self.enabled = b
 class QLabel(_W):
-    pass
+    def __init__(self, texto="", *a): super().__init__(); self.texto = texto
+    def setStyleSheet(self, e): pass
+class QWidgetAction:
+    def __init__(self, *a): self.titulo = ""
+    def setDefaultWidget(self, w): self.titulo = getattr(w, "texto", "")
+    def setEnabled(self, b): pass
 class QCheckBox(_W):
     def __init__(self, text, parent=None):
         super().__init__(); self.text = text; self.checked = False; self.toggled = _Sig()

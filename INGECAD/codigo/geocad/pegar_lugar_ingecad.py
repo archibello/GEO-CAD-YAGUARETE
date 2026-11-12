@@ -320,6 +320,11 @@ def _envolver_menus(original):
             _poner_en_menu(self)        # IngeCAD rearma los menús al prender o apagar un plugin
         except Exception:  # noqa: BLE001
             pass
+        try:
+            from . import color_menu     # el menú GeoCAD, con su color (también se rearma)
+            color_menu.aplicar(self)
+        except Exception:  # noqa: BLE001
+            pass
         return resultado
     _build_menus._puente_original = original
     _build_menus._puente_fabrica = _envolver_menus
