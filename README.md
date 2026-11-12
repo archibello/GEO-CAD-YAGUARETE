@@ -10,6 +10,17 @@ AutoCAD, en los dos programas.
 > Antes se llamaba **GeoCAD**. Desde la 3.8.0, en el programa: menú y
 > barra «GeoCAD Yaguareté» y **Acerca de GEO-CAD-YAGUARETÉ...**
 
+**GeoCAD Yaguareté** (también escrito *Geo-CAD Yaguareté*, *GeoCAD
+Yaguarete* o *GEO-CAD-YAGUARETE*) es software libre: un **complemento
+(plugin) de QGIS** y un **plugin de IngeCAD** que funcionan juntos, pensados
+para catastro, agrimensura y urbanismo. Hecho en Posadas, Misiones,
+Argentina.
+
+*In English:* GeoCAD Yaguareté is a free QGIS plugin and IngeCAD plugin that
+make GIS and CAD work as one system: GIS to CAD and CAD to GIS round trips
+over GeoPackage and shapefile, AutoCAD-style drawing tools, and Google Earth
+imagery placed at its real location and scale. Documentation in Spanish.
+
 ## Imágenes de Google Earth, ya ubicadas
 
 Con **Google Earth Pro**, **IngeCAD** y **QGIS** instalados en la misma
