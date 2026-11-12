@@ -7,6 +7,9 @@ esquinas, Medio, Intersección, Cercano, Perpendicular, y Inserción en su
 punto de inserción. GeoCAD se lo agrega envolviendo SnapEngine._extract; una
 imagen recortada se engancha por su recorte. Va con el módulo «georref»
 (Imágenes georreferenciadas): apagado, IngeCAD queda como venía.
+
+IngeCAD 0.8.0 lo trae de fábrica (cambio aa986bc: el borde de IMAGE y WIPEOUT da segmentos
+y la imagen su inserción). Desde esa versión GeoCAD no envuelve nada: engancharía dos veces.
 """
 from __future__ import annotations
 
@@ -75,13 +78,19 @@ def _instalado(funcion) -> bool:
 
 def instalar() -> None:
     """Se llama al cargar el plugin, después de bloques.instalar_referencias.
-    Sin IngeCAD (pruebas sin interfaz) se instala igual sobre core.snap."""
+    Sin IngeCAD (pruebas sin interfaz) se instala igual sobre core.snap. Con IngeCAD 0.8.0
+    o más nuevo no se instala, y si quedó de antes (Actualizar sin reiniciar) se saca."""
+    from .convivencia import NATIVO_08, ingecad_desde
     try:
         from core.snap import SnapEngine
     except Exception:  # noqa: BLE001
         return
     actual = SnapEngine.__dict__.get("_extract")
     funcion = getattr(actual, "__func__", actual)
+    if ingecad_desde(NATIVO_08):
+        if getattr(funcion, "_marco_fabrica", None) is not None:
+            SnapEngine._extract = staticmethod(funcion._marco_original)
+        return
     if funcion is None or _instalado(funcion):
         return
     if getattr(funcion, "_marco_fabrica", None) is not None:   # de una versión anterior

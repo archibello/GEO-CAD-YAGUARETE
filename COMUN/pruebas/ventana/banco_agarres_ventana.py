@@ -28,6 +28,14 @@ assert lp.available, getattr(lp, "reason", "")
 mods = import_module("ingecad_plugin_geocad.modulos")
 AG = import_module("ingecad_plugin_geocad.agarres_ingecad")
 from views.main_window import MainWindow
+try:
+    from core.version import __version__ as VERSION_INGECAD
+except Exception:  # noqa: BLE001 -- las viejas no lo tienen
+    VERSION_INGECAD = "0"
+#: IngeCAD 0.8.0 hace solo, sin el módulo, lo escrito con el agarre tomado y Mayús + derecho
+#: (cambios e57c356 y ac79782): sin el módulo ya no «suelta» ni ignora lo escrito
+NATIVOS = tuple(int(x) for x in VERSION_INGECAD.split(".")[:2] if x.isdigit()) >= (0, 8)
+print("IngeCAD", VERSION_INGECAD, "(con lo nativo de la 0.8)" if NATIVOS else "")
 fallas = []
 
 
@@ -149,7 +157,11 @@ ver("END, referencia de una vez", pts(p)[2] == (160, 90) and b.c.osnap_override 
 b = B(pl); p = b.objs[0]; b.elegir(p); b.clic(100, 100); b.mover(130, 130); b.escribir("L")
 ver("un comando no arranca con el agarre tomado", b.c.tool is None and b.caliente(), b.ecos[-1:])
 b.escribir("abc,de"); ver("lo inválido tampoco lo suelta", b.caliente())
-b.escribir(""); ver("Intro cancela", not b.caliente() and pts(p)[2] == (100, 100), pts(p))
+if NATIVOS:   # IngeCAD 0.8: Intro sigue con el agarre (X o Esc lo sueltan); GeoCAD se aparta
+    b.escribir(""); ver("Intro: IngeCAD 0.8 sigue con el agarre", b.caliente(), pts(p))
+    b.escribir("X"); ver("X lo suelta sin mover", not b.caliente() and pts(p)[2] == (100, 100), pts(p))
+else:
+    b.escribir(""); ver("Intro cancela", not b.caliente() and pts(p)[2] == (100, 100), pts(p))
 b.escribir("L"); ver("sin agarre, los comandos andan", b.c.tool is not None)
 b.c.cancel(); b.cerrar()
 b = B(pl); p = b.objs[0]; b.elegir(p); b.clic(100, 50); b.mover(120, 50); b.escribir("@20,0")
@@ -217,7 +229,9 @@ b.elegir(p); b.clic(50, 0, Qt.ControlModifier); b.escribir("@0,-10")
 ver("escrito en el nuevo", pts(p) == [(0, 0), (50, -10), (100, 0), (100, 100)], pts(p))
 b.cerrar()
 b = B(pl); p = b.objs[0]; b.elegir(p); b.clic(100, 50); b.mover(120, 50); b.clic(120, 50)
-ver("el clic solo sigue moviendo el tramo", pts(p) == [(0, 0), (120, 0), (120, 100)], pts(p)); b.cerrar()
+# el cursor cae en un píxel: X = 120 ± medio píxel (0.8.0: 119,95 por el encuadre)
+ver("el clic solo sigue moviendo el tramo", pts(p)[0] == (0, 0) and all(abs(q[0] - 120) < 0.2 for q in pts(p)[1:])
+    and [q[1] for q in pts(p)] == [0, 0, 100], pts(p)); b.cerrar()
 b = B(lambda m: [m.add_lwpolyline([(0, 0), (100, 0), (100, 100)], close=True)]); p = b.objs[0]; b.elegir(p)
 b.clic(50, 50, Qt.ControlModifier); b.mover(40, 60); b.clic(40, 60)
 ver("en el tramo de cierre", len(pts(p)) == 4 and pts(p)[:3] == [(0, 0), (100, 0), (100, 100)] and p.closed, pts(p)); b.cerrar()
@@ -315,7 +329,8 @@ for nombre, mod in (("Mayús", Qt.ShiftModifier), ("Ctrl", Qt.ControlModifier)):
     m.close(); esperar(); b.mover(140, 110); ver("cerrar el menú: sigue tomado", b.caliente() and abs(pts(p)[2][0] - 140) < 1, pts(p))
     b.c.cancel(); b.cerrar()
 b = B(pl); p = b.objs[0]; b.elegir(p); b.clic(100, 100); b.mover(150, 85); derecho(b, 150, 85, Qt.ShiftModifier); m = menu_de(b)
-ver("Desde y Medio entre 2 puntos, apagados", not m.actions()[0].isEnabled() and not m.actions()[1].isEnabled())
+if not NATIVOS:   # en la 0.8 el menú es el de IngeCAD, como él lo arma
+    ver("Desde y Medio entre 2 puntos, apagados", not m.actions()[0].isEnabled() and not m.actions()[1].isEnabled())
 opcion(m, "Endpoint").trigger(); m.close(); esperar()
 ver("elegir Final no suelta", b.caliente() and b.c.osnap_override == frozenset({"END"}), b.c.osnap_override)
 b.mover(158, 88); b.mover(159.7, 89.7); b.clic(159.7, 89.7)
@@ -328,7 +343,11 @@ ver("los marcados llegan con la referencia", pts(p)[2] == (160, 90) and pts(p)[1
 b = B(pl); p = b.objs[0]; b.elegir(p); b.clic(100, 100); b.mover(130, 110); derecho(b, 130, 110, Qt.NoModifier)
 ver("el derecho solo sigue cancelando", not b.caliente() and pts(p)[2] == (100, 100), pts(p)); b.cerrar()
 b = B(pl); b.win._osnap_menu = None; p = b.objs[0]; b.elegir(p); AG.quitar(b.win); b.clic(100, 100); b.mover(130, 110); derecho(b, 130, 110, Qt.ShiftModifier)
-ver("sin el módulo, como IngeCAD: suelta", not b.caliente() and menu_de(b) is None and "_geocad_agarres_filtro" not in vars(b.win)); b.cerrar()
+if NATIVOS:   # IngeCAD 0.8: abre su propio menú y sigue con el agarre
+    ver("sin el módulo, IngeCAD 0.8 sigue con el agarre", b.caliente() and "_geocad_agarres_filtro" not in vars(b.win))
+else:
+    ver("sin el módulo, como IngeCAD: suelta", not b.caliente() and menu_de(b) is None and "_geocad_agarres_filtro" not in vars(b.win))
+b.cerrar()
 
 
 print("== la marca de la referencia se ve con el agarre tomado")
@@ -336,7 +355,10 @@ def marca_pintada(b, x, y):
     """¿Hay píxeles del color de la marca alrededor de (x, y), en lo que pinta el visor?"""
     v = b.win.viewport
     img = QImage(v.width(), v.height(), QImage.Format_RGB32); img.fill(0)
-    q = QPainter(img); v._draw_grips(q); q.end()
+    q = QPainter(img); v._draw_grips(q)
+    if NATIVOS:
+        v._draw_tool_feedback(q)     # IngeCAD 0.8 la pinta ahí (49197aa); GeoCAD ya no
+    q.end()
     sx, sy = v._space_to_screen(x, y)
     r = int(v.MARKER_SIZE) + 3
     color = v.MARKER_COLOR.rgb()
@@ -353,7 +375,8 @@ b.mover(159.5, 64.5); ver("elegida en el menú: la marca se ve", marca_pintada(b
 b.clic(159.5, 64.5); ver("y queda ahí", pts(p)[2] == (160, 65), pts(p))
 ver("soltado: sin marca", marca_pintada(b, 160, 65) == 0); b.cerrar()
 b = B(pl); p = b.objs[0]; b.c.osnap_on = True; b.elegir(p); AG.quitar(b.win); b.clic(100, 100); b.mover(159.5, 89.5)
-ver("sin el módulo, como IngeCAD: no se ve", b.c.snap_hit is not None and marca_pintada(b, 160, 90) == 0); b.c.cancel(); b.cerrar()
+ver("sin el módulo, como IngeCAD: " + ("se ve (0.8)" if NATIVOS else "no se ve"),
+    b.c.snap_hit is not None and (marca_pintada(b, 160, 90) > 10) == NATIVOS); b.c.cancel(); b.cerrar()
 
 
 print("== módulo apagado")
@@ -365,7 +388,11 @@ ver("sin rastro", not {"begin_grip_drag", "update_grip_drag", "finish_grip_drag"
                         "grip_overlay_entities", "_geocad_agarres"} & set(vars(c))
     and "_draw_grips" not in vars(b.win.viewport), sorted(set(vars(c)) & {"on_text", "_geocad_agarres"}))
 b.clic(100, 100, Qt.ShiftModifier); ver("Mayús toma, como IngeCAD", b.caliente())
-b.mover(130, 100); b.escribir("@10,5"); ver("lo escrito no va", b.caliente() and abs(pts(p)[2][0] - 130) < 1, pts(p))
+b.mover(130, 100); b.escribir("@10,5")
+if NATIVOS:   # IngeCAD 0.8 lo toma solo
+    ver("lo escrito va, como IngeCAD 0.8", pts(p)[2] == (110, 105), pts(p))
+else:
+    ver("lo escrito no va", b.caliente() and abs(pts(p)[2][0] - 130) < 1, pts(p))
 b.c.cancel(); b.c.selection = {p.dxf.handle}; b.c._grips_cache = None; esperar()
 b.win._cmd_delete(); esperar(0.1); ver("Supr borra el objeto", p not in list(b.msp))
 mods.guardar("ingecad", {"agarres": True}); b.cerrar()

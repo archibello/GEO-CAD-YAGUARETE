@@ -1,0 +1,38 @@
+GeoCAD - versión 3.77.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Convivencia con IngeCAD 0.8.0 (Fernando, 11/11/2026: «Sí, que se aparte»).
+IngeCAD 0.8.0 trae de fábrica cosas que GeoCAD le agregaba. Desde esa versión
+GeoCAD se las deja; con IngeCAD 0.7.0, 0.6.8.2 y 0.6.7 todo sigue como antes.
+
+Imágenes georreferenciadas (módulo «georref»)
+- El marco de las imágenes engancha (Final, Medio, Intersección, Inserción...)
+  por IngeCAD. GeoCAD ya no agrega lo suyo: antes enganchaba dos veces.
+
+Agarres de vértices (módulo «agarres»)
+- Ahora son de IngeCAD: lo escrito con el agarre tomado (@dx,dy, @d<ángulo,
+  una coordenada, una distancia), la marca de la referencia, los objetos con
+  un agarre en el mismo lugar que se estiran juntos, y Mayús + botón derecho
+  (menú de referencias).
+- Siguen siendo de GeoCAD: Mayús + clic marca varios agarres que se mueven
+  juntos, Ctrl + clic en el agarre del medio agrega un vértice, Supr borra los
+  vértices marcados, y END, MID, INT... escritos con el agarre tomado.
+- Cambia: con IngeCAD 0.8.0, Intro con el agarre tomado no lo suelta (como
+  IngeCAD); se suelta con X o con Esc.
+
+Por dentro
+- convivencia.py: qué versión de IngeCAD corre (core/version.py).
+
+Pruebas
+- test_marco_imagen y test_agarres_ingecad, según la versión de IngeCAD.
+- banco_agarres_ventana (ventana real) espera lo de IngeCAD en la 0.8.0.
+- 86/86 con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7; banco de agarres TODO OK
+  con las cuatro.
+
+Para probar (IngeCAD 0.8.0)
+- Insertar una imagen y acercarse a una esquina con Final: una sola marca.
+- Dos polilíneas con una esquina en común, designar las dos, tomar la
+  esquina y moverla: se estiran juntas, un solo deshacer.
+- Mayús + clic en dos vértices y mover uno: van los dos. Ctrl + clic en el
+  agarre del medio: vértice nuevo. Marcar uno y Supr: se borra el vértice.

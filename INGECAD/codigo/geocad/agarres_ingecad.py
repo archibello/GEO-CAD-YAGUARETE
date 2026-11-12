@@ -17,12 +17,18 @@ sigue siendo de IngeCAD. Faltaba:
 Todo va sobre el arrastre de IngeCAD: los compañeros se suman a la foto de deshacer y siguen
 al agarre tomado. Se engancha en la ventana, como el recorte de imágenes, para no pisarse con
 los envoltorios de la clase; con el módulo apagado se saca y no queda nada.
+
+IngeCAD 0.8.0 adoptó cuatro de las siete: lo escrito con el agarre (e57c356), la marca de la
+referencia (49197aa), los que comparten lugar se estiran juntos (e384637, sus «partners») y
+Mayús + botón derecho (ac79782). Desde esa versión GeoCAD se las deja y conserva las suyas:
+varios agarres marcados, agregar vértice y Supr con marcados (Fernando, 11/11/2026).
 """
 from __future__ import annotations
 
 import math
 
 from . import modulos
+from .convivencia import NATIVO_08, ingecad_desde
 from .recorte_imagen import _teclas
 
 PROGRAMA = "ingecad"
@@ -126,6 +132,16 @@ def _marcas(controlador) -> set:
     return estado.marcas
 
 
+def _nativo() -> bool:
+    """IngeCAD 0.8.0 o más nuevo: lo escrito, la marca, los compañeros del lugar y el menú son suyos."""
+    return ingecad_desde(NATIVO_08)
+
+
+def _socios(controlador) -> set:
+    """Los objetos que IngeCAD 0.8.0 ya estira con el agarre tomado."""
+    return {h for h, _i, _r in vars(controlador).get("_grip_partners", ())}
+
+
 def _echo(controlador, texto: str) -> None:
     controlador.window.command_line.echo(texto)
 
@@ -144,7 +160,7 @@ def _mover_companeros(controlador, x, y) -> None:
 def _sumar_a_la_foto(controlador, handles) -> None:
     """Un solo deshacer para todos, y Esc los deja a todos como estaban."""
     handle, indice, rol, foto = controlador._grip_drag
-    ids = sorted(set(handles) - {handle})
+    ids = sorted((set(handles) | _socios(controlador)) - {handle})   # sin perder los de IngeCAD
     entidades = [controlador.index.entity(h) for h in ids]
     foto = type(foto)([controlador.index.entity(handle)] + entidades)
     controlador._grip_drag = (handle, indice, rol, foto)
@@ -197,14 +213,25 @@ def _tomar(controlador, grip) -> None:
     if not _caliente(controlador):
         return                                     # el agarre era de otro (un lado de una imagen)
     if accion == "agregar":
+        if _nativo():
+            # IngeCAD estiraría el medio de los otros tramos; acá se les agrega el vértice a ellos
+            ajenos = _socios(controlador) - {g[3] for g in coincidentes(todos, [grip])
+                                              if _polilinea_recta(controlador, g)}
+            controlador._grip_partners = []
+            if ajenos and hasattr(controlador.window.viewport, "unhide_handles"):
+                controlador.window.viewport.unhide_handles(sorted(ajenos))
         _agregar(controlador, grip, todos)
     else:
         companeros = [g for g in principales if g != grip] + coincidentes(todos, principales)
+        if _nativo():                              # los del lugar del agarre ya los lleva IngeCAD
+            socios = _socios(controlador)
+            companeros = [g for g in companeros if g[3] not in socios]
         if companeros:
             _sumar_a_la_foto(controlador, [g[3] for g in companeros])
             estado.companeros = companeros
     controlador._refresh_overlay()
-    _echo(controlador, "Precise el punto nuevo (clic, @dx,dy, @d<ángulo, una coordenada o una distancia):")
+    if not _nativo():                              # IngeCAD 0.8.0 ya lo pide
+        _echo(controlador, "Precise el punto nuevo (clic, @dx,dy, @d<ángulo, una coordenada o una distancia):")
 
 
 def _seguir(controlador, x, y) -> None:
@@ -305,9 +332,23 @@ def _punto_escrito(controlador, texto: str) -> bool:
     return True
 
 
+def _referencia_escrita(controlador, texto: str) -> bool:
+    """END, MID, INT... con el agarre tomado: IngeCAD 0.8.0 toma los puntos, pero no esto."""
+    from core import osnap
+
+    referencia = osnap.override_from_text(texto.strip())
+    if referencia is None:
+        return False
+    controlador.set_osnap_override(referencia, typed=True)
+    return True
+
+
 def _texto(controlador, texto: str):
     if (controlador.tool is None and _caliente(controlador)
             and getattr(controlador, "_selecting_for", None) is None):
+        if _nativo():                              # el punto es de IngeCAD; la referencia, nuestra
+            return (_referencia_escrita(controlador, texto)
+                    or type(controlador).on_text(controlador, texto))
         return _punto_escrito(controlador, texto)
     return type(controlador).on_text(controlador, texto)
 
@@ -392,6 +433,8 @@ def _filtro_visor(window):
 
 def _poner_filtro(window) -> None:
     _sacar_filtro(window)
+    if _nativo():
+        return                                     # IngeCAD 0.8.0 ya abre el menú (ac79782)
     if hasattr(window.viewport, "installEventFilter"):
         filtro = _filtro_visor(window)
         if filtro is not None:
@@ -413,6 +456,8 @@ def _pintar(visor, p) -> None:
     if controlador is None:
         return
     if controlador.tool is None and _caliente(controlador):
+        if _nativo():
+            return                                 # IngeCAD 0.8.0 ya pinta la marca
         # IngeCAD las pinta sólo con un comando en marcha: enganchaba sin que se viera (Fernando, 05/11/2026)
         visor._draw_tracking(p, controlador)
         marca = controlador.snap_hit
@@ -453,6 +498,7 @@ def aplicar(window) -> None:
     if window is None or not hasattr(window, "tools"):
         return
     if modulos.activo(PROGRAMA, "agarres"):
+        quitar(window)                             # lo de otra versión de IngeCAD no queda
         for objeto, nombre, funcion in _ganchos(window):
             funcion._geocad_agarres = True
             setattr(objeto, nombre, funcion)

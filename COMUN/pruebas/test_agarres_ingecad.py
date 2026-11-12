@@ -116,4 +116,17 @@ assert "window.osnap_override_menu()" in ag                      # el menú de I
 assert "window.viewport.removeEventFilter(filtro)" in ag         # apagado, sale el filtro
 modulos.guardar("ingecad", {"agarres": True})
 
+# ================================================================ IngeCAD 0.8.0: deja cuatro a IngeCAD
+C = import_module("ingecad_plugin_geocad.convivencia")
+import core.version
+assert C.version_ingecad() == tuple(int(n) for n in core.version.__version__.split(".")[:4])
+real = core.version.__version__
+for falsa, nativo in (("0.7.0", False), ("0.6.8.2", False), ("0.8.0", True), ("0.10.1", True)):
+    core.version.__version__ = falsa
+    assert C.ingecad_desde((0, 8)) is nativo and A._nativo() is nativo, falsa
+core.version.__version__ = real
+assert "_grip_partners" in ag and "unhide_handles" in ag           # no se pisa con los de IngeCAD
+assert ag.count("if _nativo():") >= 4                              # foto, agregar, marca, menú, lo escrito
+print("ok convivencia con IngeCAD 0.8.0")
+
 print("TODO OK test_agarres_ingecad")

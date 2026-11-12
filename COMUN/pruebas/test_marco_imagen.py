@@ -1,7 +1,8 @@
 """Referencias en el marco de las imágenes (3.33.7): Final en las esquinas,
 Medio, Intersección, Cercano, Perpendicular e Inserción, como en AutoCAD,
 para ubicar y escalar una imagen ya insertada. Con el recorte, por el
-recorte. Con el módulo «georref» apagado, IngeCAD queda como venía."""
+recorte. Con el módulo «georref» apagado, IngeCAD queda como venía.
+IngeCAD 0.8.0 lo trae de fábrica: ahí GeoCAD no envuelve nada (engancharía dos veces)."""
 import tmp_pruebas  # lo temporal de la prueba se borra al salir
 import os, tempfile
 os.environ["HOME"] = tempfile.mkdtemp()
@@ -17,6 +18,7 @@ assert lp.available, lp.reason
 MI = import_module("ingecad_plugin_geocad.marco_imagen")
 B = import_module("ingecad_plugin_geocad.bloques")
 mods = import_module("ingecad_plugin_geocad.modulos")
+NATIVO = import_module("ingecad_plugin_geocad.convivencia").ingecad_desde((0, 8))
 
 
 def modulo(prendido):
@@ -69,7 +71,10 @@ print("ok imagen recién insertada")
 
 # ---------------------------------------------------------------- 4. módulo apagado
 modulo(False); eng.invalidate()
-assert ref(140.2, 70.1, {"END"}) is None and ref(100.2, 50.1, {"INS"}) is None
+if NATIVO:      # IngeCAD 0.8.0: el marco engancha solo, con el módulo apagado también
+    assert ref(140.2, 70.1, {"END"}) == ("END", 140, 70) and ref(100.2, 50.1, {"INS"}) == ("INS", 100, 50)
+else:
+    assert ref(140.2, 70.1, {"END"}) is None and ref(100.2, 50.1, {"INS"}) is None
 modulo(True); eng.invalidate()
 assert ref(140.2, 70.1, {"END"}) == ("END", 140, 70)
 print("ok apagado: IngeCAD como venía")
@@ -82,7 +87,12 @@ f = SnapEngine.__dict__["_extract"].__func__; capas = 0
 while f is not None:
     capas += getattr(f, "_marco_fabrica", None) is MI._envolver_extract
     f = getattr(f, "_marco_original", None) or getattr(f, "_puente_original", None)
-assert capas == 1, capas
+assert capas == (0 if NATIVO else 1), (capas, NATIVO)        # en 0.8.0, ninguna: es de IngeCAD
+if NATIVO:      # de una versión vieja de GeoCAD que quedó envuelta (Actualizar sin reiniciar): se saca
+    viejo = SnapEngine.__dict__["_extract"]
+    SnapEngine._extract = staticmethod(MI._envolver_extract(viejo.__func__))
+    MI.instalar()
+    assert SnapEngine.__dict__["_extract"].__func__ is viejo.__func__
 eng.invalidate(); assert ref(140.2, 70.1, {"END"}) == ("END", 140, 70)
 print("ok instalado una sola vez")
 print("TODO OK")
