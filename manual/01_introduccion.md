@@ -2,7 +2,7 @@
 
 ![QGIS, IngeCAD y Google Earth unidos por GEO-CAD-YAGUARETÉ](imagenes/tres_fronteras.svg)
 
-En la selva misionera, donde se juntan la Argentina, el Brasil y el Paraguay,
+En la selva misionera, donde se juntan Argentina, Brasil y Paraguay,
 el yaguareté camina sin saber de fronteras: el monte es uno solo. Con los
 datos de un territorio pasa lo mismo. La parcela, el camino o el arroyo son
 uno solo, pero para trabajarlos usamos tres programas distintos que no se

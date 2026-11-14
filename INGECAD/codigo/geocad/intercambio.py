@@ -688,8 +688,12 @@ class PlanImportar:
     tablas: list = field(default_factory=list)     # tablas de atributos creadas
 
 
-def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
-    """Lo que IMPORTARSHP agrega, como UN paso de deshacer."""
+def plan_importar(doc, rutas, op: OpcionesImportar, avance=None) -> PlanImportar:
+    """Lo que IMPORTARSHP agrega, como UN paso de deshacer.
+
+    ``avance`` (3.79.0): un avance.Avance; cuenta cada registro leído y puede
+    levantar avance.Cancelado (todavía no se escribió nada). Las fábricas
+    quedan envueltas para que la etapa que escribe cuente cada objeto."""
     destino = sistema_del_dibujo(doc)
     adoptado = ""
     capas_nuevas, fabricas, por_archivo, avisos = [], [], [], []
@@ -706,8 +710,10 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
             capas_nuevas.append(nombre_c)
         return nombre_c
 
-    for ruta in rutas:
-        sf = shpio.Shapefile(ruta)
+    abiertos = [shpio.Shapefile(r) for r in rutas]
+    if avance is not None:
+        avance.etapa("Leyendo los registros", total=sum(len(sf) for sf in abiertos))
+    for ruta, sf in zip(rutas, abiertos):
         nombre_a = Path(sf.shp_path).stem
         sistema = sistema_de_prj(sf.shp_path) or op.sistema_shp.get(str(Path(ruta)), "")
         if not destino and sistema and op.adoptar and not adoptado:
@@ -734,6 +740,8 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
             tipo = "linea"
         else:
             avisos.append(f"{nombre_a}: el tipo {shpio.SHAPE_NAMES.get(st, st)} no se importa.")
+            if avance is not None:
+                avance.paso(avance.hechos + len(sf))       # sus registros, como leídos
             continue
         bloque_ok = op.puntos == "bloque" and op.bloque and op.bloque in doc.blocks
         if op.puntos == "bloque" and tipo == "punto" and not bloque_ok:
@@ -749,6 +757,8 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
             tablas_usadas.add(tabla)
         registros = objetos = sin_geo = 0
         for i in range(len(sf)):
+            if avance is not None:
+                avance.paso()
             if sf.is_deleted(i):
                 continue
             geom = sf.geometry(i)
@@ -792,6 +802,8 @@ def plan_importar(doc, rutas, op: OpcionesImportar) -> PlanImportar:
     if viejas:
         avisos.append("Las capas que ya estaban (" + ", ".join(viejas) + ") conservan su color "
                       "y espesor.")
+    if avance is not None:
+        fabricas = [(c, avance.contar(f)) for c, f in fabricas]
     comandos += [AddToModelCommand("IMPORTARSHP", f, layer=c) for c, f in fabricas]
     return PlanImportar(CompositeCommand("importar SHP", comandos), total, por_archivo, avisos,
                         adoptado, tablas)

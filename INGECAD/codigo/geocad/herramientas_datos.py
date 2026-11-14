@@ -371,7 +371,8 @@ def erase_labels(document, key, fids=None) -> list:
     return commands
 
 
-def label_commands(document, key, field: str, height: float, opciones=None, fids=None):
+def label_commands(document, key, field: str, height: float, opciones=None, fids=None,
+                   avance=None):
     """Los rótulos de ``field``, ubicados con las reglas de rotulos.py (3.26.0):
     polígonos dentro y centrados, líneas según su eje, puntos centrados o
     desde el punto. Devuelve (comando, rótulos, reemplazados); comando.omitidos
@@ -383,7 +384,10 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
 
     3.48.1: con ``anteriores == "conservar"`` no se borra ningún rótulo (los
     nuevos se suman); con ``altura == "menor"`` todos quedan con la altura
-    del más chico de esa vez (cada uno se vuelve a ubicar con ella)."""
+    del más chico de esa vez (cada uno se vuelve a ubicar con ella).
+
+    ``avance`` (3.79.0): un avance.Avance; cuenta cada objeto ubicado y
+    puede levantar avance.Cancelado (todavía no se escribió nada)."""
     data = datos.layer_data(document, key)
     f = data.field(field)
     by_fid = data.entities_by_fid(document)
@@ -393,10 +397,10 @@ def label_commands(document, key, field: str, height: float, opciones=None, fids
         by_fid = {k: v for k, v in by_fid.items() if k in fids}
     items = [(fid, values.get(fid, ""), [r for e in ents for r in datos.entity_rings(e)])
              for fid, ents in sorted(by_fid.items())]
-    return place_labels(document, key, f.name, items, height, opciones, fids)
+    return place_labels(document, key, f.name, items, height, opciones, fids, avance)
 
 
-def place_labels(document, key, tag: str, items, height, opciones=None, fids=None):
+def place_labels(document, key, tag: str, items, height, opciones=None, fids=None, avance=None):
     """El motor de ROTULOSIG sobre [(fid, texto, anillos)] ya armados; ``tag``
     va en el XDATA de cada rótulo (el campo). ``height``: una altura, o
     {fid: altura} (3.50.0: los rótulos que llegan de QGIS, cada uno con la
@@ -424,7 +428,11 @@ def place_labels(document, key, tag: str, items, height, opciones=None, fids=Non
         commands += erase_labels(document, key, fids)
     n = omitted = 0
     ubicados, pedidas = [], {}
+    if avance is not None:
+        avance.etapa("Ubicando rótulos", total=len(items))
     for fid, text, rings in items:
+        if avance is not None:
+            avance.paso()
         h = height.get(fid, 0.0) if isinstance(height, dict) else height
         if not text or not h or h <= 0:
             continue
@@ -524,10 +532,24 @@ class LabelTool(Tool):
             elegido = self._preguntar(names) if names else None
             if elegido is not None:
                 field, height, op = elegido
-                command, n, replaced = label_commands(document, key, field, height, op, fids)
-                self.ctx.execute(command)
-                self.ctx.echo(resumen_rotulos(command, n, replaced, field, key, fids))
+                self._rotular(document, key, field, height, op, fids)
         self.ctx.finish()
+
+    def _rotular(self, document, key, field, height, op, fids) -> None:
+        """3.79.0: con la ventanita de avance (ubicar, escribir, redibujar);
+        Cancelar mientras se ubican deja el dibujo como estaba."""
+        from . import avance as AV
+        ventana = getattr(self.ctx.services, "window", None)
+        try:
+            with AV.Avance(ventana, "Rótulos (SHPLABEL)", etapas=3) as av:
+                command, n, replaced = label_commands(document, key, field, height, op, fids, av)
+                av.etapa("Escribiendo los rótulos en el dibujo", cancelable=False)
+                self.ctx.execute(command)
+                av.pantalla(ventana, pedir=False)
+        except AV.Cancelado:
+            self.ctx.echo("SHPLABEL cancelado: no se cambió nada.")
+            return
+        self.ctx.echo(resumen_rotulos(command, n, replaced, field, key, fids))
 
     def _preguntar(self, names):
         """(campo, altura, opciones) o None. La ventana de rotulos_ui (3.26.0);

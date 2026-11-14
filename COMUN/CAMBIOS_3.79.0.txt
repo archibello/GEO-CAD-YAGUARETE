@@ -1,0 +1,56 @@
+GeoCAD - versión 3.79.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Barra de avance en los trabajos largos (Fernando, 14/11/2026: «una barra de
+avance que disminuya el estrés del usuario»; número 3.79.0, con Cancelar).
+Antes SHPLABEL y IMPORTARSHP trabajaban varios segundos sin mostrar nada y no
+se sabía si el programa respondía.
+
+Rótulos de un campo (SHPLABEL)
+- Ventanita «Rótulos (SHPLABEL)» con tres etapas:
+    1/3  Ubicando rótulos... 640 de 1373 (46 %)
+    2/3  Escribiendo los rótulos en el dibujo...
+    3/3  Actualizando la pantalla... faltan unos 2 s
+- Medido con 1373 parcelas: ~6 s ubicando y ~2 s redibujando.
+- Cancelar mientras se ubican: no se cambia nada (los rótulos anteriores
+  quedan como estaban) y la línea de comandos dice «SHPLABEL cancelado».
+
+Importar SHP (IMPORTARSHP)
+- Ventanita «Importar SHP (IMPORTARSHP)»:
+    1/4  Leyendo los registros... N de M (P %)
+    2/4  Agregando al dibujo... N de M (P %)
+    3/4  Actualizando la tabla de datos...   (sólo con columnas tildadas)
+    4/4  Actualizando la pantalla...
+- Cancelar mientras se leen los registros: no se agrega nada.
+- Un solo redibujo: si IngeCAD ya está redibujando (lo hace solo cuando se
+  agregan miles de objetos), GeoCAD ya no le pide otro encima. Con 20 000
+  polígonos con base de datos: antes ~7,7 s congelado sin aviso y la pantalla
+  al día a los ~12 s (dos redibujos); ahora la pantalla al día a los ~9 s,
+  todo con la ventanita a la vista.
+
+Cómo se comporta
+- La ventanita aparece sólo si el trabajo pasa de medio segundo (lo corto no
+  parpadea) y se cierra sola al terminar.
+- Cancelar sólo vale antes de escribir; mientras se escribe o se redibuja el
+  botón queda apagado. Lo agregado es, como siempre, un solo deshacer.
+- Todo corre en el hilo principal: nada toca el dibujo desde otro hilo.
+
+Por dentro
+- avance.py nuevo (la ventanita, las etapas y Cancelar; sin Qt cuenta igual).
+- herramientas_datos.py (label_commands / place_labels: parámetro avance),
+  intercambio.py (plan_importar: parámetro avance), intercambio_ui.py.
+
+Pruebas
+- test_avance: textos, cuenta de objetos, Cancelar sin cambiar el dibujo
+  (IMPORTARSHP y SHPLABEL), un solo redibujo.
+- banco_avance_ventana (ventana real de IngeCAD): 1500 parcelas con base de
+  datos reproyectadas; las etapas se ven, la barra sube, Cancelar con el botón
+  de verdad corta en las dos órdenes.
+
+Para probar (IngeCAD)
+- IMPORTARSHP con un SHP grande y columnas tildadas: se ven las 4 etapas y
+  las cuentas; al terminar, zoom a lo importado y la tabla al día.
+- Lo mismo y Cancelar mientras dice «Leyendo los registros»: nada nuevo.
+- SHPLABEL sobre toda la capa: «Ubicando rótulos... N de M» sube; al final,
+  los rótulos. Repetir y Cancelar: quedan los rótulos de antes.

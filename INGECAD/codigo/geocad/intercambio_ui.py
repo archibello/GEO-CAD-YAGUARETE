@@ -659,21 +659,36 @@ def importar(ctx) -> None:
     if not dlg.exec():
         return
     antes = {e.dxf.handle for e in doc.modelspace()}
+    op = dlg.opciones()
+    # 3.79.0: ventanita de avance (leer, agregar, tabla, redibujar); Cancelar
+    # mientras se leen los registros deja el dibujo como estaba
+    from . import avance as AV
     try:
-        plan = IX.plan_importar(doc, [v.ruta for v in vistas], dlg.opciones())
-    except Exception as exc:  # noqa: BLE001
-        ctx.echo(f"IMPORTARSHP: no se pudo importar ({exc}). No se cambió nada.")
+        con_base = bool(getattr(op, "atributos", False))
+        with AV.Avance(ctx.host, "Importar SHP (IMPORTARSHP)", etapas=4 if con_base else 3) as av:
+            try:
+                plan = IX.plan_importar(doc, [v.ruta for v in vistas], op, av)
+            except AV.Cancelado:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                ctx.echo(f"IMPORTARSHP: no se pudo importar ({exc}). No se cambió nada.")
+                return
+            av.etapa("Agregando al dibujo", total=plan.objetos, cancelable=False)
+            ctx.execute(plan.comando)
+            if con_base:
+                av.etapa("Actualizando la tabla de datos", cancelable=False)
+                try:
+                    from . import puente
+                    puente.table_refresh()
+                except Exception:  # noqa: BLE001 -- sin el módulo de datos
+                    pass
+            # un solo redibujo: antes se pedía otro encima del que lanza IngeCAD
+            av.pantalla(ctx.host)
+    except AV.Cancelado:
+        ctx.echo("IMPORTARSHP cancelado: no se cambió nada.")
         return
-    ctx.execute(plan.comando)
-    _refrescar(ctx)
     _zoom(ctx, [e for e in doc.modelspace() if e.dxf.handle not in antes])
     ctx.echo("IMPORTARSHP: " + IX.resumen_importar(plan))
-    if plan.tablas:
-        try:
-            from . import puente
-            puente.table_refresh()
-        except Exception:  # noqa: BLE001 -- sin el módulo de datos
-            pass
 
 
 # ================================================================== EXPORTARSHP
