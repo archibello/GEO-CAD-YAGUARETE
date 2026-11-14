@@ -1,0 +1,55 @@
+GeoCAD - versión 3.80.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo;
+kmlformato.py, del núcleo, recibe un parámetro opcional que QGIS no usa).
+
+Más barras de avance, y la consulta por ubicación mucho más rápida (Fernando,
+14/11/2026: «Sí, hacé la 3.80.0», después de medir qué otras órdenes hacen
+esperar). Medido con 20 000 polígonos con base de datos.
+
+Consulta por ubicación (SHPSPATIAL)
+- Mucho más rápida: cada objeto se compara sólo con las zonas cercanas (antes,
+  con todas). Mismo resultado que antes (comprobado en 25 casos al azar).
+    500 zonas, «dentro»:              26 s  ->  0,8 s
+    500 zonas, «a una distancia» 10:  561 s (9 min 20 s)  ->  1 s
+- Ventanita «1/2 Comparando con las zonas... N de M (P %)» y
+  «2/2 Seleccionando los objetos». Cancelar: la selección queda como estaba.
+
+REPROYECTAR
+- Ventanita «1/2 Convirtiendo los objetos... N de M (P %)» y
+  «2/2 Actualizando la pantalla» (con 20 000 polígonos, ~10 s). Sin Cancelar:
+  ya se confirmó antes; un solo U lo deshace, como siempre.
+- Un solo redibujo, como en IMPORTARSHP (3.79.0).
+
+Exportar a Google Earth (EXPORTARKML)
+- Ventanita «1/3 Preparando las marcas», «2/3 Escribiendo las marcas» y
+  «3/3 Guardando el archivo» (con 20 000 polígonos, ~6,5 s).
+- Cancelar mientras prepara o escribe: no se escribe nada y un archivo que ya
+  estaba queda como estaba. En un .kml con imágenes, una vez guardadas las
+  imágenes junto al .kml ya no se cancela.
+
+Rótulos que llegan de QGIS (Enviar a IngeCAD con rótulos)
+- La misma ventanita que SHPLABEL mientras se ubican («Ubicando rótulos...
+  N de M»), sin Cancelar: es parte de lo que manda QGIS.
+
+Por dentro
+- datos.py: spatial_select con un índice por caja de las zonas (_IndiceZonas).
+- avance.py: Avance(..., cancelar=False); sin ventana, sobre la activa.
+- kml.py (plan_kml, escribir), kmlformato.py del núcleo (texto_kml, escribir),
+  intercambio.py (el comando de REPROYECTAR cuenta cada objeto la primera
+  vez), intercambio_ui.py, herramientas_datos.py, estilo.py.
+
+Pruebas
+- test_avance: la consulta nueva da lo mismo que la de antes (25 casos al azar:
+  dentro, toca, distancia; zonas cerradas, abiertas, círculos, puntos y una
+  enorme); cuenta y cancela; REPROYECTAR cuenta; EXPORTARKML cuenta y Cancelar
+  no toca el archivo; rótulos de QGIS sin Cancelar.
+- banco_avance_ventana (ventana real de IngeCAD): las cuatro órdenes nuevas,
+  con el botón Cancelar de verdad donde corresponde.
+
+Para probar (IngeCAD)
+- Consulta por ubicación con varias zonas sobre una capa grande: barra y
+  resultado casi enseguida; Cancelar: la selección no cambia.
+- REPROYECTAR todo el dibujo: barra, después «Actualizando la pantalla».
+- EXPORTARKML de una capa grande: tres etapas; Cancelar: no queda archivo.
+- Desde QGIS, Enviar a IngeCAD una capa con rótulos: «Ubicando rótulos».

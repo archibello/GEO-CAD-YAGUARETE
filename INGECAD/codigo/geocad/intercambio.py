@@ -538,7 +538,10 @@ class ReproyectarCommand(Command):
 
     def do(self, document) -> None:
         self.hechos, self.salteados = [], Counter()
+        avance = getattr(self, "avance", None)    # 3.80.0: sólo la primera vez (REPROYECTAR)
         for e in self.entidades:
+            if avance is not None:
+                avance.paso()
             foto = _foto(e)
             try:
                 reproyectar_entidad(e, self.proy, document)

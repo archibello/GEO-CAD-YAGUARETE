@@ -599,16 +599,100 @@ def relation(feature_rings, zone_rings, mode: str, distance: float = 0.0) -> boo
     return best <= distance
 
 
-def spatial_select(document, key: str, zone_entities, mode: str, distance: float = 0.0):
-    """FIDs de la capa que cumplen la relación con alguna de las zonas."""
+def _caja(pts):
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+class _IndiceZonas:
+    """Los anillos de las zonas en una grilla por caja (3.80.0).
+
+    Cualquier relación que cuenta (un punto adentro, un cruce, un vértice
+    de la zona dentro del objeto, o la distancia hasta ``margen``) necesita
+    que la caja del anillo y la del objeto (agrandada en ``margen``) se
+    toquen: los anillos lejanos no cambian el resultado y no se miran.
+    Antes cada objeto se comparaba con todas las zonas: 500 zonas a 10 m
+    sobre 20 000 polígonos tardaba 561 s."""
+
+    MAX_CELDAS = 4096                     # un anillo enorme va a la lista «grandes»
+
+    def __init__(self, anillos) -> None:
+        self.anillos = [r for r in anillos if r[0]]
+        self.cajas = [_caja(pts) for pts, _c in self.anillos]
+        self.grandes: list[int] = []
+        self.celdas: dict = {}
+        if not self.cajas:
+            self.lado = 1.0
+            return
+        x0 = min(c[0] for c in self.cajas)
+        y0 = min(c[1] for c in self.cajas)
+        x1 = max(c[2] for c in self.cajas)
+        y1 = max(c[3] for c in self.cajas)
+        tamanos = sorted(max(c[2] - c[0], c[3] - c[1]) for c in self.cajas)
+        mediana = tamanos[len(tamanos) // 2]
+        extension = max(x1 - x0, y1 - y0, 1e-9)
+        self.lado = max(mediana, extension / 512, 1e-9)
+        for i, c in enumerate(self.cajas):
+            celdas = self._celdas(c, 0.0)
+            if celdas is None:
+                self.grandes.append(i)
+                continue
+            for k in celdas:
+                self.celdas.setdefault(k, []).append(i)
+
+    def _celdas(self, c, margen):
+        lado = self.lado
+        i0, j0 = math.floor((c[0] - margen) / lado), math.floor((c[1] - margen) / lado)
+        i1, j1 = math.floor((c[2] + margen) / lado), math.floor((c[3] + margen) / lado)
+        if (i1 - i0 + 1) * (j1 - j0 + 1) > self.MAX_CELDAS:
+            return None
+        return [(i, j) for i in range(i0, i1 + 1) for j in range(j0, j1 + 1)]
+
+    def cerca(self, caja, margen):
+        """Los anillos cuya caja toca ``caja`` agrandada en ``margen``."""
+        celdas = self._celdas(caja, margen)
+        if celdas is None:
+            candidatos = range(len(self.anillos))
+        else:
+            vistos = set(self.grandes)
+            for k in celdas:
+                vistos.update(self.celdas.get(k, ()))
+            candidatos = sorted(vistos)
+        x0, y0, x1, y1 = caja[0] - margen, caja[1] - margen, caja[2] + margen, caja[3] + margen
+        return [self.anillos[i] for i in candidatos
+                if self.cajas[i][0] <= x1 and self.cajas[i][2] >= x0
+                and self.cajas[i][1] <= y1 and self.cajas[i][3] >= y0]
+
+
+def spatial_select(document, key: str, zone_entities, mode: str, distance: float = 0.0,
+                   avance=None):
+    """FIDs de la capa que cumplen la relación con alguna de las zonas.
+
+    3.80.0: cada objeto se compara sólo con las zonas cercanas (mismo
+    resultado, mucho más rápido); ``avance`` (avance.Avance) cuenta cada
+    objeto y puede levantar avance.Cancelado (sólo se lee)."""
     zone = [r for e in zone_entities for r in entity_rings(e)]
     out = set()
     by_fid: dict[int, list] = {}
     for fid, e in tagged(document, key):
         by_fid.setdefault(fid, []).append(e)
+    if avance is not None:
+        avance.etapa("Comparando con las zonas", total=len(by_fid))
+    if mode != "distancia" and not any(len(pts) > 1 for pts, _c in zone):
+        return out                         # sin tramos de zona no hay dentro ni toca
+    indice = _IndiceZonas(zone)
+    margen = (max(distance, 0.0) if mode == "distancia" else 0.0)
+    margen += 1e-6 * max(1.0, indice.lado)
     for fid, ents in by_fid.items():
+        if avance is not None:
+            avance.paso()
         rings = [r for e in ents for r in entity_rings(e)]
-        if relation(rings, zone, mode, distance):
+        pts = [p for r, _c in rings for p in r]
+        if not pts:
+            continue
+        cercanas = indice.cerca(_caja(pts), margen)
+        if cercanas and relation(rings, cercanas, mode, distance):
             out.add(fid)
     return out
 

@@ -190,7 +190,8 @@ def desarmar(entidades, doc, nivel: int = 0):
 
 def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
              relleno: int = RELLENO, cerradas_como_poligono: bool = True,
-             campo_nombre: str = "", ruta_dibujo=None) -> PlanKml:
+             campo_nombre: str = "", ruta_dibujo=None,
+             avance=None) -> PlanKml:
     """Lo elegido como marcas en WGS 84. ``campo_nombre``: el atributo del
     que sale el nombre de líneas y polígonos (si no, «capa número»).
     ``ruta_dibujo``: para hallar las imágenes con ruta relativa."""
@@ -204,7 +205,12 @@ def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
 
     marcas, salteados, cuenta = [], Counter(), Counter()
     superposiciones = []
-    for e in desarmar(entidades, doc):
+    todas = list(desarmar(entidades, doc))
+    if avance is not None:
+        avance.etapa("Preparando las marcas", total=len(todas))
+    for e in todas:
+        if avance is not None:
+            avance.paso()
         t = e.dxftype()
         if t == "IMAGE":
             s = superposicion(e, ruta_dibujo, proy)
@@ -297,9 +303,9 @@ def png(archivo) -> bytes | None:
     return buf.getvalue()
 
 
-def escribir(plan: PlanKml, ruta) -> Path:
+def escribir(plan: PlanKml, ruta, avance=None) -> Path:
     """El KMZ o KML (la escritura está en el núcleo: kmlformato.py)."""
-    return F.escribir(plan, ruta, png)
+    return F.escribir(plan, ruta, png, avance)
 
 
 def resumen(plan: PlanKml, ruta) -> str:

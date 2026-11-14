@@ -460,8 +460,16 @@ def reproyectar(ctx, destino: str = "") -> None:
         texto += f"\n\n{conectados} objeto(s) de capas conectadas no se tocan."
     if not _confirmar(ctx.host, texto + "\n\nUn solo U lo deshace.", "Reproyectar"):
         return
-    ctx.execute(cmd)
-    _refrescar(ctx)
+    # 3.80.0: ventanita de avance (convertir, redibujar); ya confirmado, no se cancela
+    from . import avance as AV
+    with AV.Avance(ctx.host, "REPROYECTAR", etapas=2) as av:
+        av.etapa("Convirtiendo los objetos", total=n, cancelable=False)
+        cmd.avance = av
+        try:
+            ctx.execute(cmd)
+        finally:
+            cmd.avance = None           # rehacer (Ctrl+Y) ya no la usa
+        av.pantalla(ctx.host)
     ctx.echo("REPROYECTAR: " + IX.resumen_reproyeccion(cmd, conectados))
 
 
@@ -968,10 +976,16 @@ def exportar_kml(ctx) -> None:
         entidades = [e for e in doc.modelspace() if e.dxf.get("layer", "0") in capas]
     else:
         entidades = list(doc.modelspace())
+    # 3.80.0: ventanita de avance; Cancelar antes de guardar no toca el archivo
+    from . import avance as AV
     try:
-        plan = KML.plan_kml(entidades, doc, base, dlg.por_capa.isChecked(), dlg.relleno.value(),
+        with AV.Avance(ctx.host, "Exportar a Google Earth (EXPORTARKML)", etapas=3) as av:
+            plan = KML.plan_kml(entidades, doc, base, dlg.por_capa.isChecked(), dlg.relleno.value(),
                                 dlg.poligonos.isChecked(), dlg.nombre.currentData() or "",
-                                archivo)
+                                archivo, avance=av)
+    except AV.Cancelado:
+        ctx.echo("EXPORTARKML cancelado: no se escribió nada.")
+        return
     except Exception as exc:  # noqa: BLE001
         ctx.echo(f"EXPORTARKML: {exc}")
         return
@@ -983,7 +997,13 @@ def exportar_kml(ctx) -> None:
                                                      "¿Reemplazarlo?", "Reemplazar"):
         return
     try:
-        KML.escribir(plan, destino)
+        with AV.Avance(ctx.host, "Exportar a Google Earth (EXPORTARKML)", etapas=3) as av:
+            av.numero = 1                   # sigue la cuenta: 2/3 y 3/3
+            av.etapa("Escribiendo las marcas", total=len(plan.marcas) + len(plan.superposiciones))
+            KML.escribir(plan, destino, av)
+    except AV.Cancelado:
+        ctx.echo("EXPORTARKML cancelado: no se escribió nada.")
+        return
     except Exception as exc:  # noqa: BLE001
         ctx.echo(f"EXPORTARKML: no se pudo escribir {destino} ({exc}).")
         return

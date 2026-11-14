@@ -65,8 +65,12 @@ class Avance:
             av.pantalla(ventana)          # espera el redibujo de IngeCAD
     """
 
-    def __init__(self, parent, titulo: str, etapas: int = 1, demora: float = 0.4) -> None:
+    def __init__(self, parent, titulo: str, etapas: int = 1, demora: float = 0.4,
+                 cancelar: bool = True) -> None:
+        """``cancelar=False`` (3.80.0): ninguna etapa se puede cancelar (lo que
+        llega de QGIS: el resto de la carga sigue igual)."""
         self.parent, self.titulo, self.etapas, self.demora = parent, titulo, etapas, demora
+        self.permite_cancelar = cancelar
         self.qt = _qt()
         self.dlg = None
         self.numero = 0
@@ -107,7 +111,7 @@ class Avance:
     def etapa(self, texto: str, total: int = 0, cancelable: bool = True) -> None:
         self.numero += 1
         self.texto, self.total, self.hechos = texto, max(0, int(total)), 0
-        self.cancelable = cancelable
+        self.cancelable = cancelable and self.permite_cancelar
         self.registro.append((self.numero, texto, self.total))
         self._refrescar(forzar=True)
 
@@ -133,7 +137,8 @@ class Avance:
     # ------------------------------------------------------------ pantalla
     def _crear(self) -> None:
         QtCore, QtWidgets = self.qt
-        d = QtWidgets.QProgressDialog(self.parent)
+        # sin ventana (lo que llega de QGIS): sobre la ventana activa de IngeCAD
+        d = QtWidgets.QProgressDialog(self.parent or QtWidgets.QApplication.activeWindow())
         d.setWindowTitle(f"{self.titulo} — GEO-CAD-YAGUARETÉ")
         d.setRange(0, 100)
         d.setMinimumDuration(0)

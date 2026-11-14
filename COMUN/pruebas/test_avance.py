@@ -166,4 +166,117 @@ with AV.Avance(None, "PRUEBA", etapas=2) as av:
     assert v.pedidos == ["fondo"]
 print("ok un solo redibujo")
 
+# ============================================================= 3.80.0
+import random, shapefile
+D = import_module("ingecad_plugin_geocad.datos")
+KML = import_module("ingecad_plugin_geocad.kml")
+ES = import_module("ingecad_plugin_geocad.estilo")
+from core.georef import Georef, write_georef
+
+# ------------------------------------------------------------- 6. consulta por ubicación: igual que antes
+random.seed(7)
+ruta = os.path.join(tempfile.mkdtemp(), "azar")
+w = shapefile.Writer(ruta, shapeType=shapefile.POLYGON, encoding="utf-8")
+w.field("N", "N", 6)
+for k in range(300):
+    x, y = random.uniform(0, 1000), random.uniform(0, 1000)
+    a_, b_ = random.uniform(2, 40), random.uniform(2, 40)
+    w.poly([[(x, y), (x, y + b_), (x + a_, y + b_), (x + a_, y), (x, y)]])
+    w.record(k)
+w.close()
+doc = Document(ezdxf.new("R2018")); hist = History(doc); msp = doc.modelspace()
+hist.execute(IX.plan_importar(doc.doc, [ruta + ".shp"], IX.OpcionesImportar(adoptar=False)).comando)
+zonas = []
+for k in range(60):
+    x, y = random.uniform(-50, 1050), random.uniform(-50, 1050)
+    tipo = k % 4
+    if tipo == 0:
+        a_ = random.uniform(5, 120)
+        zonas.append(msp.add_lwpolyline([(x, y), (x + a_, y), (x + a_, y + a_), (x, y + a_)], close=True))
+    elif tipo == 1:
+        zonas.append(msp.add_lwpolyline([(x, y), (x + random.uniform(-200, 200), y + random.uniform(-200, 200))]))
+    elif tipo == 2:
+        zonas.append(msp.add_circle((x, y), random.uniform(1, 60)))
+    else:
+        zonas.append(msp.add_point((x, y)))
+zonas.append(msp.add_lwpolyline([(-10, -10), (1100, -10), (1100, 1100), (-10, 1100)], close=True))  # enorme
+
+
+def vieja(zs, mode, dist=0.0):
+    """La cuenta de antes: cada objeto contra todas las zonas."""
+    zone = [r for e in zs for r in D.entity_rings(e)]
+    por = {}
+    for fid, e in D.tagged(doc, "azar"):
+        por.setdefault(fid, []).append(e)
+    return {fid for fid, ents in por.items()
+            if D.relation([r for e in ents for r in D.entity_rings(e)], zone, mode, dist)}
+
+
+casos = 0
+for zs in (zonas[:-1], zonas, zonas[2:3], zonas[3:4], [zonas[1], zonas[3]]):
+    for mode, dist in (("dentro", 0), ("toca", 0), ("distancia", 0), ("distancia", 7.5), ("distancia", 60)):
+        nueva = D.spatial_select(doc, "azar", zs, mode, dist)
+        assert nueva == vieja(zs, mode, dist), (mode, dist, len(zs))
+        casos += 1
+assert D.spatial_select(doc, "azar", zonas[-1:], "dentro") == set(range(300))  # la enorme las cubre
+av = AV.Avance(None, "SHPSPATIAL", etapas=2)
+D.spatial_select(doc, "azar", zonas[:-1], "toca", 0, av)
+assert av.registro[0] == (1, "Comparando con las zonas", 300) and av.hechos == 300
+try:
+    D.spatial_select(doc, "azar", zonas[:-1], "toca", 0, CortaEn(50))
+    raise AssertionError("debía cancelar")
+except AV.Cancelado:
+    pass
+print(f"ok consulta por ubicación: igual que la cuenta de antes en {casos} casos; cuenta y cancela")
+
+# ------------------------------------------------------------- 7. REPROYECTAR cuenta cada objeto
+write_georef(doc.doc, Georef(crs="EPSG:5347"))
+cmd, _c = IX.preparar_reproyeccion(doc.doc, "EPSG:22195")
+av = AV.Avance(None, "REPROYECTAR", etapas=2)
+av.etapa("Convirtiendo los objetos", total=len(cmd.entidades), cancelable=False)
+cmd.avance = av
+hist.execute(cmd)
+cmd.avance = None
+assert av.hechos == len(cmd.entidades) > 300
+hist.undo(); hist.redo()                                    # sin avance: como siempre
+print("ok REPROYECTAR cuenta cada objeto")
+
+# ------------------------------------------------------------- 8. EXPORTARKML
+hist.undo()
+ents_kml = [e for e in msp if e.dxf.layer == "azar"]
+av = AV.Avance(None, "EXPORTARKML", etapas=3)
+plan = KML.plan_kml(ents_kml, doc.doc, "Prueba", avance=av)
+assert av.registro[0] == (1, "Preparando las marcas", 300) and av.hechos == 300
+try:
+    KML.plan_kml(ents_kml, doc.doc, "Prueba", avance=CortaEn(10))
+    raise AssertionError("debía cancelar")
+except AV.Cancelado:
+    pass
+carpeta = Path(tempfile.mkdtemp())
+av.etapa("Escribiendo las marcas", total=len(plan.marcas))
+KML.escribir(plan, carpeta / "a.kmz", av)
+assert (carpeta / "a.kmz").exists() and av.registro[-1] == (3, "Guardando el archivo", 0)
+assert av.registro[-2][1] == "Escribiendo las marcas" and av.hechos == 0
+(carpeta / "b.kmz").write_text("lo de antes")
+corta = CortaEn(0)
+corta.numero = 0
+corta.etapa("Escribiendo las marcas", total=len(plan.marcas))
+corta.cancelar()
+try:
+    KML.escribir(plan, carpeta / "b.kmz", corta)
+    raise AssertionError("debía cancelar")
+except AV.Cancelado:
+    pass
+assert (carpeta / "b.kmz").read_text() == "lo de antes"             # el archivo que había queda
+assert sorted(p.name for p in carpeta.iterdir()) == ["a.kmz", "b.kmz"]  # sin temporales
+print("ok EXPORTARKML: cuenta marcas; Cancelar no toca el archivo")
+
+# ------------------------------------------------------------- 9. rótulos de QGIS: sin Cancelar
+av = AV.Avance(None, "QGIS", cancelar=False)
+av.etapa("Ubicando rótulos", total=3)
+av.cancelar()
+av.paso(); av.paso(); av.paso()
+assert not av.cancelado and not av.cancelable
+print("ok rótulos que llegan de QGIS: la ventanita no se puede cancelar")
+
 print("TODO OK")

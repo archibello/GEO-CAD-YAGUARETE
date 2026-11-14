@@ -1,5 +1,6 @@
 """Banco con la VENTANA REAL de IngeCAD (sin pantalla, Qt «offscreen»):
-la ventanita de avance de SHPLABEL e IMPORTARSHP (3.79.0).
+la ventanita de avance de SHPLABEL e IMPORTARSHP (3.79.0), y de SHPSPATIAL,
+EXPORTARKML, REPROYECTAR y los rótulos que llegan de QGIS (3.80.0).
 
 Con 1500 parcelas con base de datos (generadas acá, en Campo Inchauspe, a
 un dibujo en POSGAR 2007: se reproyectan):
@@ -76,15 +77,15 @@ class Espia:
     """Anota lo que muestra la ventanita (textos y valores) cada vez que se repinta."""
 
     def __init__(self):
-        self.textos, self.valores, self.dialogos = [], [], set()
+        self.textos, self.valores, self.dialogos, self.botones = [], [], set(), []
         self.cancelar_en = None          # texto: al verlo, aprieta el botón Cancelar de verdad
         original = AV.Avance._refrescar
         espia = self
         orig_init = AV.Avance.__init__
 
-        def init(av, parent, titulo, etapas=1, demora=0.4):
+        def init(av, parent, titulo, etapas=1, demora=0.4, **kw):
             # en el banco aparece enseguida (lo de 1500 dura menos que la demora)
-            orig_init(av, parent, titulo, etapas, 0.0)
+            orig_init(av, parent, titulo, etapas, 0.0, **kw)
         AV.Avance.__init__ = init
 
         def refrescar(av, forzar=False):
@@ -93,6 +94,7 @@ class Espia:
                 espia.dialogos.add(id(av.dlg))
                 espia.textos.append(av.dlg.labelText())
                 espia.valores.append(av.dlg.value())
+                espia.botones.append(av._boton.isEnabled())
                 if espia.cancelar_en and espia.cancelar_en in av.dlg.labelText() and av.hechos > 100:
                     espia.cancelar_en = None
                     boton = av.dlg.findChild(QPushButton)
@@ -107,7 +109,7 @@ class Espia:
         AV.Avance.pantalla = pantalla
 
     def limpiar(self):
-        self.textos, self.valores, self.dialogos = [], [], set()
+        self.textos, self.valores, self.dialogos, self.botones = [], [], set(), []
 
 
 espia = Espia()
@@ -133,6 +135,7 @@ class Ctx:
         self.ecos.append(t)
 
     def execute(self, c):
+        self.ultimo = c
         win.tools._execute(c)
 
 
@@ -200,6 +203,87 @@ ver("SHPLABEL: la barra avanza", espia.valores == sorted(espia.valores[:len(ubic
 ver("SHPLABEL: «2/3 Escribiendo» y «3/3 Actualizando la pantalla»",
     any(t.startswith("2/3  Escribiendo los rótulos") for t in espia.textos)
     and any(t.startswith("3/3  Actualizando la pantalla") for t in espia.textos))
+
+# ------------------------------------------------------------- 3.80.0: SHPSPATIAL
+D = import_module("ingecad_plugin_geocad.datos")
+ES = import_module("ingecad_plugin_geocad.estilo")
+ms = doc.modelspace()
+lotes = [e for e in ms if e.dxftype() == "LWPOLYLINE" and e.dxf.layer == "lotes"]
+x0, y0 = min(p[0] for p in lotes[0].get_points("xy")), min(p[1] for p in lotes[0].get_points("xy"))
+zonas = [ms.add_lwpolyline([(x0 + 200 * i - 5, y0 - 5), (x0 + 200 * i + 75, y0 - 5),
+                            (x0 + 200 * i + 75, y0 + 75), (x0 + 200 * i - 5, y0 + 75)], close=True)
+         for i in range(10)]
+consulta = HD.SpatialQueryTool.__new__(HD.SpatialQueryTool)
+consulta.ctx = types.SimpleNamespace(services=win.tools, ecos=[], finish=lambda: None,
+                                     echo=lambda t: consulta.ctx.ecos.append(t),
+                                     ask_choice=lambda q, ops, defecto=None: ops[0] if "Condición" in q else defecto,
+                                     ask_text=lambda q, d="": d)
+HD.choose_link = lambda ctx, document, *a, **k: "lotes"
+espia.limpiar()
+espia.cancelar_en = "Comparando con las zonas"
+consulta.on_selection(zonas)
+ver("SHPSPATIAL: Cancelar con el botón corta", consulta.ctx.ecos[-1:] == ["SHPSPATIAL cancelado: no se cambió la selección."],
+    consulta.ctx.ecos[-1:])
+espia.limpiar()
+t0 = time.monotonic()
+consulta.on_selection(zonas)
+dt = time.monotonic() - t0
+esperado = D.spatial_select(doc, "lotes", zonas, "dentro")
+ver("SHPSPATIAL: selecciona lo de adentro", len(esperado) > 0
+    and {e.dxf.handle for e in HD.entities_of(doc, "lotes", esperado)} == set(win.tools.selection)
+    and consulta.ctx.ecos[-1].startswith(f"{len(esperado)} objeto(s) de lotes"), f"{consulta.ctx.ecos[-1]} ({dt:.1f} s)")
+ver("SHPSPATIAL: «1/2  Comparando con las zonas... N de 1500»",
+    any(t.startswith("1/2  Comparando con las zonas...") and "de 1500 (" in t for t in espia.textos))
+
+# ------------------------------------------------------------- 3.80.0: EXPORTARKML
+carpeta = Path(tempfile.mkdtemp(prefix="banco-kml-"))
+UI.ExportarKmlDialog.exec = lambda self: (self.todo.setChecked(True), True)[1]
+UI.ExportarKmlDialog.archivo = lambda self: carpeta / "lotes.kmz"
+win.tools.selection = set()
+espia.limpiar(); ctx.ecos = []
+espia.cancelar_en = "Preparando las marcas"
+UI.exportar_kml(ctx)
+ver("EXPORTARKML: Cancelar al preparar", ctx.ecos[-1:] == ["EXPORTARKML cancelado: no se escribió nada."]
+    and not list(carpeta.iterdir()), ctx.ecos[-1:])
+espia.limpiar()
+espia.cancelar_en = "Escribiendo las marcas"
+UI.exportar_kml(ctx)
+ver("EXPORTARKML: Cancelar al escribir", ctx.ecos[-1:] == ["EXPORTARKML cancelado: no se escribió nada."]
+    and not list(carpeta.iterdir()), ctx.ecos[-1:])
+espia.limpiar()
+UI.exportar_kml(ctx)
+ver("EXPORTARKML: escribió", (carpeta / "lotes.kmz").exists() and ctx.ecos[-1].startswith("EXPORTARKML:"),
+    ctx.ecos[-1][:60])
+for etapa in ("1/3  Preparando las marcas...", "2/3  Escribiendo las marcas...", "3/3  Guardando el archivo..."):
+    ver(f"EXPORTARKML: «{etapa}»", any(t.startswith(etapa) for t in espia.textos))
+
+# ------------------------------------------------------------- 3.80.0: rótulos que llegan de QGIS
+feats = []
+for e in lotes:
+    fid = D.fid_of(doc, e, "lotes")
+    feats.append((fid, None, [[list(p) + [0.0] for p in e.get_points("xy")]], None))
+link = types.SimpleNamespace(key="lotes", kind="polygon")
+espia.limpiar()
+cmds, info = ES.sig_label_commands(doc, link, {str(f[0]): [f"Q{f[0]}", 4.0] for f in feats}, "PARC",
+                                   feats, {f[0] for f in feats})
+ver("Rótulos de QGIS: los ubica", info["n"] == N, info)
+ver("Rótulos de QGIS: «Ubicando rótulos... N de 1500»",
+    any(t.startswith("Ubicando rótulos...") and "de 1500 (" in t for t in espia.textos))
+ver("Rótulos de QGIS: sin Cancelar", all(not d for d in espia.botones))
+
+# ------------------------------------------------------------- 3.80.0: REPROYECTAR
+UI.ReproyectarDialog.exec = lambda self: True
+UI._confirmar = lambda *a, **k: True
+espia.limpiar(); regens.clear(); ctx.ecos = []
+antes_xy = lotes[0].get_points("xy")[0]
+UI.reproyectar(ctx, "EPSG:22196")
+ver("REPROYECTAR: convirtió", ctx.ecos[-1:] and ctx.ecos[-1].startswith("REPROYECTAR:")
+    and abs(lotes[0].get_points("xy")[0][0] - antes_xy[0]) > 1, ctx.ecos[-1:])
+ver("REPROYECTAR: «1/2  Convirtiendo los objetos... N de M» y «2/2  Actualizando la pantalla»",
+    any(t.startswith("1/2  Convirtiendo los objetos...") and " de " in t for t in espia.textos)
+    and any(t.startswith("2/2  Actualizando la pantalla") for t in espia.textos))
+ver("REPROYECTAR: sin Cancelar (ya se confirmó)", all(not d for d in espia.botones))
+ver("REPROYECTAR: rehacer sin la ventanita", getattr(ctx.ultimo, "avance", 1) is None)
 
 win.document.dirty = False
 if fallas:

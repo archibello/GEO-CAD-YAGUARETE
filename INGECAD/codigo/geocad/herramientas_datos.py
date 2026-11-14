@@ -259,9 +259,19 @@ class SpatialQueryTool(Tool):
                         return
                 code = ("dentro", "toca", "distancia")[self.MODES.index(mode)]
                 zone = [e for e in entities if datos.fid_of(document, e, key) is None] or entities
-                fids = datos.spatial_select(document, key, zone, code, dist)
-                ents = entities_of(document, key, fids)
-                select(self.ctx, ents)
+                # 3.80.0: con la ventanita de avance; Cancelar no cambia nada
+                from . import avance as AV
+                try:
+                    with AV.Avance(getattr(self.ctx.services, "window", None),
+                                   "Consulta por ubicación (SHPSPATIAL)", etapas=2) as av:
+                        fids = datos.spatial_select(document, key, zone, code, dist, av)
+                        av.etapa("Seleccionando los objetos", cancelable=False)
+                        ents = entities_of(document, key, fids)
+                        select(self.ctx, ents)
+                except AV.Cancelado:
+                    self.ctx.echo("SHPSPATIAL cancelado: no se cambió la selección.")
+                    self.ctx.finish()
+                    return
                 self.ctx.echo(f"{len(fids)} objeto(s) de {key} cumplen «{mode.lower()}»"
                               + (f" ({dist:g})" if code == "distancia" else "") + ".")
         self.ctx.finish()

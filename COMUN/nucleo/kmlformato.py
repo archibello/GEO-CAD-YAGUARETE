@@ -190,7 +190,8 @@ def _superposicion(destino, s: Superposicion, orden: int) -> None:
     ET.SubElement(quad, _q("coordinates")).text = _coords(s.esquinas)
 
 
-def texto_kml(plan: PlanKml) -> str:
+def texto_kml(plan: PlanKml, avance=None) -> str:
+    """``avance`` (3.80.0, IngeCAD): un avance.Avance; cuenta cada marca."""
     ET.register_namespace("", KML_NS)
     ET.register_namespace("gx", GX_NS)
     raiz = ET.Element(_q("kml"))
@@ -210,6 +211,8 @@ def texto_kml(plan: PlanKml) -> str:
             destino = ET.SubElement(d, _q("Folder"))
             ET.SubElement(destino, _q("name")).text = nombre_c or "0"
         for m in marcas:
+            if avance is not None:
+                avance.paso()
             if isinstance(m, Superposicion):
                 _superposicion(destino, m, orden[id(m)])
                 continue
@@ -263,7 +266,7 @@ def guardar_imagen(datos: bytes, carpeta, nombre: str) -> Path:
     raise OSError("demasiadas imágenes con el mismo nombre")
 
 
-def escribir(plan: PlanKml, ruta, a_png=None) -> Path:
+def escribir(plan: PlanKml, ruta, a_png=None, avance=None) -> Path:
     """``.kmz`` (un zip con doc.kml, lo que abre Google Earth con doble
     clic) o ``.kml`` (texto). Se escribe a un temporal y se reemplaza al
     final: si algo falla, el archivo que había queda como estaba. Las
@@ -271,7 +274,10 @@ def escribir(plan: PlanKml, ruta, a_png=None) -> Path:
     junto al .kml. Esa carpeta puede ser la de las imágenes del dibujo
     (PEGARIMAGEN, ASPECTOIMAGEN): ahí no se pisa nada; un PNG que ya está
     se nombra tal cual. ``a_png(archivo)``: los bytes en PNG, o None si ya lo
-    es (sin ella, los archivos se copian tal cual: sólo sirve para PNG)."""
+    es (sin ella, los archivos se copian tal cual: sólo sirve para PNG).
+    ``avance`` (3.80.0, IngeCAD): cuenta cada marca mientras arma el texto
+    (ahí se puede cancelar: todavía no se tocó el archivo) y después pasa a
+    «Guardando el archivo»."""
     png = a_png or (lambda _archivo: None)
     ruta = Path(ruta)
     es_kml = ruta.suffix.lower() == ".kml"
@@ -292,12 +298,20 @@ def escribir(plan: PlanKml, ruta, a_png=None) -> Path:
                 final[n] = guardar_imagen(datos, ruta.parent / carpeta, n).name
             for s, n in zip(plan.superposiciones, nombres):
                 s.href = f"{carpeta}/{final[n]}"
-            tmp.write_text(texto_kml(plan), encoding="utf-8")
+            if avance is not None and archivos:
+                avance.cancelable = False      # las imágenes ya se guardaron junto al .kml
+            texto = texto_kml(plan, avance)
+            if avance is not None:
+                avance.etapa("Guardando el archivo", cancelable=False)
+            tmp.write_text(texto, encoding="utf-8")
         else:
             for s, n in zip(plan.superposiciones, nombres):
                 s.href = f"{carpeta}/{n}"
+            texto = texto_kml(plan, avance)
+            if avance is not None:
+                avance.etapa("Guardando el archivo", cancelable=False)
             with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
-                z.writestr("doc.kml", texto_kml(plan))
+                z.writestr("doc.kml", texto)
                 for n, archivo in archivos:      # el PNG ya viene comprimido
                     datos = png(archivo)
                     if datos is None:

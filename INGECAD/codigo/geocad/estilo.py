@@ -342,8 +342,12 @@ def sig_label_commands(document, link, rotulos: dict, campo: str, features, fids
     info = {"n": 0, "circulos": 0, "omitidos": 0}
     if not items:
         return [], info
-    command, n, _old = place_labels(document, link.key, campo, items, heights,
-                                    _options(pedidas), {f for f, _t, _r in items})
+    # 3.80.0: la misma ventanita de SHPLABEL mientras se ubican (sin Cancelar:
+    # es parte de lo que manda QGIS)
+    from . import avance as AV
+    with AV.Avance(None, "Rótulos que llegan de QGIS", cancelar=False) as av:
+        command, n, _old = place_labels(document, link.key, campo, items, heights,
+                                        _options(pedidas), {f for f, _t, _r in items}, av)
     info.update(n=n, omitidos=command.omitidos,
                 circulos=sum(1 for c in command.commands if getattr(c, "name", "") == "SHP label circle"))
     return ([command] if n else []), info
