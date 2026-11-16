@@ -47,7 +47,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.84.0"
+VERSION = "3.84.1"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -120,6 +120,7 @@ def _document_open(ctx, document):
     legibles.instalar()
     seleccion.aplicar_autocompletar(ctx.host)
     papel.preparar_combo(ctx.host)
+    papel.enganchar_ventanas(ctx.host)
     teclado_ingecad.aplicar(ctx.host)
     pegar_lugar_ingecad.aplicar(ctx.host)
     color_menu.aplicar(ctx.host)
@@ -454,7 +455,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.84.0",
+        version="3.84.1",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -491,6 +492,7 @@ def aplicar_modulos(window) -> None:
     color_menu.aplicar(window)
     agarres_ingecad.aplicar(window)
     papel.preparar_combo(window)
+    papel.enganchar_ventanas(window)
     if not modulos.activo(PROGRAMA, "googleearth"):
         googleearth_cmd.apagar()            # ventanita, servidor, atajo y enlace fuera
     if modulos.activo(PROGRAMA, "puente"):

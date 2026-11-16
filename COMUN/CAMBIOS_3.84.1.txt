@@ -1,0 +1,41 @@
+GeoCAD - versión 3.84.1
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Espacio papel: la ventana gráfica borrada ya no queda como «fantasma»
+(Fernando, 16/11/2026, preparando una lámina: «no me deja borrar el viewport
+que viene por defecto»; clic en el borde + Supr, y con «E» tampoco).
+
+Qué pasaba (error de IngeCAD 0.6.7 a 0.8.0; pasa también sin GeoCAD)
+   El primer Supr (o BORRA) SÍ borraba la ventana del dibujo, pero IngeCAD
+   no la sacaba de su índice de selección: un comando que toca una ventana
+   va por la regeneración y se saltea el parche del índice. Entonces:
+   - un clic en el borde la volvía a elegir (agarres, «1 selected» y
+     «Viewport» en Propiedades), aunque ya no existía;
+   - el siguiente Supr o BORRA fallaba callado (ezdxf: «x not in list»):
+     no cambiaba nada.
+   En IngeCAD solo, ir a Model y volver a la presentación lo limpia; REGEN no.
+
+Ahora
+   Después de cada comando, GeoCAD saca del índice de selección, de las
+   referencias y de lo elegido las ventanas que el comando dejó fuera del
+   dibujo. Supr y BORRA funcionan como siempre; U la devuelve y se puede
+   elegir y borrar otra vez; rehacer, igual. Si una IngeCAD nueva lo arregla,
+   GeoCAD no hace nada de más.
+
+Por dentro
+- papel.py (módulo Papel): ventanas_borradas(), olvidar_ventanas() y
+  enganchar_ventanas(): un gancho en el controlador de la ventana (como
+  Agarres), no en la clase, para no pisarse con el envoltorio de
+  redibujo_imagenes. Apagado el módulo, se saca.
+- __init__.py: el gancho se pone al abrir un dibujo y al cambiar los módulos.
+
+Pruebas
+- test_ventana_borrada (sin Qt): el fantasma de IngeCAD reproducido; con el
+  gancho, sin fantasma; deshacer y borrar otra vez; lo demás no se toca;
+  comando compuesto; RemoveViewportCommand; módulo apagado.
+- banco_ventana_borrada (ventana real, Python del Flatpak de IngeCAD):
+  presentación nueva, clic en el borde, la acción Supr real, U, rehacer y
+  BORRA, con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+
+Para probar (IngeCAD): VB1-VB4 en 02_PRUEBAS_MANUALES.txt.

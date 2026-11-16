@@ -30,6 +30,17 @@ GeoCAD hace que IngeCAD respete esa escala, como AutoCAD:
    PUBLICAR y VISTAPREVIA). La presentación, la vista previa y el PDF
    muestran la misma hoja (prueba test_impresion_etapas).
 
+7. (3.84.1) Una ventana gráfica borrada no queda como fantasma. Fernando,
+   16/11/2026: «no me deja borrar el viewport que viene por defecto». El
+   primer Supr (o BORRA) SÍ la borraba, pero IngeCAD (0.6.7 a 0.8.0) no la
+   sacaba de su índice de selección: un comando que toca una ventana va por
+   la regeneración y se saltea el parche del índice. Un clic en su borde la
+   volvía a elegir (agarres, «Viewport» en Propiedades) y el siguiente borrado
+   fallaba callado (ezdxf: «x not in list»). GeoCAD, después de cada comando,
+   saca del índice, de las referencias y de la selección las ventanas que el
+   comando dejó fuera del dibujo. Se engancha en la ventana (como Agarres),
+   para no pisarse con el envoltorio de la clase de redibujo_imagenes.
+
 Con escala 1:1 (dibujos en mm, presentaciones de siempre) nada cambia.
 Apagado el módulo, IngeCAD queda como venía. Las cuentas no usan Qt.
 """
@@ -379,6 +390,81 @@ def preparar_combo(window) -> None:
     combo.setToolTip("Escala de la ventana: elegir de la lista o escribir "
                      "1/100, 1:100, 1/250, 2:1... y Enter (GeoCAD Yaguareté)")
     _refrescar(window)
+
+
+# ------------------------------------------- ventanas borradas (3.84.1)
+def _grupos(command):
+    """Los objetos que toca un comando (y los de sus pasos, si es compuesto)."""
+    for attr in ("entities", "sources", "old_entities", "targets"):
+        grupo = getattr(command, attr, None)
+        if grupo:
+            try:
+                yield from list(grupo)
+            except TypeError:
+                pass
+    entidad = getattr(command, "entity", None)
+    if entidad is not None:
+        yield entidad
+    for paso in getattr(command, "commands", None) or ():
+        yield from _grupos(paso)
+
+
+def ventanas_borradas(command) -> list:
+    """Handles de las ventanas gráficas que el comando dejó fuera del dibujo:
+    BORRA las desengancha (siguen vivas, sin dueño, para deshacer)."""
+    out = []
+    for e in _grupos(command):
+        try:
+            if e is None or e.dxftype() != "VIEWPORT":
+                continue
+            if not e.is_alive or e.dxf.owner is None:
+                out.append(e.dxf.handle)
+        except Exception:  # noqa: BLE001 -- una entidad destruida
+            continue
+    if type(command).__name__ == "RemoveViewportCommand":
+        out.extend(getattr(command, "removed_handles", None) or [])
+    return list(dict.fromkeys(h for h in out if h))
+
+
+def olvidar_ventanas(controlador, handles) -> int:
+    """Saca esas ventanas del índice de selección, de las referencias y de lo
+    elegido. Devuelve cuántas. Si IngeCAD ya las sacó, no hace nada."""
+    handles = list(handles)
+    if not handles:
+        return 0
+    for cache in (getattr(controlador, "index", None),
+                  getattr(controlador, "snap_engine", None)):
+        if cache is not None and hasattr(cache, "remove_handles"):
+            cache.remove_handles(handles)
+    elegidos = set(getattr(controlador, "selection", None) or ())
+    if elegidos & set(handles):
+        controlador.selection = elegidos - set(handles)
+    return len(handles)
+
+
+def _ejecutar(controlador, command, *args, **kwargs):
+    resultado = type(controlador)._execute_command(controlador, command, *args, **kwargs)
+    try:
+        olvidar_ventanas(controlador, ventanas_borradas(command))
+    except Exception:  # noqa: BLE001 -- ante la duda, IngeCAD como venía
+        pass
+    return resultado
+
+
+def enganchar_ventanas(window) -> None:
+    """Pone o saca el gancho en el controlador de esa ventana (al abrir y al
+    cambiar los módulos)."""
+    c = getattr(window, "tools", None)
+    if c is None or not hasattr(type(c), "_execute_command"):
+        return
+    propio = getattr(vars(c).get("_execute_command"), "_geocad_papel", False)
+    if activo():
+        def gancho(command, *args, **kwargs):
+            return _ejecutar(c, command, *args, **kwargs)
+        gancho._geocad_papel = True
+        setattr(c, "_execute_command", gancho)
+    elif propio:
+        delattr(c, "_execute_command")
 
 
 # ------------------------------------------- TRAZAR desde una presentación
