@@ -768,6 +768,27 @@ def feature_measures(entities):
 
 # -- estado de la tabla (sin Qt: el panel sólo lo dibuja) ---------------------------------------
 
+def tramos_de_filas(rows, fids):
+    """Tramos (primera, última) de filas seguidas cuyo fid está en ``fids``.
+
+    3.81.1: la tabla marca la selección del dibujo de una sola vez con estos
+    tramos; marcar fila por fila crecía al cuadrado con miles de parcelas.
+    """
+    elegidos = fids if isinstance(fids, (set, frozenset)) else set(fids)
+    out = []
+    inicio = None
+    for i, r in enumerate(rows):
+        if r.fid in elegidos:
+            if inicio is None:
+                inicio = i
+        elif inicio is not None:
+            out.append((inicio, i - 1))
+            inicio = None
+    if inicio is not None:
+        out.append((inicio, len(rows) - 1))
+    return out
+
+
 class TableState:
     """Filas visibles, columnas, orden y filtro de la tabla de atributos."""
 
@@ -859,7 +880,8 @@ class TableState:
         return self.editable(col) and (row.connected or row.new)
 
     def summary(self, selected_fids=()) -> str:
-        sel = [r for r in self.rows if r.fid in set(selected_fids)]
+        elegidos = set(selected_fids)          # una sola vez (3.81.1: antes, una por fila)
+        sel = [r for r in self.rows if r.fid in elegidos]
         pend = sum(1 for r in self.data.rows if r.pending or r.new)
         conn = sum(1 for r in self.data.rows if r.connected)
         parts = [f"{len(self.rows)} de {len(self.data.rows)} registros"]

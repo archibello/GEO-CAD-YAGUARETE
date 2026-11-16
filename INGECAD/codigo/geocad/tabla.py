@@ -14,18 +14,21 @@ este módulo sólo la dibuja y conecta:
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractTableModel, QItemSelectionModel, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDockWidget,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton,
                                QTableView, QVBoxLayout, QWidget)
 
 from . import datos, puente
+from .datos import tramos_de_filas
 
 PENDING_BG = QColor(255, 243, 176)       # amarillo suave: cambio sin guardar
 NEW_BG = QColor(214, 245, 214)           # verde suave: objeto nuevo
 DOCK_NAME = "PuenteQGIS_TablaAtributos"
 R = Qt.ItemDataRole
+_ELEGIBLE = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+_EDITABLE = _ELEGIBLE | Qt.ItemFlag.ItemIsEditable
 
 
 class AttributeModel(QAbstractTableModel):
@@ -84,11 +87,12 @@ class AttributeModel(QAbstractTableModel):
         return None
 
     def flags(self, index):
-        base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        # Qt la pide por cada celda al marcar filas: con miles de parcelas
+        # tiene que ser barata (3.81.1: banderas armadas una sola vez).
         if self.state is not None and index.isValid() and \
                 self.state.cell_editable(self.state.rows[index.row()], index.column()):
-            base |= Qt.ItemFlag.ItemIsEditable
-        return base
+            return _EDITABLE
+        return _ELEGIBLE
 
     def setData(self, index, value, role=R.EditRole):
         if role != R.EditRole or self.state is None:
@@ -116,6 +120,8 @@ class AttributePanel(QWidget):
         super().__init__(window)
         self.window = window
         self._syncing = False
+        self._ultima_sync = None
+        self._cache_fids = None
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 4, 4, 4)
         top = QHBoxLayout()
@@ -159,7 +165,7 @@ class AttributePanel(QWidget):
         self.select_btn.clicked.connect(self._select_filtered)
         self.table.selectionModel().selectionChanged.connect(self._rows_selected)
         try:
-            window.tools.changed.connect(self.sync_from_drawing)
+            window.tools.changed.connect(self._dibujo_cambio)
         except Exception:
             pass
         self.reload()
@@ -249,11 +255,30 @@ class AttributePanel(QWidget):
         if ctrl is None or key is None:
             return out
         doc = self.document()
+        state = self.model.state
+        por_objeto = self._fid_por_objeto(state) if state is not None and state.key == key else {}
         for e in ctrl._selection_entities():
-            fid = datos.fid_of(doc, e, key)
+            fid = por_objeto.get(e.dxf.handle)
+            if fid is None:               # objeto que no estaba al leer la capa
+                fid = datos.fid_of(doc, e, key)
             if fid is not None:
                 out.add(fid)
         return out
+
+    def _fid_por_objeto(self, state) -> dict:
+        """{handle: fid} de la capa, armado una vez por lectura (3.81.1: leer
+        los datos de cada objeto seleccionado tardaba ~0,7 s con 12 801)."""
+        cache = self._cache_fids
+        if cache is None or cache[0] is not state.ents:
+            mapa = {}
+            for fid, ents in state.ents.items():
+                for e in ents:
+                    try:
+                        mapa[e.dxf.handle] = fid
+                    except Exception:
+                        pass
+            cache = self._cache_fids = (state.ents, mapa)
+        return cache[1]
 
     def sync_from_drawing(self, *_args) -> None:
         state = self.model.state
@@ -266,21 +291,50 @@ class AttributePanel(QWidget):
                 state.only_selected = fids
                 state.apply()
                 self.model.set_state(state)
+            # 3.81.1: todas las filas de una vez, en tramos seguidos (marcarlas
+            # de a una crecía al cuadrado: 12 801 parcelas colgaban IngeCAD).
+            ultima = self.model.columnCount() - 1
+            seleccion = QItemSelection()
+            first = None
+            for i, j in tramos_de_filas(state.rows, fids):
+                seleccion.select(self.model.index(i, 0), self.model.index(j, max(ultima, 0)))
+                if first is None:
+                    first = self.model.index(i, 0)
+            # Vaciar y después marcar: ClearAndSelect compara la selección vieja
+            # con la nueva y en Qt eso también crece al cuadrado (mitad -> todo:
+            # 1,6 s contra 0,2 s).
             sm = self.table.selectionModel()
             sm.clearSelection()
-            first = None
-            for i, row in enumerate(state.rows):
-                if row.fid in fids:
-                    idx = self.model.index(i, 0)
-                    sm.select(idx, QItemSelectionModel.SelectionFlag.Select
-                              | QItemSelectionModel.SelectionFlag.Rows)
-                    if first is None:
-                        first = idx
+            if not seleccion.isEmpty():
+                sm.select(seleccion, QItemSelectionModel.SelectionFlag.Select
+                          | QItemSelectionModel.SelectionFlag.Rows)
             if first is not None:
                 self.table.scrollTo(first)
             self.status.setText(state.summary(fids))
+            self._ultima_sync = self._firma_sync()
         finally:
             self._syncing = False
+
+    def _firma_sync(self):
+        """Lo que define las filas marcadas: estado, orden de filas y selección del dibujo."""
+        state = self.model.state
+        ctrl = self._controller()
+        try:
+            sel = frozenset(ctrl.selection) if ctrl is not None else frozenset()
+        except Exception:
+            sel = None
+        return (state, getattr(state, "rows", None), self.current_key(),
+                self.only_sel.isChecked(), sel)
+
+    def _dibujo_cambio(self, *_args) -> None:
+        """El dibujo avisa cambios muy seguido (también sin tocar la selección):
+        sólo se vuelve a sincronizar si cambió algo que la tabla muestra."""
+        firma = self._firma_sync()
+        ultima = self._ultima_sync
+        if (ultima is not None and firma[4] is not None and firma[0] is ultima[0]
+                and firma[1] is ultima[1] and firma[2:] == ultima[2:]):
+            return
+        self.sync_from_drawing()
 
     def _rows_selected(self, *_args) -> None:
         state = self.model.state
@@ -304,6 +358,7 @@ class AttributePanel(QWidget):
             ctrl.changed.emit()
         finally:
             self._syncing = False
+        self._ultima_sync = self._firma_sync()      # las filas ya muestran esta selección
         if zoom and ents:
             try:
                 self.window.zoom_to_entity(ents[0])
@@ -341,7 +396,7 @@ def remove_table(window) -> None:
         return
     panel = dock.widget()
     try:
-        window.tools.changed.disconnect(panel.sync_from_drawing)
+        window.tools.changed.disconnect(panel._dibujo_cambio)
     except Exception:
         pass
     puente.register_table(None)

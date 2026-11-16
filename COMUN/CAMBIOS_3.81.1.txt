@@ -1,0 +1,46 @@
+GeoCAD - versión 3.81.1
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Seleccionar muchas parcelas con la Tabla de atributos abierta ya no cuelga
+IngeCAD (Fernando, 15/11/2026: con PC_APOSTOLES, 12 801 parcelas, quedaba
+«IngeCAD no responde»; «Sí, hacé la 3.81.1»).
+
+La causa no era la selección de IngeCAD sino la tabla, que marca en sus filas
+lo seleccionado en el dibujo. Lo hacía con cuentas que crecían al cuadrado:
+- el resumen de abajo («N de M registros · X seleccionados») rearmaba el
+  conjunto de seleccionados una vez por cada fila (~8 s con 12 801);
+- marcaba las filas de a una, y Qt comparaba la selección vieja con la nueva;
+- leía los datos de cada objeto seleccionado para saber su registro;
+- y repetía todo con cada aviso del dibujo, aunque la selección no cambiara.
+
+Ahora, medido con la ventana real de IngeCAD y 12 801 parcelas con base
+de datos (lo que tarda IngeCAD solo, sin la tabla, es ~0,7 s y no cambia):
+    seleccionar todo, lo que agrega la tabla:      0,4 a 0,6 s
+    la mitad salteada (el peor caso), ídem:        0,6 a 0,8 s
+    vaciar la selección:                           0,0 s
+    otro aviso del dibujo sin cambiar la selección: no recalcula
+Antes (3.81.0), el mismo banco con el código anterior:
+    seleccionar todo, lo que agregaba la tabla:    60,5 s
+    la mitad salteada:                             11,9 s
+    «Sólo seleccionados» y seleccionar todo:       56,7 s
+    y cada aviso del dibujo (mover, redibujar) volvía a hacer la cuenta:
+    por eso IngeCAD quedaba «no responde» sin plazo a la vista.
+Con esos tiempos no hace falta barra de avance (las ventanitas de GeoCAD
+aparecen pasado medio segundo y desaparecerían enseguida).
+
+Por dentro
+- datos.py: tramos_de_filas (filas seguidas en tramos); TableState.summary
+  arma el conjunto una sola vez.
+- tabla.py: marca todos los tramos de una vez (vaciar y después marcar);
+  {handle: fid} de la capa armado una vez por lectura; flags() sin cuentas;
+  _dibujo_cambio sólo vuelve a sincronizar si cambió la selección, la capa, el
+  orden o «Sólo seleccionados».
+
+Pruebas
+- test_tabla_seleccion: tramos y resumen con 12 801 (sin Qt).
+- banco_tabla_seleccion_ventana (ventana real de IngeCAD, 12 801 parcelas
+  importadas con IMPORTARSHP): seleccionar todo, la mitad salteada, Sólo
+  seleccionados, vaciar, avisos repetidos y elegir una fila de la tabla.
+
+Para probar (IngeCAD): TS1-TS4 en 02_PRUEBAS_MANUALES.txt.
