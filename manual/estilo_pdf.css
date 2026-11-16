@@ -13,3 +13,7 @@ tr { page-break-inside: avoid; }
 th, td { border: 1px solid #bbb; padding: 4px 6px; vertical-align: top; }
 th { background: #f3ead8; }
 code { font-size: 9pt; background: #f4f4f4; padding: 0 2px; }
+/* QR de contacto en la portada (portada_qr.html) */
+#portada-qr { position: absolute; top: 175mm; left: 0; right: 0; text-align: center; }
+#portada-qr img { width: 35mm; max-width: none; margin: 0 auto 2mm; }
+#portada-qr p { margin: 0; font-size: 9.5pt; color: #7a5414; }

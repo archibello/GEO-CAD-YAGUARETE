@@ -15,7 +15,7 @@ trap 'rm -f "$html"' EXIT
 paginas=( $(ls [0-9][0-9]_*.md | sort) )
 
 pandoc "${paginas[@]}" --standalone --metadata title="Manual de usuario de GEO-CAD-YAGUARETÉ" \
-  --metadata subtitle="Un abrazo entre tres fronteras: QGIS, IngeCAD y Google Earth" --metadata lang=es --css estilo_pdf.css --embed-resources -o "$html"
+  --metadata subtitle="Un abrazo entre tres fronteras: QGIS, IngeCAD y Google Earth" --metadata lang=es --css estilo_pdf.css --include-before-body portada_qr.html --embed-resources -o "$html"
 
 "$chrome" --headless=new --disable-gpu --no-pdf-header-footer \
   --print-to-pdf="$salida" "file://$PWD/$(basename "$html")" 2>/dev/null
