@@ -1,0 +1,59 @@
+GeoCAD - versión 3.84.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+ASPECTOIMAGEN: limpiar manchas (Fernando, 16/11/2026: «Sólo manchas, 3.84.0»).
+
+La limpieza de planos escaneados que en las administraciones públicas se
+hace con Photoshop: «un limpiador de píxeles que no pertenecen a un dibujo,
+considerando un porcentaje de admitidos a pequeñas distancias, para que el
+resto permanezca lo más blanco o transparente posible», «dando prioridad al
+entendimiento de los textos».
+
+Cómo funciona
+   Grupo «Limpiar manchas» (apagado de entrada), debajo de Contraste:
+   - Distancia (2 a 40 píxeles del original): hasta dónde busca otra tinta.
+   - Tolerancia (5 a 50 %): cuánta tinta tiene que haber alrededor, en % de
+     una línea fina que cruzara esa vecindad.
+   Cada píxel con tinta cuenta la tinta que tiene a su alrededor; si no
+   llega a la tolerancia, es una mancha y se borra (queda transparente, o
+   blanca sin «Fondo transparente»). Debajo dice qué borra: «Borra manchas
+   de hasta N píxeles sin otra tinta a menos de D píxeles».
+
+Lo que cuida (los textos primero)
+   - Una línea nunca se borra, por fina o tenue que sea: hasta la punta de
+     una línea tiene la mitad de su vecindad con tinta, y la tolerancia
+     llega hasta 50 %. Cuenta si hay tinta, no cuán oscura es.
+   - Un punto, una coma, una tilde o el punto de la «i» a menos de
+     Distancia de una letra se quedan: cuentan la tinta de la letra. Sólo
+     se borra lo chico que está SOLO. Más Distancia cuida más los textos.
+   - Lo más grande que puede borrar es Tolerancia · (2·Distancia+1)
+     píxeles: menos que cualquier letra.
+   - Por lo mismo, una mancha pegada a una línea o a un texto se queda:
+     ante la duda, deja el píxel.
+
+Ver antes de aceptar
+   - «Ver en rojo lo que se borra» (tildada de entrada): la vista previa
+     pinta en rojo lo que se va a borrar. Destildada, se ve cómo queda.
+   - Acercada (rueda o 1:1), el rojo sale de los píxeles del original. En la
+     vista entera es aproximado (la imagen está reducida).
+   - La limpieza va en la copia y en «Entregar imagen final...». El
+     original no se toca; U lo deshace; los valores quedan en la imagen.
+
+Por dentro
+- aspecto.py: valores «limpiar», «distancia», «tolerancia»; manchas() (sumas
+  en ventana con acumuladas, por franjas y columnas: sólo numpy, igual en
+  Windows); procesar(..., escala, marcar). 54 Mpx: ~7 s con la limpieza,
+  ~3 s sin ella (con su barra de avance).
+- aspecto_ui.py: el grupo, los deslizadores, el rojo, y el detalle acercado
+  calculado con su margen.
+
+Pruebas
+- test_aspecto, sección 8: polvo y mancha de 4 px borrados; línea fina,
+  línea tenue, trazo corto, «letra» y su coma, no (ni en 50 %); transparente,
+  blanco, final, rojo, reducida, borde de franjas, avance; la orden guarda
+  la copia limpia y los valores.
+- banco_fondo_imagen_ventana, sección 5 (ventana real): el grupo, el texto,
+  la mancha en rojo a 1:1 con la línea negra, sin rojo, la copia limpia.
+
+Para probar (IngeCAD): FL1-FL6 en 02_PRUEBAS_MANUALES.txt.

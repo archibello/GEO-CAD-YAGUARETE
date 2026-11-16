@@ -16,7 +16,8 @@ ventana (aspecto_ui.py) se decide:
     papel blanco sigue blanco y las líneas tenues se ven más fuertes;
   - la imagen final (3.83.0): «Entregar imagen final...» hace la copia con
     el aspecto sobre papel blanco, toda opaca, para entregar el trabajo
-    terminado; reemplaza al fondo de la capa (ver abajo).
+    terminado; reemplaza al fondo de la capa (ver abajo);
+  - limpiar manchas (3.84.0, ver abajo).
 
 El archivo original NUNCA se toca: se guarda una copia PNG en la carpeta de
 imágenes del dibujo (la de PEGARIMAGEN), la imagen pasa a usarla y U lo
@@ -32,6 +33,26 @@ imagen (o su recorte), en la capa FONDO_IMAGENES, enviado al fondo: queda
 debajo de la imagen y de todo lo demás. Apagar o inutilizar la capa lo saca
 de la vista sin tocar la imagen. Lleva XDATA GEOCAD_FONDO con el handle de
 su imagen: la ventana lo encuentra, lo rehace al contorno actual o lo quita.
+
+Limpiar manchas (3.84.0, Fernando, 16/11/2026): la limpieza de planos que
+se hace con Photoshop; borrar el polvo y los granos del escaneo «para que el
+resto permanezca lo más blanco o transparente posible», con «un porcentaje
+de admitidos a pequeñas distancias» y «dando prioridad a los textos». Cada
+píxel con algo de tinta cuenta la tinta que hay a su alrededor, en un
+cuadrado de lado 2·Distancia+1. Se borra si esa cuenta es menor que
+Tolerancia % de una línea fina que cruzara el cuadrado (2·Distancia+1
+píxeles). Así:
+  * una línea nunca se borra (la tolerancia llega hasta 50 %: hasta la
+    punta de una línea tiene la mitad);
+  * una mancha se borra sólo si es chica Y está sola: un punto, una coma o
+    una tilde a menos de Distancia de una letra cuentan la tinta de la letra
+    y se quedan (la prioridad de los textos); lo más grande que puede borrar
+    es Tolerancia % · (2·Distancia+1) píxeles, menos que cualquier letra;
+  * cuenta si hay tinta, no cuán oscura es: una línea tenue no se trata
+    como mancha por ser clara.
+Lo borrado queda transparente (o blanco, sin fondo transparente). En la
+vista previa puede verse en rojo antes de aceptar. Las cuentas son sumas en
+ventana (acumuladas, por franjas): sólo numpy, en Windows igual.
 """
 from __future__ import annotations
 
@@ -52,11 +73,15 @@ LINEAS = ("como", "negativo", "color")
 
 #: los valores iniciales («Valores iniciales» en la ventana)
 DEFECTO = {"transparente": True, "blanco": 25, "lineas": "como",
-           "color": "#FF2020", "opacidad": 100, "contraste": 100, "final": False}
+           "color": "#FF2020", "opacidad": 100, "contraste": 100, "final": False,
+           "limpiar": False, "distancia": 8, "tolerancia": 30}
 BLANCO_MAX = 80
 OPACIDAD_MIN = 10
 CONTRASTE_MAX = 400
 SUFIJO_FINAL = "_final"
+DISTANCIA_MIN, DISTANCIA_MAX = 2, 40     # píxeles del original
+TOLERANCIA_MIN, TOLERANCIA_MAX = 5, 50   # % de una línea fina (50: nunca borra una línea)
+ROJO = (255, 0, 0)                       # lo que se borra, en la vista previa
 
 #: los últimos usados en la sesión, para una imagen que todavía no tiene aspecto
 _ultimos = [dict(DEFECTO)]
@@ -91,6 +116,13 @@ def normalizar(valores) -> dict:
     v.update({k: x for k, x in dict(valores or {}).items() if k in DEFECTO})
     v["transparente"] = bool(v["transparente"])
     v["final"] = bool(v["final"])
+    v["limpiar"] = bool(v["limpiar"])
+    for k, lo, hi in (("distancia", DISTANCIA_MIN, DISTANCIA_MAX),
+                      ("tolerancia", TOLERANCIA_MIN, TOLERANCIA_MAX)):
+        try:
+            v[k] = int(round(min(hi, max(lo, float(v[k])))))
+        except (TypeError, ValueError):
+            v[k] = DEFECTO[k]
     try:
         v["contraste"] = int(round(min(CONTRASTE_MAX, max(100, float(v["contraste"])))))
     except (TypeError, ValueError):
@@ -124,6 +156,9 @@ def describir(valores) -> str:
     if v["contraste"] != 100:
         partes.append(f"contraste de las líneas {v['contraste']} %")
     partes.append(f"opacidad {v['opacidad']} %")
+    if v["limpiar"]:
+        partes.append(f"manchas limpiadas (distancia {v['distancia']} px, "
+                      f"tolerancia {v['tolerancia']} %)")
     if v["final"]:
         partes.append("imagen final sobre papel blanco")
     return ", ".join(partes)
@@ -179,22 +214,91 @@ def _franja(a, v, color):
     elif v["lineas"] == "color":
         colores = np.broadcast_to(color, colores.shape)
     if v["final"]:
-        # la entrega: todo sobre papel blanco, opaco (como se ve con la capa)
-        a3 = alfa[..., None]
-        colores = colores * a3 + 255.0 * (1.0 - a3)
-        alfa = np.ones_like(alfa)
+        colores, alfa = _sobre_blanco(colores, alfa)
     salida = np.empty(a.shape, dtype=np.uint8)
     salida[..., :3] = np.clip(np.rint(colores), 0, 255).astype(np.uint8)
     salida[..., 3] = np.clip(np.rint(alfa * 255.0), 0, 255).astype(np.uint8)
     return salida
 
 
-def procesar(imagen, valores, hecho=None):
+def _sobre_blanco(colores, alfa):
+    """La entrega: todo sobre papel blanco, opaco (como se ve con la capa)."""
+    import numpy as np
+    a3 = alfa[..., None]
+    return colores * a3 + 255.0 * (1.0 - a3), np.ones_like(alfa)
+
+
+def _tinta(a, v):
+    """1 donde una franja tiene tinta (más oscuro que «Blanco que se borra»,
+    por tenue que sea: una línea clara cuenta igual que una negra), 0 en el
+    papel (uint8)."""
+    import numpy as np
+    f = a.astype(np.float32)
+    lum = (0.299 * f[..., 0] + 0.587 * f[..., 1] + 0.114 * f[..., 2]) / 255.0
+    t = 1.0 - v["blanco"] / 100.0
+    return ((lum < t) & (a[..., 3] >= 128)).astype(np.uint8)
+
+
+def _suma_filas(c, r, eje):
+    """Suma en ventana [i-r, i+r] a lo largo de ``eje`` (los bordes cuentan
+    sólo lo que hay adentro)."""
+    import numpy as np
+    n = c.shape[eje]
+    acum = np.cumsum(c, axis=eje, dtype=np.int32)
+    forma = list(acum.shape)
+    forma[eje] = 1
+    acum = np.concatenate([np.zeros(forma, dtype=np.int32), acum], axis=eje)
+    i = np.arange(n)
+    hi = np.minimum(n, i + r + 1)
+    lo = np.maximum(0, i - r)
+    return np.take(acum, hi, axis=eje) - np.take(acum, lo, axis=eje)
+
+
+def manchas(a, v, escala: float = 1.0):
+    """Lo que la limpieza borra (bool, alto x ancho) de un arreglo RGBA:
+    los píxeles con algo de tinta cuya vecindad (2r+1)² tiene menos tinta
+    que Tolerancia % de una línea fina de 2r+1 píxeles. ``escala``: la
+    imagen está reducida (vista previa): la distancia se achica igual."""
+    import numpy as np
+    alto, ancho = a.shape[:2]
+    r = max(1, int(round(v["distancia"] * escala)))
+    minimo = v["tolerancia"] / 100.0 * (2 * r + 1)
+    pesos = np.empty((alto, ancho), dtype=np.uint8)
+    for y in range(0, alto, FILAS_FRANJA):
+        pesos[y:y + FILAS_FRANJA] = _tinta(a[y:y + FILAS_FRANJA], v)
+    horiz = np.empty((alto, ancho), dtype=np.uint8)        # <= 2·40+1
+    for y in range(0, alto, FILAS_FRANJA):
+        horiz[y:y + FILAS_FRANJA] = _suma_filas(pesos[y:y + FILAS_FRANJA], r, 1)
+    borrar = np.empty((alto, ancho), dtype=bool)
+    paso = 1024
+    for x in range(0, ancho, paso):
+        cuenta = _suma_filas(horiz[:, x:x + paso], r, 0)
+        borrar[:, x:x + paso] = (cuenta < minimo) & (pesos[:, x:x + paso] > 0)
+    # el halo claro de una mancha (sin tinta) también se va
+    return borrar | _halo(a, v, borrar)
+
+
+def _halo(a, v, borrar):
+    """Los píxeles claros que no llegan a tinta, pegados a lo que se borra."""
+    import numpy as np
+    if not borrar.any():
+        return borrar
+    cerca = np.zeros_like(borrar)
+    cerca[1:] |= borrar[:-1]
+    cerca[:-1] |= borrar[1:]
+    cerca[:, 1:] |= borrar[:, :-1]
+    cerca[:, :-1] |= borrar[:, 1:]
+    return cerca & ~borrar & (a[..., 3] > 0) & (a[..., :3].min(axis=2) < 255)
+
+
+def procesar(imagen, valores, hecho=None, escala: float = 1.0, marcar: bool = False):
     """La imagen RGBA con el aspecto. La transparencia sale de la oscuridad
     de cada píxel: alfa = (T - L) / T, con L la luminancia (0 negro, 1
     blanco) y T = 1 - blanco/100: lo más claro que T queda invisible. Se
     multiplica por el alfa propio de la imagen y por la opacidad. Con
-    ``hecho`` (una lista [0..1]) va diciendo cuánto lleva."""
+    ``hecho`` (una lista [0..1]) va diciendo cuánto lleva. Con la limpieza
+    (3.84.0), lo borrado queda transparente (o blanco); ``marcar`` lo pinta
+    en rojo (la vista previa); ``escala``: ver manchas()."""
     Image = _pil()
     import numpy as np
     v = normalizar(valores)
@@ -203,10 +307,31 @@ def procesar(imagen, valores, hecho=None):
     color = np.array(rgb(v["color"]), dtype=np.float32)
     salida = np.empty(a.shape, dtype=np.uint8)
     alto = a.shape[0]
+    limpiar = v["limpiar"]
+    vf = dict(v, final=False) if limpiar else v
+    tramo = 0.6 if limpiar else 1.0
     for y in range(0, alto, FILAS_FRANJA):
-        salida[y:y + FILAS_FRANJA] = _franja(a[y:y + FILAS_FRANJA], v, color)
+        salida[y:y + FILAS_FRANJA] = _franja(a[y:y + FILAS_FRANJA], vf, color)
         if hecho is not None:
-            hecho[0] = min(alto, y + FILAS_FRANJA) / alto
+            hecho[0] = tramo * min(alto, y + FILAS_FRANJA) / alto
+    if limpiar:
+        borrar = manchas(a, v, escala)
+        if hecho is not None:
+            hecho[0] = 0.85
+        if marcar:
+            salida[borrar] = (*ROJO, 255)
+        elif v["transparente"]:
+            salida[borrar, 3] = 0
+        else:
+            salida[borrar, :3] = 255
+        if v["final"]:
+            for y in range(0, alto, FILAS_FRANJA):
+                s = salida[y:y + FILAS_FRANJA]
+                c, al = _sobre_blanco(s[..., :3].astype(np.float32), s[..., 3] / 255.0)
+                s[..., :3] = np.clip(np.rint(c), 0, 255).astype(np.uint8)
+                s[..., 3] = 255
+        if hecho is not None:
+            hecho[0] = 1.0
     return Image.fromarray(salida, "RGBA")
 
 

@@ -131,6 +131,7 @@ def _Previa(QtCore, QtGui, QtWidgets, tam, chica, completa):  # noqa: N802
             self.detalle.setZValue(1)
             self.detalle.hide()
             self.valores, self.clave = None, "q"
+            self.marcar = True             # 3.84.0: lo que la limpieza borra, en rojo
             self.ajustada = True
             self.al_cambiar_zoom = None
             self._reloj = QtCore.QTimer(self)
@@ -141,9 +142,13 @@ def _Previa(QtCore, QtGui, QtWidgets, tam, chica, completa):  # noqa: N802
             self.verticalScrollBar().valueChanged.connect(self._pedir_detalle)
 
         # -- lo que se muestra -----------------------------------------------
-        def mostrar(self, valores, clave):
+        def mostrar(self, valores, clave, marcar=None):
             self.valores, self.clave = valores, clave
-            self.base.setPixmap(_pixmap(QtGui, _componer(A.procesar(chica, valores), clave)))
+            if marcar is not None:
+                self.marcar = bool(marcar)
+            hecha = A.procesar(chica, valores, escala=chica.width / max(1, tam[0]),
+                               marcar=self.marcar)
+            self.base.setPixmap(_pixmap(QtGui, _componer(hecha, clave)))
             self._pedir_detalle()
 
         def zoom(self) -> float:
@@ -165,12 +170,24 @@ def _Previa(QtCore, QtGui, QtWidgets, tam, chica, completa):  # noqa: N802
             if x1 <= x0 or y1 <= y0:
                 self.detalle.hide()
                 return
-            pedazo = completa.crop((x0, y0, x1, y1))
             ancho = max(1, min(x1 - x0, int((x1 - x0) * t)))      # nunca más que la pantalla
             alto = max(1, min(y1 - y0, int((y1 - y0) * t)))
-            if (ancho, alto) != pedazo.size:
-                pedazo = pedazo.resize((ancho, alto))
-            hecha = A.procesar(pedazo, self.valores)
+            if self.valores.get("limpiar"):
+                # la limpieza mira los píxeles del original con su vecindad:
+                # se calcula con un margen y después se achica
+                m = int(self.valores.get("distancia", 0)) + 1
+                bx0, by0 = max(0, x0 - m), max(0, y0 - m)
+                bx1, by1 = min(tam[0], x1 + m), min(tam[1], y1 + m)
+                hecha = A.procesar(completa.crop((bx0, by0, bx1, by1)), self.valores,
+                                   marcar=self.marcar)
+                hecha = hecha.crop((x0 - bx0, y0 - by0, x1 - bx0, y1 - by0))
+                if (ancho, alto) != hecha.size:
+                    hecha = hecha.resize((ancho, alto))
+            else:
+                pedazo = completa.crop((x0, y0, x1, y1))
+                if (ancho, alto) != pedazo.size:
+                    pedazo = pedazo.resize((ancho, alto))
+                hecha = A.procesar(pedazo, self.valores)
             self.detalle.setPixmap(_pixmap(QtGui, _componer(hecha, self.clave)))
             self.detalle.setPos(x0, y0)
             self.detalle.setScale((x1 - x0) / ancho)
@@ -319,6 +336,43 @@ def _Dialogo(QtCore, QtGui, QtWidgets, parent, original, tam, chica, valores, co
             grilla.setColumnStretch(1, 1)
             izq.addWidget(g)
 
+            # 3.84.0 (Fernando): la limpieza de planos, cuidando los textos
+            self.limpiar = W.QGroupBox("Limpiar manchas")
+            self.limpiar.setCheckable(True)
+            self.limpiar.setToolTip(
+                "Borra el polvo y los granos del escaneo: lo chico que está solo. Una línea "
+                "nunca se borra; un punto, una coma o una tilde cerca de una letra se quedan.")
+            grilla = W.QGridLayout(self.limpiar)
+            grilla.addWidget(W.QLabel("Distancia"), 0, 0)
+            self.distancia = W.QSlider(Qt.Orientation.Horizontal)
+            self.distancia.setRange(A.DISTANCIA_MIN, A.DISTANCIA_MAX)
+            self.distancia.setToolTip("Hasta dónde busca otra tinta (píxeles del original). "
+                                      "Lo que tiene tinta más cerca, se queda: más distancia "
+                                      "cuida más los textos.")
+            grilla.addWidget(self.distancia, 0, 1)
+            self.distancia_txt = W.QLabel()
+            self.distancia_txt.setMinimumWidth(48)
+            grilla.addWidget(self.distancia_txt, 0, 2)
+            grilla.addWidget(W.QLabel("Tolerancia"), 1, 0)
+            self.tolerancia = W.QSlider(Qt.Orientation.Horizontal)
+            self.tolerancia.setRange(A.TOLERANCIA_MIN, A.TOLERANCIA_MAX)
+            self.tolerancia.setToolTip("Cuánta tinta tiene que haber alrededor, en % de una "
+                                       "línea fina: más alto borra manchas más grandes. "
+                                       "Hasta 50 %, una línea nunca se borra.")
+            grilla.addWidget(self.tolerancia, 1, 1)
+            self.tolerancia_txt = W.QLabel()
+            self.tolerancia_txt.setMinimumWidth(48)
+            grilla.addWidget(self.tolerancia_txt, 1, 2)
+            self.rojo = W.QCheckBox("Ver en rojo lo que se borra")
+            self.rojo.setChecked(True)
+            grilla.addWidget(self.rojo, 2, 0, 1, 2)
+            self.mancha_txt = W.QLabel()
+            self.mancha_txt.setStyleSheet("color: gray;")
+            self.mancha_txt.setWordWrap(True)
+            grilla.addWidget(self.mancha_txt, 3, 0, 1, 3)
+            grilla.setColumnStretch(1, 1)
+            izq.addWidget(self.limpiar)
+
             nota = W.QLabel(f"Se guarda una copia: {original.stem}{A.SUFIJO}.png, junto al "
                             "dibujo. El original no se toca. U lo deshace.")
             nota.setWordWrap(True)
@@ -387,6 +441,10 @@ def _Dialogo(QtCore, QtGui, QtWidgets, parent, original, tam, chica, valores, co
             self.blanco.valueChanged.connect(self._refrescar)
             self.opacidad.valueChanged.connect(self._refrescar)
             self.contraste.valueChanged.connect(self._refrescar)
+            self.limpiar.toggled.connect(self._refrescar)
+            self.distancia.valueChanged.connect(self._refrescar)
+            self.tolerancia.valueChanged.connect(self._refrescar)
+            self.rojo.toggled.connect(self._refrescar)
             self.b_final.clicked.connect(self._final)
             self.fondo.currentIndexChanged.connect(self._refrescar)
             self.fondo_blanco.toggled.connect(self._ver_fondo_blanco)
@@ -404,6 +462,9 @@ def _Dialogo(QtCore, QtGui, QtWidgets, parent, original, tam, chica, valores, co
             self.blanco.setValue(v["blanco"])
             self.opacidad.setValue(v["opacidad"])
             self.contraste.setValue(v["contraste"])
+            self.limpiar.setChecked(v["limpiar"])
+            self.distancia.setValue(v["distancia"])
+            self.tolerancia.setValue(v["tolerancia"])
             {"como": self.como, "negativo": self.negativo,
              "color": self.de_color}[v["lineas"]].setChecked(True)
             self._color = v["color"]
@@ -416,7 +477,10 @@ def _Dialogo(QtCore, QtGui, QtWidgets, parent, original, tam, chica, valores, co
             return A.normalizar({"transparente": self.transparente.isChecked(),
                                  "blanco": self.blanco.value(), "lineas": lineas,
                                  "color": self._color, "opacidad": self.opacidad.value(),
-                                 "contraste": self.contraste.value()})
+                                 "contraste": self.contraste.value(),
+                                 "limpiar": self.limpiar.isChecked(),
+                                 "distancia": self.distancia.value(),
+                                 "tolerancia": self.tolerancia.value()})
 
         def _elegir_color(self):
             c = W.QColorDialog.getColor(QtGui.QColor(self._color), self, "Color de las líneas")
@@ -449,7 +513,15 @@ def _Dialogo(QtCore, QtGui, QtWidgets, parent, original, tam, chica, valores, co
             self.blanco_txt.setText(f"{v['blanco']} %")
             self.opacidad_txt.setText(f"{v['opacidad']} %")
             self.contraste_txt.setText(f"{v['contraste']} %")
+            self.distancia_txt.setText(f"{v['distancia']} px")
+            self.tolerancia_txt.setText(f"{v['tolerancia']} %")
+            mayor = int(v["tolerancia"] / 100.0 * (2 * v["distancia"] + 1) - 1e-9)
+            self.mancha_txt.setText(
+                f"Borra manchas de hasta {mayor} píxeles sin otra tinta a menos de "
+                f"{v['distancia']} píxeles." if mayor >= 1 else
+                "Con estos valores no borra nada: subí la tolerancia o la distancia.")
             self.boton_color.setStyleSheet(f"background-color: {v['color']};")
-            self.previa.mostrar(v, self.fondo.currentData())
+            self.previa.mostrar(v, self.fondo.currentData(),
+                                marcar=v["limpiar"] and self.rojo.isChecked())
 
     return Dialogo()

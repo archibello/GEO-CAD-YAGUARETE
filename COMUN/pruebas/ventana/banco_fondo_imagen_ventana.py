@@ -15,6 +15,8 @@ y la ventana de verdad (casilla «Fondo blanco» tildada con el clic):
 1:1, Ver todo; acercada, lo que se ve sale de los píxeles del original) y
 «Entregar imagen final...»: una imagen nueva opaca con fondo blanco, la
 imagen del dibujo pasa a usarla y su fondo de la capa se quita.
+3.84.0: «Limpiar manchas» (Distancia, Tolerancia, en rojo en la vista previa
+con los píxeles del original; la copia sale sin la mancha y con la línea).
 
 Uso (PySide6, ezdxf, numpy, Pillow):
     python banco_fondo_imagen_ventana.py <carpeta de IngeCAD> <carpeta del plugin geocad>
@@ -50,6 +52,7 @@ tmp = Path(tempfile.mkdtemp(prefix="banco-"))
 png = tmp / "recorte.png"                         # líneas negras sobre transparente
 im = PILImage.new("RGBA", (3000, 1500), (0, 0, 0, 0))   # más grande que la vista entera (LADO_BASE)
 im.paste((0, 0, 0, 255), (300, 745, 2700, 755))
+im.paste((0, 0, 0, 255), (1500, 300, 1502, 302))       # una mancha de 4 px, sola (3.84.0)
 im.save(png)
 fallas = []
 
@@ -195,6 +198,41 @@ verificar("el fondo de la capa se quitó", A.fondo_de(img) is None and -1 not in
 verificar("contraste guardado con la imagen", A.leer(img)[0]["contraste"] == 300 and A.leer(img)[0]["final"])
 win.history.undo(); win.regen_in_memory(); esperar(win)
 verificar("U: vuelve la de antes con su fondo", img.image_def.dxf.filename == antes and A.fondo_de(img) is not None)
+
+print("5. limpiar manchas (3.84.0)")
+
+
+def limpiar(dlg, visto):
+    pv = dlg.previa
+    visto["grupo"] = (dlg.limpiar.title(), dlg.limpiar.isChecked())
+    dlg.limpiar.setChecked(True); app.processEvents()
+    visto["rojo"] = dlg.rojo.isChecked()
+    visto["texto"] = dlg.mancha_txt.text()
+    pv.poner_zoom(1.0); pv.centerOn(1500, 400); app.processEvents()
+    pv._calcular_detalle(); app.processEvents()
+    q = pv.detalle.pixmap().toImage()
+    x0, y0 = int(pv.detalle.pos().x()), int(pv.detalle.pos().y())
+    visto["detalle"] = pv.detalle.isVisible()
+    visto["mancha"] = q.pixelColor(1500 - x0, 300 - y0).getRgb()[:3] if visto["detalle"] else None
+    visto["linea"] = q.pixelColor(1500 - x0, 750 - y0).getRgb()[:3] if visto["detalle"] else None
+    dlg.rojo.setChecked(False); app.processEvents()
+    pv._calcular_detalle(); app.processEvents()
+    q = pv.detalle.pixmap().toImage()
+    visto["sin_rojo"] = q.pixelColor(1500 - x0, 300 - y0).getRgb()[:3]
+    dlg.accept()
+
+
+v = con_ventana(win, img, True, limpiar)
+verificar("grupo «Limpiar manchas», apagado", v.get("grupo") == ("Limpiar manchas", False))
+verificar("en rojo, de entrada", v.get("rojo") is True)
+verificar("dice qué borra", "hasta 5 píxeles" in str(v.get("texto")))
+verificar("1:1: la mancha en rojo", v.get("mancha") == (255, 0, 0))
+verificar("1:1: la línea sigue negra", v.get("linea") == (0, 0, 0))
+verificar("sin «en rojo»: la mancha ya no se ve", v.get("sin_rojo") == (255, 255, 255))
+copia = PILImage.open(img.image_def.dxf.filename)
+verificar("la copia: sin la mancha, con la línea",
+          copia.getpixel((1500, 300))[3] == 0 and copia.getpixel((1500, 750))[3] == 255)
+verificar("limpiar guardado con la imagen", A.leer(img)[0]["limpiar"] is True)
 
 print("TODO OK" if not fallas else f"FALLAS: {fallas}")
 sys.stdout.flush()

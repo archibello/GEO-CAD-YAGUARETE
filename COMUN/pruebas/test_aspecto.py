@@ -378,4 +378,69 @@ assert img.image_def.dxf.filename == antes_final and A.fondo_de(img) is not None
 hist.redo(); assert Path(img.image_def.dxf.filename) == final and A.fondo_de(img) is None
 print("ok imagen final")
 
+# ------------------------------------------------------------- 8. limpiar manchas (3.84.0)
+#   Fernando: «un limpiador de píxeles que no pertenecen a un dibujo ... con un
+#   porcentaje de admitidos a pequeñas distancias», «dando prioridad a los textos»
+import numpy as np
+from PIL import ImageDraw
+assert A.DEFECTO["limpiar"] is False                        # apagado: nada cambia
+n = A.normalizar({"limpiar": 1, "distancia": 99, "tolerancia": 1})
+assert n["limpiar"] is True and n["distancia"] == A.DISTANCIA_MAX and n["tolerancia"] == A.TOLERANCIA_MIN
+assert A.normalizar({"distancia": "x"})["distancia"] == A.DEFECTO["distancia"]
+assert "manchas limpiadas (distancia 8 px, tolerancia 30 %)" in A.describir(dict(A.DEFECTO, limpiar=True))
+assert "manchas" not in A.describir(A.DEFECTO)
+sucio = Image.new("RGB", (600, 300), (238, 232, 214))       # papel amarillento
+dib = ImageDraw.Draw(sucio)
+dib.line((20, 150, 580, 150), fill=(0, 0, 0), width=1)       # línea fina negra
+dib.line((20, 220, 580, 220), fill=(175, 175, 175), width=1) # línea tenue
+dib.line((300, 20, 300, 26), fill=(0, 0, 0), width=1)        # trazo corto (7 px): se queda
+dib.rectangle((40, 40, 70, 70), fill=(0, 0, 0))              # «letra»
+dib.rectangle((74, 66, 75, 68), fill=(0, 0, 0))              # coma (6 px) a 4 px de la letra
+polvo = [(400, 60), (450, 90), (500, 260), (120, 260)]
+for x, y in polvo:
+    sucio.putpixel((x, y), (40, 40, 40))
+dib.rectangle((200, 80, 201, 81), fill=(20, 20, 20))         # mancha de 4 px, sola
+vl = dict(A.DEFECTO, limpiar=True)                           # distancia 8, tolerancia 30: < 5,1 px
+b = A.manchas(np.asarray(sucio.convert("RGBA")), A.normalizar(vl))
+assert all(b[y, x] for x, y in polvo) and b[80:82, 200:202].all()
+assert not b[150].any() and not b[220].any()                 # las líneas, ni la tenue
+assert not b[20:27, 300].any()                               # un trazo corto no es mancha
+assert not b[40:71, 40:71].any() and not b[66:69, 74:76].any()   # la letra y su coma
+# la coma sola (lejos de todo) sí se va con más tolerancia; la línea nunca, ni en 50 %
+b50 = A.manchas(np.asarray(sucio.convert("RGBA")), A.normalizar(dict(vl, tolerancia=50)))
+assert not b50[150].any() and not b50[220].any() and not b50[66:69, 74:76].any()
+# transparente: lo borrado, invisible; sin transparencia: blanco; final: blanco opaco
+h = A.procesar(sucio, vl)
+assert h.getpixel((400, 60))[3] == 0 and h.getpixel((300, 150))[3] > 200
+h = A.procesar(sucio, dict(vl, transparente=False))
+assert h.getpixel((400, 60))[:3] == (255, 255, 255) and h.getpixel((300, 150))[:3] == (0, 0, 0)
+h = A.procesar(sucio, dict(vl, final=True))
+assert h.getpixel((400, 60)) == (255, 255, 255, 255) and h.getpixel((5, 5)) == (255, 255, 255, 255)
+assert h.getpixel((300, 150))[0] < 30 and h.getpixel((300, 150))[3] == 255
+assert A.procesar(sucio, dict(vl, limpiar=False)).getpixel((400, 60))[3] > 100   # apagado: queda
+# la vista previa: en rojo; reducida, la distancia se achica con ella
+h = A.procesar(sucio, vl, marcar=True)
+assert h.getpixel((400, 60)) == (255, 0, 0, 255) and h.getpixel((300, 150))[:3] == (0, 0, 0)
+chica = sucio.resize((300, 150))
+hc = A.procesar(chica, vl, escala=0.5, marcar=True)
+assert hc.getpixel((150, 75))[:3] != (255, 0, 0)             # la línea, tampoco reducida
+# más alta que una franja: el mismo resultado que de a pedazos no importa, es de una vez
+alto = Image.new("RGB", (60, 3 * A.FILAS_FRANJA + 7), (255, 255, 255))
+alto.putpixel((30, A.FILAS_FRANJA), (0, 0, 0))               # justo en el borde de franjas
+assert A.procesar(alto, vl).getpixel((30, A.FILAS_FRANJA))[3] == 0
+hecho = [0.0]; A.procesar(alto, vl, hecho); assert hecho[0] == 1.0
+# la orden: la copia sale limpia y los valores quedan en la imagen
+plano_sucio = Path(tempfile.mkdtemp()) / "sucio.png"; sucio.save(plano_sucio)
+img = msp.add_image(doc.doc.add_image_def(filename=str(plano_sucio), size_in_pixel=(600, 300)),
+                    insert=(9000, 0), size_in_units=(60, 30))
+respuesta[0] = {"accion": "aceptar", "valores": dict(vl, distancia=10, tolerancia=40)}
+herramienta({img.dxf.handle})
+copia = Image.open(img.image_def.dxf.filename)
+assert Path(img.image_def.dxf.filename).name.startswith("sucio_aspecto")
+assert copia.getpixel((400, 60))[3] == 0 and copia.getpixel((300, 150))[3] > 200
+g = A.leer(img)[0]
+assert g["limpiar"] is True and g["distancia"] == 10 and g["tolerancia"] == 40
+assert any("manchas limpiadas (distancia 10 px, tolerancia 40 %)" in m for m in msgs)
+print("ok limpiar manchas")
+
 print("TODO OK ASPECTO")
