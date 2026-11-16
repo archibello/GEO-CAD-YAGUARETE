@@ -37,7 +37,9 @@ GeoCAD no modifica Google Earth: se comunica con él por un **enlace de red**,
 una herramienta que el propio Google Earth trae para recibir datos de otro
 programa.
 
-- Al abrir Google Earth con GeoCAD aparece en **Lugares temporales** un
+- Al enlazar Google Earth con GeoCAD (**Traer imagen de Google Earth…** en
+  IngeCAD, **Abrir Google Earth con GeoCAD** en QGIS) aparece en
+  **Lugares temporales** un
   enlace llamado **«GeoCAD Yaguareté»**, con tres partes:
   - **Vista**: por ahí GeoCAD lleva Google Earth a un lugar y sabe qué se
     está viendo.
@@ -80,16 +82,17 @@ exacto, sin georreferenciar a mano.
 
 | | IngeCAD | QGIS |
 |---|---|---|
-| Abrir Google Earth con GeoCAD | GeoCAD Yaguareté > Google Earth, u orden **ABRIRGE** | GeoCAD Yaguareté > Google Earth |
-| Capturar | botón **CAPTURAR**, **Ctrl+Alt+G** u orden **CAPTURARGE** | botón **CAPTURAR** o **Ctrl+Alt+G** |
+| Abrir y enlazar Google Earth | GeoCAD Yaguareté > Google Earth > **Traer imagen de Google Earth…**, u orden **CAPTURARGE** | GeoCAD Yaguareté > Google Earth > Abrir Google Earth con GeoCAD |
+| Capturar | botón **CAPTURAR** o **Ctrl+Alt+G** (con la ventanita abierta) | botón **CAPTURAR** o **Ctrl+Alt+G** |
 | Configurar captura | **CONFIGURARGE** | Configurar captura… |
 | Este capítulo del manual | Manual de Google Earth (capítulo 3)… (**MANUALGE**) | Manual de Google Earth (capítulo 3)… |
 
 **Paso a paso:**
 
-1. **Abrir Google Earth con GeoCAD.** Se abre la ventanita y Google Earth
-   con el enlace «GeoCAD Yaguareté». Si Google Earth ya estaba abierto, lo
-   enlaza.
+1. **Traer imagen de Google Earth…** (IngeCAD; en QGIS, **Abrir Google
+   Earth con GeoCAD**). Se abre la ventanita y Google Earth con el enlace
+   «GeoCAD Yaguareté». Si Google Earth ya estaba abierto, lo enlaza. Todavía
+   no captura: espera a que se elija la zona y la calidad.
 2. **Llevar Google Earth a la zona**: moverlo a mano o tocar **«Llevar Google
    Earth a lo que veo en IngeCAD/QGIS»**. Google Earth vuela hasta lo que se
    ve en la pantalla del programa.
@@ -145,7 +148,8 @@ programa) y si las cruces se muestran siempre.
 
 ### Práctica 3.A — La manzana antes y ahora
 
-1. Con la manzana del caso práctico abierta en IngeCAD, **ABRIRGE** y
+1. Con la manzana del caso práctico abierta en IngeCAD, **Traer imagen de
+   Google Earth…** y
    **«Llevar Google Earth a lo que veo en IngeCAD»**.
 2. En Google Earth, en *imágenes históricas*, elegir una imagen de hace
    diez años. Calidad **Lo que veo en IngeCAD**. **CAPTURAR**.
@@ -160,7 +164,25 @@ programa) y si las cruces se muestran siempre.
 a cualquiera que tenga Google Earth: un cliente, un vecino, un juzgado, un
 municipio. El KMZ se abre con doble clic.
 
-### Desde IngeCAD: EXPORTARKML
+### Desde IngeCAD: Enviar a Google Earth (directo)
+
+**Dónde está:** **GeoCAD Yaguareté > Google Earth > Enviar a Google
+Earth…**, u orden **ABRIRGE**.
+
+Para verlo enseguida en Google Earth, sin elegir archivo:
+
+1. **Enviar a Google Earth…** Si el dibujo no tiene sistema, lo pregunta.
+2. Elegir **qué se envía**: **los elementos seleccionados**, **lo que se ve
+   en pantalla** (lo que asoma va entero) o **las capas elegidas** (por
+   ejemplo una imagen en una capa y los polígonos en otra), y el relleno de
+   los polígonos. **Enviar**.
+3. Google Earth se abre (o se pone al frente) con lo enviado en **Lugares
+   temporales**, una carpeta por capa y las imágenes en su lugar.
+
+El KMZ queda en la carpeta de GeoCAD y se reemplaza en cada envío. Para
+guardar uno propio y mandarlo a otra persona, **EXPORTARKML**.
+
+### Desde IngeCAD: EXPORTARKML (guardar un KMZ)
 
 **Dónde está:** **GeoCAD Yaguareté > Exportar > KML / KMZ…**, el botón del
 globo con chinche de la barra GeoCAD, o la orden **EXPORTARKML**.
@@ -273,12 +295,12 @@ globo con la flecha hacia adentro, o la orden **IMPORTARKML**.
 
 | Lo que pasa | Qué hacer |
 |---|---|
-| «Google Earth con el enlace de antes» | En Google Earth, borrar todos los «GeoCAD Yaguareté» (Lugares temporales y Mis lugares) y volver a **Abrir Google Earth con GeoCAD**. |
+| «Google Earth con el enlace de antes» | En Google Earth, borrar todos los «GeoCAD Yaguareté» (Lugares temporales y Mis lugares) y volver a enlazar: **Traer imagen de Google Earth…** en IngeCAD (**Abrir Google Earth con GeoCAD** en QGIS). |
 | «Se cortó el enlace» | Google Earth se cerró o dejó de pedir el enlace: abrirlo de nuevo con GeoCAD. |
 | No se ve una cruz | Algo la tapa: la chincheta del buscador, la brújula u otra ventana. |
 | El mosaico tarda mucho, o «Google Earth vuela lento» | Velocidad de vuelo en 5 (ver 3.3). |
 | «Google Earth no está a la vista» | Está minimizado o cerrado: traerlo al frente o abrirlo con GeoCAD. |
-| «Another instance of this application is already running» sin otro abierto | Quedó trabado por un cierre de golpe. **Abrir Google Earth con GeoCAD** lo destraba solo (si no hay ninguna ventana de Google Earth, ni minimizada). A mano: borrar `~/.googleearth/instance-running-lock`. |
+| «Another instance of this application is already running» sin otro abierto | Quedó trabado por un cierre de golpe. **Traer imagen de Google Earth…** en IngeCAD (**Abrir Google Earth con GeoCAD** en QGIS), o **Enviar a Google Earth…**, lo destraba solo (si no hay ninguna ventana de Google Earth, ni minimizada). A mano: borrar `~/.googleearth/instance-running-lock`. |
 | El trabajo aparece lejos, en otra provincia o en el mar | El sistema de la capa no es el de sus coordenadas: aceptar la corrección que ofrece GeoCAD o revisar SISTEMAGEO. |
 | En Windows, la captura no anda | Hace falta GeoCAD 3.75.0 o más nuevo (ver 3.1). Dejar Google Earth a la vista mientras captura. |
 | «Ctrl+Alt+G sólo con esta ventana al frente (otro programa ya usa Ctrl+Alt+G)» | Otro programa tomó ese atajo: capturar con el botón de la ventanita. |

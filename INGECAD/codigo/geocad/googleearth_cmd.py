@@ -2,8 +2,13 @@
 """Google Earth en IngeCAD (módulo «googleearth», 3.33.0): menú GeoCAD >
 Google Earth.
 
-    ABRIRGE        (GEOEARTHOPEN)     Abrir Google Earth con GeoCAD
-    CAPTURARGE     (GEOEARTHCAPTURE)  Capturar vista (Ctrl+Alt+G)
+    ABRIRGE        (GEOEARTHOPEN)     Enviar a Google Earth... (3.81.0:
+                                      googleearth_enviar.py)
+    CAPTURARGE     (GEOEARTHCAPTURE)  Traer imagen de Google Earth... (3.81.0:
+                                      abre y enlaza Google Earth y deja la
+                                      ventanita lista; se ubica la zona, se
+                                      elige la calidad y se captura con
+                                      CAPTURAR o Ctrl+Alt+G)
     CONFIGURARGE   (GEOEARTHSETUP)    Configurar captura
 
 Las cuentas, el servidor y la ventanita están en el núcleo (googleearth*.py).
@@ -142,11 +147,18 @@ def _abrir(ctx, **kw) -> None:
 
 
 def cmd_abrir(ctx, *args) -> None:
-    _abrir(ctx, abrir_ge=True)
+    """Enviar a Google Earth (3.81.0; antes abría y enlazaba, eso pasó a
+    Traer imagen)."""
+    from . import googleearth_enviar
+    googleearth_enviar.enviar(ctx)
 
 
 def cmd_capturar(ctx, *args) -> None:
-    _abrir(ctx, capturar=True)
+    """Traer imagen de Google Earth (3.81.0): todo desde el principio. Abre y
+    enlaza Google Earth (si ya lo está, no lo duplica) y deja la ventanita al
+    frente; ya no captura en el acto: primero se ubica la zona y se elige la
+    calidad (Fernando, 15/11/2026)."""
+    _abrir(ctx, abrir_ge=True)
 
 
 def cmd_configurar(ctx, *args) -> None:

@@ -1,0 +1,56 @@
+GeoCAD - versión 3.81.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo;
+del núcleo sólo cambia, en modulos.py, el texto del módulo Google Earth de IngeCAD).
+
+Google Earth: cada orden con un trabajo claro (Fernando, 15/11/2026: las dos
+se pisaban; la ventanita de «Abrir Google Earth con GeoCAD» ya traía el botón
+CAPTURAR).
+
+    De IngeCAD a Google Earth:  «Enviar a Google Earth...»        (GEOEARTHOPEN, ABRIRGE)
+    De Google Earth a IngeCAD:  «Traer imagen de Google Earth...» (GEOEARTHCAPTURE, CAPTURARGE)
+
+Las órdenes conservan sus nombres (GEOEARTHOPEN, ABRIRGE, GEOEARTHCAPTURE,
+CAPTURARGE); cambia lo que hacen y cómo se llaman en el menú.
+
+Enviar a Google Earth... (nuevo)
+- Una ventana pregunta qué se envía:
+    · Los elementos seleccionados (apagado si no hay nada seleccionado)
+    · Lo que se ve en pantalla (lo que asoma va entero)
+    · Las capas elegidas (sólo se ofrecen las que tienen objetos): por ejemplo
+      una imagen en una capa y los polígonos en otra.
+  y el relleno de los polígonos. Botón «Enviar».
+- Se arma el mismo KMZ que EXPORTARKML (WGS 84, una carpeta por capa, colores,
+  grosores, atributos, imágenes en su lugar) y se abre en Google Earth, que lo
+  pone en Lugares temporales. No se pregunta dónde guardarlo: queda en
+  ~/.config/geocad/googleearth/enviados/<dibujo>.kmz y se reemplaza en cada envío.
+- Si el dibujo no tiene sistema, lo pregunta (como EXPORTARKML) y controla la faja.
+- Ventanita de avance en 3 etapas (Preparando, Escribiendo, Guardando) con Cancelar.
+- Si Google Earth quedó trabado de un cierre de golpe («Another instance»), lo destraba.
+- Para guardar un KMZ en otra carpeta sigue Exportar > KML / KMZ (EXPORTARKML).
+
+Traer imagen de Google Earth... (antes «Capturar vista (Ctrl+Alt+G)»)
+- Todo el procedimiento desde el principio: abre Google Earth y lo enlaza con
+  GeoCAD (si ya está enlazado no lo duplica) y deja la ventanita al frente.
+- Ya NO captura en el acto: primero se ubica la zona en Google Earth (o «Llevar
+  Google Earth a lo que veo en IngeCAD»), se elige la calidad (Pantalla,
+  Mosaico o Lo que veo en IngeCAD) y se captura con CAPTURAR o Ctrl+Alt+G.
+
+Por dentro
+- googleearth_enviar.py (nuevo): la ventana y el envío.
+- kml.py: en_zona (los objetos que tocan una zona).
+- googleearth_cmd.py, __init__.py (menú), i18n/es/ui.json; modulos.py del núcleo (texto del módulo en IngeCAD).
+
+Pruebas
+- test_googleearth_enviar: menú, cada orden hace lo suyo (Traer ya no captura
+  sola), qué se envía (seleccionado, pantalla, capas), el KMZ con imagen y
+  polígonos de dos capas.
+- banco_enviar_ge_ventana (ventana real de IngeCAD): la ventana nueva, las tres
+  opciones, el KMZ que se abre y las 3 etapas del avance; TODO OK con IngeCAD
+  0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+
+Para probar (IngeCAD; pasos GT1-GT6 en 02_PRUEBAS_MANUALES.txt)
+- Enviar: una imagen en una capa y polígonos en otra, «Las capas elegidas»:
+  Google Earth abre y muestra las dos carpetas.
+- Traer: Google Earth se abre enlazado y la ventanita espera; elegir calidad y
+  capturar.

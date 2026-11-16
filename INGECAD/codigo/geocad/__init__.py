@@ -16,8 +16,9 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Aspecto de imagen (aspecto.py): ASPECTOIMAGEN, fondo transparente, líneas y opacidad
     Intercambio (intercambio.py, kml.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP,
     EXPORTARKML, IMPORTARKML
-    Google Earth (googleearth_cmd.py y googleearth*.py del núcleo): ABRIRGE, CAPTURARGE
-    (Ctrl+Alt+G), CONFIGURARGE; captura georreferenciada y mosaico
+    Google Earth (googleearth_cmd.py, googleearth_enviar.py y googleearth*.py del núcleo):
+    ABRIRGE (Enviar a Google Earth), CAPTURARGE (Traer imagen, Ctrl+Alt+G),
+    CONFIGURARGE; captura georreferenciada y mosaico
 
 Un módulo apagado no deja rastro: ni menú, ni barra, ni comandos, ni
 cambios en el comportamiento de IngeCAD. El menú se rearma solo al
@@ -46,7 +47,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.80.0"
+VERSION = "3.81.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -370,8 +371,8 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     if est["googleearth"]:
         menu += [
             Submenu("Google Earth", (
-                MenuItem("Open Google Earth with GeoCAD", "GEOEARTHOPEN", _icon("google_earth")),
-                MenuItem("Capture view (Ctrl+Alt+G)", "GEOEARTHCAPTURE", _icon("capturar_ge")),
+                MenuItem("Send to Google Earth...", "GEOEARTHOPEN", _icon("google_earth")),
+                MenuItem("Get image from Google Earth...", "GEOEARTHCAPTURE", _icon("capturar_ge")),
                 MenuItem("Capture settings...", "GEOEARTHSETUP"),
                 SEPARATOR,
                 MenuItem("Google Earth manual (chapter 3)...", "GEOEARTHMANUAL"),
@@ -453,7 +454,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.80.0",
+        version="3.81.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

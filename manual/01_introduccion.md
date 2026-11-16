@@ -93,9 +93,9 @@ capítulo.
 | **Dibujo conectado a capas** | IngeCAD ⇄ SHP / GeoPackage | geometría y tabla de atributos, con respaldo, validación y control de conflictos | CONECTARSHP, GUARDARSHP, IMPORTARSHP, EXPORTARSHP | 2 |
 | **Buzón común** | IngeCAD ⇄ QGIS | el aviso de que el otro programa mandó algo, y la configuración compartida | automático | 1 y 2 |
 | **Mismo sistema de coordenadas** | los tres | el sistema del trabajo (por ejemplo POSGAR 2007, faja 7) y la reproyección cuando hace falta | SISTEMAGEO en IngeCAD; el proyecto en QGIS | 1 y 2 |
-| **Captura de Google Earth** | Google Earth → IngeCAD y QGIS | la imagen de la pantalla o un mosaico de hasta 25 fotos, ubicada y en escala | Abrir Google Earth con GeoCAD (ABRIRGE); en Windows desde la 3.75.0 | 3 |
+| **Captura de Google Earth** | Google Earth → IngeCAD y QGIS | la imagen de la pantalla o un mosaico de hasta 25 fotos, ubicada y en escala | Traer imagen de Google Earth… en IngeCAD; Abrir Google Earth con GeoCAD en QGIS; en Windows desde la 3.75.0 | 3 |
 | **Llevar Google Earth a lo que veo** | IngeCAD / QGIS → Google Earth | la vista actual del dibujo o del mapa | botón de la ventanita de GeoCAD | 3 |
-| **Exportar a Google Earth** | IngeCAD / QGIS → Google Earth | dibujos y capas como KML/KMZ, con nombres, colores y rótulos | EXPORTARKML; Exportar a Google Earth y Ver en Google Earth en QGIS | 1, 2 y 3 |
+| **Exportar a Google Earth** | IngeCAD / QGIS → Google Earth | dibujos y capas como KML/KMZ, con nombres, colores y rótulos | Enviar a Google Earth… (directo) y EXPORTARKML en IngeCAD; Exportar a Google Earth y Ver en Google Earth en QGIS | 1, 2 y 3 |
 | **Traer de Google Earth** | Google Earth → IngeCAD | lugares y trazados marcados en Google Earth | IMPORTARKML | 2 y 3 |
 | **Pegar en su lugar** | entre dibujos y programas | entidades con sus coordenadas reales | PEGARENLUGAR | 1 y 2 |
 | **Actualizar** | IngeCAD y QGIS | la versión nueva de GeoCAD, que se encuentra sola | GeoCAD Yaguareté > Actualizar | Final |

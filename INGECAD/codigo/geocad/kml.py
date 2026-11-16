@@ -188,6 +188,27 @@ def desarmar(entidades, doc, nivel: int = 0):
         yield from desarmar(partes, doc, nivel + 1)
 
 
+def en_zona(entidades, zona) -> list:
+    """Los objetos cuya caja toca ``zona`` (xmin, ymin, xmax, ymax): «lo que
+    se ve en pantalla» de Enviar a Google Earth (3.81.0). Un objeto que
+    asoma entero va entero; los que no tienen caja (vacíos) quedan afuera."""
+    from ezdxf import bbox
+    x0, y0, x1, y1 = zona
+    cache = bbox.Cache()
+    out = []
+    for e in entidades:
+        try:
+            caja = bbox.extents([e], fast=True, cache=cache)
+        except Exception:  # noqa: BLE001 -- un objeto raro no frena el resto
+            continue
+        if not caja.has_data:
+            continue
+        if caja.extmax.x < x0 or caja.extmin.x > x1 or caja.extmax.y < y0 or caja.extmin.y > y1:
+            continue
+        out.append(e)
+    return out
+
+
 def plan_kml(entidades, doc, titulo: str = "GeoCAD", por_capa: bool = True,
              relleno: int = RELLENO, cerradas_como_poligono: bool = True,
              campo_nombre: str = "", ruta_dibujo=None,

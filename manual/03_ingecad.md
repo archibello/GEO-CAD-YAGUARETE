@@ -20,7 +20,7 @@ función también es una **orden escrita** en la línea de comandos, en español
 | **Puente** | conectar capas SIG, cambios pendientes, guardar, desconectar |
 | **Sistema de coordenadas** | SISTEMAGEO y REPROYECTAR |
 | **Importar / Exportar** | SHP y KML/KMZ |
-| **Google Earth** | abrir, capturar, configurar y el manual de Google Earth (capítulo 3) |
+| **Google Earth** | enviar a Google Earth, traer imagen de Google Earth, configurar captura y el manual de Google Earth (capítulo 3) |
 | Herramientas de dibujo e imágenes | según los módulos prendidos |
 | **Bloques, Impresión, Cotas** | bancos de herramientas |
 | Módulos…, Administrar Herramientas…, Configuración común…, Actualizar, Diagnóstico | mantenimiento |
@@ -254,7 +254,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 |---|---|
 | **INSERTARGEO** | una imagen con archivo de mundo o GeoTIFF, **en su lugar** |
 | **Ctrl+V** o **PEGARIMAGEN** | una captura de pantalla del portapapeles, con dos clics (esquinas inferiores) |
-| **ABRIRGE** | la imagen de Google Earth, ya ubicada (capítulo 3) |
+| **Traer imagen de Google Earth…** (CAPTURARGE) | la imagen de Google Earth, ya ubicada (capítulo 3) |
 | **EXPORTARGEO** | guarda una copia con su archivo de mundo, que QGIS abre en su lugar |
 | **ASPECTOIMAGEN** | fondo transparente, líneas en negativo o de un color, opacidad (en una copia: el original no se toca) |
 
@@ -347,7 +347,7 @@ que le dan la escala, en el modelo o en el papel; o como **dibujo y textos**
 |---|---|
 | **IMPORTARSHP** | uno o varios SHP, llevados al sistema del dibujo, con sus atributos en cada objeto |
 | **EXPORTARSHP** | por capa y tipo, o por tipo con un campo LAYER, en el sistema del dibujo u otro, con .prj |
-| **IMPORTARKML** / **EXPORTARKML** | de y hacia Google Earth (capítulo 3) |
+| **IMPORTARKML** / **EXPORTARKML** | de y hacia Google Earth (capítulo 3); **Enviar a Google Earth…** (ABRIRGE) lo manda directo |
 | **Control de los DWG** | al guardar en DWG, las falsas alarmas conocidas de LibreDWG se descartan y lo que queda se explica en español |
 
 ### Práctica 2.0 — Traer la manzana con IMPORTARSHP

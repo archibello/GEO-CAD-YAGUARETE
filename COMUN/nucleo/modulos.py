@@ -157,11 +157,13 @@ CATALOGO = {
                "errores que quedan, con su texto."),
         Modulo("googleearth", "Google Earth: captura georreferenciada y mosaico",
                "Captura georreferenciada de lo que se ve en Google Earth Pro, en planas, desde "
-               "el menú GeoCAD > Google Earth: ventanita «GeoCAD Yaguareté» con el botón CAPTURAR "
-               "(Ctrl+Alt+G con Google Earth al frente), calidad Pantalla o Mosaico (una sola "
-               "imagen hecha de varias capturas más cercanas), GeoTIFF, PNG+PGW o JPG+JGW en una "
-               "carpeta común a IngeCAD y QGIS. Apagado no queda rastro: sin enlace en Google "
-               "Earth ni atajo.", requiere="georref"),
+               "el menú GeoCAD > Google Earth: «Traer imagen de Google Earth...» abre y enlaza "
+               "Google Earth y la ventanita «GeoCAD Yaguareté» con el botón CAPTURAR "
+               "(Ctrl+Alt+G con Google Earth al frente), calidad Pantalla, Mosaico (una sola "
+               "imagen hecha de varias capturas más cercanas) o Lo que veo, GeoTIFF, PNG+PGW o "
+               "JPG+JGW en una carpeta común a IngeCAD y QGIS. «Enviar a Google Earth...» manda "
+               "lo seleccionado, lo que se ve o las capas elegidas. Apagado no queda rastro: sin "
+               "enlace en Google Earth ni atajo.", requiere="georref"),
         Modulo("referencias", "Perpendicular y Apparent Intersection con guías de puntos",
                "Con Perpendicular o Apparent Intersection (Mayús + clic derecho, PER o APP): "
                "detenerse medio segundo sobre una línea la toma, y la línea se prolonga con "
