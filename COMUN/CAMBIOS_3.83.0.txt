@@ -1,0 +1,59 @@
+GeoCAD - versión 3.83.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+ASPECTOIMAGEN: contraste de las líneas, vista previa grande con zoom e
+imagen final para entregar (Fernando, 16/11/2026, probando la 3.82.0).
+
+1. Contraste
+   «Vamos a mejorar el contraste de las líneas, sean del color que sean».
+   Deslizador «Contraste», debajo de Opacidad: 100 % las deja como están,
+   hasta 400 %. Refuerza la «tinta» de cada píxel (lo que le falta para ser
+   blanco): las líneas tenues de lápiz o de un escaneo claro se ven más
+   fuertes, negras o de color; el papel blanco sigue blanco. Con «Fondo
+   transparente», lo que ya es línea se hace más opaco y el papel que se
+   borra sigue borrado (el amarillento no vuelve a aparecer).
+
+2. Vista previa grande y con zoom
+   «Mejorar el tamaño de la imagen previa, o poder hacer zoom, para
+   asegurar que vamos por buen camino».
+   - La ventana abre más grande y se puede agrandar; la vista ocupa la mitad
+     derecha.
+   - Rueda: acercar y alejar donde está el cursor. Arrastrar: mover.
+     Doble clic o «Ver todo»: la imagen entera. «1:1»: un píxel del
+     original por píxel de pantalla. Arriba dice el zoom.
+   - Acercada, lo que se ve se calcula con los píxeles del ORIGINAL (no con
+     la copia chica): se puede controlar cada línea antes de aceptar. Sólo
+     se calcula el pedazo a la vista: rápido aun con un plano de 37 Mpx.
+   - Si la imagen ya tiene su fondo blanco, la vista abre sobre Blanco.
+
+3. Entregar imagen final
+   «Para entregar el trabajo terminado vamos a hacer una captura del
+   resultado y transformar todo en una imagen nueva».
+   - Botón «Entregar imagen final...», junto a Aceptar: hace una imagen
+     nueva, <original>_final.png en la carpeta de imágenes del dibujo, con
+     el aspecto elegido (contraste, color, opacidad...) sobre papel blanco,
+     toda opaca (sin canal de transparencia). Es la que se entrega.
+   - La imagen del dibujo pasa a usarla y se quita su fondo de la capa
+     FONDO_IMAGENES (ya no hace falta). El original no se toca. Un U
+     deshace las dos cosas.
+   - La casilla «Fondo blanco» (3.82.0) sigue igual: sirve para comparar
+     mientras se trabaja, prendiendo y apagando la capa.
+
+Por dentro
+- aspecto.py: valores «contraste» y «final»; SUFIJO_FINAL; la copia final
+  se guarda sin alfa; la próxima imagen no hereda «final».
+- aspecto_ui.py: _Previa (QGraphicsView en píxeles del original: la vista
+  entera de una copia de 1200 px y, acercada, el pedazo visible del
+  original); el deslizador y el botón.
+
+Pruebas
+- test_aspecto: contraste (papel blanco, gris y rojo tenues, negro, con
+  fondo transparente, papel amarillento sigue borrado), imagen final (RGB,
+  papel blanco, línea fuerte, quita el fondo, valores guardados, U y
+  rehacer).
+- banco_fondo_imagen_ventana, sección 4 (ventana real): el deslizador, la
+  vista grande, la rueda, el detalle del original al acercar, Ver todo,
+  «Entregar imagen final...» y U.
+
+Para probar (IngeCAD): FC1-FC6 en 02_PRUEBAS_MANUALES.txt.

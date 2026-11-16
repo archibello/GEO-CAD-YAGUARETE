@@ -84,6 +84,26 @@ p = px({"transparente": True, "blanco": 0, "lineas": "color", "color": "#00FF00"
 assert p[0] == (0, 255, 0, 255) and p[1][:3] == (0, 255, 0)
 p = px({"transparente": False, "opacidad": 50})
 assert abs(p[0][3] - 128) <= 1 and abs(p[4][3] - 64) <= 1
+#   3.83.0: contraste de las líneas (la «tinta» se multiplica) e imagen final sobre blanco
+v = A.normalizar({"contraste": 9999}); assert v["contraste"] == A.CONTRASTE_MAX
+assert A.normalizar({"contraste": 3})["contraste"] == 100 and A.normalizar({})["final"] is False
+assert "contraste de las líneas 200 %" in A.describir({"contraste": 200})
+tenue = Image.new("RGBA", (4, 1))
+tenue.putdata([(255, 255, 255, 255), (200, 200, 200, 255), (255, 160, 160, 255), (0, 0, 0, 255)])
+p = px({"transparente": False, "contraste": 200}, tenue)
+assert p[0][:3] == (255, 255, 255)                          # el papel sigue blanco
+assert p[1][:3] == (145, 145, 145)                          # el gris tenue, el doble de tinta
+assert p[2][:3] == (255, 65, 65)                            # una línea roja tenue: más roja
+assert p[3][:3] == (0, 0, 0)                                # lo negro no puede ser más negro
+assert px({"transparente": False, "contraste": 100}, tenue) == px({"transparente": False}, tenue)
+a1 = px({"transparente": True, "blanco": 0}, tenue)[1][3]
+a2 = px({"transparente": True, "blanco": 0, "contraste": 300}, tenue)[1][3]
+assert a2 > 2 * a1                                          # con fondo transparente: más opaca
+assert px({"transparente": True, "blanco": 25, "contraste": 400})[2][3] == 0   # el papel amarillento sigue borrado
+p = px({"transparente": True, "blanco": 0, "lineas": "color", "color": "#0000FF", "final": True}, tenue)
+assert all(q[3] == 255 for q in p)                          # la final: opaca
+assert p[0][:3] == (255, 255, 255) and p[3][:3] == (0, 0, 255)   # papel blanco, línea azul
+assert 0 < p[1][0] < 255 and p[1][2] == 255                 # lo tenue, azul claro sobre blanco
 gris = Image.new("L", (3, 3), 0)                            # escala de grises y paleta también
 assert A.procesar(gris, {}).mode == "RGBA" and A.procesar(gris.convert("P"), {}).size == (3, 3)
 assert max(A.reducida(Image.new("RGB", (2000, 1000)), 400).size) == 400
@@ -140,8 +160,10 @@ class Ctrl:
         return self.index.entity(h) if h else None
 
 
-def falsa_ventana(parent, original, valores, con_aspecto):
+fondos_pedidos = []
+def falsa_ventana(parent, original, valores, con_aspecto, fondo=False):
     pedidos.append((Path(original), dict(valores), con_aspecto))
+    fondos_pedidos.append(fondo)
     return respuesta[0]
 A.ventana = falsa_ventana
 
@@ -250,5 +272,110 @@ respuesta[0] = {"accion": "aceptar", "valores": dict(A.DEFECTO, transparente=Fal
 herramienta({img3.dxf.handle})                                    # sin fondo transparente: se ve
 assert not any(m.startswith("Atención") for m in msgs)
 print("ok recorrido")
+
+# ------------------------------------------------------------- 6. fondo blanco en su capa (3.82.0)
+#   Fernando: «volver al fondo blanco cuando lo necesitemos», con una capa que
+#   se prende o se apaga en vez de rellenar los píxeles
+from core.draworder import order_groups
+doc = Document(ezdxf.new("R2018")); hist = History(doc); msp = doc.modelspace()
+doc.path = str(d / "lote13.dwg")
+otra_linea = msp.add_line((0, 0), (1, 1))                           # algo dibujado antes
+ddef = doc.doc.add_image_def(filename=str(plano), size_in_pixel=(60, 40))
+img = msp.add_image(ddef, insert=(1000, 2000), size_in_units=(60, 40))
+assert A.fondo_de(img) is None
+respuesta[0] = {"accion": "aceptar", "valores": A.DEFECTO, "fondo_blanco": True}
+herramienta({img.dxf.handle})
+assert fondos_pedidos[-1] is False                                  # la ventana: sin fondo todavía
+f = A.fondo_de(img)
+assert f is not None and f.dxf.layer == A.CAPA_FONDO and A.CAPA_FONDO in doc.doc.layers
+assert f.dxf.solid_fill and f.rgb == (255, 255, 255)               # blanco verdadero, no el color 7
+xs = sorted({round(v[0], 6) for v in f.paths[0].vertices}); ys = sorted({round(v[1], 6) for v in f.paths[0].vertices})
+assert xs[0] <= 1000 and xs[-1] >= 1059 and ys[0] <= 2000 and ys[-1] >= 2039   # el contorno de la imagen
+grupos = order_groups(msp)
+assert grupos.get(f.dxf.handle) == -1 and img.dxf.handle not in grupos     # al fondo, debajo de la imagen
+assert any("capa FONDO_IMAGENES" in m for m in msgs)
+assert Path(img.image_def.dxf.filename).name == "mensura_aspecto.png"      # el aspecto, igual que siempre
+copia_fondo = img.image_def.dxf.filename
+hist.undo()                                                         # un U: aspecto y fondo juntos
+assert A.fondo_de(img) is None and A.CAPA_FONDO not in doc.doc.layers
+assert img.image_def.dxf.filename == str(plano) and not order_groups(msp)
+hist.redo()
+assert A.fondo_de(img) is not None and img.image_def.dxf.filename == copia_fondo
+#   la ventana lo ve tildado; sin cambiar el aspecto, sólo se quita el fondo (sin rehacer la copia)
+respuesta[0] = {"accion": "aceptar", "valores": A.DEFECTO, "fondo_blanco": False}
+herramienta({img.dxf.handle})
+assert fondos_pedidos[-1] is True
+assert A.fondo_de(img) is None and img.image_def.dxf.filename == copia_fondo
+assert any("Fondo blanco quitado" in m for m in msgs)
+assert f.dxf.handle not in order_groups(msp)                        # sin rastro en el orden de dibujo
+hist.undo(); assert A.fondo_de(img) is not None                     # U lo devuelve
+#   la imagen se movió: el fondo se rehace al contorno nuevo (uno solo)
+img.dxf.insert = (3000, 4000)
+respuesta[0] = {"accion": "aceptar", "valores": dict(A.DEFECTO, opacidad=60), "fondo_blanco": True}
+herramienta({img.dxf.handle})
+fs = [h for h in msp.query("HATCH") if h.dxf.layer == A.CAPA_FONDO]
+assert len(fs) == 1 and min(v[0] for v in fs[0].paths[0].vertices) >= 2999
+hist.undo()
+fs = [h for h in msp.query("HATCH") if h.dxf.layer == A.CAPA_FONDO]
+assert len(fs) == 1 and fs[0] is f                                  # vuelve el de antes
+#   sin la clave en la respuesta (ventana vieja) el fondo queda como estaba
+respuesta[0] = {"accion": "aceptar", "valores": dict(A.DEFECTO, opacidad=70)}
+herramienta({img.dxf.handle}); assert A.fondo_de(img) is not None
+#   «Volver al original» con fondo: los dos juntos; el fondo queda
+respuesta[0] = {"accion": "original", "fondo_blanco": True}
+herramienta({img.dxf.handle})
+assert img.image_def.dxf.filename == str(plano) and A.fondo_de(img) is not None
+#   imagen sin aspecto: «original» + fondo sólo pone o quita el fondo
+respuesta[0] = {"accion": "original", "fondo_blanco": False}
+herramienta({img.dxf.handle}); assert A.fondo_de(img) is None
+assert not any("ya usa su archivo original" in m for m in msgs)
+#   una imagen enviada al fondo vuelve al orden normal (si no, su fondo la taparía)
+from core.draworder import DrawOrderCommand
+hist.execute(DrawOrderCommand([img], "back"))
+assert order_groups(msp)[img.dxf.handle] == -1
+respuesta[0] = {"accion": "original", "fondo_blanco": True}
+herramienta({img.dxf.handle})
+g = order_groups(msp)
+assert g[A.fondo_de(img).dxf.handle] == -1 and img.dxf.handle not in g
+assert any("vuelve al orden normal" in m for m in msgs)
+hist.undo(); assert order_groups(msp)[img.dxf.handle] == -1 and A.fondo_de(img) is None
+#   imagen recortada: el fondo sigue el recorte
+hist.execute(DrawOrderCommand([img], "front")); hist.undo()
+img.set_boundary_path([(10, 10), (50, 10), (30, 35)])
+respuesta[0] = {"accion": "original", "fondo_blanco": True}
+herramienta({img.dxf.handle})
+assert len(A.fondo_de(img).paths[0].vertices) == 3
+#   se guarda con el DXF y se vuelve a encontrar al abrirlo
+dxf = d / "lote13.dxf"; doc.doc.saveas(dxf)
+abierto = ezdxf.readfile(dxf).modelspace()
+otra = next(iter(abierto.query("IMAGE")))
+assert A.fondo_de(otra) is not None and A.fondo_de(otra).dxf.layer == A.CAPA_FONDO
+assert order_groups(abierto)[A.fondo_de(otra).dxf.handle] == -1
+print("ok fondo blanco")
+
+# ------------------------------------------------------------- 7. entregar imagen final (3.83.0)
+#   Fernando: «para entregar el trabajo terminado vamos a hacer una captura del
+#   resultado y transformar todo en una imagen nueva»
+respuesta[0] = {"accion": "aceptar", "valores": A.DEFECTO, "fondo_blanco": True}
+herramienta({img.dxf.handle}); assert A.fondo_de(img) is not None
+antes_final = img.image_def.dxf.filename
+elegidos = dict(A.DEFECTO, lineas="color", color="#0000FF", contraste=250)
+respuesta[0] = {"accion": "final", "valores": elegidos, "fondo_blanco": True}
+herramienta({img.dxf.handle})
+final = Path(img.image_def.dxf.filename)
+assert final.name.startswith("mensura_final") and final.suffix == ".png" and final.is_file()
+hecha = Image.open(final)
+assert hecha.mode == "RGB"                                  # opaca: sin canal alfa
+assert hecha.getpixel((2, 2)) == (255, 255, 255)            # el papel, blanco
+assert hecha.getpixel((30, 20))[2] == 255 and hecha.getpixel((30, 20))[0] < 60   # la línea, azul fuerte
+assert A.fondo_de(img) is None                              # el fondo de la capa ya no hace falta
+assert A.leer(img)[0]["final"] and A.leer(img)[0]["contraste"] == 250 and A.leer(img)[1] == str(plano)
+assert plano.read_bytes() == original_bytes                 # el original NUNCA se toca
+assert any("Imagen final" in m and str(final) in m for m in msgs)
+assert A._ultimos[0]["final"] is False                      # la próxima imagen no sale «final»
+hist.undo()                                                 # un U: la imagen y su fondo como estaban
+assert img.image_def.dxf.filename == antes_final and A.fondo_de(img) is not None
+hist.redo(); assert Path(img.image_def.dxf.filename) == final and A.fondo_de(img) is None
+print("ok imagen final")
 
 print("TODO OK ASPECTO")

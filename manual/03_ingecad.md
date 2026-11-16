@@ -256,7 +256,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 | **Ctrl+V** o **PEGARIMAGEN** | una captura de pantalla del portapapeles, con dos clics (esquinas inferiores) |
 | **Traer imagen de Google Earth…** (CAPTURARGE) | la imagen de Google Earth, ya ubicada (capítulo 3) |
 | **EXPORTARGEO** | guarda una copia con su archivo de mundo, que QGIS abre en su lugar |
-| **ASPECTOIMAGEN** | fondo transparente, líneas en negativo o de un color, opacidad (en una copia: el original no se toca) |
+| **ASPECTOIMAGEN** | fondo transparente, líneas en negativo o de un color, opacidad y contraste, con vista previa con zoom (en una copia: el original no se toca); **Fondo blanco** detrás de la imagen, en la capa FONDO_IMAGENES que se prende o se apaga; **Entregar imagen final…**: una imagen nueva, opaca y con fondo blanco, para la entrega |
 
 ### Tomar la imagen del marco
 

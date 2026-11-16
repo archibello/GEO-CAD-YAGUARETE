@@ -1,0 +1,43 @@
+GeoCAD - versión 3.82.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+ASPECTOIMAGEN: casilla «Fondo blanco» (Fernando, 16/11/2026: «para volver al
+fondo blanco cuando lo necesitemos»; «trabajar con una capa de fondo que se
+pueda prender o apagar en vez de rellenar»; «superponer un fondo blanco
+opaco que aparezca por detrás, y que dé como resultado una imagen con fondo
+blanco»).
+
+- En la ventana «Aspecto de la imagen», junto a «Fondo transparente», la
+  casilla «Fondo blanco». Al tildarla la vista previa pasa a fondo Blanco.
+- Aceptar pone un sombreado sólido blanco opaco (color verdadero 255,255,255,
+  no el 7, que en pantalla oscura es negro) con el contorno de la imagen, o
+  el de su recorte si tiene, en la capa FONDO_IMAGENES, enviado al fondo: la
+  imagen queda encima y se ve con fondo blanco.
+- Apagar la capa FONDO_IMAGENES lo saca de la vista; prenderla lo devuelve.
+  La imagen, su archivo y su copia con aspecto no se tocan.
+- La ventana abre tildada si la imagen ya tiene su fondo; destildar y
+  Aceptar lo quita; Aceptar con la casilla tildada lo rehace al contorno
+  actual (si la imagen se movió o se recortó).
+- Si sólo cambió el fondo, no se rehace la copia de la imagen (es inmediato
+  aun con un plano grande).
+- Aspecto y fondo se deshacen juntos con un solo U.
+- Si la imagen estaba enviada al fondo (DRAWORDER), vuelve al orden normal:
+  IngeCAD pinta los rellenos de un grupo encima de sus imágenes y el fondo
+  la taparía. Se avisa en la línea de comandos.
+- El fondo se guarda con el dibujo (XDATA GEOCAD_FONDO con el handle de su
+  imagen) y se vuelve a encontrar al abrirlo.
+
+Por dentro
+- aspecto.py: fondo_de, contorno y FondoCommand (capa, sombreado y orden de
+  dibujo, con deshacer exacto); la orden arma aspecto + fondo en un solo paso.
+- aspecto_ui.py: la casilla; ventana(...) devuelve también «fondo_blanco».
+
+Pruebas
+- test_aspecto, sección 6: poner, quitar, rehacer al contorno nuevo, recorte,
+  imagen enviada al fondo, U y rehacer, guardar y abrir el DXF.
+- banco_fondo_imagen_ventana (ventana real de IngeCAD): la casilla con el
+  clic, el relleno en el grupo del fondo y la imagen en el normal, capa
+  apagada y prendida, destildar y U.
+
+Para probar (IngeCAD): FB1-FB5 en 02_PRUEBAS_MANUALES.txt.
