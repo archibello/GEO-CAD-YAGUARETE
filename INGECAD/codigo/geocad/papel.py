@@ -40,6 +40,10 @@ GeoCAD hace que IngeCAD respete esa escala, como AutoCAD:
    saca del índice, de las referencias y de la selección las ventanas que el
    comando dejó fuera del dibujo. Se engancha en la ventana (como Agarres),
    para no pisarse con el envoltorio de la clase de redibujo_imagenes.
+   (3.84.2) Lo mismo al moverla: «crea un fantasma cuando lo desplazas». El
+   índice seguía con la forma vieja y el resaltado de la selección quedaba
+   en el lugar de antes. Las ventanas que el comando tocó y siguen en el
+   dibujo se vuelven a cargar en el índice con su forma de ahora.
 
 Con escala 1:1 (dibujos en mm, presentaciones de siempre) nada cambia.
 Apagado el módulo, IngeCAD queda como venía. Las cuentas no usan Qt.
@@ -442,10 +446,47 @@ def olvidar_ventanas(controlador, handles) -> int:
     return len(handles)
 
 
+def ventanas_cambiadas(command) -> list:
+    """Las ventanas gráficas que el comando tocó y siguen en el dibujo
+    (MOVE, ESCALA, sus agarres, MVIEW...): su forma en el índice puede ser
+    la de antes (3.84.2)."""
+    out, vistos = [], set()
+    for e in _grupos(command):
+        try:
+            if (e is None or e.dxftype() != "VIEWPORT" or not e.is_alive
+                    or e.dxf.owner is None or id(e) in vistos):
+                continue
+        except Exception:  # noqa: BLE001
+            continue
+        vistos.add(id(e))
+        out.append(e)
+    return out
+
+
+def rehacer_ventanas(controlador, ventanas) -> int:
+    """Vuelve a cargar esas ventanas en el índice de selección y en las
+    referencias con su forma de ahora (la de antes se saca). La selección y
+    su resaltado salen de ahí: sin esto, MOVE dejaba el resaltado y el clic
+    en el lugar viejo (Fernando, 16/11/2026: «crea un fantasma cuando lo
+    desplazas»). Devuelve cuántas."""
+    ventanas = list(ventanas)
+    if not ventanas:
+        return 0
+    handles = [vp.dxf.handle for vp in ventanas]
+    for cache in (getattr(controlador, "index", None),
+                  getattr(controlador, "snap_engine", None)):
+        if (cache is not None and hasattr(cache, "remove_handles")
+                and hasattr(cache, "add_entities")):
+            cache.remove_handles(handles)
+            cache.add_entities(ventanas)
+    return len(ventanas)
+
+
 def _ejecutar(controlador, command, *args, **kwargs):
     resultado = type(controlador)._execute_command(controlador, command, *args, **kwargs)
     try:
         olvidar_ventanas(controlador, ventanas_borradas(command))
+        rehacer_ventanas(controlador, ventanas_cambiadas(command))
     except Exception:  # noqa: BLE001 -- ante la duda, IngeCAD como venía
         pass
     return resultado

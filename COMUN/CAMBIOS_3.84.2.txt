@@ -1,0 +1,37 @@
+GeoCAD - versión 3.84.2
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Espacio papel: mover una ventana gráfica ya no deja un «fantasma»
+(Fernando, 16/11/2026, con la 3.84.1: «hice un viewport nuevo y crea un
+fantasma cuando lo desplazas»).
+
+Qué pasaba (error de IngeCAD 0.6.7 a 0.8.0; pasa también sin GeoCAD)
+   La misma causa que la 3.84.1 arregló para el borrado: después de un
+   comando que toca una ventana, IngeCAD no rehace su índice de selección.
+   Con MOVE, la ventana se movía y sus agarres también, pero el resaltado de
+   la selección (azul) quedaba en el lugar viejo, y un clic en el borde
+   viejo la volvía a elegir. En IngeCAD solo, ir a Model y volver lo limpia.
+   (El agarre del centro ya andaba bien en IngeCAD 0.7.0 y 0.8.0.)
+
+Ahora
+   Después de cada comando, las ventanas que el comando tocó y siguen en el
+   dibujo (MOVE, ESCALA, sus agarres, MVIEW...) se vuelven a cargar en el
+   índice de selección y en las referencias con su forma nueva. Las
+   borradas siguen saliendo del índice (3.84.1). U y rehacer, igual.
+
+Por dentro
+- papel.py (módulo Papel): ventanas_cambiadas() y rehacer_ventanas(), en el
+  mismo gancho del controlador que la 3.84.1.
+
+Pruebas
+- test_ventana_borrada, sección 3b: el fantasma de IngeCAD al mover
+  (el borde viejo la elige); con el gancho, el lugar viejo no elige nada,
+  el nuevo sí, sigue elegida y el resaltado sale del marco nuevo.
+- banco_ventana_borrada, sección 3 (ventana real): MOVE con la herramienta
+  real y con el agarre del centro, el resaltado en el lugar nuevo, el borde
+  viejo sin elegir nada, U y Supr, con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7
+  (en 0.6.7 y 0.6.8.2 el agarre del centro no mueve la ventana, tampoco sin
+  GeoCAD: no se mide).
+
+Para probar (IngeCAD): VM1-VM3 en 02_PRUEBAS_MANUALES.txt.

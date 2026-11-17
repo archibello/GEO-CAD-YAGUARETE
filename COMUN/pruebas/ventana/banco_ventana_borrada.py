@@ -159,6 +159,88 @@ t.on_click(x, y)
 ver("BORRA: sin fantasma", not t.selection, str(t.selection))
 win.close(); esperar(0.1)
 
+# ------------------------------------------------------------- 3. moverla (3.84.2)
+# Fernando: «hice un viewport nuevo y crea un fantasma cuando lo desplazas»:
+# la ventana se movía, pero el resaltado y el clic quedaban en el lugar viejo.
+def resaltado(t):
+    segs = t.highlight_geometry()[0]
+    if not len(segs):
+        return None
+    xs = list(segs[:, 0]) + list(segs[:, 2])
+    ys = list(segs[:, 1]) + list(segs[:, 3])
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+def igual(a, b, tol=1e-6):
+    return a is not None and b is not None and all(abs(p - q) <= tol for p, q in zip(a, b))
+
+
+def mover(gancho, como):
+    win, lay, vp = hoja_nueva()
+    t = win.tools
+    if gancho:
+        AG.aplicar(win)
+        P.enganchar_ventanas(win)
+    viejo = L.viewport_rect(vp)
+    xv, yv = borde(vp)
+    t.on_click(xv, yv)
+    assert t.selection == {vp.dxf.handle}
+    if como == "MOVE":                            # la herramienta MOVE, con la ventana elegida
+        t.osnap_on = False
+        t.start_tool("MOVE"); esperar(0.1)
+        bx, by = (viejo[0] + viejo[2]) / 2.0, viejo[1] - 10.0     # fuera de la ventana
+        t.on_click(bx, by); esperar(0.1)
+        t.on_click(bx + 40.0, by + 30.0); esperar()
+    else:                                         # el agarre del centro
+        cx, cy = (viejo[0] + viejo[2]) / 2.0, (viejo[1] + viejo[3]) / 2.0
+        grip = t.grip_at(cx, cy, 3.0)
+        t.begin_grip_drag(grip)
+        t.update_grip_drag(cx + 40.0, cy + 30.0)
+        t.finish_grip_drag(cx + 40.0, cy + 30.0)
+        esperar()
+    nuevo = L.viewport_rect(vp)
+    movida = igual(nuevo, (viejo[0] + 40, viejo[1] + 30, viejo[2] + 40, viejo[3] + 30))
+    t.selection = {vp.dxf.handle}                 # sigue elegida (como en la captura)
+    r = resaltado(t)
+    t.clear_selection()
+    t.on_click(xv, yv)
+    en_viejo = set(t.selection)
+    t.clear_selection()
+    xn, yn = borde(vp)
+    t.on_click(xn, yn)
+    en_nuevo = set(t.selection)
+    t.clear_selection()
+    return win, lay, vp, t, movida, r, nuevo, en_viejo, en_nuevo
+
+
+for como in ("MOVE", "agarre"):
+    win, lay, vp, t, movida, r, nuevo, en_viejo, en_nuevo = mover(False, como)
+    print(f"  IngeCAD solo, {como}: movida={movida}, resaltado en el lugar "
+          f"{'NUEVO' if igual(r, nuevo) else 'VIEJO (fantasma)'}, el borde viejo elige "
+          f"{sorted(en_viejo) or 'nada'}")
+    win.close(); esperar(0.1)
+    if not movida:
+        # IngeCAD 0.6.7 y 0.6.8.2: el agarre del centro no mueve la ventana
+        # (tampoco sin GeoCAD): no hay nada que medir
+        print(f"  {como}: esta IngeCAD no mueve la ventana así (tampoco sola): no se mide")
+        continue
+    win, lay, vp, t, movida, r, nuevo, en_viejo, en_nuevo = mover(True, como)
+    h = vp.dxf.handle
+    ver(f"{como}: la ventana se movió", movida)
+    ver(f"{como}: el resaltado está en el lugar nuevo", igual(r, nuevo), f"{r} vs {nuevo}")
+    ver(f"{como}: el borde viejo no elige nada", not en_viejo, str(en_viejo))
+    ver(f"{como}: el borde nuevo la elige", en_nuevo == {h}, str(en_nuevo))
+    win._cmd_undo(); esperar()
+    atras = L.viewport_rect(vp)
+    t.selection = {h}
+    ver(f"{como}: U, el resaltado vuelve con ella", igual(resaltado(t), atras))
+    t.clear_selection()
+    x, y = borde(vp)
+    t.on_click(x, y)
+    ver(f"{como}: U, se elige en su lugar y Supr la borra",
+        t.selection == {h} and supr(win) and not L.visible_viewports(lay))
+    win.close(); esperar(0.1)
+
 print()
 if fallas:
     print("FALLAS:", ", ".join(fallas))

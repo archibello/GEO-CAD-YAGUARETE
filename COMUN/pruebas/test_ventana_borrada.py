@@ -131,6 +131,40 @@ assert not flotantes(psp) and c.index.pick(BORDE, 2.0) is None
 assert P.olvidar_ventanas(c, [hv]) == 1 and c.index.pick(BORDE, 2.0) is None
 print("ok lo demás igual")
 
+# ------------------------------------------------------------- 3b. moverla (3.84.2)
+# Fernando: «hice un viewport nuevo y crea un fantasma cuando lo desplazas»: el
+# índice seguía con el marco viejo (el clic y el resaltado, en el lugar de antes).
+from core.actions import TransformCommand
+from ezdxf.math import Matrix44
+NUEVO = (100.0, 150.0)           # el lado izquierdo, después de mover 40, 30 (lejos del marco viejo)
+
+
+def mover(c, vp):
+    c._execute_command(TransformCommand("MOVE", [vp], Matrix44.translate(40, 30, 0)))
+
+
+doc, psp, vp, c = hoja()
+hv = vp.dxf.handle
+assert c.index.pick(BORDE, 2.0) == hv               # el clic que la eligió (arma el índice)
+mover(c, vp)                                       # sin el gancho: como IngeCAD
+assert (vp.dxf.center.x, vp.dxf.center.y) == (140.0, 130.0)
+assert c.index.pick(BORDE, 2.0) == hv, "IngeCAD: el borde viejo la sigue eligiendo"
+assert c.index.pick(NUEVO, 2.0) != hv
+doc, psp, vp, c = hoja()
+P.enganchar_ventanas(types.SimpleNamespace(tools=c))
+hv = vp.dxf.handle
+assert c.index.pick(BORDE, 2.0) == hv
+c.selection = {hv}
+mover(c, vp)
+assert c.index.pick(BORDE, 2.0) is None, "el lugar viejo ya no elige nada"
+assert c.index.pick(NUEVO, 2.0) == hv, "el lugar nuevo la elige"
+assert hv in c.selection, "sigue elegida"
+segs = c.index.segments_of([hv])
+assert abs(float(segs[:, [0, 2]].min()) - 100.0) < 1e-9, "el resaltado sale del marco nuevo"
+assert P.ventanas_cambiadas(TransformCommand("MOVE", [vp], Matrix44())) == [vp]
+assert P.ventanas_cambiadas(EraseCommand([psp.add_line((0, 0), (1, 1))])) == []
+print("ok mover sin fantasma")
+
 # ------------------------------------------------------------- 4. módulo apagado: como venía
 M.guardar("ingecad", {"papel": False})
 assert not P.activo()

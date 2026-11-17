@@ -333,9 +333,10 @@ que le dan la escala, en el modelo o en el papel; o como **dibujo y textos**
 - **Espacio papel como AutoCAD**: la presentación respeta la escala de su
   configuración de página; con el dibujo en metros, una ventana a 1:100
   (1/100XP) muestra 100 m en 1000 mm y se imprime así.
-- **Borrar una ventana gráfica**: se elige por el borde y se borra con Supr o
-  BORRA, también la que trae la presentación. Una vez borrada ya no vuelve a
-  elegirse (en IngeCAD solo quedaba un «fantasma» que no se podía borrar).
+- **Borrar o mover una ventana gráfica**: se elige por el borde y se borra con
+  Supr o BORRA, también la que trae la presentación; se mueve con MOVE o con
+  su agarre. Borrada o movida, no queda un «fantasma» en el lugar de antes (en
+  IngeCAD solo el borde viejo la volvía a elegir y no se podía borrar).
 - **VISTAPREVIA**: la presentación como sale impresa, con zoom e Imprimir.
 - **PLUMAS**: la tabla de plumas .ctb como AutoCAD (color → color de
   impresión, grosor, tramado).
