@@ -164,6 +164,34 @@ hoja, modelo = lienzo_mod.Viewport(True), lienzo_mod.Viewport(False)
 assert L.en_papel(hoja) and not L.en_papel(modelo)
 assert hoja.paintGL() == "pintado" and hoja.usado == 0.0           # la hoja: todos
 assert modelo.paintGL() == "pintado" and modelo.usado == 6.0       # el modelo: 6 px
+
+# 3.84.4: abrir un dibujo corre orden.instalar(); con IngeCAD 0.6.7+ eso
+# sacaba el envoltorio de AFUERA de paintGL, que era el de la hoja (Fernando,
+# 17/11/2026, después de reiniciar IngeCAD: los textos otra vez escondidos).
+# Ahora cada módulo saca sólo el suyo y el otro queda.
+O = import_module("ingecad_plugin_geocad.orden")
+from ingecad_plugin_geocad.dibujo import envolver as _env, desenvolver as _des
+_falsos = types.SimpleNamespace(Batch=type("Batch", (), {"visible_runs": lambda self: None}))
+O._quitar(_falsos, types.SimpleNamespace())            # IngeCAD que pinta por grupos
+assert getattr(lienzo_mod.Viewport.paintGL, "_puente_fabrica", None) is L._envolver_paint
+hoja.usado = None
+assert hoja.paintGL() == "pintado" and hoja.usado == 0.0, hoja.usado
+# IngeCAD viejo: orden se pone afuera y la hoja queda adentro (y al revés)
+assert _env(lienzo_mod.Viewport, "paintGL", O._envolver_paint, reemplazar=True)
+hoja.usado = None
+assert hoja.paintGL() == "pintado" and hoja.usado == 0.0, hoja.usado
+assert L.instalar_papel() is True                     # se vuelve a poner afuera, sin duplicar
+_f, _n = lienzo_mod.Viewport.paintGL, 0
+while hasattr(_f, "_puente_original"):
+    _n, _f = _n + 1, _f._puente_original
+assert _n == 2, _n                                    # hoja + orden, una vez cada uno
+_des(lienzo_mod.Viewport, "paintGL", O._envolver_paint)  # orden se va; la hoja queda
+assert getattr(lienzo_mod.Viewport.paintGL, "_puente_fabrica", None) is L._envolver_paint
+assert lienzo_mod.Viewport.paintGL._puente_original._puente_fabrica is None if hasattr(
+    lienzo_mod.Viewport.paintGL._puente_original, "_puente_fabrica") else True
+hoja.usado = None
+assert hoja.paintGL() == "pintado" and hoja.usado == 0.0
+print("ok abrir un dibujo (orden.instalar) ya no saca el envoltorio de la hoja")
 assert lienzo_mod.MIN_TEXT_PX == 6.0                               # queda como estaba
 # si al pintar falla, el mínimo vuelve igual
 def roto(self):

@@ -251,23 +251,68 @@ def _envolver_start_tool(original):
     return start_tool
 
 
+def _clave(fabrica):
+    """Quién puso un envoltorio: módulo y nombre de su fábrica (iguales en
+    la versión recargada por Actualizar, aunque el objeto sea otro)."""
+    return (getattr(fabrica, "__module__", None), getattr(fabrica, "__qualname__", None))
+
+
+def _capas(actual):
+    """Los envoltorios de GeoCAD que se reconocen (con su fábrica), de afuera
+    hacia adentro, y lo que queda debajo."""
+    capas = []
+    while (callable(getattr(actual, "_puente_fabrica", None))
+           and getattr(actual, "_puente_original", None) is not None):
+        capas.append(actual._puente_fabrica)
+        actual = actual._puente_original
+    return capas, actual
+
+
+def _rearmar(cls, nombre, capas, base) -> None:
+    for fabrica in reversed(capas):
+        base = fabrica(base)
+    setattr(cls, nombre, base)
+
+
 def envolver(cls, nombre: str, fabrica, reemplazar: bool = False) -> bool:
     """Envuelve ``cls.nombre`` una sola vez. Con ``reemplazar``, un
     envoltorio de una versión anterior del plugin se cambia por el nuevo
-    (al actualizar sin reiniciar IngeCAD)."""
+    (al actualizar sin reiniciar IngeCAD).
+
+    3.84.4: con ``reemplazar`` sólo se cambia el envoltorio de ESA fábrica;
+    los de otros módulos (que dicen su fábrica) quedan. Antes se tiraba el de
+    afuera fuera de quien fuera: abrir un dibujo sacaba el de la hoja de
+    textos legibles (Fernando, 17/11/2026: los textos de la hoja otra vez
+    escondidos)."""
     actual = getattr(cls, nombre, None)
-    if actual is not None and hasattr(actual, "_puente_original"):
-        if not reemplazar:
-            return False
-        actual = actual._puente_original
     if actual is None:
         return False
-    setattr(cls, nombre, fabrica(actual))
+    capas, base = _capas(actual)
+    if not capas:
+        if hasattr(actual, "_puente_original"):     # envoltorio sin fábrica: como antes
+            if not reemplazar:
+                return False
+            actual = actual._puente_original
+        setattr(cls, nombre, fabrica(actual))
+        return True
+    if not reemplazar:
+        return False
+    otras = [f for f in capas if _clave(f) != _clave(fabrica)]
+    _rearmar(cls, nombre, [fabrica] + otras, base)
     return True
 
 
-def desenvolver(cls, nombre: str) -> None:
+def desenvolver(cls, nombre: str, fabrica=None) -> None:
+    """Saca un envoltorio. Con ``fabrica``, sólo el de esa fábrica (de esta
+    versión o de una anterior), esté donde esté; los demás quedan (3.84.4).
+    Sin ``fabrica``, el de afuera, como antes."""
     actual = getattr(cls, nombre, None)
+    if fabrica is not None:
+        capas, base = _capas(actual)
+        otras = [f for f in capas if _clave(f) != _clave(fabrica)]
+        if len(otras) != len(capas):
+            _rearmar(cls, nombre, otras, base)
+        return
     original = getattr(actual, "_puente_original", None)
     if original is not None:
         setattr(cls, nombre, original)

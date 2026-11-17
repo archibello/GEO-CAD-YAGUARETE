@@ -127,9 +127,10 @@ def quitar(backend) -> None:
     """Saca el retoque si estaba puesto (deja los de IngeCAD)."""
     from .dibujo import desenvolver
     vb = getattr(backend, "VertexBackend", None)
-    for nombre in ("enter_entity", "exit_entity", "_bucket"):
-        if vb is not None and hasattr(getattr(vb, nombre, None), "_puente_original"):
-            desenvolver(vb, nombre)
+    for nombre, fabrica in (("enter_entity", _envolver_enter), ("exit_entity", _envolver_exit),
+                            ("_bucket", _envolver_bucket)):
+        if vb is not None:
+            desenvolver(vb, nombre, fabrica)
 
 
 def instalar() -> bool:

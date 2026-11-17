@@ -1,0 +1,48 @@
+GeoCAD - versión 3.84.4
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Espacio papel: los textos de la hoja otra vez escondidos después de
+reiniciar IngeCAD (corrige la 3.84.3)
+(Fernando, 17/11/2026, «Charla GeoCAD Yaguareté.dwg», Layout2, 5 MTEXT de
+0,0025 en la capa Textos: al alejarse hasta ver la hoja entera los textos
+desaparecían, salvo el que estaba editando).
+
+Qué pasaba
+   La 3.84.3 hace que en la hoja no se esconda ningún texto (el mínimo de
+   6 px vale sólo en Model). Lo hace envolviendo el dibujado del lienzo de
+   IngeCAD. Pero cada vez que se abre o se crea un dibujo, GeoCAD vuelve a
+   preparar el módulo de orden de dibujo, y con IngeCAD 0.6.7 en adelante
+   eso SACABA el envoltorio de afuera del dibujado, fuera de quien fuera:
+   era el de la hoja. Desde ese momento volvía el mínimo de 6 px y los
+   textos de 2,5 mm (letra promedio ~2,6 px a hoja entera) se escondían.
+   El que se está editando se veía porque IngeCAD lo muestra aparte.
+   La prueba de la 3.84.3 pasó porque Actualizar la cargó con el dibujo ya
+   abierto; al reiniciar IngeCAD y abrir el dibujo, el retoque se perdía.
+
+Ahora
+   Cada módulo de GeoCAD saca sólo SUS envoltorios; los de otros módulos
+   quedan. Abrir o crear dibujos ya no toca el de la hoja: en una
+   presentación no se esconde ningún texto, también después de reiniciar.
+   En Model sigue el tamaño mínimo de la configuración. El archivo no cambia.
+
+Por dentro
+- dibujo.py: envolver(..., reemplazar=True) cambia sólo el envoltorio de la
+  misma fábrica (módulo y nombre: también el de una versión anterior) y
+  rearma los demás; desenvolver(cls, nombre, fabrica) saca sólo ese, esté
+  afuera o adentro. Sin fábrica, como antes.
+- orden.py: _quitar saca sólo los envoltorios de orden (visible_runs,
+  _draw_images, _draw_thick, paintGL).
+- legibles.py: quitar() saca sólo los suyos.
+
+Pruebas
+- test_legibles: sección nueva: orden._quitar (IngeCAD 0.6.7+) y orden
+  puesto afuera (IngeCAD viejo) ya no sacan el envoltorio de la hoja; sin
+  duplicados al volver a ponerlo.
+- banco_texto_hoja_ventana: ahora ACTIVA GeoCAD en la ventana real y abre
+  un dibujo, como IngeCAD al arrancar (antes no lo hacía: por eso no vio el
+  error); y mide un MTEXT de 0,0025 a 1370 px/u (la hoja de Fernando).
+  Con la 3.84.3 falla («lienzo envuelto después de abrir un dibujo», «al
+  pintar la hoja pide 0 px»); con la 3.84.4, TODO OK.
+
+Para probar (IngeCAD): TR1-TR3 en 02_PRUEBAS_MANUALES.txt.

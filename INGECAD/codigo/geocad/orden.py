@@ -260,13 +260,17 @@ def _quitar(batches, backend) -> None:
         actual = getattr(modulo, "pack", None)
         if getattr(actual, "_puente_fabrica", None) is _envolver_pack:
             setattr(modulo, "pack", actual._puente_original)
-    desenvolver(batches.Batch, "visible_runs")
+    # sólo los envoltorios de ESTE módulo (3.84.4): el de afuera de paintGL
+    # podía ser el de la hoja de textos legibles, y abrir un dibujo lo sacaba
+    desenvolver(batches.Batch, "visible_runs", _envolver_runs)
     try:
         from views.viewport import Viewport
     except Exception:  # noqa: BLE001
         return
-    for nombre in ("_draw_images", "_draw_thick", "paintGL"):
-        desenvolver(Viewport, nombre)
+    for nombre, fabrica in (("_draw_images", _envolver_imagenes),
+                            ("_draw_thick", _envolver_thick),
+                            ("paintGL", _envolver_paint)):
+        desenvolver(Viewport, nombre, fabrica)
 
 
 def instalar() -> None:
