@@ -1,0 +1,41 @@
+GeoCAD - versión 3.84.3
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Espacio papel: los textos de la hoja ya no se esconden por chicos
+(Fernando, 17/11/2026, «Charla GeoCAD Yaguareté.dwg», Layout2: «cuando los
+borro y vuelvo atrás aparecen por un instante, pero después desaparecen y
+sólo quedan las cajas que los contienen»).
+
+Qué pasaba
+   GeoCAD esconde los textos que en pantalla miden menos que el «tamaño
+   mínimo de los textos» (6 px, desde la 3.27.0; IngeCAD trae 2 px). Es un
+   criterio de SIG, pensado para los rótulos de un catastro, pero valía
+   también en la hoja. IngeCAD no mide la altura de letra sino el promedio
+   de las letras dibujadas (las minúsculas son más bajas): textos de 5 mm en
+   una A3 vista entera miden ~7 px y su promedio ~4-5 px, y se escondían.
+   Al deshacer, IngeCAD los dibuja primero sin esa medida (por eso se veían
+   un instante) y al regenerar los volvía a esconder. Acercando, se veían.
+
+Ahora
+   En una presentación (espacio papel) no se esconde ningún texto, como en
+   AutoCAD: se ve lo que se va a imprimir (también lo que muestran las
+   ventanas gráficas de la hoja). En Model sigue el tamaño mínimo de la
+   configuración (6 px por defecto), y el catastro sigue liviano y limpio.
+   El archivo no cambia: es sólo la pantalla.
+
+Por dentro
+- legibles.py: el dibujado del lienzo de IngeCAD (Viewport.paintGL) va
+  envuelto; mientras pinta una hoja pone MIN_TEXT_PX en 0 y al terminar lo
+  devuelve (también si el dibujado falla). instalar_papel() se pone al
+  cargar GeoCAD, como el resto del retoque.
+
+Pruebas
+- test_legibles: sección de la hoja (lienzo de mentira: la hoja pinta con
+  0, el modelo con 6, el mínimo queda como estaba aunque falle).
+- banco_texto_hoja_ventana (nuevo, ventana real con OpenGL): un MTEXT de 5
+  a 1,5 px por unidad: con 6 px IngeCAD no lo dibujaría (el error), con 0
+  sí; al pintar la hoja pide 0 px y en Model 6 px. TODO OK con IngeCAD
+  0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+
+Para probar (IngeCAD): TH1-TH3 en 02_PRUEBAS_MANUALES.txt.

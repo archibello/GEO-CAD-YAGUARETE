@@ -144,4 +144,42 @@ C.AL_GUARDAR.insert(0, lambda v: 1 / 0)
 assert C.save({"texto_minimo_px": 6}, "prueba")["texto_minimo_px"] == 6.0 and vp.MIN_TEXT_PX == 6.0
 del sys.modules["views.viewport"]
 print("ok tamaño mínimo configurable (6 px), aplicado al guardar sin reiniciar")
+
+# 3.84.3: en una presentación no se esconde ningún texto (Fernando, 17/11/2026:
+# textos de 5 mm en una A3 se veían a ~7 px y desaparecían). El lienzo de
+# mentira pinta con el MIN_TEXT_PX de SU módulo, como el de IngeCAD.
+lienzo_mod = types.ModuleType("views.viewport")
+lienzo_mod.MIN_TEXT_PX = 6.0
+exec("class Viewport:\n"
+     "    def __init__(self, papel):\n"
+     "        self._scene = type('E', (), {'paper': object() if papel else None})()\n"
+     "        self.usado = None\n"
+     "    def paintGL(self):\n"
+     "        self.usado = MIN_TEXT_PX\n"
+     "        return 'pintado'\n", lienzo_mod.__dict__)
+lienzo_mod.Viewport.paintGL.__module__ = "views.viewport"
+sys.modules["views.viewport"] = lienzo_mod
+assert L.instalar_papel() is True and L.instalar_papel() is False   # una sola vez
+hoja, modelo = lienzo_mod.Viewport(True), lienzo_mod.Viewport(False)
+assert L.en_papel(hoja) and not L.en_papel(modelo)
+assert hoja.paintGL() == "pintado" and hoja.usado == 0.0           # la hoja: todos
+assert modelo.paintGL() == "pintado" and modelo.usado == 6.0       # el modelo: 6 px
+assert lienzo_mod.MIN_TEXT_PX == 6.0                               # queda como estaba
+# si al pintar falla, el mínimo vuelve igual
+def roto(self):
+    raise RuntimeError("x")
+roto.__module__ = "views.viewport"
+lienzo_mod.Viewport.paintGL = L._envolver_paint(roto)
+try:
+    hoja.paintGL()
+    raise AssertionError("debía fallar")
+except RuntimeError:
+    pass
+assert lienzo_mod.MIN_TEXT_PX == 6.0
+# con la regla real: textos de 0,005 (5 mm) vistos a 1,5 px/mm no pasan 6 px, sí 0
+assert sum(c for _f, c in despues.triangles.visible_runs((-1e12, -1e12, 1e12, 1e12), 0.2, 0.0)) > 0
+# sin lienzo de IngeCAD, nada
+del sys.modules["views.viewport"]
+assert L.instalar_papel(types.SimpleNamespace()) is False
+print("ok en la hoja (espacio papel) no se esconde ningún texto; en el modelo, el mínimo")
 print("TODO OK test_legibles")

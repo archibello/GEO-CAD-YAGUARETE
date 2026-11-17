@@ -202,6 +202,58 @@ def _repintar(viewport) -> None:
             w.update()
 
 
+# ------------------------------------------- la hoja, como AutoCAD (3.84.3)
+# Fernando (17/11/2026, «Charla GeoCAD Yaguareté.dwg», Layout2): textos de
+# 5 mm en una A3 desaparecían. Vista la hoja entera, 5 mm son ~7 px y el
+# promedio de sus letras ~4-5 px: menos que el mínimo de 6. El mínimo es un
+# criterio de SIG para los rótulos del modelo; en una presentación se ve lo
+# que se va a imprimir. Mientras IngeCAD pinta una hoja (``_scene.paper``),
+# el mínimo vale 0; en el modelo sigue el de la configuración.
+
+def en_papel(viewport) -> bool:
+    """Ese lienzo muestra una presentación (espacio papel)."""
+    escena = getattr(viewport, "_scene", None)
+    return escena is not None and getattr(escena, "paper", None) is not None
+
+
+def _envolver_paint(original):
+    def paintGL(self, *args, **kwargs):  # noqa: N802
+        if not en_papel(self):
+            return original(self, *args, **kwargs)
+        try:
+            modulo = import_module(original.__module__)
+            antes = modulo.MIN_TEXT_PX
+        except Exception:  # noqa: BLE001 -- como venía
+            return original(self, *args, **kwargs)
+        modulo.MIN_TEXT_PX = 0.0
+        try:
+            return original(self, *args, **kwargs)
+        finally:
+            if modulo.MIN_TEXT_PX == 0.0:
+                modulo.MIN_TEXT_PX = antes
+    paintGL._puente_original = original
+    paintGL._puente_fabrica = _envolver_paint
+    return paintGL
+
+
+def instalar_papel(viewport=None) -> bool:
+    """Pone el retoque de la hoja en el lienzo de IngeCAD (una sola vez).
+    True si recién se puso. Sin ``MIN_TEXT_PX`` o sin paintGL, nada."""
+    try:
+        if viewport is None:
+            viewport = import_module("views.viewport")
+    except Exception:  # noqa: BLE001 -- sin la pantalla de IngeCAD
+        return False
+    clase = getattr(viewport, "Viewport", None)
+    if (clase is None or not callable(getattr(clase, "paintGL", None))
+            or not isinstance(getattr(viewport, "MIN_TEXT_PX", None), (int, float))):
+        return False
+    if getattr(clase.paintGL, "_puente_fabrica", None) is _envolver_paint:
+        return False
+    from .dibujo import envolver
+    return envolver(clase, "paintGL", _envolver_paint, reemplazar=True)
+
+
 def escuchar_config() -> None:
     """Cada vez que se guarda la configuración (Opciones, SHPCONFIG), el
     tamaño mínimo se aplica en el momento (una sola vez por carga)."""
@@ -219,6 +271,11 @@ def aplicar_ya() -> None:
         escuchar_config()
         aplicar_minimo()
     except Exception:  # noqa: BLE001 -- queda el de IngeCAD
+        pass
+    try:
+        if instalar_papel():
+            _repintar(import_module("views.viewport"))
+    except Exception:  # noqa: BLE001 -- la hoja queda como la pinta IngeCAD
         pass
     if not instalar():
         return
