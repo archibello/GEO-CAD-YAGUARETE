@@ -1,0 +1,22 @@
+¿POR QUÉ VINCULAR ESTOS DOS PROGRAMAS? — copia para el pendrive
+================================================================
+
+Cómo abrirla (no necesita internet):
+  1. Copiá la carpeta ENTERA (presentacion.html + la carpeta recursos).
+  2. Doble clic en presentacion.html: se abre en el navegador
+     (Chrome, Chromium, Firefox o Edge).
+  3. Tecla F: pantalla completa.
+
+Teclas:
+  → , Espacio, Enter o clic a la derecha .... diapositiva siguiente
+  ← o clic a la izquierda .................... diapositiva anterior
+  Inicio / Fin ............................... primera / última
+  N .......................................... notas del orador (abajo)
+  F .......................................... pantalla completa
+
+Los videos del yaguareté (diapositivas 1 y 11) se reproducen solos y sin
+sonido. El chat «En vivo» y las animaciones arrancan al llegar a cada
+diapositiva.
+
+Si algo no se ve, probá con otro navegador. Por las dudas, llevá también
+el PDF exportado desde la página.

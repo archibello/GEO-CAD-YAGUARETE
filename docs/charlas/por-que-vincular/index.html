@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Por qué vincular estos dos programas?</title>
+<style>
+@font-face { font-family: 'DM Sans'; src: url(recursos/DMSans.woff2) format('woff2'); font-weight: 100 1000; }
+@font-face { font-family: 'Oswald'; src: url(recursos/Oswald.woff2) format('woff2'); font-weight: 200 700; }
+html, body { margin: 0; height: 100%; background: #05101A; overflow: hidden; }
+#escenario { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; }
+#escenario > section { position: absolute; inset: 0; width: 1920px; height: 1080px; box-sizing: border-box; display: none; overflow: hidden; }
+#escenario > section.activa { display: flex; }
+h1, h2, h3, p, ul { margin: 0; }
+video { display: block; }
+.flecha { background: #D9952B; }
+aside.notas { display: none; }
+#ayuda, #numero { position: fixed; bottom: 10px; font: 14px sans-serif; color: #E5ECEF; background: rgba(5,16,26,.85); padding: 4px 10px; border-radius: 6px; transition: opacity .6s; }
+#ayuda { left: 12px; }
+#numero { right: 14px; }
+body.quieto #ayuda, body.quieto #numero { opacity: 0; }
+body.quieto { cursor: none; }
+#panel-notas { position: fixed; left: 0; right: 0; bottom: 0; max-height: 30%; overflow: auto; background: rgba(5,16,26,.95); color: #E5ECEF; font: 20px/1.4 sans-serif; padding: 14px 20px; display: none; }
+body.con-notas #panel-notas { display: block; }
+:root {
+  --monte: #0D2637;
+  --monte2: #18374C;
+  --crema: #ECF0EF;
+  --crema2: #DCE5DA;
+  --salvia: #AEBDA3;
+  --ocre: #D9952B;
+  --ocre-osc: #8A5410;
+  --texto: #34454A;
+  --texto-claro: #C3D2DA;
+}
+body { font-family: 'DM Sans', Arial, sans-serif; color: var(--texto); }
+section { padding: 128px 128px 160px; background: var(--crema); display: flex; flex-direction: column; gap: 40px; }
+section.oscuro { background: var(--monte); color: var(--texto-claro); }
+section.ocre { background: var(--ocre); color: var(--monte); }
+h1, h2 { font-family: 'Oswald', 'Arial Narrow', sans-serif; font-weight: 600; letter-spacing: 0.5px; }
+h1 { font-size: 120px; line-height: 1.02; color: var(--monte); }
+h2 { font-size: 72px; line-height: 1.08; color: var(--monte); }
+h3 { font-family: 'DM Sans', Arial, sans-serif; font-size: 36px; font-weight: 700; color: var(--monte); line-height: 1.2; }
+section.oscuro h1, section.oscuro h2, section.oscuro h3 { color: var(--crema); }
+.ceja { font-size: 28px; font-weight: 700; letter-spacing: 4px; color: var(--ocre-osc); }
+section.oscuro .ceja { color: var(--ocre); }
+section.ocre .ceja { color: var(--monte); }
+.bajada { font-size: 36px; line-height: 1.4; }
+.chico { font-size: 28px; line-height: 1.4; }
+ul.lista { font-size: 32px; line-height: 1.35; padding-left: 40px; display: flex; flex-direction: column; gap: 14px; }
+
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; flex: 1; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 28px; }
+
+.tarjetas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+.tarjetas.dos-col { grid-template-columns: 1fr 1fr; }
+.tarjeta { background: var(--crema2); border-radius: 16px; padding: 36px 40px; display: flex; flex-direction: column; gap: 14px; border-top: 6px solid var(--ocre); }
+section.oscuro .tarjeta { background: var(--monte2); }
+.tarjeta .t-texto { font-size: 28px; line-height: 1.4; }
+
+.numero { font-family: 'Oswald', sans-serif; font-size: 240px; line-height: 1; color: var(--ocre); font-weight: 700; }
+
+.cita { font-family: 'Oswald', sans-serif; font-size: 64px; line-height: 1.2; color: var(--monte); font-weight: 500; }
+section.oscuro .cita { color: var(--crema); }
+section.ocre .cita { color: var(--monte); }
+
+.antes-despues { display: grid; grid-template-columns: 1fr 96px 1fr; gap: 24px; align-items: center; }
+.flecha { width: 96px; height: 48px; background: var(--ocre); }
+
+/* arte de la tarjeta GeoCAD Yaguareté */
+.topo-sd { position: absolute; right: 0; top: 0; width: 864px; height: 600px; object-fit: cover; }
+.topo-ii { position: absolute; left: 0; bottom: 0; width: 470px; height: 456px; object-fit: cover; }
+.marca { position: absolute; right: 72px; bottom: 36px; width: 116px; height: 96px; object-fit: contain; border-radius: 12px; }
+.marca-clara { position: absolute; right: 64px; bottom: 32px; width: 132px; height: 104px; object-fit: contain; background: var(--crema); border-radius: 14px; padding: 4px; box-sizing: border-box; }
+.video-marco { position: absolute; border-radius: 24px; object-fit: cover; box-shadow: 0 24px 60px rgba(13,38,55,0.25); border: 3px solid var(--salvia); }
+.tarjeta-foto { width: 1040px; height: 655px; object-fit: contain; border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.45); transform: rotate(-3deg); }
+
+/* galería de prácticas */
+.galeria { display: grid; grid-template-columns: 1040px 1fr; gap: 32px; }
+.galeria-der { display: flex; flex-direction: column; gap: 24px; }
+.foto { position: relative; border-radius: 16px; overflow: hidden; background: var(--monte2); border: 3px solid var(--salvia); }
+.foto img { display: block; object-fit: contain; }
+.rotulo-foto { position: absolute; left: 16px; bottom: 16px; font-size: 24px; font-weight: 700; color: var(--crema); background: rgba(13,38,55,0.88); padding: 8px 18px; border-radius: 10px; white-space: nowrap; }
+.lupa { position: absolute; border: 4px solid var(--ocre); border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.55); object-fit: contain; background: var(--crema); }
+
+/* columna de chat en vivo */
+section.cc { padding-right: 600px; }
+section.cc h1 { font-size: 104px; }
+section.cc h2 { font-size: 64px; }
+section.cc h3 { font-size: 32px; }
+section.cc .bajada { font-size: 32px; }
+section.cc .tarjeta { padding: 28px 32px; }
+section.cc .tarjeta .t-texto { font-size: 26px; }
+section.cc ul.lista { font-size: 30px; }
+section.cc .cita { font-size: 56px; }
+section.cc .numero { font-size: 200px; }
+.chat { position: absolute; right: 0; top: 0; width: 520px; height: 1080px; box-sizing: border-box; background: #0A1A26; border-left: 4px solid var(--ocre); display: flex; flex-direction: column; }
+.chat-cab { display: flex; align-items: center; gap: 16px; padding: 28px 28px 20px; border-bottom: 2px solid #24465E; }
+.chat-logo { width: 76px; height: 63px; object-fit: contain; background: var(--crema); border-radius: 12px; }
+.chat-tit { display: flex; flex-direction: column; gap: 6px; }
+.chat-nombre { font-size: 26px; font-weight: 700; color: var(--crema); }
+.chat-vivo { font-size: 24px; font-weight: 700; color: var(--monte); background: var(--ocre); padding: 2px 12px; border-radius: 8px; align-self: flex-start; letter-spacing: 2px; }
+.chat-cuerpo { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 16px; padding: 20px 28px 36px; overflow: hidden; }
+.msg { font-size: 24px; line-height: 1.33; color: #D5E1E8; background: #17344A; padding: 12px 18px; border-radius: 18px 18px 18px 4px; }
+.msg.previo { opacity: 0.45; }
+.r1 { color: #F2B45A; font-weight: 700; }
+.r2 { color: #A9D49A; font-weight: 700; }
+.r3 { color: #8CC8EE; font-weight: 700; }
+.chip { font-size: 24px; line-height: 1.3; color: var(--crema); background: var(--monte2); border-left: 6px solid var(--ocre); padding: 14px 16px; border-radius: 10px; }
+
+@keyframes lupa-entra { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+.lupa { animation: lupa-entra 700ms ease-out both; animation-delay: 700ms; }
+@keyframes subir { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tarjeta-entra { from { opacity: 0; transform: translateY(40px) rotate(-8deg); } to { opacity: 1; transform: translateY(0) rotate(-3deg); } }
+.entra { animation: subir 600ms ease-out both; animation-delay: calc(var(--i, 0) * 140ms); }
+.funde { animation: aparecer 1200ms ease-out both; }
+.tarjeta-foto { animation: tarjeta-entra 900ms ease-out both; animation-delay: 200ms; }
+
+</style>
+</head>
+<body>
+<div id="escenario">
+<section id="portada" class="cc" data-transition="fade">
+<img class="topo-sd funde" style="right:520px; width:560px; height:389px;" src="recursos/topo_sup_der.png" alt="">
+<img class="topo-ii funde" style="width:260px; height:252px;" src="recursos/topo_inf_izq.png" alt="">
+<p class="ceja entra" style="--i:0">INGECAD · QGIS</p>
+<h1 class="entra" style="--i:1;width:600px;translate:0 4px">¿Por qué vincular estos dos programas?</h1>
+<p class="bajada entra" style="--i:2; width:600px;">De la mesa de dibujo y el papel vegetal al software libre en las oficinas del Estado.</p>
+<video class="video-marco entra" style="--i:3; left:800px; top:400px; width:520px; height:293px;" src="recursos/logo_animado.mp4" poster="recursos/v1_final.png" muted loop playsinline preload="auto" aria-label="Logo animado de GeoCAD Yaguareté: el yaguareté dibujado con curvas de nivel"></video>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:4"><span class="r1">¿Por qué vincular estos dos programas?</span></p>
+</div>
+</div>
+<aside class="notas">Antes de mostrar el puente, contar de dónde venimos: cómo se registraban los inmuebles, qué pasó con el CAD y con los SIG, y por qué el software libre.</aside>
+</section>
+<section id="papel" class="cc">
+<p class="ceja">LA CULTURA DEL PAPEL</p>
+<h2>El CAD llegó, pero el papel seguía mandando</h2>
+<div class="tarjetas">
+<div class="tarjeta entra" style="--i:0"><h3>El tamaño de la hoja</h3><p class="t-texto">La lámina horizontal y el doblado decidían cómo se dibujaba.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>El Norte para arriba</h3><p class="t-texto">Normas y acuerdos heredados del registro en papel.</p></div>
+<div class="tarjeta entra" style="--i:2"><h3>Láminas separadas</h3><p class="t-texto">Cada municipio, las secciones, las chacras y los manzaneros, por su lado.</p></div>
+</div>
+<p class="bajada">Los primeros usuarios del CAD nunca pudieron sistematizar la confección de los planos.</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3">Los primeros usuarios del CAD, provenientes de los empleos generados por organismos donde se registraban inmuebles, nunca pudieron abordar la problemática de la confección de inmuebles de <span class="r3">forma sistematizada</span>.</p>
+<p class="msg entra" style="--i:5">Sus planos, representados en el mejor de los casos por polígonos, o por líneas en su defecto, seguían presiones que venían de la <span class="r1">cultura de registrar en papel</span>.</p>
+<p class="msg entra" style="--i:7">Condicionantes como el tamaño del papel, la horizontalidad de la hoja, el doblado de láminas, y normas o acuerdos como, por ejemplo, <span class="r2">el Norte para arriba</span>.</p>
+</div>
+</div>
+<aside class="notas">Sus planos eran, en el mejor de los casos, polígonos; si no, líneas sueltas. Y seguían las presiones de la cultura de registrar en papel.</aside>
+</section>
+<section id="marana" class="oscuro cc" style="justify-content:center;">
+<p class="ceja">CADA PARCELA, UN POLÍGONO</p>
+<p class="cita">Su misión era estar en esa maraña de pequeños polígonos, compitiendo por existir.</p>
+<p class="bajada">Un polígono casi igual al de la mensura. Y ni hablar de borrar para unificar, o de subdividir para un loteo nuevo.</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:1">Las parcelas de un determinado municipio o departamento tenían que ser representadas en <span class="r3">láminas separadas</span>, como así también los planos de sección, las chacras y los manzaneros.</p>
+<p class="msg entra" style="--i:3">Cada parcela simplemente debía estar representada por un polígono infinitesimalmente similar al de la mensura; su misión era estar en esa <span class="r1">maraña de pequeños polígonos compitiendo por existir</span>.</p>
+<p class="msg entra" style="--i:5">Ni hablar de la problemática de <span class="r2">borrar para hacer unificaciones</span> y la de <span class="r2">subdividir para generar nuevos loteos</span>.</p>
+</div>
+</div>
+<aside class="notas">Cada parcela debía estar representada por un polígono infinitesimalmente similar al de la mensura. Unificar y subdividir era un problema en sí mismo.</aside>
+</section>
+<section id="mate" class="cc">
+<p class="ceja">DE LA MESA AL MONITOR</p>
+<div class="antes-despues">
+<div class="tarjeta entra" style="--i:0"><h3>Antes</h3><p class="t-texto">Enormes mesas de dibujo, donde se apoyaban los planos para mostrarlos y debatirlos.</p></div>
+<div class="flecha entra" style="--i:1clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%);"></div>
+<div class="tarjeta entra" style="--i:2"><h3>Después</h3><p class="t-texto">Puestos chicos con computadoras gigantes: el monitor ocupaba todo, y no había lugar ni para apoyar el mate.</p></div>
+</div>
+<p class="bajada">Surgían nuevos puestos, criterios de registro y formas de archivo, pero seguían apoyados en los anteriores, que todavía daban el orden y la legitimidad de todo el proceso.</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3">Esta fue la problemática que debieron abordar los primeros dibujantes de CAD al dejar sus <span class="r3">enormes mesas de dibujo</span> por pequeños puestos de trabajo con computadoras gigantes, donde solo el monitor ocupaba todo el espacio disponible, al punto que <span class="r1">ni lugar para apoyar el mate había</span>.</p>
+<p class="msg entra" style="--i:5">Así iban surgiendo nuevos puestos de trabajo, nuevos criterios de registro y formas de archivo de documentos que convivían y estaban apoyados en los anteriores, que seguían estableciendo los órdenes y la <span class="r2">legitimidad de todo el proceso ancestral</span>.</p>
+</div>
+</div>
+<aside class="notas">Lo nuevo convivía con lo ancestral: el papel seguía siendo la fuente de legitimidad.</aside>
+</section>
+<section id="vegetal" class="cc">
+<p class="ceja">LOS PRIMEROS DIBUJANTES DE CAD</p>
+<h2>Reemplazar los pergaminos sin cambiar las reglas</h2>
+<div class="tarjetas">
+<div class="tarjeta entra" style="--i:0"><h3>Papel vegetal</h3><p class="t-texto">Láminas impresas para seguir usando el copiado heliográfico.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>Polígono y texto</h3><p class="t-texto">Cada polígono por separado, con un texto en un círculo que debía caber en la parcela.</p></div>
+<div class="tarjeta entra" style="--i:2"><h3>Legible para todos</h3><p class="t-texto">Para las nuevas y las viejas generaciones de archiveros de planos.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3">Algo que recuerdo de los primeros dibujantes de CAD: había que reemplazar esos pergaminos antiguos por láminas impresas en <span class="r1">papel vegetal</span>, para poder seguir usando las técnicas de <span class="r3">copiado heliográfico</span>.</p>
+<p class="msg entra" style="--i:5">Dibujar los polígonos por separado y agregarles un texto que los identifique; en el mejor de los casos ese texto era <span class="r2">rodeado por un círculo</span>, y ambos debían caber en el espacio de la parcela y ser legibles por el ojo humano de las nuevas y viejas generaciones de archiveros o archivadores de planos.</p>
+</div>
+</div>
+<aside class="notas">Algo que recuerdo de los primeros dibujantes de CAD: había que reemplazar los pergaminos antiguos por láminas en papel vegetal.</aside>
+</section>
+<section id="acto-sig" class="cc" style="justify-content:center;">
+<img class="topo-sd funde" style="right:520px; width:480px; height:333px;" src="recursos/topo_sup_der.png" alt="">
+<img class="topo-ii funde" src="recursos/topo_inf_izq.png" alt="">
+<p class="numero entra" style="--i:0; padding-left:360px;">2</p>
+<h1 class="entra" style="--i:1; padding-left:360px;">Llegan los Sistemas de Información Geográfica</h1>
+<p class="bajada entra" style="--i:2; padding-left:360px;">Nuevas tecnologías aplicadas a las viejas técnicas</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3"><span class="r1">Gurús de la información</span> y celosos guardianes de sus adorados papiros, que les daban sentido a sus vidas asegurando, en consecuencia, sus fuentes de empleo.</p>
+<p class="msg entra" style="--i:5">La etapa siguiente, con la aparición de los <span class="r3">Sistemas de Información Geográfica</span>.</p>
+<p class="msg entra" style="--i:7">Primero hicieron su desembarco las grandes desarrolladoras de soluciones CAD, para impulsar el uso de las <span class="r2">nuevas tecnologías aplicadas a las viejas técnicas</span>.</p>
+</div>
+</div>
+<aside class="notas">La etapa siguiente: primero desembarcaron las grandes desarrolladoras de CAD.</aside>
+</section>
+<section id="map" class="cc">
+<p class="ceja">AUTOCAD MAP</p>
+<h2>Un cambio rotundo en la forma de dibujar y de registrar</h2>
+<div class="tarjetas">
+<div class="tarjeta entra" style="--i:0"><h3>Polígonos cerrados</h3><p class="t-texto">Cada parcela, un polígono cerrado.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>Datos en el DWG</h3><p class="t-texto">Cada polígono vinculado a su registro en una base de datos nativa del archivo.</p></div>
+<div class="tarjeta entra" style="--i:2"><h3>Etiquetas</h3><p class="t-texto">El rótulo con su círculo, centrado en el polígono.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3"><span class="r1">AutoCAD Map</span> marcó un cambio rotundo en la forma de dibujar y en la cultura de registrar.</p>
+<p class="msg entra" style="--i:5">Las parcelas tenían que ser representadas por <span class="r3">polígonos cerrados</span>, y estos podían estar vinculados a una <span class="r2">base de datos nativa del archivo DWG</span>, donde cada polígono tenía su correlación con un dato en una base de datos donde se podía identificar y acceder a información propia de los registros de inmuebles.</p>
+<p class="msg entra" style="--i:7">Aparecieron aplicaciones que estampaban las etiquetas con la opción de agregar un <span class="r1">círculo centrado en el epicentro</span> de los polígonos; esto permitió hacer uso de esta nueva cultura de contar no solo con el polígono, sino también con los datos asociados en su base de datos interna.</p>
+</div>
+</div>
+<aside class="notas">Aparecieron aplicaciones que estampaban las etiquetas con un círculo en el centro de los polígonos. Eso permitió usar la nueva cultura de tener el polígono y sus datos asociados.</aside>
+</section>
+<section id="archivero" class="cc">
+<p class="ceja">EL ARCHIVO SE MUDA AL ESCRITORIO</p>
+<div class="antes-despues">
+<div class="tarjeta entra" style="--i:0"><h3>El archivero con estanterías</h3><p class="t-texto">Largas mesas donde se apoyaban los inmensos planos para mostrar y debatir legitimidades y datos de inscripción.</p></div>
+<div class="flecha entra" style="--i:1clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%);"></div>
+<div class="tarjeta entra" style="--i:2"><h3>El oficinista sin estanterías</h3><p class="t-texto">Puestos mucho más chicos, con acceso a datos muy importantes para atender al ciudadano en sus trámites.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3">Dando la posibilidad de imprimir planos muy parecidos a los que estaban en las <span class="r3">estanterías de los organismos registrales</span>.</p>
+<p class="msg entra" style="--i:5">De a poco, todo este nuevo bagaje de información generó puestos de trabajo de escritorio donde los archiveros eran <span class="r1">oficinistas sin estanterías</span>, que accedían a datos muy importantes para ofrecer a los ciudadanos que venían a hacer sus trámites,</p>
+<p class="msg entra" style="--i:7">en puestos de trabajo muy pequeños comparados con las <span class="r2">largas mesas donde se apoyaban los inmensos planos</span> para mostrar y debatir legitimidades y datos de inscripción.</p>
+</div>
+</div>
+<aside class="notas">De a poco, todo este bagaje de información generó puestos de escritorio: los archiveros pasaron a ser oficinistas sin estanterías.</aside>
+</section>
+<section id="licencias" class="oscuro cc">
+<p class="ceja">ARCGIS · ARCVIEW</p>
+<h2>Los primeros SIG: amigables, pero inaccesibles</h2>
+<div class="dos">
+<div class="col">
+<h3>Lo que trajeron</h3>
+<ul class="lista">
+<li>Información vectorial</li>
+<li>Imágenes satelitales</li>
+<li>Bases de datos, de manera familiar</li>
+</ul>
+</div>
+<div class="col">
+<h3>Lo que costaban</h3>
+<ul class="lista">
+<li>Llaves y licencias carísimas</li>
+<li>Fuera del alcance de los operarios de oficinas públicas</li>
+</ul>
+</div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:1">De a poco, los programas que ofrecían una batería de soluciones basadas en estas nuevas tecnologías entraron al mercado, ofreciendo trabajar no solo con información vectorial, sino también con <span class="r3">imágenes satelitales y bases de datos</span>, de manera mucho más amigable y familiar para los que venían de este mundo tan específico.</p>
+<p class="msg entra" style="--i:3">Así llegaron los primeros SIG administrados por estos programas, «ArcGIS», «ArcView»: programas con <span class="r1">llaves y licencias carísimas e inaccesibles</span> para el común de los operarios de oficinas públicas.</p>
+</div>
+</div>
+<aside class="notas">Los programas que ofrecían una batería de soluciones entraron al mercado: no sólo información vectorial, también imágenes satelitales y bases de datos.</aside>
+</section>
+<section id="consultorias" class="ocre cc" style="justify-content:center;">
+<p class="ceja">LAS CONSULTORÍAS</p>
+<p class="cita">Un traspaso de tecnología que nunca llegaría a las nuevas generaciones de trabajadores.</p>
+<p class="bajada">Con el argumento de modernizar el Estado, se instaló un servicio tercerizado: un Estado cautivo y empresas privadas a cargo de información pública.</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:1">Esto favoreció la proliferación de <span class="r1">consultorías dedicadas a la administración tercerizada</span> de información territorial de muchos organismos públicos.</p>
+<p class="msg entra" style="--i:3">Con los argumentos de crear las condiciones para la <span class="r3">modernización del Estado</span>, que debidamente sería depositario de un <span class="r1">traspaso de tecnología que nunca llegaría a cumplirse</span> con las nuevas generaciones de trabajadores.</p>
+</div>
+</div>
+<aside class="notas">Proliferaron las consultorías dedicadas a administrar, tercerizada, la información territorial de muchos organismos públicos.</aside>
+</section>
+<section id="acto-libre" class="cc" style="justify-content:center;">
+<img class="topo-sd funde" style="right:520px; width:480px; height:333px;" src="recursos/topo_sup_der.png" alt="">
+<p class="numero entra" style="--i:0">3</p>
+<h1 class="entra" style="--i:1; width:620px;">El software libre</h1>
+<p class="bajada entra" style="--i:2; width:620px;">Llevar estas tecnologías a las nuevas generaciones de trabajadores</p>
+<video class="video-marco entra" style="--i:3; left:800px; top:430px; width:520px; height:293px;" src="recursos/yaguarete_caminando.mp4" poster="recursos/v2_still.png" muted loop playsinline preload="auto" aria-label="El yaguareté de GeoCAD caminando, dibujado con curvas de nivel"></video>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:4">Eso sí, se instalaría una modalidad de servicio tercerizado, con un <span class="r1">Estado cautivo</span> y empresas privadas ocupándose de información que no debería ser de acceso público, favoreciendo un ambiente de administraciones de mucho personal sin capacidades adquiridas y bajos sueldos.</p>
+<p class="msg entra" style="--i:6">Razón por la cual decidí sumarme al proyecto de un ingeniero peruano, <span class="r3">Marco Sumari Tellez</span>, con las mismas vocaciones e intenciones de crear un <span class="r2">software libre y gratuito que pueda funcionar bajo Linux</span>.</p>
+</div>
+</div>
+<aside class="notas">Por todo esto decidí sumarme a un proyecto de software libre. El yaguareté camina: el dato cruza fronteras.</aside>
+</section>
+<section id="ingecad" class="oscuro cc">
+<p class="ceja">INGECAD</p>
+<h2>Un CAD libre, gratuito y que funciona en Linux</h2>
+<p class="bajada">Me sumé al proyecto de un ingeniero peruano, Marco Sumari Tellez, que tenía las mismas vocaciones e intenciones.</p>
+<div class="tarjetas dos-col">
+<div class="tarjeta entra" style="--i:0"><h3>Para quién</h3><p class="t-texto">Los trabajadores de organismos estatales con pocos recursos y presupuestos recortados.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>Para qué</h3><p class="t-texto">Popularizar estas tecnologías entre las nuevas generaciones de trabajadores.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">Razón por la cual decidí sumarme al proyecto de un ingeniero peruano, Marco Sumari Tellez, con las mismas vocaciones e intenciones de crear un software libre y gratuito que pueda funcionar bajo Linux.</p>
+<p class="msg entra" style="--i:2">Lo que completó mi idea de <span class="r2">popularización de las tecnologías</span> a las nuevas generaciones de trabajadores, en especial de trabajadores de <span class="r1">organismos estatales de bajos recursos y presupuestos recortados</span>.</p>
+</div>
+</div>
+<aside class="notas">Con IngeCAD se completó mi idea de popularizar las tecnologías entre las nuevas generaciones de trabajadores.</aside>
+</section>
+<section id="aporte" class="cc">
+<p class="ceja">MI APORTE A INGECAD</p>
+<h2>Lo de los programas caros, ahora libre</h2>
+<div class="tarjetas">
+<div class="tarjeta entra" style="--i:0"><h3>DWG nativo</h3><p class="t-texto">Fácil de compartir entre oficinas.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>Archivos SHP</h3><p class="t-texto">Los de los SIG, como si fueran nativos.</p></div>
+<div class="tarjeta entra" style="--i:2"><h3>Imágenes</h3><p class="t-texto">Satelitales, con su sistema de coordenadas.</p></div>
+<div class="tarjeta entra" style="--i:3"><h3>Tablas y datos</h3><p class="t-texto">La información de cada parcela, en el dibujo.</p></div>
+<div class="tarjeta entra" style="--i:4"><h3>Mensuras</h3><p class="t-texto">Planos manejados como nunca imaginamos.</p></div>
+<div class="tarjeta entra" style="--i:5"><h3>Todo organismo</h3><p class="t-texto">Soluciones para los problemas de cada día.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:6">Mi aporte fue dotar a IngeCAD de todas aquellas herramientas que estaban disponibles en softwares de <span class="r1">costos y licencias inaccesibles</span>,</p>
+<p class="msg entra" style="--i:8">dando como resultado un conjunto de soluciones capaces de resolver los <span class="r2">problemas cotidianos de cualquier organismo público</span> que tenga oficinas donde sus trabajadores deban manipular y producir información de sistemas CAD con <span class="r3">formatos nativos DWG</span>, fáciles de compartir,</p>
+</div>
+</div>
+<aside class="notas">Mi aporte fue darle a IngeCAD todas las herramientas que sólo estaban en programas con costos y licencias inaccesibles: un conjunto de soluciones para los problemas cotidianos de cualquier organismo público.</aside>
+</section>
+<section id="practicas-ingecad" class="cc">
+<p class="ceja">LOS EJERCICIOS DEL MANUAL · INGECAD</p>
+<h2>Los ejercicios, en IngeCAD</h2>
+<div class="galeria" style="grid-template-columns:740px 1fr;">
+<div class="foto entra" style="--i:0"><img style="width:734px; height:450px;" src="recursos/ingecad_rotulos.webp" alt="La manzana 12 rotulada con ROTULOSIG en IngeCAD"><p class="rotulo-foto">Práctica 2.B · La manzana rotulada</p></div>
+<div class="galeria-der">
+<div class="foto entra" style="--i:1"><img style="width:414px; height:210px;" src="recursos/georref_4_resultado.webp" alt="Plano escaneado georreferenciado sobre las parcelas en IngeCAD"><p class="rotulo-foto">2.D · Plano viejo</p></div>
+<div class="foto entra" style="--i:2"><img style="width:414px; height:210px;" src="recursos/google_earth_2_ingecad.webp" alt="Captura de Google Earth ubicada debajo de las parcelas en IngeCAD"><p class="rotulo-foto">3.A · Google Earth</p></div>
+</div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3">adicionándoles las posibilidades de interpretar archivos provenientes de sistemas de información geográfica <span class="r1">SHP como si lo hicieran de forma nativa</span>;</p>
+<p class="msg entra" style="--i:5">que leyeran y manipularan <span class="r3">imágenes satelitales</span> e interpretaran sistemas de coordenadas de forma inmediata y sin grandes complicaciones; que manipularan tablas de información y bases de datos;</p>
+<p class="msg entra" style="--i:7">que manipularan imágenes como planos de mensura de maneras que <span class="r2">nunca imaginamos en un software gratuito de uso libre</span>.</p>
+</div>
+</div>
+<aside class="notas">Estas capturas son de las prácticas publicadas en el manual, con datos reales de Corpus: 14 manzanas y 107 parcelas, con los números de lote y partida cambiados.</aside>
+</section>
+<section id="qgis" class="oscuro cc">
+<p class="ceja">CAPÍTULO APARTE: QGIS</p>
+<h2>Un hito para los usuarios de SIG</h2>
+<div class="tarjetas">
+<div class="tarjeta entra" style="--i:0"><h3>Un concepto nuevo</h3><p class="t-texto">Una comunidad que desarrolla las soluciones.</p></div>
+<div class="tarjeta entra" style="--i:1"><h3>Más completo</h3><p class="t-texto">Cada vez más parecido a los programas más caros.</p></div>
+<div class="tarjeta entra" style="--i:2"><h3>Una nueva camada</h3><p class="t-texto">Popularizó el oficio de los trabajadores del territorio.</p></div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg entra" style="--i:3"><span class="r1">Capítulo aparte: QGIS.</span></p>
+<p class="msg entra" style="--i:5">La aparición de QGIS marca un <span class="r1">hito</span> entre los usuarios de GIS: un software construido sobre un <span class="r3">concepto nuevo</span>, una comunidad que desarrolla soluciones que van adquiriendo cada vez más similitudes a las herramientas de los softwares más caros del mercado.</p>
+<p class="msg entra" style="--i:7">Esto popularizó el oficio de una <span class="r2">nueva camada de trabajadores del territorio</span>, entre los que me identifico.</p>
+</div>
+</div>
+<aside class="notas">Las soluciones que surgieron de la comunidad tampoco llegaron a cumplir mis expectativas. De ahí nace volcar estas herramientas en QGIS.</aside>
+</section>
+<section id="qgis-comandos" class="oscuro cc">
+<p class="ceja">QGIS CON GEOCAD</p>
+<h2>QGIS, con línea de comandos</h2>
+<div style="display:flex; gap:24px; align-items:flex-start;">
+<div class="foto entra" style="--i:0"><img style="width:880px; height:575px;" src="recursos/qgis_linea.png" alt="QGIS dibujando una línea con GeoCAD: tramos escritos como @10&lt;90 en la línea de comandos y junto al cursor"></div>
+<div class="col entra" style="--i:1; width:282px; gap:16px;">
+<p class="chip">Tramos escritos: @10&lt;90, @10&lt;-90</p>
+<p class="chip">Cerrar, Longitud, desHacer a un clic</p>
+<p class="chip">La orden también junto al cursor</p>
+<p class="chip">Coordenadas, ángulo y ORTO en vivo</p>
+</div>
+</div>
+<img class="lupa" style="left:100px; top:812px; width:1180px; height:105px;" src="recursos/linea_comandos2.png" alt="Detalle de la línea de comandos: Precise punto siguiente o [Cerrar/Longitud/desHacer]: @10&lt;90">
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">Esto popularizó el oficio de una nueva camada de trabajadores del territorio, entre los que me identifico.</p>
+<p class="msg entra" style="--i:2">Y como tal, a lo largo de mi carrera he tenido <span class="r1">grandes urgencias de soluciones que nunca estuvieron disponibles</span>,</p>
+<p class="msg entra" style="--i:4">y las que surgieron de esta comunidad tampoco llegaron a <span class="r3">cumplir con mis expectativas</span>.</p>
+</div>
+</div>
+<aside class="notas">Este es el momento de sorprender: QGIS nunca tuvo una línea de comandos así. Contar que se escribe @10&lt;90 (10 metros a 90 grados del último punto) y el tramo sale en su lugar, como en el CAD. La misma pregunta aparece al lado del cursor.</aside>
+</section>
+<section id="practicas-qgis" class="cc">
+<p class="ceja">LOS EJERCICIOS DEL MANUAL · QGIS</p>
+<h2>La misma manzana, de la mensura a la lámina</h2>
+<div class="galeria" style="grid-template-columns:740px 1fr;">
+<div class="foto entra" style="--i:0"><img style="width:734px; height:450px;" src="recursos/qgis_rumbos_cerrado.webp" alt="El lote 006 cerrado con RUMBOS sobre la parcela real en QGIS"><p class="rotulo-foto">Práctica 1.B · Desde la mensura</p></div>
+<div class="galeria-der">
+<div class="foto entra" style="--i:1"><img style="width:414px; height:210px;" src="recursos/qgis_composicion.webp" alt="Composición A3 de la manzana 12 en QGIS"><p class="rotulo-foto">1.C · Lámina A3</p></div>
+<div class="foto entra" style="--i:2"><img style="width:414px; height:210px;" src="recursos/google_earth_3_qgis.webp" alt="La captura de Google Earth como capa en QGIS"><p class="rotulo-foto">3.A · Google Earth</p></div>
+</div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">y las que surgieron de esta comunidad tampoco llegaron a cumplir con mis expectativas.</p>
+<p class="msg entra" style="--i:3">De ahí en más, el <span class="r1">volcado de estas nuevas posibilidades a la propuesta de QGIS</span> me deja muy <span class="r2">satisfecho y orgulloso</span>,</p>
+</div>
+</div>
+<aside class="notas">La captura de Google Earth es la misma que entra en IngeCAD: un solo dato en los dos programas.</aside>
+</section>
+<section id="referencias" class="oscuro cc">
+<p class="ceja">AYUDAS AL DIBUJO · REFERENCIAS A OBJETOS</p>
+<h2>El dibujo que se adivina</h2>
+<div class="tarjetas">
+<div class="tarjeta" style="padding:24px 32px; align-items:center;">
+<svg aria-label="Referencia Paralela: una línea nueva sale paralela a una existente, guiada por una línea de puntos" width="312" height="240" viewBox="0 0 520 400">
+<line x1="60" y1="320" x2="300" y2="120" stroke="#ECF0EF" stroke-width="5" stroke-linecap="round"/>
+<g stroke="#D9952B" stroke-width="4" stroke-linecap="round">
+<line x1="173" y1="235" x2="196" y2="216"/><line x1="164" y1="224" x2="187" y2="205"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.5;1" dur="0.9s" begin="0s"/>
+</g>
+<line x1="220" y1="360" x2="500" y2="127" stroke="#D9952B" stroke-width="3" stroke-dasharray="10 10">
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.7;1" dur="1.2s" begin="0s"/>
+</line>
+<rect x="212" y="352" width="16" height="16" fill="none" stroke="#AEBDA3" stroke-width="3"/>
+<line x1="220" y1="360" x2="430" y2="185" stroke="#AEBDA3" stroke-width="6" stroke-linecap="round" stroke-dasharray="274" stroke-dashoffset="0">
+<animate attributeName="stroke-dashoffset" values="274;274;0" keyTimes="0;0.45;1" dur="2.6s" begin="0s"/>
+</line>
+<g stroke="#ECF0EF" stroke-width="2"><line x1="410" y1="185" x2="450" y2="185"/><line x1="430" y1="165" x2="430" y2="205"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.9;1" dur="2.6s" begin="0s"/>
+</g>
+</svg>
+<h3>Paralela</h3>
+<p class="t-texto">Se apoya en una línea y la nueva sale paralela, con su guía de puntos.</p>
+</div>
+<div class="tarjeta" style="padding:24px 32px; align-items:center;">
+<svg aria-label="Referencia Extensión: la línea se prolonga más allá de su punto final y se toma un punto sobre la prolongación" width="312" height="240" viewBox="0 0 520 400">
+<line x1="60" y1="300" x2="260" y2="200" stroke="#ECF0EF" stroke-width="5" stroke-linecap="round"/>
+<g stroke="#D9952B" stroke-width="4" stroke-linecap="round"><line x1="250" y1="200" x2="270" y2="200"/><line x1="260" y1="190" x2="260" y2="210"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.5;1" dur="0.9s" begin="0s"/>
+</g>
+<line x1="260" y1="200" x2="490" y2="85" stroke="#D9952B" stroke-width="3" stroke-dasharray="10 10">
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.7;1" dur="1.2s" begin="0s"/>
+</line>
+<rect x="132" y="352" width="16" height="16" fill="none" stroke="#AEBDA3" stroke-width="3"/>
+<line x1="140" y1="360" x2="420" y2="120" stroke="#AEBDA3" stroke-width="6" stroke-linecap="round" stroke-dasharray="369" stroke-dashoffset="0">
+<animate attributeName="stroke-dashoffset" values="369;369;0" keyTimes="0;0.45;1" dur="2.6s" begin="0s"/>
+</line>
+<g stroke="#D9952B" stroke-width="4" stroke-linecap="round"><line x1="410" y1="110" x2="430" y2="130"/><line x1="430" y1="110" x2="410" y2="130"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.9;1" dur="2.6s" begin="0s"/>
+</g>
+</svg>
+<h3>Extensión</h3>
+<p class="t-texto">La línea sigue más allá de su punto final y se toma un punto sobre esa prolongación.</p>
+</div>
+<div class="tarjeta" style="padding:24px 32px; align-items:center;">
+<svg aria-label="Referencia Intersección aparente: dos líneas que no se tocan se prolongan y se toma el punto donde se cruzarían" width="312" height="240" viewBox="0 0 520 400">
+<line x1="40" y1="320" x2="200" y2="240" stroke="#ECF0EF" stroke-width="5" stroke-linecap="round"/>
+<line x1="480" y1="330" x2="380" y2="230" stroke="#ECF0EF" stroke-width="5" stroke-linecap="round"/>
+<g stroke="#D9952B" stroke-width="3" stroke-dasharray="10 10"><line x1="200" y1="240" x2="327" y2="177"/><line x1="380" y1="230" x2="327" y2="177"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.6;1" dur="1.2s" begin="0s"/>
+</g>
+<g stroke="#D9952B" stroke-width="4" fill="none"><rect x="315" y="165" width="24" height="24"/><line x1="315" y1="165" x2="339" y2="189"/><line x1="339" y1="165" x2="315" y2="189"/>
+<animate attributeName="opacity" values="0;0;1" keyTimes="0;0.75;1" dur="1.4s" begin="0s"/>
+</g>
+<rect x="112" y="62" width="16" height="16" fill="none" stroke="#AEBDA3" stroke-width="3"/>
+<line x1="120" y1="70" x2="327" y2="177" stroke="#AEBDA3" stroke-width="6" stroke-linecap="round" stroke-dasharray="233" stroke-dashoffset="0">
+<animate attributeName="stroke-dashoffset" values="233;233;0" keyTimes="0;0.55;1" dur="2.6s" begin="0s"/>
+</line>
+</svg>
+<h3>Intersección aparente</h3>
+<p class="t-texto">Dos líneas que no se tocan: se prolongan y se toma el punto donde se cruzarían.</p>
+</div>
+</div>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">De ahí en más, el volcado de estas nuevas posibilidades a la propuesta de QGIS me deja muy satisfecho y orgulloso,</p>
+<p class="msg entra" style="--i:2">especialmente el hecho de poder hacer una <span class="r1">devolución a esta comunidad</span> que tantas alegrías me trajo al ejercer mi oficio de operario en el ámbito del <span class="r3">Estado</span>,</p>
+</div>
+</div>
+<aside class="notas">En QGIS con GeoCAD, las referencias se piden con Mayús + clic derecho. Perpendicular e Intersección aparente prolongan las líneas con trazo de puntos. En gris claro las líneas que ya están; en ocre la guía y la marca de la referencia; en verde la línea nueva.</aside>
+</section>
+<section id="devolucion" class="ocre cc" style="justify-content:center;">
+<p class="ceja">UNA DEVOLUCIÓN</p>
+<p class="cita">Devolverle a la comunidad tantas alegrías que me dio el oficio.</p>
+<p class="bajada">Volcar estas posibilidades en QGIS me deja satisfecho y orgulloso. Y compartirlas con los compañeros que pasan día a día por las mismas carencias y dificultades.</p>
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">especialmente el hecho de poder hacer una devolución a esta comunidad que tantas alegrías me trajo al ejercer mi oficio de operario en el ámbito del Estado,</p>
+<p class="msg entra" style="--i:2">y poder <span class="r1">compartirlas y difundirlas entre compañeros</span> que pasan día a día por las <span class="r3">mismas carencias y dificultades</span>.</p>
+</div>
+</div>
+<aside class="notas">Cierre: por eso vinculamos IngeCAD y QGIS. Es una devolución a la comunidad y a los compañeros que trabajan con los mismos problemas.</aside>
+</section>
+<section id="contacto" class="oscuro cc" style="flex-direction:row; align-items:center; gap:40px;">
+<div class="col" style="width:392px;">
+<p class="ceja entra" style="--i:0">GEOCAD YAGUARETÉ</p>
+<h2 class="entra" style="--i:1; font-size:120px;">Gracias</h2>
+<p class="bajada entra" style="--i:2">Escaneá el código de la tarjeta para escribirnos.</p>
+</div>
+<img class="tarjeta-foto" style="width:760px; height:479px;" src="recursos/tarjeta.png" alt="Tarjeta de GeoCAD Yaguareté con el logo, curvas de nivel, un código QR y el correo de contacto">
+<div class="chat">
+<div class="chat-cab"><img class="chat-logo" src="recursos/logo.png" alt=""><div class="chat-tit"><p class="chat-nombre">GeoCAD Yaguareté</p><p class="chat-vivo">EN VIVO</p></div></div>
+<div class="chat-cuerpo">
+<p class="msg previo">y poder compartirlas y difundirlas entre compañeros que pasan día a día por las mismas carencias y dificultades.</p>
+<p class="msg entra" style="--i:3"><span class="r1">¡Gracias!</span></p>
+</div>
+</div>
+<aside class="notas">Cierre: mostrar la tarjeta y dejarla en pantalla durante las preguntas.</aside>
+</section>
+
+</div>
+<div id="panel-notas"></div>
+<div id="numero"></div>
+<div id="ayuda">← → avanzar · F pantalla completa · N notas</div>
+<script>
+const esc = document.getElementById('escenario');
+const diapos = [...esc.querySelectorAll(':scope > section')];
+const plantillas = diapos.map(d => d.innerHTML);
+let i = 0;
+function escalar() {
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  esc.style.transform = `scale(${s}) translate(-50%, -50%)`;
+}
+function mostrar(n) {
+  diapos.forEach(d => { d.classList.remove('activa'); d.querySelectorAll('video').forEach(v => v.pause()); });
+  i = Math.max(0, Math.min(diapos.length - 1, n));
+  const d = diapos[i];
+  d.innerHTML = plantillas[i];           // reinicia animaciones
+  d.classList.add('activa');
+  d.querySelectorAll('svg').forEach(s => { try { s.setCurrentTime(0); s.unpauseAnimations(); } catch (e) {} });
+  d.querySelectorAll('video').forEach(v => { v.currentTime = 0; v.play().catch(() => {}); });
+  const nota = d.querySelector('aside.notas');
+  document.getElementById('panel-notas').textContent = nota ? nota.textContent : '';
+  document.getElementById('numero').textContent = (i + 1) + ' / ' + diapos.length;
+  history.replaceState(null, '', '#' + (i + 1));
+}
+addEventListener('resize', escalar);
+addEventListener('keydown', e => {
+  if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { mostrar(i + 1); e.preventDefault(); }
+  else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { mostrar(i - 1); e.preventDefault(); }
+  else if (e.key === 'Home') mostrar(0);
+  else if (e.key === 'End') mostrar(diapos.length - 1);
+  else if (e.key === 'f' || e.key === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  else if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('con-notas');
+});
+addEventListener('click', e => { if (e.clientX > innerWidth / 3) mostrar(i + 1); else mostrar(i - 1); });
+let reloj;
+function despertar() { document.body.classList.remove('quieto'); clearTimeout(reloj); reloj = setTimeout(() => document.body.classList.add('quieto'), 2500); }
+addEventListener('mousemove', despertar);
+addEventListener('hashchange', () => { const n = (parseInt(location.hash.slice(1)) || 1) - 1; if (n !== i) mostrar(n); });
+despertar();
+escalar();
+mostrar((parseInt(location.hash.slice(1)) || 1) - 1);
+</script>
+</body>
+</html>
