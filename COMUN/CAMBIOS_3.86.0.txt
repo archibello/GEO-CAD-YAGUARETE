@@ -1,0 +1,72 @@
+GeoCAD - versión 3.86.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Limpiar plano antiguo (LIMPIARPLANO)
+(Fernando, 19/11/2026: un plano de mensura escaneado de 1958 con manchas de
+humedad y pliegues; la condición, «que los textos se lean al final». Con el
+resultado de la prueba: «QUEDO PERFECTO». Va en IngeCAD, en la barra «Yaguá
+Imagenes» y en el menú GeoCAD.)
+
+Qué hace
+   Un botón nuevo en la barra «Yaguá Imagenes», después de Aspecto de la
+   imagen (también en GeoCAD > Dibujo y la orden LIMPIARPLANO):
+   1. Clic en la imagen del plano (o elegirla antes).
+   2. Zonas de sello, si hacen falta: dos esquinas por rectángulo donde hay
+      tinta tenue (un sello de goma violeta, lápiz, una firma). Ahí la
+      limpieza es más suave para no perderla. D quita la última zona.
+   3. Enter: se limpia.
+   El resultado sale en gris, con el papel blanco: se van las manchas de
+   humedad, los pliegues y el granulado del papel. La tinta queda, también
+   la que está encima de una mancha, y los textos chicos (rumbos) se leen
+   porque la copia se hace al doble de resolución, con sus bordes suaves.
+   La copia limpia (PNG) va a la carpeta de imágenes del dibujo
+   («<dibujo>_imagenes», la de Pegar imagen) como «<original>_limpio.png»,
+   sin pisar nada. La imagen del dibujo pasa a usarla en el mismo lugar y
+   del mismo tamaño. El ORIGINAL NO SE TOCA. U lo deshace.
+   Limpiarla de nuevo parte otra vez del original y muestra las zonas de
+   antes, para agregar o quitar. Con Aspecto de la imagen después, se le
+   puede poner fondo transparente o un color a las líneas.
+   Un plano de 2000 × 1533 píxeles tarda unos 3 segundos; se ve la barra de
+   avance.
+
+Por dentro
+- limpieza.py (nuevo): la receta probada con el plano de Fernando: ampliar
+  ×2 (LANCZOS) y desenfoque 0,6 px; «papel local» por un cierre en gris
+  (ventana de 27 px a 2x); contraste relativo (papel − imagen) / papel;
+  máscara de tinta por histéresis (grupos de 8 vecinos con r > 0,15 que
+  tocan r > 0,45, de 120 px o más), dilatada 1 px; tono n = imagen / papel
+  estirado entre 0,20 y 0,75. Zonas de sello: 0,08 / 0,22 / 0,35 / 0,85 y
+  60 px.
+  Sin scipy (el Flatpak de IngeCAD 0.8.0 trae sólo numpy y PIL): máximo y
+  mínimo separables por duplicación de ventanas (bordes reflejados, como
+  scipy.ndimage); grupos conexos por tramos de fila y union-find
+  vectorizado; dilatación en cruz. Con el plano entero da IDÉNTICO al
+  prototipo hecho con scipy (0 píxeles distintos).
+  Si la imagen tiene partes transparentes (un recorte de GeoCAD), siguen
+  transparentes.
+- limpiar_plano.py (nuevo, módulo «georref»): la orden. La copia limpia
+  cambia el tamaño en píxeles de la imagen y achica sus vectores de píxel
+  en la misma proporción desde el punto de inserción (un solo U). XDATA
+  GEOCAD_LIMPIEZA: el original y las zonas. Las marcas de ASPECTOIMAGEN y
+  del recorte se sueltan (ya no valen sobre la copia nueva); U las
+  devuelve.
+- __init__.py, yaguarete.py, barra.py: orden LIMPIARPLANO (también
+  GEOLIMPIARPLANO, CLEANSCAN), en el menú y en la barra, ícono
+  limpiar_plano.png; i18n/es.
+- botones.py (núcleo): LIMPIARPLANO en «Yaguá Imagenes» de fábrica y en el
+  banco Edición. A una configuración de barras ya guardada se le agrega,
+  una sola vez, detrás de ASPECTOIMAGEN (migración «limpiar-plano»).
+- modulos.py (núcleo): la descripción del módulo Imágenes la nombra.
+
+Pruebas
+- test_limpiar_plano (nueva): la orden en el menú, en la barra y en la
+  migración de botones; el cierre, los grupos conexos, la histéresis y la
+  dilatación contra cuentas directas; un RECORTE de 300 × 300 del plano de
+  1958 (el plano entero no va al repositorio) contra el mismo recorte de la
+  referencia aprobada: en el interior (20 px de margen) idéntico; tolerancia
+  de 0,1 % de píxeles con más de 8 niveles y media < 0,5; la zona de sello
+  recupera el sello y no cambia lo de afuera; 2000 × 1533 en pocos segundos;
+  la orden en un dibujo (zonas, D, Enter, copia sin pisar, original intacto,
+  mismo lugar al doble de píxeles, rehacer desde el original, U, archivo
+  que no está, transparencia).

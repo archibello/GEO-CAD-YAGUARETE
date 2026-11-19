@@ -22,9 +22,9 @@ assert Y.elegidas(todo) == [("RECTANG", "draw_toolbar"), ("TEXT", "draw_toolbar"
                             ("BREAKATPOINT", None), ("CHAMFER", "modify_toolbar"),
                             ("FILLET", "modify_toolbar"), ("MATCHPROP", "standard_toolbar"),
                             ("INSERTARGEO", None), ("GEORREF", None), ("EXPORTARGEO", None),
-                            ("ASPECTOIMAGEN", None)]
+                            ("ASPECTOIMAGEN", None), ("LIMPIARPLANO", None)]
 apagados = dict(todo, empalme=False, estirar=False, texto=False)
-assert [o for o, _ in Y.elegidas(apagados)] == ["RECTANG", "BREAKATPOINT", "CHAMFER", "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN"]  # vuelven a IngeCAD
+assert [o for o, _ in Y.elegidas(apagados)] == ["RECTANG", "BREAKATPOINT", "CHAMFER", "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "LIMPIARPLANO"]  # vuelven a IngeCAD
 assert [o for o, _ in Y.elegidas({})] == ["RECTANG"]           # REC: siempre con GeoCAD
 spec = import_module("ingecad_plugin_geocad").construir_spec()
 assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in spec.toolbar}  # no repetidas

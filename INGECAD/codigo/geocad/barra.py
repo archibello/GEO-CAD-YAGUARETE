@@ -92,7 +92,8 @@ def _iconos_propios() -> dict:
     carpeta = Path(__file__).parent / "iconos"
     propios = {"BREAKATPOINT": carpeta / "partir.png", "GEORREF": carpeta / "georref.png",
                "INSERTARGEO": carpeta / "insertar_geo.png", "EXPORTARGEO": carpeta / "exportar_geo.png",
-               "ASPECTOIMAGEN": carpeta / "aspecto_imagen.png"}
+               "ASPECTOIMAGEN": carpeta / "aspecto_imagen.png",
+               "LIMPIARPLANO": carpeta / "limpiar_plano.png"}
     return {orden: ruta for orden, ruta in propios.items() if ruta.exists()}
 
 

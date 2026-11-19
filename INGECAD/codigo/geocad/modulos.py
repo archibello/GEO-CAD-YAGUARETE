@@ -69,7 +69,7 @@ CATALOGO = {
         Modulo("partir", "Partir en punto (PARTEENPUNTO)",
                "Corta un objeto en un punto elegido con referencias (intersección, "
                "punto final, medio...). Muestra los dos pedazos antes del clic."),
-        Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN)",
+        Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO)",
                "GEORREF ajusta una imagen con puntos de control, como el "
                "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin "
                "Plate Spline y Proyectiva, que rehacen la imagen; .points de QGIS). INSERTARGEO inserta una imagen con archivo de mundo o GeoTIFF en "
@@ -78,6 +78,8 @@ CATALOGO = {
                "pantalla del portapapeles con dos clics (esquinas inferior izquierda y derecha). "
                "ASPECTOIMAGEN cambia el aspecto de una imagen (fondo transparente, líneas en "
                "negativo o de un color, opacidad) en una copia; el original no se toca. "
+               "LIMPIARPLANO limpia un plano antiguo escaneado (manchas de humedad, "
+               "pliegues) y deja los textos legibles, en una copia; el original no se toca. "
                "El marco de las imágenes se engancha con las referencias (esquinas, medio, "
                "inserción), para ubicarlas y escalarlas desde los extremos. Recortar con "
                "los agarres (en una copia; hacia afuera se vuelve a abrir): Ctrl en una "

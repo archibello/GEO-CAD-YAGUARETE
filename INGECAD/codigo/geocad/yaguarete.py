@@ -37,6 +37,7 @@ HERRAMIENTAS = (
     ("GEORREF", "georref", None),
     ("EXPORTARGEO", "georref", None),
     ("ASPECTOIMAGEN", "georref", None),
+    ("LIMPIARPLANO", "georref", None),
 )
 
 #: el tema de cada botón: entre un tema y el siguiente va un divisor, como en
@@ -46,7 +47,7 @@ TEMAS = {
     "STRETCH": "edicion", "BREAKATPOINT": "edicion", "CHAMFER": "edicion",
     "FILLET": "edicion", "MATCHPROP": "edicion",
     "INSERTARGEO": "imagenes", "GEORREF": "imagenes", "EXPORTARGEO": "imagenes",
-    "ASPECTOIMAGEN": "imagenes",
+    "ASPECTOIMAGEN": "imagenes", "LIMPIARPLANO": "imagenes",
 }
 
 
@@ -67,6 +68,7 @@ ETIQUETAS = {
     "INSERTARGEO": "Insert georeferenced image (INSERTARGEO)",
     "EXPORTARGEO": "Export georeferenced copy (EXPORTARGEO)",
     "ASPECTOIMAGEN": "Image appearance (ASPECTOIMAGEN)",
+    "LIMPIARPLANO": "Clean old scanned plan (LIMPIARPLANO)",
 }
 
 #: qué hace cada orden, en una línea (la segunda del cartel)
@@ -109,6 +111,7 @@ DESCRIPCIONES = {
     "INSERTARGEO": "Inserta una imagen con archivo de mundo (.pgw, .jgw, .tfw) o GeoTIFF en su lugar.",
     "EXPORTARGEO": "Guarda una copia de la imagen con su archivo de mundo, donde se elija; QGIS la abre en su lugar.",
     "ASPECTOIMAGEN": "Fondo transparente, líneas en negativo o de un color y opacidad, con vista previa; el original no se toca.",
+    "LIMPIARPLANO": "Limpia un plano antiguo escaneado: saca manchas de humedad y pliegues y deja los textos legibles; zonas de sello con umbrales suaves; el original no se toca.",
     "SELECT": "Elige objetos con las opciones de AutoCAD (W, C, WP, CP, F...).",
     "GEOFILTER": "Elige objetos por tipo, capa, color, medidas, textos y datos de QGIS.",
     "GEOPASTETABLE": "Pega la tabla copiada en GenOffice, Calc, Excel o QGIS (tabla de atributos o «Copiar tabla» de una composición), con su formato; dos puntos le dan la escala.",

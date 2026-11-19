@@ -35,6 +35,7 @@
   "Insert georeferenced image (INSERTARGEO)": "Insertar imagen georreferenciada (INSERTARGEO)",
   "Export georeferenced copy (EXPORTARGEO)": "Exportar copia georreferenciada (EXPORTARGEO)",
   "Image appearance (ASPECTOIMAGEN)": "Aspecto de la imagen (ASPECTOIMAGEN)",
+  "Clean old scanned plan (LIMPIARPLANO)": "Limpiar plano antiguo escaneado (LIMPIARPLANO)",
   "AutoCAD-style chamfer (CHAMFER)": "Chaflán estilo AutoCAD (CHAFLAN)",
   "Blocks": "Bloques",
   "Create block (BLOCK)": "Crear bloque (BLOQUE)",

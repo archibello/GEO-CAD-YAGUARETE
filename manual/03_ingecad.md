@@ -51,7 +51,7 @@ conciencia.
 | Perpendicular y Apparent Intersection con guías | referencias con prolongación punteada |
 | Teclado siempre a la línea de comandos | escribir sin hacer clic en ella |
 | Bloques | BLOQUE mejorado y edición en el lugar |
-| Imágenes georreferenciadas | GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, pegar capturas |
+| Imágenes georreferenciadas | GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO, pegar capturas |
 | Orden de dibujo | ALFRENTE, ALFONDO |
 | Espacio papel, Vista previa y plumas, Cotas | la lámina como AutoCAD |
 | Tablas | PEGARTABLA |
@@ -257,6 +257,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 | **Traer imagen de Google Earth…** (CAPTURARGE) | la imagen de Google Earth, ya ubicada (capítulo 3) |
 | **EXPORTARGEO** | guarda una copia con su archivo de mundo, que QGIS abre en su lugar |
 | **ASPECTOIMAGEN** | fondo transparente, líneas en negativo o de un color, opacidad y contraste, limpiar manchas (el polvo del escaneo, cuidando los textos), con vista previa con zoom (en una copia: el original no se toca); **Fondo blanco** detrás de la imagen, en la capa FONDO_IMAGENES que se prende o se apaga; **Entregar imagen final…**: una imagen nueva, opaca y con fondo blanco, para la entrega |
+| **LIMPIARPLANO** | limpia un plano antiguo escaneado: saca las manchas de humedad y los pliegues y deja los textos legibles (al doble de resolución, en gris). Clic en la imagen; si hay un sello o una firma tenue, dos esquinas alrededor (zona de sello, más suave; D quita la última); Enter. Copia «_limpio.png» junto al dibujo, en el mismo lugar: el original no se toca, U lo deshace |
 
 ### Tomar la imagen del marco
 

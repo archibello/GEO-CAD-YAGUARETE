@@ -40,7 +40,7 @@ DEFECTO = {
         ("Yaguá GEO", ("GEOCRS", "GEOREPROJECT")),
         ("Yaguá Dibujo", ("RECTANG", "TEXT", "SHPNEW", "SHPLABEL", "SHPTHEME")),
         ("Yaguá Imagenes", (
-            "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "GEOPASTEIMAGE",)),
+            "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "LIMPIARPLANO", "GEOPASTEIMAGE",)),
         ("Yaguá Blocks", ("BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE")),
         ("Yaguá Cotas", ("GEODIMSETUP", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR")),
         ("Yaguá Print", ("GEOPREVIEW", "GEOPLOTSTYLES", "GEOSHEETGRID")),
@@ -126,7 +126,8 @@ TEMA_BANCO = {
             "SELECT", "GEOFILTER", "STRETCH", "FILLET", "CHAMFER", "BREAKATPOINT",
             "MATCHPROP", "GEOPASTEORIG", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
             "GEOREFADD", "GEOREFREMOVE", "GEOREFSAVE", "GEOREFDISCARD", "GEORREF",
-            "ASPECTOIMAGEN", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO", "SHPATTR"),
+            "ASPECTOIMAGEN", "LIMPIARPLANO", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO",
+            "SHPATTR"),
         "Dibujo": (
             "RECTANG", "TEXT", "BLOCK", "INSERT", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR",
             "INSERTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "SHPNEW", "SHPLABEL",
@@ -259,7 +260,10 @@ CAPAS_BANCO = tuple("capas:" + c for c in (
 #: «capas-relleno» (3.64.0): el color y la transparencia de relleno de los polígonos,
 #: detrás del grosor donde esté (Fernando, 03/11/2026).
 CAPAS_RELLENO = ("capas:fill", "capas:filltr")
-MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno")}
+#: LIMPIARPLANO (3.86.0): en una barra ya guardada va detrás de ASPECTOIMAGEN
+#: (si no, caería al final de la barra GeoCAD)
+MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno"),
+               "ingecad": ("limpiar-plano",)}
 
 
 def _migrar(programa: str, crudo: dict) -> bool:
@@ -308,6 +312,15 @@ def _migrar(programa: str, crudo: dict) -> bool:
                 bs = list(destino.get("botones") or ())
                 at = bs.index("capas:lineweight") + 1 if "capas:lineweight" in bs else len(bs)
                 destino["botones"] = bs[:at] + list(CAPAS_RELLENO) + bs[at:]
+        elif nombre == "limpiar-plano":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any("LIMPIARPLANO" in (c.get("botones") or ()) for c in cats):
+                continue
+            destino = next((c for c in cats if "ASPECTOIMAGEN" in (c.get("botones") or ())), None)
+            if destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("ASPECTOIMAGEN") + 1
+                destino["botones"] = bs[:at] + ["LIMPIARPLANO"] + bs[at:]
     crudo["migraciones"] = hechas
     return cambio
 
