@@ -337,6 +337,14 @@ que le dan la escala, en el modelo o en el papel; o como **dibujo y textos**
   Supr o BORRA, también la que trae la presentación; se mueve con MOVE o con
   su agarre. Borrada o movida, no queda un «fantasma» en el lugar de antes (en
   IngeCAD solo el borde viejo la volvía a elegir y no se podía borrar).
+- **Grilla de hoja (GRILLAHOJA)**: el botón de la barra Ventanas gráficas
+  muestra una grilla milimetrada celeste, casi invisible, sobre la hoja (cada
+  1, 5 y 10 mm de papel, cada medida con su grosor como en el papel
+  milimetrado: la de 1 cm es la más marcada; las de 1 mm aparecen al
+  acercarse). Es sólo de pantalla: no se
+  imprime. Vale con la hoja en 1 mm = 1 o 0,001 unidades; si no lo está, el
+  botón la pasa a mm y escala lo de la hoja (U lo deshace). La flechita elige
+  la intensidad: Suave, Media (de fábrica) o Marcada.
 - **VISTAPREVIA**: la presentación como sale impresa, con zoom e Imprimir.
 - **PLUMAS**: la tabla de plumas .ctb como AutoCAD (color → color de
   impresión, grosor, tramado).

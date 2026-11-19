@@ -19,7 +19,7 @@ TEMAS = {
     "GEODRAWFRONT": "orden", "GEODRAWBACK": "orden",
     "BLOCK": "bloques", "INSERT": "bloques", "GEOREFEDIT": "bloques", "GEOBLOCKBASE": "bloques",
     "SELECT": "seleccion", "GEOFILTER": "seleccion",
-    "GEOPREVIEW": "impresion", "GEOPLOTSTYLES": "impresion",
+    "GEOPREVIEW": "impresion", "GEOPLOTSTYLES": "impresion", "GEOSHEETGRID": "impresion",
     "GEOPASTETABLE": "tablas", "GEOPASTEIMAGE": "tablas",
     "GEOCRS": "intercambio", "GEOREPROJECT": "intercambio", "GEOIMPORTSHP": "intercambio",
     "GEOEXPORTSHP": "intercambio", "GEOEXPORTKML": "intercambio",

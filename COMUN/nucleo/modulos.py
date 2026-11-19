@@ -118,7 +118,9 @@ CATALOGO = {
                "La presentación respeta la escala de su configuración de página: "
                "con 1 mm = 0,001 unidades (m) la hoja se dibuja en metros, la ventana "
                "a 1:100 (1/100XP) muestra 100 m en 1000 mm y se imprime así. Las "
-               "presentaciones nuevas de un dibujo en metros nacen con 1 mm = 0,001.",
+               "presentaciones nuevas de un dibujo en metros nacen con 1 mm = 0,001. "
+               "GRILLAHOJA (botón en la barra Ventanas gráficas): grilla milimetrada "
+               "de la hoja, casi invisible y que no se imprime.",
                cambia_programa=True),
         Modulo("impresion", "Vista previa y plumas (VISTAPREVIA, PLUMAS)",
                "VISTAPREVIA muestra la presentación como sale impresa (hoja, escalas, "

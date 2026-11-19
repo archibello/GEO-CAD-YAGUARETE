@@ -128,6 +128,7 @@ DESCRIPCIONES = {
     "GEOBLOCKBASE": "Cambia el punto base de un bloque.",
     "GEOPREVIEW": "Muestra la presentación como sale impresa.",
     "GEOPLOTSTYLES": "Edita la tabla de plumas (.ctb): color, grosor y tramado de impresión.",
+    "GEOSHEETGRID": "Grilla milimetrada de la hoja, casi invisible y que no se imprime; si la hoja no está en mm, la pasa a mm.",
     "GEODIMSETUP": "Arma un estilo de cota con la escala del papel.",
     "DIMLINEAR": "Acota una distancia horizontal o vertical.",
     "DIMALIGNED": "Acota una distancia paralela a los puntos elegidos.",

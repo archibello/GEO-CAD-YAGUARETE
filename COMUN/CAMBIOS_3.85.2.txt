@@ -1,0 +1,45 @@
+GeoCAD - versión 3.85.2
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Grilla de hoja: las tres medidas, cada una con su grosor
+(Fernando, 19/11/2026, captura de Layout2 con dos ventanas a 1:100 y 1:200
+y un cuadrado de 10 × 10 m: «¿no debería medir 10x10 módulos de la hoja, y
+el de 1:200, 5x5?»; después: «que estén presentes las tres medidas, la de
+10x10 mm, la de 5x5 mm y la de 1x1 mm, cada una con su espesor, que se
+puedan distinguir a simple vista». De tres muestras eligió la C).
+
+Qué pasaba
+   Las escalas estaban bien: medido sobre la captura, el cuadrado a 1:100
+   mide 100 mm de papel (10 × 10 módulos de 1 cm) y el de 1:200, 50 mm
+   (5 × 5). Pero todas las líneas eran de 1 píxel y la de 10 mm casi no se
+   distinguía de la de 5 mm: se contaban celdas de 5 mm como módulos.
+
+Ahora
+   Como el papel milimetrado impreso, cada medida con su grosor y su tono:
+   - 1 mm: ½ píxel, la más suave.
+   - 5 mm: 1 píxel.
+   - 10 mm: 1½ píxel, la más marcada: el centímetro se cuenta a simple vista.
+   Opacidad de 1 / 5 / 10 mm (de 255): Suave 25/42/70, Media (de fábrica)
+   35/60/100, Marcada 45/78/130.
+   A hoja entera se ven las de 5 y 10 mm; las de 1 mm aparecen apenas
+   quedan a 3 píxeles o más entre sí (más juntas serían un tinte, no
+   líneas). Se dibujan de la más fina a la más gruesa: en los cruces gana la
+   de 10 mm. Con la pantalla en escala ×2 el grosor se pinta en píxeles
+   físicos (1½ px = 3 físicos), sin huecos. Lo demás no cambia: no se
+   imprime, sólo en la hoja, debajo de lo dibujado.
+
+Por dentro
+- grilla_hoja.py: GROSOR (½, 1, 1½ px), MIN_PX 3; trazos() arma cada
+  grosor con líneas de 1 píxel físico una al lado de otra (la fracción, con
+  la opacidad proporcional); vertices() recibe los trazos; lineas() los
+  devuelve ordenados por medida; INTENSIDADES nuevas.
+
+Pruebas
+- test_grilla_hoja: grosores en pantallas ×1 y ×2, umbral de 3 px por mm,
+  orden de dibujo, opacidades de la muestra C.
+- banco_grilla_hoja_ventana: pintado real a hoja entera (las de 5 mm de
+  2 píxeles físicos, las de 10 mm de 3) y una captura acercada a 4 px por
+  mm con las tres medidas.
+
+Para probar (IngeCAD): GC1-GC3 en 02_PRUEBAS_MANUALES.txt.

@@ -1,0 +1,73 @@
+GeoCAD - versión 3.85.0
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Grilla de hoja (GRILLAHOJA), como la grilla de referencia de Vectorworks
+(Fernando, 19/11/2026: una grilla milimetrada celeste que no se imprime,
+sólo con la hoja en milímetros o en 0,001 de la unidad; «si apretamos el
+botón que activa la grilla, automáticamente se configura en milímetros»;
+«casi imperceptible a la vista para que no interfiera con la visibilidad de
+los objetos a imprimir»; «podemos lanzar nuestra primera versión para
+probar»).
+
+Qué hace
+   Un botón nuevo en la barra Ventanas gráficas de IngeCAD, después del
+   desplegable de escala (también en la barra GeoCAD, con Vista previa, y
+   la orden GRILLAHOJA). Prende y apaga una grilla sobre la hoja de las
+   presentaciones:
+   - Líneas cada 1 mm de papel, más marcadas cada 5 y cada 10 mm, desde la
+     esquina de la hoja. Al alejarse quedan sólo las de 5 o de 10 mm, y
+     muy de lejos se apaga sola: nunca una trama gris.
+   - Celeste muy pálido, de 1 píxel, sólo dentro de la hoja, debajo de todo
+     lo dibujado y sin tapar el borde de la hoja.
+   - La flechita del botón elige la intensidad: Muy suave (de fábrica),
+     Suave o Normal.
+   - No se imprime: es de la pantalla, como la grilla de IngeCAD (F7). No
+     sale en VISTAPREVIA, TRAZAR ni PUBLICAR.
+   - Recuerda si estaba prendida y la intensidad (configuración de GeoCAD).
+   Vale sólo con la hoja en milímetros: papel en mm y la escala de la
+   página en «1 mm = 1 unidad» o «1 mm = 0,001 unidades».
+
+Si la hoja no está en milímetros
+   Al prender la grilla en una presentación así (papel en pulgadas, u otra
+   escala), GeoCAD la pasa a mm: dibujo en metros -> 1 mm = 0,001; en mm ->
+   1 mm = 1; sin unidades declaradas, pregunta cuál. Lo dibujado en la hoja
+   (textos, rótulos, ventanas gráficas) se escala desde el origen del papel
+   para que quede igual impreso; las ventanas gráficas muestran lo mismo a
+   la misma escala impresa. Si hay objetos en la hoja, antes pregunta.
+   Todo es un solo paso: U lo deja como estaba.
+
+Por dentro
+- grilla_hoja.py (nuevo, módulo Papel): envuelve Viewport.paintGL y
+  Viewport._draw_grid de IngeCAD; durante el pintado de una hoja en mm
+  dibuja la grilla después de la hoja y antes del dibujo (la de IngeCAD se
+  dibuja sólo si el usuario la tiene prendida). Las líneas van opacas, con
+  el celeste ya mezclado con el blanco de la hoja: una línea translúcida
+  bajaba la opacidad del lienzo y en pantalla se veía lo de atrás (lo vio
+  el banco). Las puntas quedan 2 px adentro del borde.
+  La hoja a mm: PageSetupCommand + TransformCommand (escala) en un
+  CompositeCommand, por el controlador de IngeCAD (índice de selección al
+  día, como la 3.84.2).
+- config.py: grilla_hoja y grilla_hoja_intensidad (ocultos).
+- __init__.py: orden GEOSHEETGRID (GRILLAHOJA, SHEETGRID), en la barra
+  GeoCAD (tema Impresión) y en el banco «Espacio papel» de Administrar
+  botones; el botón de la barra Ventanas gráficas se pone y se saca con el
+  módulo Papel. Ícono grilla_hoja.png.
+
+Pruebas
+- test_grilla_hoja (nueva): cuándo la hoja está en mm; pasarla a mm (línea,
+  texto y ventana gráfica escalados, mismo largo en el papel, vista igual;
+  U); las líneas por zoom (pasos 1/5/10, recorte a la vista y a la hoja,
+  nunca sobre el borde); colores; el envoltorio del pintado; GRILLAHOJA con
+  una ventana falsa (confirmar, preguntar unidades, cancelar, Model,
+  intensidad, módulo Papel apagado).
+- banco_grilla_hoja_ventana (nuevo, ventana real con OpenGL): el botón en
+  la barra Ventanas gráficas; el clic pasa la hoja de 1 mm = 100 u a
+  0,001 (la línea sigue midiendo 200 mm de papel) y U la deja; pintado
+  real: la grilla cambia la hoja apenas (máx. 33 de 255, celeste), el
+  lienzo sigue opaco, la línea dibujada no cambia, fuera de la hoja nada.
+  TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+
+Para después (no entra): captura a la grilla de hoja; «Imprimir grilla».
+
+Para probar (IngeCAD): GH1-GH7 en 02_PRUEBAS_MANUALES.txt.

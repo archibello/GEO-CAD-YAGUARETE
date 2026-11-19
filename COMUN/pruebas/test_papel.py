@@ -82,6 +82,14 @@ print("ok grilla 100 m a 1:100 = 1000 mm, celdas de 10 mm")
 # ------------------------------------------------------------- 5. presentaciones nuevas
 L.NewLayoutCommand("Hoja metros").do(doc)
 assert abs(P.unidades_por_mm(doc.doc.layouts.get("Hoja metros")) - 0.001) < 1e-15
+# 3.85.4 (Fernando, 19/11/2026): la hoja nueva no guardaba papel y en
+# IngeCAD 0.7+ nacía en mm (420 de ancho) sobre la página en metros; su
+# primera ventana también, y un cuadrado de 10 m a 1:100 no medía 100 mm
+hm = doc.doc.layouts.get("Hoja metros")
+x0, y0, x1, y1 = L.paper_frame(hm)["sheet"]
+assert abs((x1 - x0) - 0.420) < 1e-12 and abs((y1 - y0) - 0.297) < 1e-12, (x0, y0, x1, y1)
+hecha = doc.doc.layouts.new("Con papel"); hecha.dxf.paper_width = 594.0; hecha.dxf.paper_height = 420.0
+assert P.escala_hoja_metros(hecha) and hecha.dxf.paper_width == 594.0    # su papel no se toca
 doc_mm = dibujo(insunits=4)
 L.NewLayoutCommand("Hoja mm").do(doc_mm)
 assert P.unidades_por_mm(doc_mm.doc.layouts.get("Hoja mm")) == 1.0    # en mm, como venía

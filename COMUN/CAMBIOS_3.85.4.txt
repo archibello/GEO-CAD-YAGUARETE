@@ -1,0 +1,42 @@
+GeoCAD - versión 3.85.4
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Escalas de una presentación nueva en un dibujo en metros (corrige la 3.85.3)
+(Fernando, 19/11/2026, «Untitled», Layout3: «hay un grave problema con las
+escalas»; a 1:100 un cuadrado de 10 m tiene que medir 10 mm × 10 = 100 mm,
+diez módulos de 1 cm de la grilla de hoja, y medía cerca del doble).
+
+Qué pasaba
+   El módulo Papel pone la página de una presentación nueva de un dibujo en
+   metros en «1 mm = 0,001 unidades». Pero esa presentación todavía no
+   guarda el tamaño de papel, y IngeCAD 0.7/0.8 supone entonces su A3 en mm
+   SIN aplicarle la escala. La hoja y la ventana gráfica que IngeCAD crea al
+   entrar por primera vez nacían en mm (405 unidades de ancho) sobre una
+   página en metros: las escalas del desplegable no correspondían a lo que
+   se imprime ni a la grilla. Es lo mismo que la 3.85.3 dejó «para revisar
+   aparte» (la hoja en mm hasta regenerar: en realidad no se arreglaba).
+
+Ahora
+   Al pasar la página a 0,001 se le escribe también la A3 que IngeCAD supone
+   (420 × 297 mm, márgenes 20 / 7,5). La hoja y su primera ventana nacen en
+   metros (0,420 de ancho) y 1:100 da 10 m = 100 mm de papel. Si la
+   presentación ya tenía papel, no se toca.
+   Las presentaciones creadas antes con el problema quedan como estaban:
+   conviene borrarlas y crearlas de nuevo.
+
+Por dentro
+- papel.py: escala_hoja_metros escribe paper_width/height, márgenes y
+  plot_paper_units = 1 cuando la presentación no tiene papel válido;
+  A3_DE_INGECAD y MARGENES_DE_INGECAD.
+
+Pruebas
+- test_papel: la hoja nueva en metros mide 0,420 × 0,297; un papel ya
+  elegido no se toca.
+- banco_grilla_hoja_ventana: presentación nueva con la ventana real: la A3
+  mide 420 mm a la escala de la página, su ventana entra en la hoja y a
+  1:100 un cuadrado de 10 m mide 100 mm de papel. Diagnóstico con el
+  IngeCAD del Flatpak: antes ventana de 405 unidades y hoja en mm; ahora
+  0,405 y hoja en metros.
+
+Para probar (IngeCAD): GE1-GE3 en 02_PRUEBAS_MANUALES.txt.

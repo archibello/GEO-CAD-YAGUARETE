@@ -60,6 +60,11 @@ PLUGIN_ID = "geocad"
 #: Milímetros por unidad del dibujo, según $INSUNITS (4 mm, 5 cm, 6 m, 7 km).
 MM_POR_UNIDAD = {4: 1.0, 5: 10.0, 6: 1000.0, 7: 1e6}
 
+#: La hoja que IngeCAD supone cuando la presentación no guarda papel
+#: (core/layouts _DEFAULT_PAPER y _DEFAULT_MARGINS: arriba, der., abajo, izq.).
+A3_DE_INGECAD = (420.0, 297.0)
+MARGENES_DE_INGECAD = (20.0, 7.5, 20.0, 7.5)
+
 #: Bit «usar escala estándar» de plot_layout_flags (AutoCAD, grupo 70).
 _BIT_ESCALA_ESTANDAR = 16
 
@@ -148,6 +153,17 @@ def escala_hoja_metros(layout) -> bool:
     except (TypeError, ValueError):
         flags = 0
     dxf.plot_layout_flags = flags & ~_BIT_ESCALA_ESTANDAR
+    # 3.85.4: una presentación nueva no guarda papel y IngeCAD 0.7+ toma
+    # entonces su A3 en mm SIN la escala: la hoja y su primera ventana
+    # nacían en mm sobre una página en metros (Fernando, 19/11/2026: el
+    # cuadrado de 10 m a 1:100 no medía 100 mm). Se escribe esa misma A3.
+    ancho = _num(dxf, "paper_width", 0.0)
+    alto = _num(dxf, "paper_height", 0.0)
+    if not (0.0 < ancho < 20000.0 and 0.0 < alto < 20000.0):
+        dxf.paper_width, dxf.paper_height = A3_DE_INGECAD
+        (dxf.top_margin, dxf.right_margin,
+         dxf.bottom_margin, dxf.left_margin) = MARGENES_DE_INGECAD
+        dxf.plot_paper_units = 1             # mm
     return True
 
 

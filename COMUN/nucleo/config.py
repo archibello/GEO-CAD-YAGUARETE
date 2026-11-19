@@ -114,6 +114,9 @@ OCULTOS = (
             (("seleccion", "Lo seleccionado"), ("capa", "La capa activa entera"))),
     Setting("envio_altura", "Altura de los textos al enviar a IngeCAD", "float", 2.5, "",
             (), 0.01, 100000),
+    Setting("grilla_hoja", "Grilla de hoja prendida (GRILLAHOJA)", "bool", False),
+    Setting("grilla_hoja_intensidad", "Intensidad de la grilla de hoja", "choice", "media", "",
+            (("suave", "Suave"), ("media", "Media"), ("marcada", "Marcada"))),
 )
 
 BY_KEY = {s.key: s for s in SETTINGS + OCULTOS}

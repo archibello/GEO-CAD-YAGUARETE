@@ -1,0 +1,40 @@
+GeoCAD - versión 3.85.3
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Grilla de hoja: no aparecía en una presentación nueva (corrige la 3.85.2)
+(Fernando, 19/11/2026, dibujo nuevo «Untitled», Layout2: GRILLAHOJA decía
+«prendida» pero la hoja seguía en blanco: «no se activa»).
+
+Qué pasaba
+   En un dibujo en metros, el módulo Papel hace que una presentación nueva
+   nazca con la página en «1 mm = 0,001 unidades». Pero la hoja que IngeCAD
+   ya había dibujado en pantalla seguía en milímetros (una A4 de 297 × 210
+   unidades). La grilla le creía a la configuración de página: ponía sus
+   líneas cada 0,001 unidades sobre una hoja de casi 300, tan juntas que se
+   apagaba sola. El banco no lo vio porque fijaba la página antes de mirar.
+
+Ahora
+   La grilla sigue la hoja tal como se ve en pantalla (la escala con la que
+   IngeCAD la dibujó). En el caso de Fernando: líneas cada 1 mm de esa hoja.
+   Con IngeCAD 0.6.x, que no dice la escala de la hoja, sigue usando la de
+   la página (ahí el módulo Papel ya dibuja la hoja con ella).
+
+Para revisar aparte (no cambia en esta versión)
+   La hoja de una presentación nueva de un dibujo en metros se ve en mm
+   aunque la página diga 1 mm = 0,001, hasta que se regenera.
+
+Por dentro
+- grilla_hoja.py: _a_dibujar toma mm_per_unit de la escena (paper_frame);
+  mm_de_la_escena(); sin ese dato, la configuración de página.
+
+Pruebas
+- test_grilla_hoja: página en 0,001 con la hoja vista en mm -> la grilla va
+  (cada 5 mm a 2 px/mm); en metros; escena en pulgadas: no; sin el dato:
+  la de la página. Tras el U, con la hoja regenerada, no se dibuja.
+- banco_grilla_hoja_ventana: el caso de Fernando con la ventana real
+  (dibujo en metros, presentación nueva sin tocar la página): la grilla se
+  dibuja y se ve. Diagnóstico con el IngeCAD del Flatpak y un dibujo
+  «Untitled»: antes no dibujaba, ahora sí.
+
+Para probar (IngeCAD): GN1-GN2 en 02_PRUEBAS_MANUALES.txt (y siguen GC1-GC3).

@@ -1,0 +1,32 @@
+GeoCAD - versión 3.85.1
+=======================
+SÓLO INGECAD. QGIS no cambia (el zip de QGIS se arma igual, con el número nuevo).
+
+Grilla de hoja (GRILLAHOJA) más visible
+(Fernando, 19/11/2026: «me gusta cómo lo conseguiste, pero podríamos darle
+un poquito más de visibilidad, creo que quedó muy clarito». Se le mostraron
+tres hojas de muestra; eligió «la media»).
+
+Ahora
+   La grilla viene de fábrica con la intensidad Media: casi el triple de la
+   3.85.0, y la línea dibujada, los textos de 2,5 mm y los bordes siguen
+   resaltando. La flechita del botón ofrece:
+   - Suave: la de la 3.85.0 (opacidad 20 / 32 / 46 de 255 para las líneas
+     de 1 / 5 / 10 mm).
+   - Media (de fábrica): 58 / 88 / 122.
+   - Marcada: 80 / 115 / 155, como papel milimetrado impreso.
+   Lo demás no cambia: sólo dentro de la hoja, debajo de lo dibujado, no se
+   imprime. Si en la 3.85.0 se había elegido «Muy suave» o «Normal», vuelve
+   a la de fábrica (Media).
+
+Por dentro
+- grilla_hoja.py: INTENSIDADES suave/media/marcada y DE_FABRICA = "media".
+- config.py (núcleo): grilla_hoja_intensidad con esas tres opciones, Media
+  por defecto; un valor viejo no válido vuelve al de fábrica.
+
+Pruebas
+- test_grilla_hoja: Media de fábrica, el orden suave < media < marcada, los
+  valores elegidos, un valor de la 3.85.0 vuelve a Media.
+- banco_grilla_hoja_ventana: pintado real con la Media.
+
+Para probar (IngeCAD): GM1-GM3 en 02_PRUEBAS_MANUALES.txt.
