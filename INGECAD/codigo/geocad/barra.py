@@ -90,7 +90,8 @@ def _iconos_propios() -> dict:
     """Los íconos de GeoCAD para las órdenes nuevas de la barra Yaguareté."""
     from pathlib import Path
     carpeta = Path(__file__).parent / "iconos"
-    propios = {"BREAKATPOINT": carpeta / "partir.png", "GEORREF": carpeta / "georref.png",
+    propios = {"BREAKATPOINT": carpeta / "partir.png", "RUMBOS": carpeta / "rumbos.png",
+               "GEORREF": carpeta / "georref.png",
                "INSERTARGEO": carpeta / "insertar_geo.png", "EXPORTARGEO": carpeta / "exportar_geo.png",
                "ASPECTOIMAGEN": carpeta / "aspecto_imagen.png",
                "LIMPIARPLANO": carpeta / "limpiar_plano.png"}

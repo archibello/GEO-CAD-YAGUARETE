@@ -146,6 +146,7 @@ def _envolver_on_text(original):
         if (tool is not None and getattr(self, "_selecting_for", None) is None
                 and not getattr(tool, "entity_picker", False)
                 and not _texto_libre(tool)
+                and not getattr(tool, "angulos_propios", False)      # RUMBOS los lee ella
                 and "<" in text and relativo()
                 and _activo(getattr(self, "window", None))):
             modifier = getattr(self, "_modifier", None)

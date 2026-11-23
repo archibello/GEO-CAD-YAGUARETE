@@ -46,6 +46,7 @@ conciencia.
 | Selección estilo AutoCAD | W, C, WP, CP, F, ALL, L, P, R, A, U… y FILTRO |
 | Empalme, Chaflán, Partir en punto, Estirar, Igualar propiedades | edición como AutoCAD |
 | Texto como AutoCAD | TEXTO / DT con altura y dirección por puntos |
+| Poligonal por rumbos | RUMBOS / RB: distancia<ángulo desde un tramo base, como en QGIS |
 | Ángulos relativos | @d<ángulo como ángulo interior desde el tramo anterior |
 | Agarres de vértices | escribir el punto, varios agarres, agregar o borrar vértices |
 | Perpendicular y Apparent Intersection con guías | referencias con prolongación punteada |
@@ -211,6 +212,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 |---|---|
 | **Botón derecho = Enter** | termina la orden, acepta lo escrito, repite la última; Ctrl + botón derecho abre el menú. Se prende y apaga con **BOTONDERECHO**. |
 | **Ángulos relativos** | **ANGREL**: en LÍNEA y POLILÍNEA, `@d<ángulo` es el ángulo interior desde el tramo anterior, antihorario (180 = recto), como se mide en el terreno. |
+| **Rumbos** (RUMBOS / RB) | la poligonal de QGIS: tramo base A-B y cada tramo `distancia<ángulo` (interior o deflexión con **A**; también `30dI`/`30dD`, `N45d30'E` y `<<`); **M** polilínea o un objeto por tramo, **B** dibuja la base, **C** cierra, **H** deshace; largo y acumulado en la línea de comandos. |
 | **Selección** | en cualquier «Designar objetos»: W, C, WP, CP, F, ALL, L, P, R, A, U y FI. **SEL** y **FILTRO** (FI) eligen por tipo, capa, color, medidas, textos y datos de QGIS. |
 | **Empalme** (EMPALME / F) | también entre tramos de polilíneas, respetando el lado elegido. |
 | **Chaflán** (CHAFLAN / CHA) | con **Ochava** por defecto (largo del bisel, ángulos iguales); Distancia, Ángulo, Polilínea, Múltiple. |
@@ -231,6 +233,9 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
    rumbo; los siguientes con `@distancia<ángulo interior` de la mensura
    (por ejemplo `@40<90`: 40 m a escuadra con el tramo anterior).
 2. **CHAFLAN** en la esquina sobre la calle: Ochava, largo **4 m**.
+   Con la mensura en la mano también sirve **RUMBOS** (RB): clic en dos
+   mojones del lindero conocido (el tramo base) y después cada tramo,
+   `40<90`, `25.4<91d30'15"`…; **C** cierra la parcela.
 3. **PARTEENPUNTO** en la intersección con la línea municipal.
 4. **IGUALARPROP**: la parcela nueva toma capa y color de las vecinas.
 

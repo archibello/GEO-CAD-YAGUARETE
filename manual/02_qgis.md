@@ -189,6 +189,7 @@ toca la tabla de la capa.
 | **PERPENDICULAR** | una línea perpendicular desde un punto |
 | **IGUALARPROP** | copiar capa CAD, color y estilo de un objeto a otros |
 | **COPIABASE**, **PEGARBASE** | copiar y pegar con punto base |
+| **UNIR** (J, JOIN) | une líneas que comparten un extremo en una sola; quedan los datos de la más larga (**CR**: la de más tramos) y las demás se borran |
 | **DESCOMP** (DESCOMPONER) | separar en partes |
 | **BORRA** | borrar |
 

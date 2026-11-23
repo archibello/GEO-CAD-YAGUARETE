@@ -1,0 +1,103 @@
+GeoCAD - versión 3.87.0
+=======================
+IngeCAD: RUMBOS. QGIS: UNIR (JOIN, J).
+
+Rumbos en IngeCAD (RUMBOS / RB)
+(Fernando, 23/11/2026: «agregar la herramienta Rumbos (RB) que desarrollamos
+para QGIS, a IngeCAD». Es la misma orden de Dibujo CAD en QGIS, la 3.43.0,
+que reunió los dos Digitalizadores GMS.)
+
+Qué hace
+   Un botón nuevo en la barra «Yaguá Dibujo», después de Rectángulo
+   (también en GeoCAD > Dibujo > Poligonal por rumbos y las órdenes
+   RUMBOS, RB, GMS y POLIGONAL):
+   1. Dos puntos del tramo base A-B (con referencias): dan la dirección
+      desde la que se mide el primer ángulo.
+   2. Cada tramo se escribe distancia<ángulo, por ejemplo 25.4<91d30'15".
+      Ángulo Interior (180 = sigue derecho, antihorario desde el tramo
+      anterior, como Líneas GMS) o Deflexión (0 = sigue derecho, + a la
+      izquierda, como el Continuo 3.0); A cambia entre los dos. Siempre
+      valen 30dI / 30dD (deflexión a la Izquierda / Derecha), los rumbos
+      N45d30'E y '<<' (ángulo absoluto). También un clic, o una distancia
+      sola hacia el cursor.
+   3. Antes del primer tramo: M = Modo Polilínea (un objeto) o Tramos (una
+      línea por tramo); B = Base Sí (el tramo base se dibuja) o No.
+   4. C cierra (la polilínea queda cerrada); H (o U) deshace el último
+      tramo; Enter o Esc termina.
+   La longitud de cada tramo y la acumulada se ven en la línea de
+   comandos. Ángulo, Modo y Base se recuerdan para la vez siguiente.
+   El resultado es EXACTAMENTE el de RUMBOS en QGIS (la prueba compara
+   los dos cálculos).
+
+Por dentro
+- rumbos.py (nuevo, módulo «rumbos»): la herramienta RumbosTool. Lee los
+  ángulos con angulos.direccion, el núcleo que ya usaba QGIS. Crea la
+  polilínea o las líneas con las acciones de IngeCAD (un U por objeto).
+- dibujo.py: el envoltorio de «Ángulos relativos» no toca lo que se
+  escribe en RUMBOS (lo lee la orden misma).
+- __init__.py, yaguarete.py, barra.py: la orden, los alias, el menú y el
+  botón, ícono rumbos.png (el de QGIS); i18n/es.
+- botones.py (núcleo): RUMBOS en «Yaguá Dibujo» de fábrica y en el banco
+  Dibujo. A una configuración de barras ya guardada se le agrega, una sola
+  vez, detrás de RECTANG (migración «rumbos»). En una instalación nueva
+  queda en «Yaguá Dibujo» sin tildar, como todo botón propio de GeoCAD
+  (de fábrica sólo se ven los de IngeCAD que GeoCAD reconfiguró).
+- modulos.py (núcleo): módulo nuevo «Poligonal por rumbos», prendido de
+  fábrica; se ofrece al actualizar, como todo módulo nuevo.
+- Manual (03_ingecad): Rumbos en la tabla de Dibujo, en los módulos y en
+  la práctica 2.C.
+
+Pruebas
+- test_rumbos_ingecad (nueva): cada tramo da lo mismo que tramo_rumbo de
+  QGIS en los dos modos y con todas las formas de ángulo; Polilínea y
+  Tramos, Base Sí y No, Cerrar, desHacer (también la base), errores,
+  vista previa, el envoltorio de ángulos relativos, orden, alias, menú,
+  barra, módulo apagado y la migración de una barra guardada.
+- test_chaflan, test_partir, test_modulos y test_yaguarete puestas al día
+  con RUMBOS.
+- ventana/banco_rumbos_ventana (nuevo, ventana real): RB tecleado, tramos
+  que llegan sin reescribir y dan los puntos de QGIS, Cerrar, U, Tramos
+  con H, LÍNEA con ángulos relativos como antes, el botón en una barra
+  guardada y en Yaguareté Tools, con ícono, arrancando la orden.
+  ventana/banco_botones_ventana puesto al día (Yaguareté empieza en RUMBOS
+  cuando RECTANG y TEXT se van a una categoría).
+
+UNIR en QGIS (UNIR / J / JOIN)
+(Fernando, 23/11/2026: «agregar a QGIS la herramienta Join (J) considerando
+que el polígono mayor en longitud o el polígono con más tramos va a otorgar
+la base de datos al más corto o de menos tramos por defecto». Decidido con
+Fernando: líneas y polilíneas, como el JOIN de AutoCAD; criterio Longitud
+de fábrica, con la opción Tramos.)
+
+Qué hace
+   Un botón nuevo en «Yaguá Edición» y en la barra Edición CAD, antes de
+   Descomponer (también la orden UNIR, J, JOIN o UNE):
+   1. Designar las líneas (o tenerlas ya seleccionadas) y Enter.
+   2. Las que comparten un extremo quedan en UNA sola línea, dadas vuelta
+      si hace falta; si dan la vuelta completa, queda cerrada.
+   3. La línea que queda es la del objeto MAYOR, con su fila de la tabla:
+      el más largo (Criterio = Longitud) o el de más tramos (Criterio =
+      Tramos). Los otros se borran. CR, mientras se designa, cambia el
+      criterio; se recuerda para la vez siguiente.
+   Las que no tocan a ninguna quedan como estaban. En un cruce de tres,
+   sigue por la mayor y la otra queda aparte. Una línea ya cerrada no se
+   une. Extremos «iguales»: hasta 0,6 mm en coordenadas UTM (lo que deja el
+   enganche). Un solo U de la capa deshace todo.
+
+Por dentro
+- dibujo/unir.py (nuevo): el cálculo, sin QGIS (cadenas desde la pieza
+  mayor, extremos en cualquier sentido, multipartes).
+- dibujo/edit_commands.py: JoinCommand (opción CR en la designación,
+  ajuste «join_criterio»); en la tabla de órdenes. plugin.py: en la barra
+  Edición CAD junto a Partir. Ícono icons/join.svg.
+- botones.py (núcleo): «dibujo:join» en «Yaguá Edición» y en el banco
+  Edición; en una barra ya guardada se agrega delante de Descomponer
+  (migración «unir»).
+- Manual (02_qgis): UNIR en la tabla de edición.
+
+Pruebas
+- test_unir_qgis (nueva): el más largo / el de más tramos manda, sentidos,
+  cierre, cerradas, sueltas, cruce en T, grupos aparte, tolerancia,
+  multipartes, orden, ícono, botón y migración.
+- ventana/banco_unir_qgis (nuevo, QGIS 4.2.3 real): datos de la más larga,
+  borrado de las otras, un solo U, CR recordado, selección previa, sueltas.

@@ -17,21 +17,21 @@ B = import_module("ingecad_plugin_geocad.barra")
 # ---- 1. qué va en la barra ----------------------------------------------------------
 assert Y.NOMBRE_BARRA == "Yaguareté Tools"
 todo = {m.clave: True for m in mods.CATALOGO["ingecad"]}
-assert Y.elegidas(todo) == [("RECTANG", "draw_toolbar"), ("TEXT", "draw_toolbar"),
+assert Y.elegidas(todo) == [("RECTANG", "draw_toolbar"), ("TEXT", "draw_toolbar"), ("RUMBOS", None),
                             ("STRETCH", "modify_toolbar"),
                             ("BREAKATPOINT", None), ("CHAMFER", "modify_toolbar"),
                             ("FILLET", "modify_toolbar"), ("MATCHPROP", "standard_toolbar"),
                             ("INSERTARGEO", None), ("GEORREF", None), ("EXPORTARGEO", None),
                             ("ASPECTOIMAGEN", None), ("LIMPIARPLANO", None)]
 apagados = dict(todo, empalme=False, estirar=False, texto=False)
-assert [o for o, _ in Y.elegidas(apagados)] == ["RECTANG", "BREAKATPOINT", "CHAMFER", "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "LIMPIARPLANO"]  # vuelven a IngeCAD
+assert [o for o, _ in Y.elegidas(apagados)] == ["RECTANG", "RUMBOS", "BREAKATPOINT", "CHAMFER", "MATCHPROP", "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "LIMPIARPLANO"]  # vuelven a IngeCAD
 assert [o for o, _ in Y.elegidas({})] == ["RECTANG"]           # REC: siempre con GeoCAD
 spec = import_module("ingecad_plugin_geocad").construir_spec()
 assert not {"FILLET", "CHAMFER", "BREAKATPOINT"} & {i.command for i in spec.toolbar}  # no repetidas
 assert {o for o, _m, _b in Y.HERRAMIENTAS if _b is None} <= set(Y.ETIQUETAS)
 # 3.20.0 divisores entre temas: dibujo | edición | imágenes
-assert Y.cortes(o for o, _ in Y.elegidas(todo)) == [2, 7]
-assert Y.cortes(o for o, _ in Y.elegidas(apagados)) == [1, 4]
+assert Y.cortes(o for o, _ in Y.elegidas(todo)) == [3, 8]
+assert Y.cortes(o for o, _ in Y.elegidas(apagados)) == [2, 5]
 assert Y.cortes(["RECTANG"]) == [] and set(Y.TEMAS) == {o for o, _m, _b in Y.HERRAMIENTAS}
 print("ok barra")
 

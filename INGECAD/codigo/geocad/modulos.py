@@ -69,6 +69,11 @@ CATALOGO = {
         Modulo("partir", "Partir en punto (PARTEENPUNTO)",
                "Corta un objeto en un punto elegido con referencias (intersección, "
                "punto final, medio...). Muestra los dos pedazos antes del clic."),
+        Modulo("rumbos", "Poligonal por rumbos (RUMBOS / RB)",
+               "La orden RUMBOS de QGIS: tramo base A-B y cada tramo distancia<ángulo "
+               "(interior o deflexión; también 30dI/30dD, rumbos N45d30'E y '<<'). "
+               "Polilínea o una línea por tramo; Cerrar, desHacer; longitud y acumulado "
+               "en la línea de comandos."),
         Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO)",
                "GEORREF ajusta una imagen con puntos de control, como el "
                "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin "

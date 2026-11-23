@@ -179,7 +179,7 @@ mia = b.get(BT.objeto_barra("Mía"))
 comprobar(mia is not None and ordenes(mia) == ["RECTANG"], "la barra «Mía» armada al aceptar")
 yag = b["geocad_yaguarete_toolbar"]
 comprobar(not yag.isHidden() and "RECTANG" not in ordenes(yag) and "TEXT" not in ordenes(yag)
-          and ordenes(yag)[0] == "STRETCH", "Yaguareté sin RECTANG ni TEXT, en su lugar")
+          and ordenes(yag)[:2] == ["RUMBOS", "STRETCH"], "Yaguareté sin RECTANG ni TEXT, en su lugar")
 comprobar(any("guardadas" in e for e in ecos), "aviso en la línea de comandos")
 
 

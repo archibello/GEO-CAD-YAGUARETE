@@ -2226,6 +2226,89 @@ class MirrorCommand(EditCommand):
 
 
 # ==========================================================================
+class JoinCommand(EditCommand):
+    """UNIR (JOIN, J), 3.87.0: las líneas designadas que comparten un extremo
+    quedan en una sola polilínea. Los datos (la fila de la tabla) son los del
+    objeto MAYOR de cada unión: el más largo (Criterio = Longitud, de fábrica)
+    o el de más tramos (Criterio = Tramos); los demás se borran. Un solo U."""
+    title = 'UNIR'
+    OPT_CRITERIO = ('CR', 'CRITERIO', 'CRITERION')
+
+    def __init__(self, mgr, layer, kind):
+        super().__init__(mgr, layer, kind)
+        from .unir import LONGITUD, TRAMOS
+        valor = get_setting('join_criterio', LONGITUD, str)
+        self.criterio = TRAMOS if valor == TRAMOS else LONGITUD
+
+    def _crit_txt(self):
+        return 'Tramos' if self.criterio == 'tramos' else 'Longitud'
+
+    def prompt(self):
+        self._sel_init()
+        if (self.selecting and self.sel_mode == 'auto' and self.win is None
+                and not self.removing):
+            self.cl.set_prompt('Designe líneas a unir o', [('CR', 'Criterio=' + self._crit_txt())])
+            return
+        super().prompt()
+
+    def on_text(self, text):
+        if self.selecting and _key(text) in self.OPT_CRITERIO:
+            self.criterio = 'tramos' if self.criterio == 'longitud' else 'longitud'
+            set_setting('join_criterio', self.criterio)
+            self.cl.echo('Criterio = %s (los datos son los del objeto %s)'
+                         % (self._crit_txt(), 'con más tramos' if self.criterio == 'tramos' else 'más largo'))
+            self.prompt()
+            return
+        super().on_text(text)
+
+    def after_selection(self):
+        from .unir import unir
+        lyr = self.layer
+        objetos = {}
+        for fid, g in self.geoms.items():
+            try:
+                kind, _s, flat, _i = explode(g)
+            except ValueError:
+                continue
+            if kind == 'line':
+                objetos[fid] = flat
+        if len(objetos) < 2:
+            self.cl.echo('UNIR: hacen falta al menos dos líneas.')
+            self.end()
+            return
+        resultado, cadenas = unir(objetos, self.criterio)
+        if not cadenas:
+            self.cl.echo('UNIR: las líneas designadas no comparten extremos; no se unió nada.')
+            self.end()
+            return
+        if not lyr.isEditable():
+            lyr.startEditing()
+        lyr.beginEditCommand('UNIR')
+        try:
+            borrar = []
+            for fid, partes in resultado.items():
+                if partes:
+                    lyr.changeGeometry(fid, conform(self.io.to_layer(rebuild('line', partes)), lyr))
+                else:
+                    borrar.append(fid)
+            if borrar:
+                lyr.deleteFeatures(borrar)
+        except Exception:
+            lyr.destroyEditCommand()
+            raise
+        lyr.endEditCommand()
+        self.marks.append(lyr.undoStack().index())
+        lyr.triggerRepaint()
+        n = sum(len(fs) for _j, fs in cadenas)
+        self.cl.echo('%d línea(s) unida(s) en %d; datos del objeto %s (Criterio = %s).'
+                     % (n, len(cadenas), 'con más tramos' if self.criterio == 'tramos' else 'más largo',
+                        self._crit_txt()))
+        sueltas = len(objetos) - n
+        if sueltas:
+            self.cl.echo('%d no se tocan con las demás: quedan como estaban.' % sueltas)
+        self.end()
+
+
 class EraseCommand(EditCommand):
     """BORRA (ERASE): suprime los objetos designados. UPS (OOPS) los recupera."""
     title = 'BORRA'
@@ -2349,6 +2432,9 @@ EDIT_COMMANDS = [
     ('EXPLODE', ('DESCOMP', 'DESCOMPONER', 'X', 'DE'), ExplodeCommand, 'DESCOMP',
      ('line', 'polygon', 'point'), 'Descompone bloques, polilíneas en tramos y multipartes en partes',
      'explode'),
+    ('JOIN', ('UNIR', 'UNE', 'J'), JoinCommand, 'UNIR',
+     ('line',), 'Une líneas que comparten un extremo; quedan los datos de la más larga (CR: la de más tramos)',
+     'join'),
     ('DIVIDE', ('DIVIDIR', 'DIV'), DivideCommand, 'DIVIDE',
      ('line',), 'Puntos a intervalos iguales (opción Partir)', 'divide'),
     ('MEASURE', ('GRADUA', 'GRADÚA', 'MEDIR', 'ME'), MeasureCommand, 'GRADÚA',

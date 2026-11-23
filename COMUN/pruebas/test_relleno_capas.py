@@ -110,7 +110,7 @@ def guardado(cats, ocultos=()):
 m = guardado([{"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:capa", "capas:color",
                                                     "capas:linetype", "capas:lineweight"]}])
 assert m["categorias"][0]["botones"][-3:] == ["capas:lineweight", "capas:fill", "capas:filltr"], m
-assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones"] == YA + ["capas-relleno"]
+assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones"] == YA + ["capas-relleno", "unir"]
 # el grosor en otra barra de Fernando: el relleno va al lado
 m = guardado([{"nombre": "Yaguá Capas", "botones": ["capas:layprops"]},
               {"nombre": "Mía", "botones": ["capas:lineweight", "dibujo:line"]}])

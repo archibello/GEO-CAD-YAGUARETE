@@ -38,7 +38,7 @@ VERSION = 1
 DEFECTO = {
     "ingecad": (
         ("Yaguá GEO", ("GEOCRS", "GEOREPROJECT")),
-        ("Yaguá Dibujo", ("RECTANG", "TEXT", "SHPNEW", "SHPLABEL", "SHPTHEME")),
+        ("Yaguá Dibujo", ("RECTANG", "RUMBOS", "TEXT", "SHPNEW", "SHPLABEL", "SHPTHEME")),
         ("Yaguá Imagenes", (
             "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "LIMPIARPLANO", "GEOPASTEIMAGE",)),
         ("Yaguá Blocks", ("BLOCK", "INSERT", "GEOREFEDIT", "GEOBLOCKBASE")),
@@ -60,7 +60,7 @@ DEFECTO = {
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
             "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:perp", "dibujo:breakpt", "dibujo:break",
-            "dibujo:explode", "dibujo:divide", "dibujo:measure", "dibujo:copybase",
+            "dibujo:join", "dibujo:explode", "dibujo:divide", "dibujo:measure", "dibujo:copybase",
             "dibujo:pastebase", "dibujo:aligncopy",)),
         ("Yaguá Texto", (
             "dibujo:dtext", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font",
@@ -129,7 +129,7 @@ TEMA_BANCO = {
             "ASPECTOIMAGEN", "LIMPIARPLANO", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO",
             "SHPATTR"),
         "Dibujo": (
-            "RECTANG", "TEXT", "BLOCK", "INSERT", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR",
+            "RECTANG", "RUMBOS", "TEXT", "BLOCK", "INSERT", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR",
             "INSERTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "SHPNEW", "SHPLABEL",
             "SHPLABELOFF", "SHPTHEME", "SHPTHEMEOFF"),
     },
@@ -151,7 +151,7 @@ TEMA_BANCO = {
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
             "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:breakpt",
-            "dibujo:break", "dibujo:explode", "dibujo:divide", "dibujo:measure",
+            "dibujo:break", "dibujo:join", "dibujo:explode", "dibujo:divide", "dibujo:measure",
             "dibujo:copybase", "dibujo:pastebase", "geocad:pegarorig", "geocad:capaseleccion", "dibujo:aligncopy",
             "dibujo:matchprop", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
             "dibujo:textcolor", "geocad:copiartabla", "geocad:imgbase_mover",
@@ -261,9 +261,10 @@ CAPAS_BANCO = tuple("capas:" + c for c in (
 #: detrás del grosor donde esté (Fernando, 03/11/2026).
 CAPAS_RELLENO = ("capas:fill", "capas:filltr")
 #: LIMPIARPLANO (3.86.0): en una barra ya guardada va detrás de ASPECTOIMAGEN
-#: (si no, caería al final de la barra GeoCAD)
-MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno"),
-               "ingecad": ("limpiar-plano",)}
+#: (si no, caería al final de la barra GeoCAD). RUMBOS (3.87.0): detrás de RECTANG.
+#: UNIR en QGIS (3.87.0): delante de DESCOMP (dibujo:explode) donde esté.
+MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno", "unir"),
+               "ingecad": ("limpiar-plano", "rumbos")}
 
 
 def _migrar(programa: str, crudo: dict) -> bool:
@@ -321,6 +322,24 @@ def _migrar(programa: str, crudo: dict) -> bool:
                 bs = list(destino.get("botones") or ())
                 at = bs.index("ASPECTOIMAGEN") + 1
                 destino["botones"] = bs[:at] + ["LIMPIARPLANO"] + bs[at:]
+        elif nombre == "unir":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any("dibujo:join" in (c.get("botones") or ()) for c in cats):
+                continue
+            destino = next((c for c in cats if "dibujo:explode" in (c.get("botones") or ())), None)
+            if destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("dibujo:explode")
+                destino["botones"] = bs[:at] + ["dibujo:join"] + bs[at:]
+        elif nombre == "rumbos":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any("RUMBOS" in (c.get("botones") or ()) for c in cats):
+                continue
+            destino = next((c for c in cats if "RECTANG" in (c.get("botones") or ())), None)
+            if destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("RECTANG") + 1
+                destino["botones"] = bs[:at] + ["RUMBOS"] + bs[at:]
     crudo["migraciones"] = hechas
     return cambio
 

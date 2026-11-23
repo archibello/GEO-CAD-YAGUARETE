@@ -9,6 +9,7 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Datos      tabla de atributos, consultas, temático, rótulos, formulario
     Botón derecho = Enter / Ángulos relativos   (dibujo.py)
     Empalme (empalme.py) / Chaflán (chaflan.py) / Partir en punto (partir.py)
+    Rumbos (rumbos.py): RUMBOS (RB, GMS, POLIGONAL), poligonal distancia<ángulo, como en QGIS
     Igualar propiedades (igualar.py): MATCHPROP con el origen resaltado
     Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
     Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
@@ -42,13 +43,14 @@ from .empalme import EmpalmeTool
 from .estirar import EstirarTool
 from .texto import TextoTool
 from .partir import PartirTool
+from .rumbos import RumbosTool
 from .pegartabla import PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.86.0"
+VERSION = "3.87.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -222,6 +224,9 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         tools["GEOCHAMFER"] = ChaflanTool
     if est["partir"]:
         tools["BREAKATPOINT"] = PartirTool
+    if est["rumbos"]:
+        tools["RUMBOS"] = RumbosTool
+        aliases.update({"RB": "RUMBOS", "GMS": "RUMBOS", "POLIGONAL": "RUMBOS"})
     if est["estirar"]:
         tools["GEOSTRETCH"] = EstirarTool
     if est["igualar"]:
@@ -390,7 +395,8 @@ def construir_spec(completo: bool = False) -> PluginSpec:
             MenuItem("Relative angles on/off (ANGREL)", "ANGREL"),
             MenuItem("Right button = Enter on/off", "RIGHTCLICK"),
             SEPARATOR,
-        ) + ((MenuItem("AutoCAD-style fillet (FILLET)", "FILLET"),) if est["empalme"] else ())
+        ) + ((MenuItem("Bearings traverse (RUMBOS)", "RUMBOS", _icon("rumbos")),) if est["rumbos"] else ())
+          + ((MenuItem("AutoCAD-style fillet (FILLET)", "FILLET"),) if est["empalme"] else ())
           + ((MenuItem("AutoCAD-style chamfer (CHAMFER)", "CHAMFER"),) if est["chaflan"] else ())
           + ((MenuItem("Break at point (BREAKATPOINT)", "BREAKATPOINT", _icon("partir")),)
              if est["partir"] else ())
@@ -471,7 +477,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.86.0",
+        version="3.87.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

@@ -28,6 +28,7 @@ ESPERA_MS = 1000                      # el cartel sale al segundo, como AutoCAD
 HERRAMIENTAS = (
     ("RECTANG", "", "draw_toolbar"),
     ("TEXT", "texto", "draw_toolbar"),
+    ("RUMBOS", "rumbos", None),
     ("STRETCH", "estirar", "modify_toolbar"),
     ("BREAKATPOINT", "partir", None),
     ("CHAMFER", "chaflan", "modify_toolbar"),
@@ -43,7 +44,7 @@ HERRAMIENTAS = (
 #: el tema de cada botón: entre un tema y el siguiente va un divisor, como en
 #: la barra GeoCAD (3.20.0: las de imágenes quedaban pegadas a las de edición)
 TEMAS = {
-    "RECTANG": "dibujo", "TEXT": "dibujo",
+    "RECTANG": "dibujo", "TEXT": "dibujo", "RUMBOS": "dibujo",
     "STRETCH": "edicion", "BREAKATPOINT": "edicion", "CHAMFER": "edicion",
     "FILLET": "edicion", "MATCHPROP": "edicion",
     "INSERTARGEO": "imagenes", "GEORREF": "imagenes", "EXPORTARGEO": "imagenes",
@@ -64,6 +65,7 @@ ETIQUETAS = {
     "FILLET": "AutoCAD-style fillet (FILLET)",
     "CHAMFER": "AutoCAD-style chamfer (CHAMFER)",
     "BREAKATPOINT": "Break at point (BREAKATPOINT)",
+    "RUMBOS": "Bearings traverse (RUMBOS)",
     "GEORREF": "Adjust image with control points (GEORREF)",
     "INSERTARGEO": "Insert georeferenced image (INSERTARGEO)",
     "EXPORTARGEO": "Export georeferenced copy (EXPORTARGEO)",
@@ -106,6 +108,7 @@ DESCRIPCIONES = {
     "FILLET": "Redondea la esquina entre dos objetos; también polilíneas, del lado elegido.",
     "EXPLODE": "Descompone un objeto compuesto en sus partes.",
     # GeoCAD
+    "RUMBOS": "Poligonal por rumbos: tramo base y cada tramo distancia<ángulo (interior o deflexión, 30dI/30dD, N45d30'E); polilínea o tramos.",
     "BREAKATPOINT": "Corta un objeto en un punto elegido con referencias; muestra los dos pedazos.",
     "GEORREF": "Lleva una imagen a su lugar con pares de puntos de control, como el Georreferenciador de QGIS.",
     "INSERTARGEO": "Inserta una imagen con archivo de mundo (.pgw, .jgw, .tfw) o GeoTIFF en su lugar.",
