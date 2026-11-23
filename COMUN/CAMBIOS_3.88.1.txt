@@ -1,0 +1,31 @@
+GeoCAD - versión 3.88.1
+=======================
+IngeCAD: arrastrar una imagen ya funciona en Wayland (corrección de la 3.88.0).
+
+Qué pasaba
+   (Fernando, 23/11/2026: «en qgis funcionó con el administrador de
+   archivos que viene con el sistema operativo. Pero en IngeCAD no
+   funcionó».) IngeCAD (Flatpak) corre directo en Wayland. Ahí, al soltar
+   un archivo, Qt no consigue la ruta del portal de archivos y entrega en
+   su lugar un número («Failed retrieving files, falling back to uris»):
+   SOLTARIMAGEN no veía una imagen y no arrancaba. QGIS corre por X11 y
+   recibe la ruta bien. (Medido con una ventana de prueba con el Qt de
+   IngeCAD: por X11 llega la ruta; por Wayland, el número, y la ruta
+   verdadera viene en el texto soltado; el portal también la devuelve.)
+
+Qué cambia
+   SOLTARIMAGEN lee la ruta del texto soltado (renglones con rutas o
+   «file://») y, si tampoco está ahí, se la pide al portal de archivos del
+   sistema (org.freedesktop.portal.FileTransfer). Lo arrastrado se revisa
+   una sola vez al entrar al dibujo. El resto, igual que la 3.88.0.
+
+   Nota: el explorador Favnyr no entrega archivos a otros programas al
+   arrastrar (ni a QGIS ni a IngeCAD); con Archivos (Nautilus) o Dolphin sí.
+
+Por dentro
+- INGECAD/codigo/geocad/soltar_imagen.py: rutas_de_texto, del_portal,
+  candidatas y quiza_imagen; el filtro del lienzo las usa.
+- test_soltar_imagen: el caso Wayland (número en urls, ruta en el texto).
+- ventana/banco_soltar_imagen_ventana.py: un arrastre armado como el de
+  Wayland arranca la orden con la ruta del texto. TODO OK con IngeCAD
+  0.8.0, 0.7.0, 0.6.8.2 y 0.6.7. Pruebas 97/97 con las cuatro.

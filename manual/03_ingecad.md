@@ -259,6 +259,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 |---|---|
 | **INSERTARGEO** | una imagen con archivo de mundo o GeoTIFF, **en su lugar** |
 | **Ctrl+V** o **PEGARIMAGEN** | una captura de pantalla del portapapeles, con dos clics (esquinas inferiores) |
+| **Arrastrar una imagen** desde el explorador (SOLTARIMAGEN) | soltarla sobre el dibujo: esquina inferior izquierda, un 2º punto que da el ancho (la escala; la imagen se ve estirándose) y al final el giro (con el cursor, escrito en grados o Enter = 0°); recién ahí queda. Esc no deja nada; U la quita; usa el archivo tal cual |
 | **Traer imagen de Google Earth…** (CAPTURARGE) | la imagen de Google Earth, ya ubicada (capítulo 3) |
 | **EXPORTARGEO** | guarda una copia con su archivo de mundo, que QGIS abre en su lugar |
 | **ASPECTOIMAGEN** | fondo transparente, líneas en negativo o de un color, opacidad y contraste, limpiar manchas (el polvo del escaneo, cuidando los textos), con vista previa con zoom (en una copia: el original no se toca); **Fondo blanco** detrás de la imagen, en la capa FONDO_IMAGENES que se prende o se apaga; **Entregar imagen final…**: una imagen nueva, opaca y con fondo blanco, para la entrega |

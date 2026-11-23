@@ -1,0 +1,60 @@
+GeoCAD - versión 3.88.0
+=======================
+IngeCAD y QGIS: arrastrar una imagen desde el explorador (SOLTARIMAGEN).
+
+Arrastrar una imagen (SOLTARIMAGEN)
+(Fernando, 23/11/2026: «volcar desde el explorador un archivo de imagen al
+área en pantalla, ofreciendo dos puntos de escalado previo y giro al final
+antes de agregar definitivamente la imagen».)
+
+Qué hace, en los dos programas
+   Se arrastra un archivo de imagen (PNG, JPG, TIF, BMP, GIF) desde el
+   explorador de archivos y se suelta sobre el dibujo o el mapa:
+   1. Esquina inferior izquierda de la imagen (clic, con referencias, o
+      escrita).
+   2. Un segundo punto: la distancia del 1º al 2º es el ANCHO de la imagen
+      (la escala; el alto sigue la proporción). La imagen se ve, derecha y
+      semitransparente, estirándose con el cursor. También se puede
+      escribir el ancho.
+   3. El GIRO alrededor de la esquina: la imagen gira con el cursor (con
+      ORTO, 0/90/180/270); clic, grados escritos (antihorario) o Enter = 0°.
+   Recién ahí queda la imagen. Esc en cualquier paso: no queda nada.
+
+IngeCAD
+   La imagen queda en la capa actual y apunta al archivo soltado tal cual
+   (no se copia); U la quita. Va con el módulo «Imágenes georreferenciadas»
+   (georref): apagado, el dibujo vuelve a no aceptar lo arrastrado.
+
+QGIS
+   Una imagen es una capa ráster: se hace una COPIA de la imagen con su
+   archivo de mundo (con el giro) y su .aux.xml (el sistema de coordenadas
+   del mapa) en «<proyecto>_imagenes», junto al proyecto (sin proyecto
+   guardado, en Imágenes/GeoCAD), y se carga arriba de todo. El original no
+   se toca (decidido con Fernando). Una imagen YA georreferenciada (GeoTIFF,
+   con su archivo de mundo) entra como siempre, en su lugar. Va con el
+   módulo Dibujo.
+
+Por dentro
+- IngeCAD: soltar_imagen.py (nuevo): la herramienta SoltarImagenTool
+  (GEODROPIMAGE, en español SOLTARIMAGEN), con las cuentas de PEGARIMAGEN
+  (pegarimagen.comando toma el nombre de la orden). El lienzo acepta lo
+  arrastrado con un filtro de eventos; la imagen se pinta en la vista previa
+  con un gancho en _draw_tool_preview, sólo mientras corre la orden (existe
+  en IngeCAD 0.6.7 a 0.8.0). __init__.py: la orden y el filtro al abrir un
+  dibujo y al cambiar los módulos; i18n/es.
+- QGIS: dibujo/soltar_imagen.py (nuevo, cuentas sin QGIS: esquinas,
+  archivo de mundo con giro, copia sin pisar) y dibujo/soltar_imagen_qgis.py
+  (nuevo: la orden SOLTARIMAGEN, la vista previa como elemento del mapa y un
+  QgsCustomDropHandler que toma sólo las imágenes sin georreferencia).
+  dibujo/plugin.py: los registra y los quita al descargar.
+- Manual: 02_qgis (tabla Dibujar) y 03_ingecad (Formas de traer una imagen).
+
+Pruebas
+- test_soltar_imagen (IngeCAD, sin Qt) y test_soltar_imagen_qgis (cuentas).
+- ventana/banco_soltar_imagen_ventana.py: ventana real de IngeCAD, arrastre
+  de verdad, píxeles pintados de la vista previa, giro, U y Esc; TODO OK con
+  IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+- ventana/banco_soltar_imagen_qgis.py: QGIS 4.2.3 real, manejador de lo
+  soltado, vista previa, capa ráster con sus esquinas en su lugar, Esc;
+  TODO OK.
+- Pruebas manuales: SI1-SI4 (IngeCAD) y SQ1-SQ4 (QGIS).

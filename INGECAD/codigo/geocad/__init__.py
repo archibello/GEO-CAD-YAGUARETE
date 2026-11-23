@@ -14,6 +14,7 @@ al instalar y se cambian en GeoCAD > Módulos... (ver modulos.py):
     Ajustar imagen (georref.py): GEORREF / RUBBERSHEET con puntos de control
     Imágenes geo (imagengeo.py): INSERTARGEO en su lugar, EXPORTARGEO copia geo
     Pegar imagen (pegarimagen.py): Ctrl+V o PEGARIMAGEN, la captura del portapapeles en dos clics
+    Soltar imagen (soltar_imagen.py): una imagen arrastrada desde el explorador, esquina, ancho y giro
     Aspecto de imagen (aspecto.py): ASPECTOIMAGEN, fondo transparente, líneas y opacidad
     Limpiar plano (limpiar_plano.py, limpieza.py): LIMPIARPLANO, manchas fuera y textos legibles
     Intercambio (intercambio.py, kml.py): SISTEMAGEO, REPROYECTAR, IMPORTARSHP, EXPORTARSHP,
@@ -37,7 +38,7 @@ sqlite_win.asegurar()     # Windows: IngeCAD empaquetado no trae sqlite3 (GeoPac
 from core.plugins import SEPARATOR, MenuItem, PluginSpec, Submenu, ToolbarItem
 
 from . import actualizacion, buzon, categorias, config, dibujo, modulos, nombre, ventanas
-from . import agarres_ingecad, aspecto, limpiar_plano, color_menu, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, grilla_hoja, pegar_lugar_ingecad, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
+from . import agarres_ingecad, aspecto, limpiar_plano, color_menu, barra, bloques, capas, controldwg, googleearth_cmd, intercambio, legibles, marco_imagen, pegarimagen, soltar_imagen, recorte_imagen, redibujo_imagenes, pegartabla, cotas, editor_texto, filtro, georref, guias_ingecad, igualar, imagengeo, impresion, orden, papel, grilla_hoja, pegar_lugar_ingecad, propiedades, seleccion, teclado_ingecad, texto, tipografias, uniones
 from .chaflan import ChaflanTool
 from .empalme import EmpalmeTool
 from .estirar import EstirarTool
@@ -50,7 +51,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.87.0"
+VERSION = "3.88.1"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -130,6 +131,7 @@ def _document_open(ctx, document):
     pegar_lugar_ingecad.aplicar(ctx.host)
     color_menu.aplicar(ctx.host)
     agarres_ingecad.aplicar(ctx.host)
+    soltar_imagen.aplicar(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
         puente.ensure_started(ctx.host)
     if not modulos.elegido(PROGRAMA) or modulos.nuevos(PROGRAMA):
@@ -244,6 +246,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         tools["ASPECTOIMAGEN"] = aspecto.AspectoImagenTool
         tools["LIMPIARPLANO"] = limpiar_plano.LimpiarPlanoTool
         tools["GEOPASTEIMAGE"] = pegarimagen.PegarImagenTool
+        tools["GEODROPIMAGE"] = soltar_imagen.SoltarImagenTool     # 3.88.0: imagen arrastrada
         aliases.update({"PASTEIMAGE": "GEOPASTEIMAGE", "PASTECLIP": "GEOPASTEIMAGE"})
         aliases.update({"RUBBERSHEET": "GEORREF", "AJUSTEIMAGEN": "GEORREF"})
         aliases.update({"IMAGEASPECT": "ASPECTOIMAGEN"})
@@ -477,7 +480,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.87.0",
+        version="3.88.1",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -513,6 +516,7 @@ def aplicar_modulos(window) -> None:
     pegar_lugar_ingecad.aplicar(window)
     color_menu.aplicar(window)
     agarres_ingecad.aplicar(window)
+    soltar_imagen.aplicar(window)
     papel.preparar_combo(window)
     papel.enganchar_ventanas(window)
     grilla_hoja.preparar_boton(window)

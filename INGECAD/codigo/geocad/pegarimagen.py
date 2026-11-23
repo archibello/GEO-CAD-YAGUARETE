@@ -60,7 +60,7 @@ def esquinas(p1, p2, ancho: int, alto: int) -> list:
     return [(x0, y0), (x0 + bx, y0 + by), (x0 + bx + hx, y0 + by + hy), (x0 + hx, y0 + hy)]
 
 
-def comando(ruta, ancho: int, alto: int, p1, p2):
+def comando(ruta, ancho: int, alto: int, p1, p2, nombre: str = "GEOPASTEIMAGE"):
     """La IMAGE en el espacio actual (capa actual, deshacer de IngeCAD)."""
     (x0, y0), u, v = colocar(p1, p2, ancho, alto)
     lado = math.hypot(*u)
@@ -77,7 +77,7 @@ def comando(ruta, ancho: int, alto: int, p1, p2):
         return img
 
     from core.actions import AddEntityCommand
-    cmd = AddEntityCommand("GEOPASTEIMAGE", factory)
+    cmd = AddEntityCommand(nombre, factory)
     cmd.needs_regen = True                     # como IMAGEATTACH: los píxeles piden la regeneración
     return cmd
 

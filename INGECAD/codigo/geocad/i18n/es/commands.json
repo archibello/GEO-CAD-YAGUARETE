@@ -129,6 +129,9 @@
   "GEOPASTEIMAGE": {
     "name": "PEGARIMAGEN"
   },
+  "GEODROPIMAGE": {
+    "name": "SOLTARIMAGEN"
+  },
   "GEOCRS": {
     "name": "SISTEMAGEO"
   },

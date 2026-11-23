@@ -144,6 +144,7 @@ horizontal y vertical; las referencias se prenden con **F3**.
 | **LINEA** (L), **POLILINEA** (PL) | tramos por clic o escritos: `@dx,dy`, `@distancia<ángulo` |
 | Rectángulo, círculo, arco | en la barra Dibujo CAD |
 | **RUMBOS** (RB) | poligonal por rumbo y distancia (ver abajo) |
+| **Arrastrar una imagen** desde el explorador (SOLTARIMAGEN) | una imagen sin georreferencia soltada sobre QGIS: esquina inferior izquierda, 2º punto que da el ancho (la escala) y el giro (con el cursor, escrito en grados o Intro = 0°). Queda como capa ráster: una copia con su archivo de mundo en «<proyecto>_imagenes»; el original no se toca. Una imagen ya georreferenciada entra como siempre |
 | Texto CAD | textos con altura, estilo y alineación; listas desplegables en la barra Texto CAD |
 
 **Ángulos relativos (REL, ANGREL):** con el modo relativo, `@d<ángulo` es el

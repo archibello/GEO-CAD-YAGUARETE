@@ -194,6 +194,8 @@ class DibujoCADPlugin:
                                       'Poligonal por rumbos: tramo base y distancia<ángulo (GMS)'))
         self._action('rumbos', 'Rumbos (RUMBOS / RB) — tramo base y distancia<ángulo, '
                      'ángulo interior o deflexión', lambda: self.run_command('RUMBOS'))
+        from . import soltar_imagen_qgis           # 3.88.0: imagen arrastrada desde el explorador
+        soltar_imagen_qgis.instalar(self)
         self.toolbar.addSeparator()
         self.a_ortho = self._action('ortho', 'Modo Orto (F8)',
                                     self.mgr.set_ortho, checkable=True)
@@ -695,6 +697,11 @@ class DibujoCADPlugin:
             self.mgr.refresh()
 
     def unload(self):
+        try:
+            from . import soltar_imagen_qgis
+            soltar_imagen_qgis.quitar(self)
+        except Exception:  # noqa: BLE001
+            pass
         vistas = getattr(self.mgr, 'vistas', None) if getattr(self, 'mgr', None) is not None else None
         if vistas is not None:
             vistas.remove()
