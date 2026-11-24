@@ -67,6 +67,12 @@ conciencia.
 
 **Administrar Herramientas…** arma la barra a gusto:
 categorías propias y qué botón va en cada una.
+Debajo de las categorías, los **bancos de respaldo** guardan todos los
+botones de GeoCAD, uno por familia (Modos y ajustes, Dibujo, Edición,
+Texto, Cotas, Bloques, Imágenes, Datos SIG y tablas, Coordenadas e
+intercambio, Impresión, Google Earth y GeoCAD; los mismos nombres que en
+QGIS). Se ven tres y el resto con la barra de desplazamiento; «Pasar a»
+trae un botón a una categoría.
 
 ### Decirle al dibujo dónde está: SISTEMAGEO
 

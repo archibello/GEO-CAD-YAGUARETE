@@ -297,15 +297,16 @@ b = barras(win)
 comprobar(BT.leer("ingecad") is None and BT.objeto_barra("Todo") not in b
           and a_la_vista(b) == esperado, "Como de fábrica: vuelve la primera instalación")
 
-# ---- 3.65.0: los bancos Configuración, Edición y Dibujo (como los de QGIS) ----------------
+# ---- 3.65.0: los bancos por tema (3.94.0: uno por familia, como los de QGIS) -------------
 bi = C.bancos(win)
-comprobar([n for n, _f in bi] == ["banco:" + t for t in BT.BANCOS], "tres bancos: " + str([n for n, _f in bi]))
+DE_INGECAD = [t for t in BT.BANCOS if t in BT.TEMA_BANCO["ingecad"]]
+comprobar([n for n, _f in bi] == ["banco:" + t for t in DE_INGECAD], "los bancos: " + str([n for n, _f in bi]))
 en = {t[len("banco:"):]: [a.property("geocad_orden") for a in f] for t, f in bi}
 todos = sum(en.values(), [])
 comprobar(len(todos) == len(set(todos)), "cada botón en un solo banco")
-comprobar("ANGREL" in en.get("Configuración", []) and "GEOCADMODULES" in en.get("Configuración", [])
-          and "FILLET" in en.get("Edición", []) and "GEOREFSAVE" in en.get("Edición", [])
-          and "DIMLINEAR" in en.get("Dibujo", []) and "RECTANG" in en.get("Dibujo", []),
+comprobar("ANGREL" in en.get("Modos y ajustes", []) and "GEOCADMODULES" in en.get("GeoCAD", [])
+          and "FILLET" in en.get("Edición", []) and "GEOREFSAVE" in en.get("Bloques", [])
+          and "DIMLINEAR" in en.get("Cotas", []) and "RECTANG" in en.get("Dibujo", []),
           "lo del menú y lo de las barras, cada uno en su tema")
 sin_icono = [a.property("geocad_orden") for _t, f in bi for a in f if a.icon().isNull()]
 comprobar(not sin_icono, "todos con ícono " + str(sin_icono))
@@ -317,12 +318,14 @@ comprobar([a.property("geocad_orden") for _t, f in C.bancos(win) for a in f] == 
 def con_bancos(dlg):
     listas = dlg.findChildren(QListWidget)
     cats, banco, bots = listas[0], listas[1], listas[2]
-    comprobar([banco.item(i).text() for i in range(banco.count())] == list(BT.BANCOS)
-              and not banco.isHidden(), "la ventana muestra los tres bancos")
+    comprobar([banco.item(i).text() for i in range(banco.count())] == DE_INGECAD
+              and not banco.isHidden(), "la ventana muestra los bancos")
+    alto = banco.sizeHintForRow(0)
+    comprobar(3 * alto <= banco.height() < 4 * alto, "tres bancos a la vista, el resto con desplazamiento")
     banco.setCurrentRow(0)
     textos = [bots.item(i).text() for i in range(bots.count())]
     k = next((i for i, t in enumerate(textos) if "(ANGREL)" in t), -1)
-    comprobar(k >= 0 and "sin barra" in textos[k], "ANGREL en Configuración, sin barra")
+    comprobar(k >= 0 and "sin barra" in textos[k], "ANGREL en Modos y ajustes, sin barra")
     bots.setCurrentRow(k)
     dlg.findChildren(QtWidgets.QComboBox)[0].setCurrentIndex(0)
     boton_dlg(dlg, "Pasar").click()

@@ -111,62 +111,86 @@ def es_banco(nombre: str) -> bool:
 
 
 #: 3.65.0 (Fernando, 04/11/2026: «armar un banco de botones ... para armar nuestras
-#: propias barras de herramientas, esto vale para los dos programas»; «meter todo en
-#: estos tres grupos, así no quedan tan extensos»): tres bancos por tema, iguales en
-#: IngeCAD y QGIS, con todo lo de GeoCAD (también lo que sólo estaba en el menú).
-#: Cada botón en uno solo, en este orden; lo que no figura va a Configuración.
-BANCOS = ("Configuración", "Edición", "Dibujo")
+#: propias barras de herramientas, esto vale para los dos programas»): bancos por
+#: tema, iguales en IngeCAD y QGIS, con todo lo de GeoCAD (también lo que sólo
+#: estaba en el menú). 3.94.0 (Fernando, 24/11/2026: «ordenar el banco de respaldo
+#: ... organizarlos por grupos en ambos programas»): de tres bancos a uno por
+#: familia, con los mismos nombres y el mismo orden en los dos programas (un banco
+#: sin botones en un programa no aparece). Cada botón en uno solo, en este orden;
+#: lo que no figura va a GeoCAD (SIN_BANCO).
+BANCOS = ("Modos y ajustes", "Vista", "Dibujo", "Edición", "Texto", "Cotas", "Bloques",
+          "Imágenes", "Capas", "Datos SIG y tablas", "Coordenadas e intercambio",
+          "Impresión", "Google Earth", "GeoCAD")
+SIN_BANCO = "GeoCAD"
 _VISTA = ("dibujo:zoomwin", "dibujo:zoomext", "dibujo:zoomprev", "dibujo:zoomobj",
           "dibujo:zoom", "dibujo:pan", "dibujo:regen")
 TEMA_BANCO = {
     "ingecad": {
-        "Configuración": (
-            "ANGREL", "RIGHTCLICK", "GEOCRS", "GEOREPROJECT", "GEODIMSETUP",
-            "GEOPLOTSTYLES", "GEOPREVIEW", "GEOSHEETGRID", "SHPCONNECT", "SHPSTATUS", "SHPCHECKIN",
-            "SHPRELEASE", "GEOIMPORTSHP", "GEOIMPORTKML", "GEOEXPORTSHP", "GEOEXPORTKML",
-            "EXPORTARGEO", "QGISEXPORT", "GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP",
-            "GEOCADMODULES", "GEOBUTTONS", "SHPCONFIG", "QGISUPDATE", "GEOCADDIAG",
-            "GEOCADMANUAL", "GEOEARTHMANUAL", "GEOCADABOUT"),
+        "Modos y ajustes": ("ANGREL", "RIGHTCLICK"),
+        "Dibujo": ("RECTANG", "RUMBOS"),
         "Edición": (
-            "SELECT", "GEOFILTER", "STRETCH", "FILLET", "CHAMFER", "BREAKATPOINT",
-            "MATCHPROP", "GEOPASTEORIG", "GEODRAWFRONT", "GEODRAWBACK", "GEOREFEDIT", "GEOBLOCKBASE",
-            "GEOREFADD", "GEOREFREMOVE", "GEOREFSAVE", "GEOREFDISCARD", "GEORREF",
-            "ASPECTOIMAGEN", "LIMPIARPLANO", "SHPTABLE", "SHPQUERY", "SHPSPATIAL", "SHPINFO",
-            "SHPATTR"),
-        "Dibujo": (
-            "RECTANG", "RUMBOS", "TEXT", "BLOCK", "INSERT", "DIMLINEAR", "DIMALIGNED", "DIMANGULAR",
-            "INSERTARGEO", "GEOPASTEIMAGE", "GEOPASTETABLE", "SHPNEW", "SHPLABEL",
-            "SHPLABELOFF", "SHPTHEME", "SHPTHEMEOFF"),
+            "SELECT", "GEOFILTER", "STRETCH", "CHAMFER", "FILLET", "BREAKATPOINT",
+            "GEOPASTEORIG", "MATCHPROP", "GEODRAWFRONT", "GEODRAWBACK"),
+        "Texto": ("TEXT",),
+        "Cotas": ("DIMLINEAR", "DIMALIGNED", "DIMANGULAR", "GEODIMSETUP"),
+        "Bloques": (
+            "BLOCK", "INSERT", "GEOBLOCKBASE", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE",
+            "GEOREFSAVE", "GEOREFDISCARD"),
+        "Imágenes": (
+            "INSERTARGEO", "GEOPASTEIMAGE", "GEORREF", "ASPECTOIMAGEN", "LIMPIARPLANO",
+            "EXPORTARGEO"),
+        "Datos SIG y tablas": (
+            "SHPCONNECT", "SHPSTATUS", "SHPCHECKIN", "SHPRELEASE", "SHPNEW", "SHPTABLE",
+            "SHPQUERY", "SHPSPATIAL", "SHPINFO", "SHPATTR", "SHPLABEL", "SHPLABELOFF",
+            "SHPTHEME", "SHPTHEMEOFF", "GEOPASTETABLE"),
+        "Coordenadas e intercambio": (
+            "GEOCRS", "GEOREPROJECT", "GEOIMPORTSHP", "GEOIMPORTKML", "GEOEXPORTSHP",
+            "GEOEXPORTKML", "QGISEXPORT"),
+        "Impresión": ("GEOPLOTSTYLES", "GEOPREVIEW", "GEOSHEETGRID"),
+        "Google Earth": ("GEOEARTHOPEN", "GEOEARTHCAPTURE", "GEOEARTHSETUP", "GEOEARTHMANUAL"),
+        "GeoCAD": (
+            "GEOCADMODULES", "GEOBUTTONS", "SHPCONFIG", "QGISUPDATE", "GEOCADDIAG",
+            "GEOCADMANUAL", "GEOCADABOUT"),
     },
     "qgis": {
-        "Configuración": (
+        "Modos y ajustes": (
             "dibujo:units", "dibujo:osnap", "dibujo:ortho", "dibujo:relangle",
-            "dibujo:properties", "dibujo:cmdline") + _VISTA + (
+            "dibujo:properties", "dibujo:cmdline"),
+        "Vista": _VISTA,
+        "Dibujo": (
+            "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
+            "dibujo:rumbos", "dibujo:perp"),
+        "Edición": (
+            "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
+            "dibujo:mirror", "dibujo:align", "dibujo:aligncopy", "dibujo:stretch",
+            "dibujo:offset", "dibujo:trim", "dibujo:extend", "dibujo:chamfer", "dibujo:fillet",
+            "dibujo:breakpt", "dibujo:break", "dibujo:join", "dibujo:explode", "dibujo:divide",
+            "dibujo:measure", "geocad:pegarorig", "dibujo:matchprop"),
+        "Texto": (
+            "dibujo:dtext", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font",
+            "dibujo:size", "dibujo:textcolor"),
+        "Bloques": (
+            "dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:gmsblocks",
+            "dibujo:copybase", "dibujo:pastebase", "dibujo:purge"),
+        "Imágenes": (
+            "dibujo:insertgeo", "dibujo:pasteimage", "dibujo:georref", "dibujo:aspecto",
+            "dibujo:limpiarplano", "dibujo:exportgeo", "geocad:imgbase_mover",
+            "geocad:imgbase_bloquear", "geocad:imgbase_guardar"),
+        "Capas": (
             "capas:layprops", "capas:capa", "capas:color", "capas:linetype",
             "capas:lineweight", "capas:fill", "capas:filltr", "capas:laymcur",
             "capas:layerp", "capas:laymch", "capas:layiso", "capas:layuniso",
             "capas:layoff", "capas:layfrz", "capas:laylck", "capas:layulk", "capas:layon",
-            "capas:laythw", "capas:lwdisplay",
-            "puente:send", "dibujo:exportgeo", "geocad:reload", "geocad:status", "dibujo:plot", "dibujo:layout",
-            "dibujo:mview", "dibujo:purge", "geocad:ge_abrir", "geocad:ge_capturar",
-            "geocad:ge_configurar", "geocad:ge_exportar", "geocad:ge_ver",
-            "geocad:modules", "geocad:botones", "geocad:config",
-            "geocad:update", "geocad:manual", "geocad:about"),
-        "Edición": (
-            "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
-            "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
-            "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:breakpt",
-            "dibujo:break", "dibujo:join", "dibujo:explode", "dibujo:divide", "dibujo:measure",
-            "dibujo:copybase", "dibujo:pastebase", "geocad:pegarorig", "geocad:capaseleccion", "dibujo:aligncopy",
-            "dibujo:matchprop", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
-            "dibujo:textcolor", "geocad:copiartabla", "dibujo:georref", "dibujo:aspecto", "dibujo:limpiarplano",
-            "geocad:imgbase_mover",
-            "geocad:imgbase_bloquear", "geocad:imgbase_guardar"),
-        "Dibujo": (
-            "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
-            "dibujo:rumbos", "dibujo:perp", "dibujo:gmsblocks", "dibujo:dtext",
-            "dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:insertgeo", "dibujo:pasteimage",
-            "geocad:pegartabla"),
+            "capas:laythw", "capas:lwdisplay", "geocad:capaseleccion"),
+        "Datos SIG y tablas": ("geocad:copiartabla", "geocad:pegartabla"),
+        "Coordenadas e intercambio": ("puente:send", "geocad:reload", "geocad:status"),
+        "Impresión": ("dibujo:plot", "dibujo:layout", "dibujo:mview"),
+        "Google Earth": (
+            "geocad:ge_abrir", "geocad:ge_capturar", "geocad:ge_configurar",
+            "geocad:ge_exportar", "geocad:ge_ver"),
+        "GeoCAD": (
+            "geocad:modules", "geocad:botones", "geocad:config", "geocad:update",
+            "geocad:manual", "geocad:about"),
     },
 }
 
@@ -211,15 +235,15 @@ def icono_letras(QtGui, QtCore, boton: str):
 
 
 def banco_de(programa: str, boton: str) -> str:
-    """El banco de ``boton`` (3.65.0)."""
+    """El banco de ``boton`` (3.65.0; lo que no figura, SIN_BANCO)."""
     for tema, lista in TEMA_BANCO.get(programa, {}).items():
         if boton in lista:
             return tema
-    return BANCOS[0]
+    return SIN_BANCO
 
 
 def bancos(programa: str, acciones, id_de) -> list:
-    """[(BANCO + tema, [acciones])]: ``acciones`` repartidas en los tres bancos,
+    """[(BANCO + tema, [acciones])]: ``acciones`` repartidas en los bancos,
     una por botón, en el orden de TEMA_BANCO (lo que no figura, al final)."""
     filas, vistos = {t: [] for t in BANCOS}, set()
     for a in acciones:

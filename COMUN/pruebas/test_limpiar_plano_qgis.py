@@ -89,7 +89,7 @@ assert fab == ("dibujo:insertgeo", "dibujo:georref", "dibujo:exportgeo", "dibujo
                "dibujo:limpiarplano", "dibujo:pasteimage")
 ing = dict(BT.DEFECTO["ingecad"])["Yaguá Imagenes"]
 assert ing.index("ASPECTOIMAGEN") + 1 == ing.index("LIMPIARPLANO")             # el orden de IngeCAD
-assert "dibujo:limpiarplano" in BT.TEMA_BANCO["qgis"]["Edición"] and "LIMPIARPLANO" in BT.TEMA_BANCO["ingecad"]["Edición"]
+assert "dibujo:limpiarplano" in BT.TEMA_BANCO["qgis"]["Imágenes"] and "LIMPIARPLANO" in BT.TEMA_BANCO["ingecad"]["Imágenes"]
 hechas = [m for m in BT.MIGRACIONES["qgis"] if m != "limpiar-plano-qgis"]
 BT.archivo().parent.mkdir(parents=True, exist_ok=True)
 

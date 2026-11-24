@@ -1,0 +1,62 @@
+GeoCAD - versión 3.94.0
+=======================
+IngeCAD y QGIS: los bancos de respaldo de «Administrar botones», ordenados
+por familia, con los mismos nombres y el mismo orden en los dos programas.
+
+Por qué
+   (Fernando, 24/11/2026: «Necesito ordenar el banco de respaldo, crear
+   categorías, cambiar el nombre de las categorías existentes si fuera
+   necesario y ordenar los componentes, organizarlos por grupos, en ambos
+   programas, conservando y respetando la funcionalidad para la que fue
+   creado».) Los tres bancos de la 3.65.0 (Configuración, Edición, Dibujo)
+   habían crecido: Configuración juntaba capas, impresión, Google Earth,
+   datos SIG y la ayuda; Edición, las imágenes y los bloques.
+
+Los bancos (en este orden; el que no tiene botones en un programa no aparece)
+   Modos y ajustes           Ángulos relativos, Botón derecho = Intro,
+                             Unidades, Referencia a objetos, Orto,
+                             Propiedades, Línea de comandos
+   Vista (QGIS)              Zoom Ventana / Extensión / Previo / Objeto /
+                             Zoom, Encuadre, Regenerar
+   Dibujo                    Línea, Polilínea, Arco, Círculo, Rectángulo,
+                             Rumbos, Perpendicular
+   Edición                   Seleccionar, Filtro, Mover, Copiar, Girar,
+                             Borrar, Simetría, Alinear, Estirar,
+                             Equidistancia, Recortar, Alargar, Chaflán,
+                             Empalme, Partir, Unir, Descomponer, Dividir,
+                             Medir, Pegar en el lugar, Igualar propiedades,
+                             Traer al frente / Enviar atrás
+   Texto                     Texto y las herramientas de texto
+   Cotas (IngeCAD)           Lineal, Alineada, Angular, Crear estilo de cota
+   Bloques                   Bloque, Insertar, Escribir bloque, Bloques GMS,
+                             Copiar / Pegar con punto base, Punto base,
+                             Editar en sitio (+, −, guardar, descartar),
+                             Limpiar bloques sin usar
+   Imágenes                  Insertar y Exportar georreferenciada, Pegar
+                             imagen, GEORREF, Aspecto de la imagen,
+                             Limpiar plano, Imagen base
+   Capas (QGIS)              todas las de capas, Capa de la selección
+   Datos SIG y tablas        Conectar, Pendientes, Guardar, Desconectar,
+                             Tabla, Consulta, Espacial, Info, Atributos,
+                             Nueva capa, Rótulos, Temas, Copiar/Pegar tabla
+   Coordenadas e intercambio Sistema de coordenadas, Reproyectar,
+                             Importar / Exportar SHP y KML, Enviar al otro
+                             programa, Recargar, Estado del puente
+   Impresión                 Estilos de trazado, Vista previa, Grilla de
+                             hoja, Imprimir, Presentación, Ventana
+   Google Earth              Abrir, Capturar, Configurar, Exportar, Ver,
+                             Manual de Google Earth
+   GeoCAD                    Módulos, Botones, Configuración, Actualizar,
+                             Diagnóstico, Manual, Acerca de (y lo que no
+                             tenga banco propio)
+
+La ventana
+   Debajo de las categorías se ven tres bancos y el resto con la barra de
+   desplazamiento: el cuadro conserva su tamaño.
+
+Lo que NO cambia
+   Ningún botón se pierde ni se repite (69 en IngeCAD, 104 en QGIS, los
+   mismos que antes). Los bancos siguen siendo sólo de respaldo: nunca son
+   una barra, y «Pasar a» trae el botón a una categoría como siempre. Las
+   categorías y barras guardadas, los botones ocultos y «Como de fábrica»
+   quedan igual (los nombres de los bancos no se guardan).

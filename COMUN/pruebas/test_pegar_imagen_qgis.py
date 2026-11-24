@@ -87,7 +87,7 @@ fab = dict(BT.DEFECTO["qgis"])
 assert fab["Yaguá Imagenes"][-1] == "dibujo:pasteimage"          # 3.90.0: con INSERTARGEO y demás
 nombres = [n for n, _b in BT.DEFECTO["qgis"]]
 assert nombres.index("Yaguá Imagenes") == nombres.index("Yaguá Dibujo") + 1
-assert "dibujo:pasteimage" in BT.TEMA_BANCO["qgis"]["Dibujo"]
+assert "dibujo:pasteimage" in BT.TEMA_BANCO["qgis"]["Imágenes"]
 assert "imagenes-qgis" in BT.MIGRACIONES["qgis"] and "imagenes-qgis" not in BT.MIGRACIONES["ingecad"]
 hechas = [m for m in BT.MIGRACIONES["qgis"] if m != "imagenes-qgis"]
 # guardada con RUMBOS: la barra nueva va detrás de la de RUMBOS, prendida

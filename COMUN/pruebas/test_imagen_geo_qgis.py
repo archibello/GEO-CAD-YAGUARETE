@@ -84,10 +84,10 @@ assert fab["Yaguá Imagenes"][:3] == ("dibujo:insertgeo", "dibujo:georref", "dib
 assert fab["Yaguá Imagenes"][-1] == "dibujo:pasteimage"
 ing_bar = dict(BT.DEFECTO["ingecad"])["Yaguá Imagenes"]
 assert ing_bar.index("INSERTARGEO") < ing_bar.index("GEORREF") < ing_bar.index("EXPORTARGEO")    # el orden de IngeCAD
-assert "dibujo:insertgeo" in BT.TEMA_BANCO["qgis"]["Dibujo"] and "INSERTARGEO" in BT.TEMA_BANCO["ingecad"]["Dibujo"]
-assert "dibujo:georref" in BT.TEMA_BANCO["qgis"]["Edición"] and "GEORREF" in BT.TEMA_BANCO["ingecad"]["Edición"]
-assert "dibujo:exportgeo" in BT.TEMA_BANCO["qgis"]["Configuración"]
-assert "EXPORTARGEO" in BT.TEMA_BANCO["ingecad"]["Configuración"]
+assert "dibujo:insertgeo" in BT.TEMA_BANCO["qgis"]["Imágenes"] and "INSERTARGEO" in BT.TEMA_BANCO["ingecad"]["Imágenes"]
+assert "dibujo:georref" in BT.TEMA_BANCO["qgis"]["Imágenes"] and "GEORREF" in BT.TEMA_BANCO["ingecad"]["Imágenes"]
+assert "dibujo:exportgeo" in BT.TEMA_BANCO["qgis"]["Imágenes"]
+assert "EXPORTARGEO" in BT.TEMA_BANCO["ingecad"]["Imágenes"]
 hechas = [m for m in BT.MIGRACIONES["qgis"] if m != "imagenes-geo-qgis"]
 BT.archivo().parent.mkdir(parents=True, exist_ok=True)
 

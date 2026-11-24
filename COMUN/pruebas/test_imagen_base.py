@@ -55,9 +55,9 @@ assert IB.nombre_archivo("Mapa 1") == "imagen_base_Mapa_1.tif"
 assert IB.nombre_archivo("/../") == "imagen_base_mapa.tif"
 assert "X +1.500 m" in IB.texto_corrimiento(1.5, -2.0, "m") and "Y -2.000 m" in IB.texto_corrimiento(1.5, -2.0, "m")
 
-# ---- los tres botones van al banco Edición y a ninguna barra de fábrica
+# ---- los tres botones van al banco Imágenes (3.94.0; antes Edición) y a ninguna barra de fábrica
 for b in ("geocad:imgbase_mover", "geocad:imgbase_bloquear", "geocad:imgbase_guardar"):
-    assert botones.banco_de("qgis", b) == "Edición"
+    assert botones.banco_de("qgis", b) == "Imágenes"
 for icono in ("mover", "bloquear", "guardar"):
     assert (IB.ICONOS / ("imagen_base_%s.png" % icono)).is_file()
 assert [m for m in modulos.catalogo("qgis") if m.clave == "imagen_base"][0].defecto

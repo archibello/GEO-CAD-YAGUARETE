@@ -62,7 +62,7 @@ assert ui["Clean old scanned plan (LIMPIARPLANO)"].startswith("Limpiar plano")
 # barra «Yaguá Imagenes» de fábrica, detrás de ASPECTOIMAGEN
 imagenes = dict(botones.DEFECTO["ingecad"])["Yaguá Imagenes"]
 assert imagenes.index("LIMPIARPLANO") == imagenes.index("ASPECTOIMAGEN") + 1
-assert "LIMPIARPLANO" in botones.TEMA_BANCO["ingecad"]["Edición"]
+assert "LIMPIARPLANO" in botones.TEMA_BANCO["ingecad"]["Imágenes"]
 # una barra YA GUARDADA (la de Fernando) la recibe detrás de ASPECTOIMAGEN, una sola vez
 crudo = {"categorias": [{"nombre": "Yaguá Imagenes", "botones": [
     "INSERTARGEO", "GEORREF", "EXPORTARGEO", "ASPECTOIMAGEN", "GEOPASTEIMAGE"]}], "migraciones": []}

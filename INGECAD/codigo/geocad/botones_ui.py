@@ -6,8 +6,9 @@ qgis.PyQt.QtWidgets (misma forma de uso). A la izquierda las categorías
 (cada una, una barra): su casilla prende o apaga la barra entera (3.47.0);
 a la derecha sus botones: la casilla los muestra u oculta, las flechas los
 ordenan y «Pasar a» los lleva a otra categoría. Debajo, los bancos de
-respaldo (3.60.7; desde 3.65.0 Configuración, Edición y Dibujo en los dos
-programas): todos los botones de GeoCAD, sin barra; «Pasar a» trae una copia
+respaldo (3.60.7; 3.65.0 Configuración, Edición y Dibujo; desde 3.94.0 uno por familia,
+los mismos en los dos programas, tres a la vista y el resto con desplazamiento):
+todos los botones de GeoCAD, sin barra; «Pasar a» trae una copia
 a una categoría.
 Aceptar va arriba, como en Módulos.
 """
@@ -127,8 +128,9 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
         "Agrupá los botones de la misma familia, ordenalos con las flechas y destildá "
         "los que no uses (siguen en el menú). «Como de fábrica» vuelve a las categorías "
         "con que viene GeoCAD, con todas las barras apagadas."
-        + (" Debajo, los bancos Configuración, Edición y Dibujo: todos los botones de "
-           "GeoCAD, siempre sin barra; de ahí «Pasar a» trae el botón a una categoría."
+        + (" Debajo, los bancos por familia (Dibujo, Edición, Capas, Imágenes…, con "
+           "desplazamiento): todos los botones de GeoCAD, siempre sin barra; de ahí "
+           "«Pasar a» trae el botón a una categoría."
            if bancos else ""), dlg)
     intro.setWordWrap(True)
     lay.addWidget(intro)
@@ -153,7 +155,10 @@ def administrar(QtWidgets, parent, programa: str, fabrica, etiquetas, iconos=Non
     lista_banco.setToolTip("Bancos de respaldo: siempre apagados, sin barra")
     for n, _fila in bancos:
         lista_banco.addItem(n)
-    lista_banco.setFixedHeight(lista_banco.sizeHintForRow(0) * len(bancos)
+    # 3.94.0: muchos bancos, pero tres a la vista y el resto con desplazamiento,
+    # así la ventana conserva su tamaño (Fernando, 24/11/2026); la barra de
+    # desplazamiento aparece sola
+    lista_banco.setFixedHeight(lista_banco.sizeHintForRow(0) * min(3, len(bancos))
                                + 2 * lista_banco.frameWidth() + 4 if bancos else 0)
     lista_banco.setVisible(bool(bancos))
     izq.addWidget(lista_banco)

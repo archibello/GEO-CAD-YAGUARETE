@@ -122,21 +122,21 @@ QTimer.shots.clear()
 titulos = lambda: [i.title for i in G.menu.items if isinstance(getattr(i, "title", None), str)
                    and i.title != "Google Earth"]          # el de Google Earth es propio (3.33.0)
 # 3.60.7 (Fernando): sin submenús Dibujo CAD y Capas CAD; sus comandos van a los
-# bancos de Administrar botones (3.65.0: Configuración, Edición y Dibujo, por tema)
+# bancos de Administrar botones (3.65.0 por tema; 3.94.0 uno por familia)
 bancos = lambda: [(n, [a.text for a in acc if a.text.startswith("acción de")]) for n, acc in G._bancos()]
 de_subs = lambda: [(n, t) for n, t in bancos() if t]
 assert titulos() == []
-assert de_subs() == [("banco:Configuración", ["acción de LayerPropertiesPlugin"]),
-                     ("banco:Dibujo", ["acción de DibujoCADPlugin"])], bancos()
+assert de_subs() == [("banco:Dibujo", ["acción de DibujoCADPlugin"]),
+                     ("banco:Capas", ["acción de LayerPropertiesPlugin"])], bancos()
 # apagar Dibujo desde Módulos...: se descarga (con Bloques y Papel) y sale de los bancos
 import geocad.modulos_ui as mui
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": False})
 G.choose_modules()
-assert de_subs() == [("banco:Configuración", ["acción de LayerPropertiesPlugin"])] \
+assert de_subs() == [("banco:Capas", ["acción de LayerPropertiesPlugin"])] \
     and "Dibujo_CAD" not in qgis.utils.plugins
 assert creados[0].descargado and creados[1].descargado and len(creados) == 3   # Capas se reinicia
 mui.elegir = lambda QtW, parent, programa, primera: modulos.guardar(programa, {"dibujo": True})
-G.choose_modules(); assert [n for n, _t in de_subs()] == ["banco:Configuración", "banco:Dibujo"]
+G.choose_modules(); assert [n for n, _t in de_subs()] == ["banco:Dibujo", "banco:Capas"]
 G.unload()
 assert "Dibujo_CAD" not in qgis.utils.plugins and "Layer_Properties" not in qgis.utils.plugins
 print("ok menú GeoCAD")

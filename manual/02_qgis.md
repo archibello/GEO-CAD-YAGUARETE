@@ -62,12 +62,18 @@ venía.
 **GeoCAD Yaguareté > Administrar Herramientas…** arma las barras a gusto:
 
 - **Bancos y categorías** propias, con los botones de la misma familia.
+  Debajo de las categorías, los **bancos de respaldo** guardan todos los
+  botones de GeoCAD, uno por familia (Modos y ajustes, Vista, Dibujo,
+  Edición, Texto, Bloques, Imágenes, Capas, Datos SIG y tablas,
+  Coordenadas e intercambio, Impresión, Google Earth y GeoCAD; los mismos
+  nombres que en IngeCAD). Se ven tres y el resto con la barra de
+  desplazamiento; «Pasar a» trae un botón a una categoría.
 - **El lugar de cada herramienta**: **Espacio Modelo** (la ventana principal)
   o **Espacio Presentaciones** (la ventana de las composiciones). Se elige
   de a una o «toda la categoría».
 - Algunas herramientas viven **sólo aquí**, no en el menú: por ejemplo
-  Exportar a Google Earth y Ver en Google Earth; Imagen base y Copiar
-  tabla quedan de respaldo en el banco Edición.
+  Exportar a Google Earth y Ver en Google Earth; Imagen base queda de
+  respaldo en el banco Imágenes y Copiar tabla en Datos SIG y tablas.
 
 
 ![Administrar Herramientas: categorías y botones](imagenes/qgis/qgis_administrar_herramientas.webp)

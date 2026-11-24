@@ -146,13 +146,13 @@ fab_total = sum(len(f) for n, f in vistos["fabrica"] if not botones.es_banco(n))
 comprobar(fab_total == total and fab_total > 50, f"la ventana ve los {fab_total} botones")
 # 3.65.0: tres bancos por tema (antes, 3.60.7, Dibujo CAD y Capas CAD), con todo lo de GeoCAD
 bancos = {n: f for n, f in vistos["fabrica"] if botones.es_banco(n)}
-comprobar([n for n, _f in vistos["fabrica"] if botones.es_banco(n)] == ["banco:" + t for t in botones.BANCOS],
-          "los tres bancos: " + str(list(bancos)))
+comprobar([n for n, _f in vistos["fabrica"] if botones.es_banco(n)] == ["banco:" + t for t in botones.BANCOS if t in botones.TEMA_BANCO["qgis"]],
+          "los bancos (3.94.0, uno por familia): " + str(list(bancos)))
 en_bancos = [b for f in bancos.values() for b in f]
 comprobar(len(en_bancos) == len(set(en_bancos)), "cada botón en un solo banco")
-comprobar("capas:layiso" in bancos.get("banco:Configuración", ()) and "dibujo:line" in bancos.get("banco:Dibujo", ())
-          and "dibujo:fillet" in bancos.get("banco:Edición", ()) and "geocad:pegarorig" in bancos.get("banco:Edición", ()) and "geocad:modules" in bancos.get("banco:Configuración", ()),
-          "LAYISO y Módulos en Configuración, EMPALME en Edición, LÍNEA en Dibujo")
+comprobar("capas:layiso" in bancos.get("banco:Capas", ()) and "dibujo:line" in bancos.get("banco:Dibujo", ())
+          and "dibujo:fillet" in bancos.get("banco:Edición", ()) and "geocad:pegarorig" in bancos.get("banco:Edición", ()) and "geocad:modules" in bancos.get("banco:GeoCAD", ()),
+          "LAYISO en Capas, Módulos en GeoCAD, EMPALME en Edición, LÍNEA en Dibujo")
 comprobar(all(b in en_bancos for n, f in vistos["fabrica"] if not botones.es_banco(n) for b in f),
           "todos los botones de las barras están en algún banco")
 # 3.61.0: ZOOM, ENCUADRE, REGEN e IGUALARPROP sólo en un banco, sin categoría
@@ -167,11 +167,14 @@ from qgis.PyQt.QtWidgets import QListWidget, QComboBox, QPushButton
 vista = {}
 def mirar_dialogo(dlg):
     listas = dlg.findChildren(QListWidget)
-    lb = [l for l in listas if l.count() == 3 and l.item(0).text() == "Configuración"]
-    vista["bancos"] = bool(lb) and [lb[0].item(i).text() for i in range(3)] == list(botones.BANCOS) \
+    de_qgis = [t for t in botones.BANCOS if t in botones.TEMA_BANCO["qgis"]]
+    lb = [l for l in listas if l.count() == len(de_qgis) and l.item(0).text() == de_qgis[0]]
+    vista["bancos"] = bool(lb) and [lb[0].item(i).text() for i in range(lb[0].count())] == de_qgis \
         and lb[0].isVisibleTo(dlg)
+    # 3.94.0: tres a la vista, el resto con desplazamiento (la ventana conserva su tamaño)
+    vista["tres"] = bool(lb) and 3 * lb[0].sizeHintForRow(0) <= lb[0].height() < 4 * lb[0].sizeHintForRow(0)
     if lb:
-        lb[0].setCurrentRow(0)
+        lb[0].setCurrentRow(de_qgis.index("Capas"))
         der = [l for l in listas if l is not lb[0]][1]
         textos = [der.item(i).text() for i in range(der.count())]
         vista["sin_barra"] = any("LAYISO" in t and "(sin barra)" in t for t in textos)
@@ -185,7 +188,8 @@ def mirar_dialogo(dlg):
 botones_ui._exec = mirar_dialogo
 botones_ui.administrar = real_administrar
 P.administrar_botones()
-comprobar(vista.get("bancos"), "la ventana muestra los tres bancos debajo de las categorías")
+comprobar(vista.get("bancos"), "la ventana muestra los bancos debajo de las categorías")
+comprobar(vista.get("tres"), "tres bancos a la vista, el resto con desplazamiento")
 comprobar(vista.get("sin_barra") and vista.get("traido"),
           "LAYISO del banco: «sin barra» y con «Pasar» queda en Yaguá Dibujo " + str(vista))
 llenas = [n for n, f in vistos["modelo"] if f]
