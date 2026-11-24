@@ -83,11 +83,16 @@ m = BT.leer("qgis")
 assert m["categorias"] == [{"nombre": "Yaguá Dibujo", "botones": ["dibujo:line"]},
                            {"nombre": "Yaguá Capas", "botones": ["capas:layprops", "capas:capa", "capas:color",
                                                                  "capas:linetype", "capas:lineweight",
-                                                                 "capas:fill", "capas:filltr"]}], m
+                                                                 "capas:fill", "capas:filltr"]},
+                           {"nombre": "Yaguá Imagenes", "botones": ["dibujo:insertgeo", "dibujo:georref",
+                                                                     "dibujo:exportgeo", "dibujo:aspecto", "dibujo:limpiarplano",
+                                                                     "dibujo:pasteimage"]}], m
 assert m["ocultos"] == ["dibujo:line"]
 assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones"] == ["capas-ingecad",
                                                                                       "capas-panel", "capas-banco",
-                                                                                      "capas-relleno", "unir"]
+                                                                                      "capas-relleno", "unir",
+                                                                                      "imagenes-qgis", "imagenes-geo-qgis",
+                                                                                      "aspecto-qgis", "limpiar-plano-qgis"]
 # 3.60.7: lo que ya pasó por la 3.60.2: LAYISO y los demás sólo en el banco Capas CAD
 BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "Mía", "botones": [
     "capas:layiso", "dibujo:line", "capas:lwdisplay"]}], "ocultos": ["capas:layoff", "dibujo:arc"],
@@ -111,7 +116,7 @@ assert "capas:color" not in dict(BT.barras("qgis", FQ4))["Yaguá Capas"]
 # sin categoría Yaguá Capas guardada: se crea al final
 BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "A", "botones": ["capas:capa"]}]}}),
                         encoding="utf-8")
-assert [c["nombre"] for c in BT.leer("qgis")["categorias"]] == ["A", "Yaguá Capas"]
+assert [c["nombre"] for c in BT.leer("qgis")["categorias"]] == ["A", "Yaguá Capas", "Yaguá Imagenes"]
 assert BT.leer("ingecad") is None                       # IngeCAD no se toca
 BT.restablecer("qgis")
 print("ok Yaguá Capas de IngeCAD")
@@ -119,7 +124,7 @@ print("ok Yaguá Capas de IngeCAD")
 # ---- 1b. las categorías de fábrica (3.39.0): las de Fernando ---------------------------
 BT.DEFECTO = DEFECTO
 assert [n for n, _b in DEFECTO["ingecad"]][:2] == ["Yaguá GEO", "Yaguá Dibujo"]
-assert [n for n, _b in DEFECTO["qgis"]][0] == "Yaguá Dibujo" and len(DEFECTO["qgis"]) == 8
+assert [n for n, _b in DEFECTO["qgis"]][0] == "Yaguá Dibujo" and len(DEFECTO["qgis"]) == 9
 for p_ in ("ingecad", "qgis"):
     ids = [b for _n, bs in DEFECTO[p_] for b in bs]
     assert len(ids) == len(set(ids)), p_                    # ningún botón dos veces

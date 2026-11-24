@@ -56,6 +56,11 @@ DEFECTO = {
         ("Yaguá Dibujo", (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
             "dibujo:rumbos", "dibujo:relangle", "dibujo:gmsblocks",)),
+        # 3.89.0: la barra de imágenes de IngeCAD, orden por orden (Fernando, 23/11/2026)
+        # 3.90.0: INSERTARGEO, GEORREF (el Georreferenciador de QGIS) y EXPORTARGEO
+        # 3.91.0: ASPECTOIMAGEN detrás de EXPORTARGEO, como en IngeCAD
+        ("Yaguá Imagenes", ("dibujo:insertgeo", "dibujo:georref", "dibujo:exportgeo",
+                            "dibujo:aspecto", "dibujo:limpiarplano", "dibujo:pasteimage")),
         ("Yaguá Edición", (
             "dibujo:select", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
@@ -142,7 +147,7 @@ TEMA_BANCO = {
             "capas:layerp", "capas:laymch", "capas:layiso", "capas:layuniso",
             "capas:layoff", "capas:layfrz", "capas:laylck", "capas:layulk", "capas:layon",
             "capas:laythw", "capas:lwdisplay",
-            "puente:send", "geocad:reload", "geocad:status", "dibujo:plot", "dibujo:layout",
+            "puente:send", "dibujo:exportgeo", "geocad:reload", "geocad:status", "dibujo:plot", "dibujo:layout",
             "dibujo:mview", "dibujo:purge", "geocad:ge_abrir", "geocad:ge_capturar",
             "geocad:ge_configurar", "geocad:ge_exportar", "geocad:ge_ver",
             "geocad:modules", "geocad:botones", "geocad:config",
@@ -154,12 +159,14 @@ TEMA_BANCO = {
             "dibujo:break", "dibujo:join", "dibujo:explode", "dibujo:divide", "dibujo:measure",
             "dibujo:copybase", "dibujo:pastebase", "geocad:pegarorig", "geocad:capaseleccion", "dibujo:aligncopy",
             "dibujo:matchprop", "dibujo:edittext", "dibujo:seltext", "dibujo:bold", "dibujo:font", "dibujo:size",
-            "dibujo:textcolor", "geocad:copiartabla", "geocad:imgbase_mover",
+            "dibujo:textcolor", "geocad:copiartabla", "dibujo:georref", "dibujo:aspecto", "dibujo:limpiarplano",
+            "geocad:imgbase_mover",
             "geocad:imgbase_bloquear", "geocad:imgbase_guardar"),
         "Dibujo": (
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
             "dibujo:rumbos", "dibujo:perp", "dibujo:gmsblocks", "dibujo:dtext",
-            "dibujo:block", "dibujo:insert", "dibujo:wblock", "geocad:pegartabla"),
+            "dibujo:block", "dibujo:insert", "dibujo:wblock", "dibujo:insertgeo", "dibujo:pasteimage",
+            "geocad:pegartabla"),
     },
 }
 
@@ -263,7 +270,18 @@ CAPAS_RELLENO = ("capas:fill", "capas:filltr")
 #: LIMPIARPLANO (3.86.0): en una barra ya guardada va detrás de ASPECTOIMAGEN
 #: (si no, caería al final de la barra GeoCAD). RUMBOS (3.87.0): detrás de RECTANG.
 #: UNIR en QGIS (3.87.0): delante de DESCOMP (dibujo:explode) donde esté.
-MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno", "unir"),
+#: «imagenes-qgis» (3.89.0): la barra «Yaguá Imagenes» de QGIS, nueva, detrás de la
+#: de RUMBOS (o al final), con PEGARIMAGEN; si el botón ya está en otra, nada.
+#: «imagenes-geo-qgis» (3.90.0): INSERTARGEO, GEORREF y EXPORTARGEO delante de
+#: PEGARIMAGEN, donde esté (los que ya estén en alguna barra no se repiten).
+#: «aspecto-qgis» (3.91.0): ASPECTOIMAGEN detrás de EXPORTARGEO (o delante de
+#: PEGARIMAGEN), donde esté; si ya está en alguna barra, o no hay ninguno, nada.
+#: «limpiar-plano-qgis» (3.92.0): LIMPIARPLANO detrás de ASPECTOIMAGEN (o delante de
+#: PEGARIMAGEN), con la misma regla.
+IMAGENES_GEO_QGIS = ("dibujo:insertgeo", "dibujo:georref", "dibujo:exportgeo")
+MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno", "unir",
+                        "imagenes-qgis", "imagenes-geo-qgis", "aspecto-qgis",
+                        "limpiar-plano-qgis"),
                "ingecad": ("limpiar-plano", "rumbos")}
 
 
@@ -331,6 +349,40 @@ def _migrar(programa: str, crudo: dict) -> bool:
                 bs = list(destino.get("botones") or ())
                 at = bs.index("dibujo:explode")
                 destino["botones"] = bs[:at] + ["dibujo:join"] + bs[at:]
+        elif nombre == "imagenes-qgis":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any("dibujo:pasteimage" in (c.get("botones") or ()) for c in cats):
+                continue
+            destino = next((c for c in cats if c.get("nombre") == "Yaguá Imagenes"), None)
+            if destino is not None:
+                destino["botones"] = list(destino.get("botones") or ()) + ["dibujo:pasteimage"]
+            else:
+                at = next((i + 1 for i, c in enumerate(cats)
+                           if "dibujo:rumbos" in (c.get("botones") or ())), len(cats))
+                cats.insert(at, {"nombre": "Yaguá Imagenes", "botones": ["dibujo:pasteimage"]})
+            crudo["categorias"] = cats
+        elif nombre == "imagenes-geo-qgis":
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            todos = {b for c in cats for b in c.get("botones") or ()}
+            nuevos = [b for b in IMAGENES_GEO_QGIS if b not in todos]
+            destino = next((c for c in cats if "dibujo:pasteimage" in (c.get("botones") or ())), None)
+            if nuevos and destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("dibujo:pasteimage")
+                destino["botones"] = bs[:at] + nuevos + bs[at:]
+        elif nombre in ("aspecto-qgis", "limpiar-plano-qgis"):
+            boton, previo = {"aspecto-qgis": ("dibujo:aspecto", "dibujo:exportgeo"),
+                             "limpiar-plano-qgis": ("dibujo:limpiarplano", "dibujo:aspecto")}[nombre]
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any(boton in (c.get("botones") or ()) for c in cats):
+                continue
+            for ancla, despues in ((previo, 1), ("dibujo:pasteimage", 0)):
+                destino = next((c for c in cats if ancla in (c.get("botones") or ())), None)
+                if destino is not None:
+                    bs = list(destino.get("botones") or ())
+                    at = bs.index(ancla) + despues
+                    destino["botones"] = bs[:at] + [boton] + bs[at:]
+                    break
         elif nombre == "rumbos":
             cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
             if any("RUMBOS" in (c.get("botones") or ()) for c in cats):

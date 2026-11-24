@@ -74,7 +74,7 @@ class VistaImagen(QgsMapCanvasItem):
         super().__init__(canvas)
         from qgis.PyQt.QtCore import Qt
         from qgis.PyQt.QtGui import QImage
-        im = QImage(str(ruta))
+        im = ruta if isinstance(ruta, QImage) else QImage(str(ruta))   # PEGARIMAGEN: la captura
         if not im.isNull() and max(im.width(), im.height()) > 1600:
             im = im.scaled(1600, 1600, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         self.imagen = None if im.isNull() else im

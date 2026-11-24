@@ -1,0 +1,66 @@
+GeoCAD - versión 3.91.0
+=======================
+QGIS: barra «Yaguá Imagenes», tercera entrega: ASPECTOIMAGEN, como en IngeCAD.
+
+(Fernando, 23/11/2026: la barra de imágenes de IngeCAD en QGIS, orden por
+orden. Ésta es la 3.91.0; sigue la 3.92.0, LIMPIARPLANO.)
+
+Aspecto de la imagen (ASPECTOIMAGEN)
+   Con la imagen activa (una capa ráster de un archivo), o un clic en ella
+   (el cursor encima la resalta), se abre la ventana «Aspecto de la imagen»,
+   la misma de IngeCAD:
+   - Fondo transparente, y «Blanco que se borra» (papel amarillento,
+     escaneos grises);
+   - Líneas como están, en negativo o de un color;
+   - Opacidad y Contraste de las líneas;
+   - Limpiar manchas (Distancia, Tolerancia, ver en rojo lo que se borra);
+   - la vista previa con zoom (rueda, arrastrar, doble clic, 1:1) sobre
+     cuadriculado, blanco o fondo oscuro;
+   - Volver al original, Valores iniciales, Entregar imagen final...,
+     Aceptar, Cancelar.
+   Se guarda una COPIA PNG (<imagen>_aspecto.png, o _final.png la imagen
+   final, opaca sobre papel blanco) con su archivo de mundo y su sistema
+   (.aux.xml) en «<proyecto>_imagenes», sin pisar otra; la capa pasa a
+   usarla, con el mismo nombre y lugar en el panel. El original NUNCA se
+   toca. Los valores quedan en la capa (se guardan con el proyecto): la
+   ventana vuelve a abrir con ellos y se rehace siempre desde el original.
+   Decidido con Fernando: en QGIS no hay «Fondo blanco» (la imagen final ya
+   trae el papel blanco) ni U: «Volver al original» devuelve la capa a su
+   archivo.
+   Nota: QGIS deja al lado de toda imagen que dibuja un .aux.xml con sus
+   estadísticas (también sin GeoCAD); la imagen y su archivo de mundo no
+   cambian.
+
+Barra «Yaguá Imagenes»
+   El botón detrás de Exportar copia georreferenciada, como en IngeCAD (y
+   en GeoCAD > Dibujo y en el banco Edición). En barras ya guardadas entra
+   una vez detrás de Exportar (o delante de Pegar imagen), donde esté.
+
+Por dentro
+- nucleo/aspecto_cuentas.py (nuevo): las cuentas de ASPECTOIMAGEN, sólo
+  numpy (fondo transparente, líneas, contraste, opacidad, imagen final,
+  limpiar manchas), que estaban en aspecto.py de IngeCAD. IngeCAD las
+  importa de ahí con los mismos nombres: hace exactamente lo mismo (medido:
+  mismos píxeles con PIL y sin PIL).
+- QGIS: dibujo/aspecto_qgis.py (nuevo: la orden, la imagen con QImage
+  porque el Python de QGIS no trae PIL, la copia con archivo de mundo, la
+  marca «geocad/aspecto» en la capa) y dibujo/aspecto_ui_qgis.py (nuevo: la
+  ventana de IngeCAD con arreglos numpy, sin Fondo blanco).
+  dibujo/plugin.py: el botón (icons/aspecto.svg).
+- nucleo/botones.py: la barra de fábrica, el banco y la migración
+  «aspecto-qgis».
+- Manual: 02_qgis (tabla Dibujar).
+
+Pruebas
+- test_aspecto_qgis (nueva): el núcleo sin PIL; los mismos píxeles que
+  ASPECTOIMAGEN de IngeCAD en cinco combinaciones; la ventana de QGIS sin
+  PIL ni Fondo blanco; fábrica, banco y migración. test_aspecto,
+  test_imagenkml y test_limpiar_plano (IngeCAD) siguen pasando;
+  test_imagen_geo_qgis, test_botones y test_relleno_capas al día.
+- ventana/banco_aspecto_qgis.py: QGIS 4.2.3 real; la ventana de verdad
+  (control movido, vista previa pintada, Aceptar), la copia con su archivo
+  de mundo, el mapa dibujado (papel transparente, línea negra; negativo;
+  final sobre blanco), volver a abrir con lo guardado, Cancelar, Volver al
+  original, resaltado y clic; TODO OK. Los bancos de PEGARIMAGEN,
+  SOLTARIMAGEN, INSERTARGEO/EXPORTARGEO siguen TODO OK.
+- Pruebas manuales: AQ1-AQ5.

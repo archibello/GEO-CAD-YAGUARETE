@@ -77,7 +77,7 @@ from geocad import botones
 edicion = dict(botones.DEFECTO["qgis"])["Yaguá Edición"]
 assert edicion.index("dibujo:join") == edicion.index("dibujo:explode") - 1
 assert "dibujo:join" in botones.TEMA_BANCO["qgis"]["Edición"]
-hechas = list(botones.MIGRACIONES["qgis"][:-1])
+hechas = [m for m in botones.MIGRACIONES["qgis"] if m != "unir"]   # 3.89.0: ya no es la última
 crudo = {"categorias": [{"nombre": "Mía", "botones": ["dibujo:break", "dibujo:explode"]}], "migraciones": hechas}
 assert botones._migrar("qgis", crudo)
 assert crudo["categorias"][0]["botones"] == ["dibujo:break", "dibujo:join", "dibujo:explode"]

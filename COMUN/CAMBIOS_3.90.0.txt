@@ -1,0 +1,63 @@
+GeoCAD - versión 3.90.0
+=======================
+QGIS: barra «Yaguá Imagenes», segunda entrega: INSERTARGEO, GEORREF y
+EXPORTARGEO, como en IngeCAD.
+
+(Fernando, 23/11/2026: la barra de imágenes de IngeCAD en QGIS, orden por
+orden. Ésta es la 3.90.0; siguen 3.91.0 ASPECTOIMAGEN y 3.92.0 LIMPIARPLANO.)
+
+Insertar imagen georreferenciada (INSERTARGEO)
+   La ventana de abrir; una imagen con archivo de mundo (.pgw, .jgw, .tfw,
+   .wld, .pngw...) o un GeoTIFF entra EN SU LUGAR como capa ráster, con el
+   archivo tal cual (como en IngeCAD), y el mapa se acerca a ella. La línea
+   de comandos dice de dónde salió la georreferencia y dónde quedó (X, Y,
+   tamaño del píxel, giro). Si la imagen no dice su sistema de coordenadas
+   toma el del mapa; si está en otro, avisa que QGIS la reproyecta al vuelo.
+   Sin georreferencia no entra y propone PEGARIMAGEN, arrastrarla o GEORREF.
+
+Georreferenciar (GEORREF)
+   No se repite en QGIS (decidido con Fernando): el botón abre el
+   Georreferenciador de QGIS con la imagen ya cargada y sus puntos de
+   control («<imagen>.points», el mismo archivo que usa GEORREF de IngeCAD).
+   La imagen: la capa ráster activa; si no, un clic en la imagen del mapa, o
+   Intro y la ventana de abrir.
+
+Exportar copia georreferenciada (EXPORTARGEO)
+   Con la imagen activa (o un clic en ella; el cursor encima la resalta con
+   su marco, también girada) y «Guardar como» (sugiere «<imagen>_georref» al
+   lado, sin pisar nada): una COPIA con su archivo de mundo, donde está hoy,
+   y su sistema de coordenadas (.aux.xml). INSERTARGEO de IngeCAD la abre en
+   su lugar. Nunca sobre la original; el mapa no cambia.
+
+Barra «Yaguá Imagenes»
+   Los tres botones delante de Pegar imagen, en el orden de IngeCAD (y en
+   GeoCAD > Dibujo; en los bancos como en IngeCAD: Insertar en Dibujo,
+   Georreferenciar en Edición, Exportar en Configuración). En barras ya
+   guardadas entran una vez delante de Pegar imagen, donde esté; los que ya
+   estén en alguna barra no se repiten.
+
+Por dentro
+- QGIS: dibujo/imagen_geo.py (nuevo, cuentas sin QGIS: archivo de mundo de
+  la geotransformación de GDAL, esquinas, clic adentro, copia geo que nunca
+  pisa la original) y dibujo/imagen_geo_qgis.py (nuevo: INSERTARGEO,
+  EXPORTARGEO y GEORREF; el Georreferenciador se abre con su acción
+  mActionShowGeoreferencer y recibe la imagen como si se la soltaran encima,
+  que es como la abre con sus puntos). dibujo/plugin.py: los tres botones
+  (icons/insertgeo.svg, georref.svg, exportgeo.svg).
+- nucleo/botones.py: la barra de fábrica, los bancos y la migración
+  «imagenes-geo-qgis».
+- Manual: 02_qgis (tabla Dibujar).
+
+Pruebas
+- test_imagen_geo_qgis (nueva, sin Qt): archivo de mundo igual al de
+  SOLTARIMAGEN e IngeCAD, clic adentro de una imagen girada, copia geo,
+  fábrica, bancos y migración. test_pegar_imagen_qgis, test_botones y
+  test_relleno_capas al día.
+- ventana/banco_imagen_geo_qgis.py: QGIS 4.2.3 real; INSERTARGEO en su
+  lugar (archivo de mundo girado, GeoTIFF en otro sistema, sin
+  georreferencia, cancelar), EXPORTARGEO (activa, clic adentro y afuera,
+  resaltado, cancelar, nunca la original); TODO OK.
+- ventana/banco_georref_qgis.py: QGIS 4.2.3 ENTERO sin pantalla, con perfil
+  de prueba: GEORREF abre el Georreferenciador con la imagen y sus 3
+  puntos; otra imagen con Intro; ninguna ventana esperando; TODO OK.
+- Pruebas manuales: GQ1-GQ5.

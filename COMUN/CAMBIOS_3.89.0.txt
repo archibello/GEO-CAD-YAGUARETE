@@ -1,0 +1,63 @@
+GeoCAD - versión 3.89.0
+=======================
+QGIS: barra «Yaguá Imagenes», primera orden: PEGARIMAGEN (pegar la imagen
+del portapapeles), con el mismo procedimiento que en IngeCAD.
+
+La barra de imágenes de IngeCAD en QGIS
+(Fernando, 23/11/2026: «agregar la barra de herramientas de imagenes de
+IngeCAD a QGIS con las mismas funcionalidades y procedimientos».) Va orden
+por orden (decidido con Fernando): 3.89.0 PEGARIMAGEN; 3.90.0 INSERTARGEO
+y EXPORTARGEO; 3.91.0 ASPECTOIMAGEN; 3.92.0 LIMPIARPLANO. GEORREF no se
+repite en QGIS: su botón abrirá el Georreferenciador de QGIS (3.90.0).
+
+Pegar una imagen (PEGARIMAGEN, Ctrl+V)
+   Se captura la pantalla (Impr Pant, o Mayús+Impr Pant para una zona), se
+   copia una imagen en el navegador o en GIMP, o se copia un archivo de
+   imagen en el explorador. Ctrl+V en el mapa (o con la línea de comandos
+   vacía), el botón o PEGARIMAGEN:
+   1. Esquina INFERIOR IZQUIERDA de la imagen.
+   2. Esquina INFERIOR DERECHA: la imagen se ve semitransparente y sigue al
+      cursor; el clic le da la escala y la dirección del borde de abajo
+      (con ORTO, F8, queda derecha). También se puede escribir el ancho
+      (queda derecha); «x,y», «@dx,dy» o «d<ángulo» son un punto.
+   Queda como capa ráster arriba de todo: la captura como PNG
+   (captura_AAAAMMDD_HHMMSS.png) o una COPIA del archivo copiado, las dos
+   con su archivo de mundo y su .aux.xml (el sistema de coordenadas del
+   mapa) en «<proyecto>_imagenes» (sin proyecto guardado, en
+   Imágenes/GeoCAD). El original no se toca. Esc no deja nada. Un archivo
+   copiado que ya está georreferenciado (GeoTIFF, con su archivo de mundo)
+   entra en su lugar, sin copia.
+   Ctrl+V con objetos copiados sigue pegándolos como siempre: PEGARIMAGEN
+   arranca sólo si el portapapeles tiene una imagen.
+
+Barra «Yaguá Imagenes»
+   Nueva en QGIS, detrás de «Yaguá Dibujo», con el botón Pegar imagen (y en
+   GeoCAD > Dibujo y en el banco Dibujo de Administrar botones). En barras
+   ya guardadas aparece una vez, detrás de la que tiene RUMBOS (o al final);
+   si después se borra, no vuelve.
+
+Por dentro
+- QGIS: dibujo/pegar_imagen.py (nuevo, cuentas sin QGIS: el borde de abajo
+  del 1º al 2º punto, ancho escrito, nombre de la captura sin pisar otra,
+  ruta copiada como texto) y dibujo/pegar_imagen_qgis.py (nuevo: la orden
+  PEGARIMAGEN / PASTEIMAGE / GEOPASTEIMAGE, el portapapeles y Ctrl+V, que
+  se engancha al QShortcut del mapa de QGIS y a la línea de comandos vacía).
+  dibujo/soltar_imagen.py: georreferenciar() (archivo de mundo y .aux.xml),
+  que comparten SOLTARIMAGEN y PEGARIMAGEN; la vista previa de
+  soltar_imagen_qgis.py acepta también una imagen en memoria.
+  dibujo/plugin.py: el botón (icons/pasteimage.svg), la orden y quitarlos
+  al descargar.
+- nucleo/botones.py: «Yaguá Imagenes» en DEFECTO["qgis"], el botón en el
+  banco Dibujo y la migración «imagenes-qgis».
+- Manual: 02_qgis (tabla Dibujar).
+
+Pruebas
+- test_pegar_imagen_qgis (nueva, sin Qt): cuentas como las de IngeCAD,
+  captura con archivo de mundo, ruta como texto, fábrica, banco y migración.
+  test_botones al día (9 categorías de fábrica en QGIS, la migración).
+- ventana/banco_pegar_imagen_qgis.py: QGIS 4.2.3 real; Ctrl+V del mapa,
+  captura y archivo copiado, píxeles pintados de la vista previa, esquinas
+  de la capa en su lugar, ancho escrito, «x,y» como punto, GeoTIFF en su
+  lugar, Esc, Ctrl+V en la línea de comandos y al descargar; TODO OK.
+  banco_soltar_imagen_qgis sigue TODO OK.
+- Pruebas manuales: PQ1-PQ5.

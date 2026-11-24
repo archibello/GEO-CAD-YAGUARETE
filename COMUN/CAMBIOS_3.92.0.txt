@@ -1,0 +1,67 @@
+GeoCAD - versión 3.92.0
+=======================
+QGIS: barra «Yaguá Imagenes», cuarta y última entrega: LIMPIARPLANO, como en
+IngeCAD. La barra de imágenes de IngeCAD queda completa en QGIS.
+
+(Fernando, 23/11/2026: «agregar la barra de herramientas de imagenes de
+IngeCAD a QGIS con las mismas funcionalidades y procedimientos». Entregas:
+3.89.0 PEGARIMAGEN, 3.90.0 INSERTARGEO, GEORREF y EXPORTARGEO, 3.91.0
+ASPECTOIMAGEN y ésta.)
+
+Limpiar plano escaneado (LIMPIARPLANO)
+   Con la imagen activa (una capa ráster de un archivo), o un clic en ella:
+   1. Zonas de sello (opcional): dos esquinas por rectángulo (se ve mientras
+      se marca); ahí van umbrales suaves para la tinta tenue (sellos de
+      goma, lápiz, firmas). D deshace la última.
+   2. Intro: se hace la copia limpia, sin manchas de humedad ni pliegues y
+      con los textos legibles, en gris y al DOBLE de resolución (así se
+      leen los rumbos chicos): <imagen>_limpio.png con su archivo de mundo
+      y su sistema en «<proyecto>_imagenes», sin pisar nada. La capa pasa a
+      usarla en el MISMO lugar, con el gris tal cual.
+   El original NUNCA se toca. Queda anotado en la capa (con las zonas, se
+   guarda con el proyecto): al volver a limpiarla se parte otra vez del
+   original y aparecen las zonas de antes. En QGIS no hay U: en el pedido
+   de zonas de una imagen ya limpia, O (Original) devuelve la capa a su
+   archivo (como «Volver al original» de ASPECTOIMAGEN). Si la capa tenía
+   aspecto (ASPECTOIMAGEN), se limpia el archivo que usa ahora y esa marca
+   se suelta, como en IngeCAD.
+   La receta es la de IngeCAD (la aprobada por Fernando el 19/11/2026). El
+   Python de QGIS no trae PIL: los tres pasos que la usaban (gris, ampliar
+   con LANCZOS y el desenfoque gaussiano) se hacen con numpy como los hace
+   PIL. Con el recorte del plano de 1958 da la referencia aprobada con las
+   mismas tolerancias que IngeCAD (ningún píxel del interior se aparta más
+   de 8; media 0,003) y difiere de la versión con PIL en el 0,13 % de los
+   píxeles.
+
+Barra «Yaguá Imagenes»
+   El botón detrás de Aspecto de la imagen (y en GeoCAD > Dibujo y en el
+   banco Edición). En barras ya guardadas entra una vez detrás de Aspecto
+   (o delante de Pegar imagen), donde esté.
+
+Por dentro
+- nucleo/limpieza.py: las cuentas de LIMPIARPLANO pasan al núcleo (estaban
+  en IngeCAD; IngeCAD sigue usando la versión con PIL, sin cambios en lo que
+  hace) y suman limpiar_arreglo (sin PIL: gris_arreglo, ampliar_arreglo,
+  desenfocar_arreglo). Los pasos comunes quedan en _receta.
+- QGIS: dibujo/limpiar_plano_qgis.py (nuevo: la orden, las zonas en píxeles
+  del original, la copia gris ×2 con archivo de mundo, la marca
+  «geocad/limpieza»); dibujo/imagen_geo.py: píxel <-> mapa y la
+  geotransformación de una copia ×2. dibujo/plugin.py: el botón
+  (icons/limpiarplano.svg).
+- nucleo/botones.py: la barra de fábrica, el banco y la migración
+  «limpiar-plano-qgis».
+- Manual: 02_qgis (tabla Dibujar).
+
+Pruebas
+- test_limpiar_plano_qgis (nueva): la receta sin PIL contra la referencia
+  aprobada (las tolerancias de IngeCAD) y contra la de PIL, píxel <-> mapa,
+  fábrica, banco y migración. test_limpiar_plano (IngeCAD) sigue pasando;
+  test_aspecto_qgis, test_botones y test_relleno_capas al día.
+- ventana/banco_limpiar_plano_qgis.py: QGIS 4.2.3 real con el recorte del
+  plano de 1958; zonas con clics, D, zona recortada a la imagen, Intro, la
+  copia gris 600 × 600 en el mismo lugar, el resultado contra la referencia,
+  el mapa dibujado sin estirar el gris, la marca, el aspecto soltado, el
+  original intacto, «ya está limpia», O, clic con otra capa activa, Esc;
+  TODO OK. Los bancos de PEGARIMAGEN, SOLTARIMAGEN, INSERTARGEO/EXPORTARGEO
+  y ASPECTOIMAGEN siguen TODO OK.
+- Pruebas manuales: LQ1-LQ5.

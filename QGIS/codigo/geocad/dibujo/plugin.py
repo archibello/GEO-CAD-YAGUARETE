@@ -196,6 +196,30 @@ class DibujoCADPlugin:
                      'ángulo interior o deflexión', lambda: self.run_command('RUMBOS'))
         from . import soltar_imagen_qgis           # 3.88.0: imagen arrastrada desde el explorador
         soltar_imagen_qgis.instalar(self)
+        from . import imagen_geo_qgis              # 3.90.0: INSERTARGEO, GEORREF, EXPORTARGEO
+        imagen_geo_qgis.instalar(self)
+        self._action('insertgeo', 'Insertar imagen georreferenciada (INSERTARGEO) — archivo de mundo '
+                     'o GeoTIFF, en su lugar', lambda: self.run_command('INSERTARGEO'))
+        from . import georref_qgis                 # 3.93.0: GEORREF de IngeCAD (pares sobre el mapa)
+        georref_qgis.instalar(self)
+        self._action('georref', 'Ajustar imagen con puntos de control (GEORREF) — pares sobre el mapa, '
+                     'tabla de puntos, Lineal a Thin Plate Spline', lambda: self.run_command('GEORREF'))
+        self._action('exportgeo', 'Exportar copia georreferenciada (EXPORTARGEO) — copia con su '
+                     'archivo de mundo, donde está hoy', lambda: self.run_command('EXPORTARGEO'))
+        from . import aspecto_qgis                 # 3.91.0: ASPECTOIMAGEN
+        aspecto_qgis.instalar(self)
+        self._action('aspecto', 'Aspecto de la imagen (ASPECTOIMAGEN) — fondo transparente, líneas, '
+                     'opacidad, contraste y manchas, en una copia', lambda: self.run_command('ASPECTOIMAGEN'))
+        from . import limpiar_plano_qgis           # 3.92.0: LIMPIARPLANO
+        limpiar_plano_qgis.instalar(self)
+        self._action('limpiarplano', 'Limpiar plano escaneado (LIMPIARPLANO) — manchas y pliegues '
+                     'fuera, textos legibles, copia al doble de resolución',
+                     lambda: self.run_command('LIMPIARPLANO'))
+        from . import pegar_imagen_qgis            # 3.89.0: barra Yaguá Imagenes, como IngeCAD
+        pegar_imagen_qgis.instalar(self)
+        self._action('pasteimage', 'Pegar imagen (PEGARIMAGEN / Ctrl+V) — la captura del '
+                     'portapapeles con dos clics: esquinas inferior izquierda y derecha',
+                     lambda: self.run_command('PEGARIMAGEN'))
         self.toolbar.addSeparator()
         self.a_ortho = self._action('ortho', 'Modo Orto (F8)',
                                     self.mgr.set_ortho, checkable=True)
@@ -700,6 +724,8 @@ class DibujoCADPlugin:
         try:
             from . import soltar_imagen_qgis
             soltar_imagen_qgis.quitar(self)
+            from . import pegar_imagen_qgis
+            pegar_imagen_qgis.quitar(self)
         except Exception:  # noqa: BLE001
             pass
         vistas = getattr(self.mgr, 'vistas', None) if getattr(self, 'mgr', None) is not None else None

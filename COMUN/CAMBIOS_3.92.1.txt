@@ -1,0 +1,40 @@
+GeoCAD - versión 3.92.1
+=======================
+QGIS: LIMPIARPLANO y ASPECTOIMAGEN con barra de avance desde el primer
+momento; QGIS ya no queda «sin responder» mientras trabajan.
+
+Qué pasaba
+   (Fernando, 23/11/2026, con un plano real: «el resultado final es
+   perfecto», pero durante la limpieza el sistema mostró «QGIS Desktop no
+   responde» con «Forzar la salida» y «Esperar»; «no se entiende si
+   realmente la herramienta esta funcionando o esta ocasionando un cuelgue
+   del programa».) La cuenta corría en el mismo hilo que la ventana de
+   QGIS: mientras limpiaba, QGIS no atendía la pantalla y el sistema lo
+   daba por colgado.
+
+Qué cambia
+   La cuenta corre en otro hilo y aparece enseguida una barra de avance con
+   la etapa, el porcentaje y los segundos que van:
+     LIMPIARPLANO:   1/3 Limpiando el plano · 2/3 Guardando la copia limpia
+                     · 3/3 Actualizando el mapa
+     ASPECTOIMAGEN:  al abrir la ventana (Abriendo la imagen para la vista
+                     previa) y al aceptar (1/4 Abriendo · 2/4 Aplicando el
+                     aspecto · 3/4 Guardando · 4/4 Actualizando el mapa)
+   QGIS sigue atendiendo mientras tanto. El porcentaje sale de lo que la
+   cuenta va diciendo y, entre un aviso y otro, del tiempo estimado por
+   megapíxel (se ajusta con lo medido en cada uso). El resultado es el
+   mismo de la 3.92.0.
+
+Por dentro
+- dibujo/aspecto_qgis.py: Progreso (QProgressDialog sin demora; la función
+  en un hilo; QGIS procesa sus eventos cada 50 ms; la barra nunca va para
+  atrás). Lo usan aspecto_qgis, aspecto_ui_qgis y limpiar_plano_qgis. Lo que
+  toca la capa se hace después, en el hilo de QGIS.
+
+Pruebas
+- ventana/banco_limpiar_plano_qgis.py, parte 5: un plano de 1500 × 1500 con
+  un reloj de 0,1 s andando: 44 latidos en 4,5 s de limpieza (QGIS atiende),
+  la barra visible desde el 1 %, con la etapa, el % y los segundos, siempre
+  hacia adelante, y cerrada al final; TODO OK. banco_aspecto_qgis TODO OK.
+- test_limpiar_plano_qgis: la barra en las dos órdenes.
+- Prueba manual: LQ6.

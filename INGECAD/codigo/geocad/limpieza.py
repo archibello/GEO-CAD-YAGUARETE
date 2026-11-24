@@ -3,7 +3,8 @@
 
 Receta probada el 19/11/2026 con un plano de mensura de 1958 (manchas de
 humedad, pliegues, rumbos chicos, un sello violeta tenue); Fernando: «QUEDO
-PERFECTO». Sólo numpy y PIL: el Flatpak de IngeCAD no trae scipy.
+PERFECTO». Sólo numpy y PIL: el Flatpak de IngeCAD no trae scipy. Desde la 3.92.0
+está en el núcleo y la usa también QGIS, sin PIL (limpiar_arreglo).
 
   1. gris, ampliar ×esc (LANCZOS) y desenfoque gaussiano de 0,3·esc px: a 1x
      los rumbos chicos (unos 6 px de alto) se empastan;
@@ -195,6 +196,118 @@ def histeresis(debil_m, fuerte_m, min_px: int):
     return (np.cumsum(d[:-1]) > 0).reshape(h, w)
 
 
+# ------------------------------------------------------------------ sin PIL (3.92.0)
+# El Python de QGIS no trae PIL: los tres pasos que lo usaban (gris, ampliar con
+# LANCZOS y el desenfoque gaussiano) hechos con numpy como los hace PIL, con el
+# redondeo a 8 bits de cada pasada. El resto de la receta es el mismo.
+def gris_arreglo(rgba):
+    """Gris (uint8) de un arreglo RGBA (lo transparente, sobre papel blanco), con la
+    fórmula de PIL (convert("L"))."""
+    np = _np()
+    a = rgba.astype(np.int64)
+    if rgba.shape[2] >= 4 and (rgba[..., 3] < 255).any():
+        al = a[..., 3:4]
+        a = (a[..., :3] * al + 255 * (255 - al) + 127) // 255
+    return ((a[..., 0] * 19595 + a[..., 1] * 38470 + a[..., 2] * 7471 + 0x8000) >> 16).astype(np.uint8)
+
+
+def _lanczos(x):
+    np = _np()
+    x = np.abs(x)
+    out = np.sinc(x) * np.sinc(x / 3.0)
+    return np.where(x < 3.0, out, 0.0)
+
+
+def _ampliar_eje(a, esc: int, eje: int):
+    """Una pasada de la ampliación LANCZOS de PIL a lo largo de ``eje`` (redondeo a 8 bits)."""
+    np = _np()
+    n = a.shape[eje]
+    m = n * esc
+    centro = (np.arange(m) + 0.5) / esc
+    lo = np.clip((centro - 3.0 + 0.5).astype(int), 0, n)
+    hi = np.clip((centro + 3.0 + 0.5).astype(int), 0, n)
+    k = int((hi - lo).max())
+    idx = lo[:, None] + np.arange(k)[None, :]
+    w = _lanczos((idx - centro[:, None] + 0.5))
+    w = np.where(idx < hi[:, None], w, 0.0)
+    w /= w.sum(axis=1, keepdims=True)
+    idx = np.minimum(idx, n - 1)
+    b = np.moveaxis(a.astype(np.float64), eje, -1)
+    out = np.zeros(b.shape[:-1] + (m,), np.float64)
+    for j in range(k):
+        out += b[..., idx[:, j]] * w[:, j]
+    out = np.clip(np.floor(out + 0.5), 0, 255)
+    return np.moveaxis(out, -1, eje)
+
+
+def ampliar_arreglo(g, esc: int = ESCALA):
+    """``g`` (gris uint8) ampliada ×esc con LANCZOS, como PIL (primero filas, después columnas)."""
+    if esc == 1:
+        return g.copy()
+    return _ampliar_eje(_ampliar_eje(g, esc, 1), esc, 0).astype(_np().uint8)
+
+
+def desenfocar_arreglo(g, radio: float):
+    """GaussianBlur(radio) de PIL: tres pasadas de caja (radio fraccionario) por eje,
+    con los bordes repetidos y redondeo a 8 bits en cada una."""
+    np = _np()
+    sigma2 = radio * radio / 3.0
+    L = (12.0 * sigma2 + 1.0) ** 0.5
+    l = int((L - 1.0) // 2)
+    a = (2 * l + 1) * (l * (l + 1) - 3 * sigma2) / (6 * (sigma2 - (l + 1) * (l + 1)))
+    r = l + a
+    ww = 1.0 / (2.0 * r + 1.0)
+    fw = (1.0 - (2 * l + 1) * ww) / 2.0
+    out = g.astype(np.float64)
+    for eje in (1, 0):
+        for _ in range(3):
+            p = np.pad(out, [(l + 1, l + 1) if e == eje else (0, 0) for e in range(2)], mode="edge")
+            n = out.shape[eje]
+            acc = np.zeros_like(out)
+            for d in range(-l, l + 1):
+                acc += np.take(p, np.arange(n) + l + 1 + d, axis=eje) * ww
+            acc += (np.take(p, np.arange(n), axis=eje) + np.take(p, np.arange(n) + 2 * l + 2, axis=eje)) * fw
+            out = np.clip(np.floor(acc + 0.5), 0, 255)
+    return out.astype(np.float32)
+
+
+def preparar_arreglo(g0, esc: int = ESCALA, suav: float = 0.3):
+    """Lo de preparar() sin PIL: ampliada ×esc y apenas desenfocada (float32)."""
+    return desenfocar_arreglo(ampliar_arreglo(g0, esc), suav * esc)
+
+
+def limpiar_arreglo(rgba, zonas_sello=(), esc: int = ESCALA, avance=None):
+    """limpiar() sin PIL (QGIS): de un arreglo RGBA, (gris limpio uint8 ×esc, alfa ×esc
+    o None). Misma receta y mismos umbrales."""
+    np = _np()
+    paso = avance or (lambda f: None)
+    g0 = gris_arreglo(rgba)
+    paso(0.05)
+    g = preparar_arreglo(g0, esc, NORMAL["suav"])
+    paso(0.20)
+    out = _receta(g, (g0.shape[1], g0.shape[0]), zonas_sello, esc, paso)
+    alfa = None
+    if rgba.shape[2] >= 4 and (rgba[..., 3] < 255).any():
+        alfa = np.repeat(np.repeat(rgba[..., 3], esc, axis=0), esc, axis=1)
+    return out.astype(np.uint8), alfa
+
+
+def _receta(g, tam, zonas_sello, esc, paso):
+    """Pasos 2 a 5 (papel local, contraste, histéresis, tono) y las zonas de sello."""
+    papel = papel_local(g, esc)
+    paso(0.45)
+    out = proceso(g, papel, esc, **NORMAL)
+    paso(0.75)
+    zonas = [z for z in (_zona(z, tam) for z in zonas_sello or ()) if z]
+    if zonas:
+        s = proceso(g, papel, esc, **SELLO)
+        for x0, y0, x1, y1 in zonas:
+            out[y0 * esc:y1 * esc, x0 * esc:x1 * esc] = s[y0 * esc:y1 * esc, x0 * esc:x1 * esc]
+        del s
+    paso(0.95)
+    return out
+
+
 # ------------------------------------------------------------------ la receta
 def gris(imagen):
     """La imagen en gris (lo transparente, sobre papel blanco)."""
@@ -243,17 +356,7 @@ def limpiar(imagen, zonas_sello=(), esc: int = ESCALA, avance=None):
     paso(0.05)
     g = preparar(g0, esc, NORMAL["suav"])
     paso(0.20)
-    papel = papel_local(g, esc)
-    paso(0.45)
-    out = proceso(g, papel, esc, **NORMAL)
-    paso(0.75)
-    zonas = [z for z in (_zona(z, g0.size) for z in zonas_sello or ()) if z]
-    if zonas:
-        s = proceso(g, papel, esc, **SELLO)
-        for x0, y0, x1, y1 in zonas:
-            out[y0 * esc:y1 * esc, x0 * esc:x1 * esc] = s[y0 * esc:y1 * esc, x0 * esc:x1 * esc]
-        del s
-    paso(0.95)
+    out = _receta(g, g0.size, zonas_sello, esc, paso)
     hecha = Image.fromarray(out.astype(np.uint8))
     alfa = _alfa(imagen)
     if alfa is not None:

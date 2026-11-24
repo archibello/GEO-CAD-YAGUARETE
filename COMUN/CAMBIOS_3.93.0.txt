@@ -1,0 +1,76 @@
+GeoCAD - versión 3.93.0
+=======================
+QGIS: GEORREF es el de IngeCAD (pares de puntos sobre el mapa, tabla de
+puntos, Transformar), con un botón para abrir el Georreferenciador de QGIS.
+
+Por qué
+   (Fernando, 23/11/2026: «con respecto a la herramienta georreferenciador
+   podemos hacer que la misma este basada en la de IngeCAD y no en la de
+   QGIS, para que exista una verdadera razon para ocuparla en casos donde el
+   plano fué insertado a la pantalla desde otros procedimientos no
+   estandares al QGIS».) En la 3.90.0 el botón abría el Georreferenciador de
+   QGIS, que trabaja sobre la imagen sola, fuera del mapa. Ahora la imagen
+   se ajusta DONDE ESTÁ en el mapa: pegada (PEGARIMAGEN), arrastrada
+   (SOLTARIMAGEN), insertada o ya georreferenciada.
+
+Ajustar imagen con puntos de control (GEORREF, RUBBERSHEET, AJUSTEIMAGEN)
+   El procedimiento de IngeCAD:
+   1. La imagen: la capa ráster activa, o un clic en ella.
+   2. Pares de puntos con las referencias a objetos: «Punto en la imagen n»
+      (dónde está) y «Punto de destino n» (dónde tiene que quedar). Cada par
+      es una flecha numerada; U quita el último; C carga «<imagen>.points».
+      Con los puntos suficientes se ve, punteado, dónde va a quedar.
+   3. Intro: la TABLA DE PUNTOS, la de IngeCAD: método con los nombres de
+      QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin Plate Spline,
+      Proyectiva), habilitado, X/Y de origen (píxeles), X/Y de destino, dX,
+      dY, residuo y error medio; remuestreo y fondo para los que rehacen la
+      imagen; Cargar / Guardar .points, Marcar más pares, Guardar copia geo
+      como..., «Abrir en el Georreferenciador de QGIS» (decidido con
+      Fernando), Transformar y Cancelar.
+   4. Transformar:
+      - Lineal, Helmert y Polinómica 1: una copia «<imagen>_georref» con su
+        archivo de mundo y su .aux.xml (con el sistema y la georreferencia,
+        que manda también sobre un GeoTIFF), y la capa pasa a usarla; o
+        «Archivo de mundo junto a la original» (con .bak del que había).
+      - Proyectiva, Polinómica 2-3 y Thin Plate Spline deforman la imagen:
+        se rehace en una copia (fondo transparente, blanco, negro o los
+        dos), con la barra de avance, y la capa pasa a usarla.
+   La original nunca se toca. Los puntos quedan en «<imagen>.points», el
+   archivo del Georreferenciador de QGIS y de GEORREF de IngeCAD.
+   En QGIS no está «Sólo el dibujo» (la imagen está en su archivo).
+   «Abrir en el Georreferenciador de QGIS»: guarda los puntos y abre ahí la
+   imagen con ellos.
+
+Por dentro
+- nucleo/georref_cuentas.py (nuevo): las cuentas de GEORREF (métodos,
+  residuos, error medio, tabla, .points, archivo de mundo), que estaban en
+  georref.py de IngeCAD; IngeCAD las importa de ahí con los mismos nombres.
+- nucleo/georref_rehacer.py (nuevo): rehacer la imagen deformada sin PIL
+  (numpy): Proyectiva exacta por píxel, Polinómica 2-3 y TPS con la malla
+  de 32 px, remuestreo Vecino / Lineal / Cúbica (la de PIL, a = −1). Da lo
+  mismo que IngeCAD con PIL: Vecino idéntico, Lineal y Cúbica ±1.
+- QGIS: dibujo/georref_qgis.py (nuevo: la orden, las flechas y sus números,
+  Transformar) y dibujo/georref_ui_qgis.py (nuevo: la tabla de IngeCAD con
+  el botón del Georreferenciador). dibujo/imagen_geo_qgis.py: sin el GEORREF
+  de la 3.90.0 (queda abrir_georreferenciador, que usa el botón).
+- Manual: 02_qgis (tabla Dibujar).
+
+Pruebas
+- test_georref_qgis (nueva): el núcleo y el rehacer sin PIL; los mismos
+  métodos que IngeCAD; el rehacer contra el de IngeCAD con PIL (Proyectiva,
+  Polinómica 2 y TPS, tres remuestreos, fondos); la tabla de QGIS.
+  test_georref, test_imagengeo y las demás de imágenes de IngeCAD siguen
+  pasando; test_imagen_geo_qgis al día.
+- ventana/banco_georref_orden_qgis.py (nuevo): QGIS 4.2.3 real; pares con
+  clics, U, flechas, números y dónde quedaría; la tabla de verdad (3 filas,
+  7 métodos, el botón); Helmert en una copia con las esquinas en su lugar
+  verdadero; archivo de mundo junto a la original; TPS y Proyectiva
+  rehechas (con los dos fondos); el botón sin Georreferenciador; Esc;
+  TODO OK.
+- ventana/banco_georref_qgis.py: QGIS 4.2.3 ENTERO: GEORREF, dos pares y el
+  botón: el Georreferenciador de QGIS se abre con la imagen y los 2 puntos;
+  TODO OK. Los bancos de PEGARIMAGEN, SOLTARIMAGEN, INSERTARGEO/EXPORTARGEO,
+  ASPECTOIMAGEN y LIMPIARPLANO siguen TODO OK.
+- banco_imagenes_ventana (IngeCAD, sin pantalla): las mismas 3 o 4 fallas
+  de siempre por falta de OpenGL, igual con el código de antes.
+- Pruebas manuales: GR1-GR5.

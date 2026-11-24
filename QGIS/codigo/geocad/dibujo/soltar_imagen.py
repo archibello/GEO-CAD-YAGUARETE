@@ -128,9 +128,15 @@ def copiar(original, carpeta, p1, ancho, giro, px, py, wkt=''):
     os.makedirs(carpeta, exist_ok=True)
     destino = nombre_libre(carpeta, original)
     shutil.copyfile(str(original), destino)
+    georreferenciar(destino, p1, ancho, giro, px, py, wkt)
+    return destino
+
+
+def georreferenciar(destino, p1, ancho, giro, px, py, wkt=''):
+    """Escribe junto a ``destino`` su archivo de mundo y, con ``wkt``, su .aux.xml
+    (también lo usa PEGARIMAGEN, 3.89.0)."""
     with open(ruta_mundo(destino), 'w', encoding='ascii') as f:
         f.write(texto_mundo(archivo_mundo(p1, ancho, giro, px, py)))
     if wkt:
-        with open(destino + '.aux.xml', 'w', encoding='utf-8') as f:
+        with open(str(destino) + '.aux.xml', 'w', encoding='utf-8') as f:
             f.write(aux_xml(wkt))
-    return destino
