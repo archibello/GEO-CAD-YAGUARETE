@@ -19,6 +19,13 @@ original quedan en la capa (propiedad «geocad/aspecto», se guarda con el
 proyecto): la ventana vuelve a abrir con ellos y se rehace siempre desde el
 original. Decidido con Fernando (23/11/2026): sin «Fondo blanco» en QGIS
 (la imagen final ya trae el papel blanco) y sin U: «Volver al original».
+
+Marca vieja (3.94.1, Fernando, 24/11/2026): GEORREF hace su propia copia con
+otro archivo de mundo (y, si la rehace, otro tamaño), pero la marca seguía en
+la capa; «Entregar imagen final» rehacía el original de antes de ajustarla y
+la imagen volvía a su lugar viejo. Si el archivo de la capa no tiene el tamaño
+y la georreferencia del original marcado, no es una copia de ASPECTOIMAGEN: la
+marca se descarta y la imagen de hoy pasa a ser el original (marca_vigente).
 """
 
 import json
@@ -131,6 +138,29 @@ def marcar(capa, valores, original):
     else:
         capa.setCustomProperty(PROPIEDAD, json.dumps(
             {'valores': A.normalizar(valores), 'original': str(original)}, sort_keys=True))
+
+
+def _mismo_lugar(a, b):
+    """¿Dos lecturas de GDAL con el mismo tamaño y la misma geotransformación?"""
+    if a[1:3] != b[1:3] or (a[0] is None) != (b[0] is None):
+        return False
+    if a[0] is None:
+        return True
+    return all(abs(float(x) - float(y)) <= 1e-9 * max(1.0, abs(float(x)), abs(float(y)))
+               for x, y in zip(a[0], b[0]))
+
+
+def marca_vigente(capa, original):
+    """¿La capa sigue usando una copia de ASPECTOIMAGEN hecha desde ``original``?
+    No, si otra orden (GEORREF) le cambió el archivo por uno de otro tamaño o en
+    otro lugar. Si GDAL no lee alguno de los dos, se deja la marca como está."""
+    actual = archivo_de_capa(capa)
+    if not actual or os.path.abspath(actual) == os.path.abspath(str(original)):
+        return True
+    a, b = leer_gdal(actual), leer_gdal(original)
+    if a is None or b is None:
+        return True
+    return _mismo_lugar(a, b)
 
 
 def nombre_copia(carpeta, original, sufijo=SUFIJO):
@@ -286,6 +316,11 @@ class AspectoImagenCommand(_ElegirImagen):
         from qgis.core import QgsProject
         cl = self.cl
         guardado = leer(capa)
+        if guardado is not None and not marca_vigente(capa, guardado[1]):
+            cl.echo('ASPECTOIMAGEN: la imagen cambió después del aspecto (GEORREF u otra orden); '
+                    'se toma como está ahora y su aspecto anterior se olvida.')
+            marcar(capa, None, None)
+            guardado = None
         if guardado is not None:
             valores, original = guardado
         else:

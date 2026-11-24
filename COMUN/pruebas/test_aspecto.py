@@ -443,4 +443,41 @@ assert g["limpiar"] is True and g["distancia"] == 10 and g["tolerancia"] == 40
 assert any("manchas limpiadas (distancia 10 px, tolerancia 40 %)" in m for m in msgs)
 print("ok limpiar manchas")
 
+# ------------------------------------------------------------- 9. después de GEORREF (3.94.1)
+#   Fernando, 24/11/2026: aspecto -> Ajustar imagen (rehace la imagen) -> «Entregar
+#   imagen final» rehacía el original sin deformar y lo estiraba en el marco nuevo
+from ezdxf.math import Matrix44
+dg = Path(tempfile.mkdtemp())
+viejo = dg / "mensura.png"; Image.new("RGB", (80, 40), (255, 255, 255)).save(viejo)
+img = msp.add_image(doc.doc.add_image_def(filename=str(viejo), size_in_pixel=(80, 40)),
+                    insert=(12000, 0), size_in_units=(80, 40))
+respuesta[0] = {"accion": "aceptar", "valores": {"transparente": True}}
+herramienta({img.dxf.handle})
+assert A.leer(img)[1] == str(viejo) and A.marca_vigente(img, viejo)
+assert A.tamano_archivo(viejo) == (80, 40) and A.tamano_archivo(dg / "no.png") is None
+rehecha = dg / "mensura_aspecto_georref.png"                # Proyectiva / Polinómica 2-3 / TPS
+Image.new("RGBA", (70, 50), (0, 0, 0, 0)).save(rehecha)
+hist.execute(G.GeorrefCommand(img, Matrix44(), copia=str(rehecha), tamano=(70, 50)))
+assert img.image_def.dxf.filename == str(rehecha) and A.leer(img)[1] == str(viejo)
+assert not A.marca_vigente(img, viejo)                      # la marca quedó vieja
+respuesta[0] = {"accion": "final", "valores": {"transparente": True}}
+herramienta({img.dxf.handle})
+assert pedidos[0][0] == rehecha and pedidos[0][2] is False  # la ventana abre con la de hoy
+final = Path(img.image_def.dxf.filename)
+assert final.name.startswith("mensura_aspecto_georref") and Image.open(final).size == (70, 50)
+assert tuple(img.dxf.image_size)[:2] == (70, 50) and A.leer(img)[1] == str(rehecha)
+assert any("cambió después del aspecto" in m for m in msgs)
+hist.undo()                                                 # U: la marca vieja vuelve, intacta
+assert img.image_def.dxf.filename == str(rehecha) and A.leer(img)[1] == str(viejo)
+#   Lineal / Helmert / Polinómica 1 sólo mueven la imagen: la marca sigue valiendo
+hist.undo()
+assert A.marca_vigente(img, viejo)
+hist.execute(G.GeorrefCommand(img, Matrix44.translate(5, 5, 0)))
+assert A.marca_vigente(img, viejo)
+msgs.clear(); respuesta[0] = {"accion": "final", "valores": {"transparente": True}}
+herramienta({img.dxf.handle})
+assert pedidos[0][0] == viejo and pedidos[0][2] is True
+assert not any("cambió después" in m for m in msgs)
+print("ok después de GEORREF")
+
 print("TODO OK ASPECTO")

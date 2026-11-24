@@ -142,6 +142,30 @@ def leer(img):
     return valores, "".join(str(t) for t in tags[2:])
 
 
+def tamano_archivo(ruta):
+    """(ancho, alto) en píxeles de un archivo de imagen sin leer los píxeles, o None."""
+    try:
+        Image = _pil()
+        with Image.open(str(ruta)) as im:
+            return tuple(int(v) for v in im.size)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def marca_vigente(img, original) -> bool:
+    """¿La imagen sigue siendo una copia de ASPECTOIMAGEN hecha desde ``original``?
+    (3.94.1, Fernando, 24/11/2026) GEORREF con Proyectiva, Polinómica 2-3 o TPS
+    rehace la imagen con otro tamaño, pero las XDATA quedaban: el aspecto
+    rehacía el original sin deformar y lo estiraba en el marco nuevo. La copia
+    de ASPECTOIMAGEN tiene el tamaño del original; si no lo tiene, la marca es
+    vieja. Si no se puede leer el original, se deja como está."""
+    tam = tamano_archivo(original)
+    if tam is None:
+        return True
+    w, h = G.tamano(img)
+    return (int(round(w)), int(round(h))) == tam
+
+
 def etiquetas(valores, original: str) -> list:
     """Las XDATA: marca, valores (JSON) y el archivo original en trozos de
     200 caracteres (el límite de un texto de XDATA es 255)."""
@@ -463,6 +487,11 @@ class AspectoImagenTool(Tool):
 
     def _aspecto(self, img) -> None:
         guardado = leer(img)
+        if guardado is not None and not marca_vigente(img, self._real(guardado[1])):
+            # las XDATA nuevas las pone AspectoCommand (U las devuelve)
+            self.ctx.echo("ASPECTOIMAGEN: la imagen cambió después del aspecto (GEORREF u otra "
+                          "orden); se toma como está ahora y su aspecto anterior se olvida.")
+            guardado = None
         if guardado is not None:
             valores, escrito = guardado
         else:

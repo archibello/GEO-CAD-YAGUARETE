@@ -1,0 +1,45 @@
+GeoCAD - versión 3.94.1
+=======================
+IngeCAD y QGIS: ASPECTOIMAGEN después de ajustar la imagen con GEORREF.
+«Entregar imagen final» queda donde GEORREF dejó la imagen.
+
+Por qué
+   (Fernando, 24/11/2026, en QGIS.) Un plano de mensura: LIMPIARPLANO,
+   ASPECTOIMAGEN (fondo transparente), Ajustar imagen dos veces (quedó
+   perfecto) y «Entregar imagen final»: el plano se achicó y se fue lejos
+   del lugar ajustado.
+   ASPECTOIMAGEN deja en la imagen una marca con el archivo original y
+   siempre rehace desde él. GEORREF cambiaba el archivo de la imagen pero
+   la marca seguía: la imagen final se rehacía desde el original de antes
+   de ajustar.
+   - QGIS: con cualquier método. La copia salía con el archivo de mundo del
+     original viejo (en este plano, píxel de 0,0126 m en vez de 0,0431 m).
+   - IngeCAD: sólo con Proyectiva, Polinómica 2-3 y TPS, que rehacen la
+     imagen con otro tamaño: el original sin deformar quedaba estirado en el
+     marco nuevo. Con Lineal, Helmert y Polinómica 1 no pasaba (sólo mueven
+     la imagen).
+
+Qué cambia
+   Antes de usar la marca, ASPECTOIMAGEN mira si la imagen sigue usando una
+   copia hecha por él desde ese original (QGIS: mismo tamaño y misma
+   georreferencia; IngeCAD: mismo tamaño en píxeles). Si no, la marca es
+   vieja: se olvida, la imagen como está ahora pasa a ser el original y la
+   línea de comandos lo dice:
+     «ASPECTOIMAGEN: la imagen cambió después del aspecto (GEORREF u otra
+     orden); se toma como está ahora y su aspecto anterior se olvida.»
+   La ventana abre con los últimos valores usados. En IngeCAD, U devuelve
+   también la marca vieja.
+
+Lo que NO cambia
+   Sin GEORREF en el medio, ASPECTOIMAGEN funciona igual que antes (se rehace
+   siempre desde el original). El original nunca se toca. Sirve también para
+   los dibujos y proyectos que ya tienen la marca vieja.
+
+Para un plano ya entregado mal ubicado (QGIS): «Volver al original» no lo
+   arregla (vuelve al original de antes de ajustar). Cargar la copia ajustada
+   (…_georref.png, en la carpeta de imágenes) o volver a ajustar, y
+   después entregar la imagen final.
+
+Pruebas
+   test_aspecto (parte 9, IngeCAD), test_aspecto_qgis y
+   banco_aspecto_qgis (parte 5, QGIS 4.2.3 real).

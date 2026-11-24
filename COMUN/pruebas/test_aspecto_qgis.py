@@ -84,6 +84,9 @@ for texto in ("Blanco que se borra", "Limpiar manchas", "Ver en rojo lo que se b
 orden = (QG / "dibujo" / "aspecto_qgis.py").read_text(encoding="utf-8")
 assert "from .. import aspecto_cuentas as A" in orden and "PROPIEDAD = 'geocad/aspecto'" in orden
 assert "('ASPECTOIMAGEN', ('ASPECTOIMAGEN', 'IMAGEASPECT', 'ASPECTO')" in orden
+# 3.94.1: después de GEORREF la marca vieja se descarta (banco_aspecto_qgis, parte 5)
+assert "def marca_vigente(capa, original):" in orden
+assert "not marca_vigente(capa, guardado[1])" in orden.split("def aspecto(self, capa):")[1]
 assert (QG / "aspecto_cuentas.py").read_bytes() == (ROOT / "COMUN" / "nucleo" / "aspecto_cuentas.py").read_bytes()
 print("ok ventana")
 

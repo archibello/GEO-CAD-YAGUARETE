@@ -8,7 +8,10 @@
 * volver a abrir: la ventana recibe lo guardado y se rehace desde el original;
 * «Entregar imagen final»: copia opaca (_final); «Volver al original»: la capa
   vuelve a su archivo y se quita la marca; Cancelar no hace nada;
-* con otra capa activa: el cursor encima resalta la imagen y el clic la elige.
+* con otra capa activa: el cursor encima resalta la imagen y el clic la elige;
+* después de GEORREF (3.94.1, Fernando): la capa usa una copia ajustada en otro
+  lugar (otro tamaño u otro archivo de mundo); «Entregar imagen final» sale desde
+  ESA copia y queda donde GEORREF la dejó, no en el lugar del original marcado.
 
 Se corre con el Python de QGIS (Flatpak org.qgis.qgis), con el complemento
 GeoCAD copiado a una carpeta de prueba (nunca la carpeta real de QGIS):
@@ -203,6 +206,47 @@ ver("la resalta", len(pts) == 4)
 n = len(pedidos)
 mgr.point_clicked(QgsPointXY(1050, 2025), False, False)
 ver("el clic la elige", len(pedidos) == n + 1 and mgr.command is None)
+
+print("5. después de GEORREF (3.94.1)")
+iface.activeLayer.return_value = capa
+AQ.ventana = falsa({"accion": "aceptar", "valores": {}})
+plugin.run_command("ASPECTOIMAGEN")
+ver("con aspecto", AQ.leer(capa) is not None and AQ.leer(capa)[1] == plano)
+ver("la copia de ASPECTOIMAGEN vale", AQ.marca_vigente(capa, plano))
+#   lo que deja GEORREF al rehacer: otra imagen, otro tamaño, otro lugar (y la marca sigue)
+ajustada = os.path.join(carpeta, "plano_aspecto_georref.png")
+im2 = QImage(180, 120, QImage.Format.Format_ARGB32); im2.fill(QColor(0, 0, 0, 0))
+p = QPainter(im2); p.fillRect(10, 58, 160, 4, QColor(0, 0, 0)); p.end()
+im2.save(ajustada, "PNG")
+mundo_ajustada = "0.25\n0\n0\n-0.25\n2000.125\n3029.875\n"           # 45 x 30 desde (2000, 3000)
+open(os.path.join(carpeta, "plano_aspecto_georref.pgw"), "w").write(mundo_ajustada)
+AQ.usar_archivo(capa, ajustada)
+ver("la marca vieja sigue en la capa", AQ.leer(capa)[1] == plano)
+ver("y ya no vale", not AQ.marca_vigente(capa, plano))
+pedidos.clear()
+AQ.ventana = falsa({"accion": "final", "valores": {}})
+plugin.run_command("ASPECTOIMAGEN")
+ver("la ventana abre con la ajustada", pedidos and pedidos[-1][0] == ajustada and pedidos[-1][2] is False,
+    repr(pedidos[-1:]))
+ver("lo avisa", "cambió después del aspecto" in historia())
+final = capa.source()
+ver("final desde la ajustada", os.path.basename(final).startswith("plano_aspecto_georref_final"), final)
+ds = gdal.Open(final)
+ver("mismo tamaño que la ajustada", (ds.RasterXSize, ds.RasterYSize) == (180, 120))
+gt = ds.GetGeoTransform()
+ver("en el lugar de GEORREF", [round(v, 6) for v in gt] == [2000.0, 0.25, 0.0, 3030.0, 0.0, -0.25], repr(gt))
+ds = None
+ext = capa.extent()
+ver("la capa, donde estaba", abs(ext.xMinimum() - 2000) < 1e-6 and abs(ext.yMaximum() - 3030) < 1e-6
+    and abs(ext.width() - 45) < 1e-6, ext.toString())
+ver("la marca nueva: la ajustada", AQ.leer(capa)[1] == ajustada and AQ.marca_vigente(capa, ajustada))
+#   mismo tamaño pero otro archivo de mundo (GEORREF Lineal/Helmert): también vieja
+otra = os.path.join(carpeta, "plano_lineal.png")
+QImage(ajustada).save(otra, "PNG")
+open(os.path.join(carpeta, "plano_lineal.pgw"), "w").write("0.25\n0\n0\n-0.25\n2500.125\n3029.875\n")
+AQ.usar_archivo(capa, otra)
+ver("otro lugar, mismo tamaño: vieja", not AQ.marca_vigente(capa, ajustada))
+ver("el original, siempre igual", original_intacto())
 AQ.ventana = real
 
 plugin.unload()
