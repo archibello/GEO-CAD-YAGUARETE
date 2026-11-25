@@ -31,7 +31,7 @@ try:                                    # Qt6 (QGIS 4)
 except ImportError:                     # Qt5 (QGIS 3)
     from qgis.PyQt.QtWidgets import QAction
 
-from . import actualizar, bloqueo, color_barra, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos, ventana_alta
+from . import actualizar, aviso_versiones, bloqueo, color_barra, botones, botones_barras, buzon, config, desde_ingecad, modulos, nombre, submodulos, ventana_alta
 
 MENU_TITLE = nombre.NOMBRE_CORTO
 # Verde bosque (opción B), del ícono de QGIS (Fernando, 12/11/2026): sólo nuestro menú, los de QGIS quedan igual
@@ -47,7 +47,7 @@ VIEJOS = ("ingecad_puente",)          # Puente IngeCAD-QGIS 1.x
 #: las barras de GeoCAD que entran en Administrar botones (3.38.0), en su orden
 BARRAS_GEOCAD = ("DibujoCADToolbar", "EdicionCADToolbar", "TextoCADToolbar", "BloquesCADToolbar",
                  "PresentacionesCADToolbar", "CadLayersToolbar", "GeoCADToolbar")
-VERSION = "3.94.1"
+VERSION = "3.95.0"
 _MSG = {"info": Qgis.MessageLevel.Info, "ok": Qgis.MessageLevel.Success,
         "warn": Qgis.MessageLevel.Warning, "error": Qgis.MessageLevel.Critical}
 _YES = QMessageBox.StandardButton.Yes
@@ -382,6 +382,69 @@ class GeoCAD:
             self._cargar_subs()
         else:
             self._cargar_subs()
+        QTimer.singleShot(3000, self._aviso_github)      # 3.95.0
+
+    # -- aviso de versiones nuevas publicadas en GitHub (3.95.0) -----------------------
+    def _aviso_github(self) -> None:
+        """Una vez por día se le pregunta a GitHub, en otro hilo (QGIS no se
+        demora; sin internet no pasa nada)."""
+        if getattr(self, "_aviso_iniciado", False) or not aviso_versiones.toca_consultar("qgis"):
+            return
+        self._aviso_iniciado = True
+        import threading
+
+        caja = {}
+        actual = VERSION
+
+        def fondo():
+            try:
+                caja["r"] = aviso_versiones.revisar("qgis", actual)
+            except Exception:  # noqa: BLE001 -- el aviso nunca molesta
+                caja["r"] = None
+            caja["listo"] = True
+
+        threading.Thread(target=fondo, daemon=True, name="geocad-aviso").start()
+        reloj = QTimer(self.iface.mainWindow())
+        reloj.setInterval(500)
+
+        def mirar():
+            if not caja.get("listo"):
+                return
+            reloj.stop()
+            reloj.deleteLater()
+            if caja.get("r"):
+                self.mostrar_aviso(*caja["r"])
+
+        reloj.timeout.connect(mirar)
+        reloj.start()
+
+    def _preguntar_aviso(self, texto: str, pagina: str) -> str:
+        from qgis.PyQt import QtWidgets
+
+        return aviso_versiones.preguntar(QtWidgets, self.iface.mainWindow(),
+                                         "Actualizar GeoCAD Yaguareté", texto, pagina)
+
+    def mostrar_aviso(self, publicada, carpeta) -> str:
+        """El aviso con la versión bajada de GitHub; devuelve lo elegido."""
+        cand = actualizar.mas_nueva(carpeta, "qgis", VERSION)
+        if cand is None:
+            return ""
+        texto = aviso_versiones.texto_aviso("QGIS", VERSION, publicada, actualizar.cambios(cand))
+        elegido = self._preguntar_aviso(texto, publicada.pagina)
+        if elegido == aviso_versiones.NO_AVISAR:
+            aviso_versiones.saltear(publicada.version, "QGIS")
+            self._bar(f"GeoCAD Yaguareté: no se avisa más de la {publicada.version}. Se puede "
+                      f"instalar igual con GeoCAD Yaguareté > Actualizar.", "info", 10)
+        elif elegido == aviso_versiones.ACTUALIZAR:
+            try:
+                buzon.send("ingecad", {"tipo": "actualizar", "carpeta": str(carpeta)}, "qgis")
+            except OSError:
+                pass
+            self._instalar_candidato(cand)
+        else:
+            self._bar(f"GeoCAD Yaguareté {publicada.version} está disponible; "
+                      f"se vuelve a avisar mañana.", "info", 8)
+        return elegido
 
     def choose_modules(self, primera_vez=False) -> None:
         from qgis.PyQt import QtWidgets
@@ -1219,11 +1282,15 @@ class GeoCAD:
         if QMessageBox.question(mw, "Actualizar GeoCAD Yaguareté", texto,
                                 _YES | _NO) != _YES:
             return False
+        return self._instalar_candidato(cand)
+
+    def _instalar_candidato(self, cand) -> bool:
         aqui = Path(__file__).resolve().parent
         try:
             actualizar.instalar_zip(actualizar.extraer(cand), aqui.parent, aqui.name)
         except Exception as exc:
-            QMessageBox.information(mw, "GeoCAD Yaguareté", f"No se instaló: {exc}")
+            QMessageBox.information(self.iface.mainWindow(), "GeoCAD Yaguareté",
+                                    f"No se instaló: {exc}")
             return False
         self._bar(f"GeoCAD Yaguareté {cand.version} instalado; recargando el complemento...", "ok")
         QTimer.singleShot(0, self._reinstalar)

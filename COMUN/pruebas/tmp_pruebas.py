@@ -7,6 +7,8 @@ import atexit, os, shutil, signal, sys, tempfile
 RAIZ = tempfile.mkdtemp(prefix="geocad-prueba-")
 tempfile.tempdir = RAIZ
 atexit.register(shutil.rmtree, RAIZ, ignore_errors=True)
+# 3.95.0: ninguna prueba le pregunta a GitHub por versiones nuevas
+os.environ.setdefault("GEOCAD_SIN_AVISO", "1")
 # timeout manda SIGTERM: salir con sys.exit para que corra atexit
 signal.signal(signal.SIGTERM, lambda *_: sys.exit(128 + signal.SIGTERM))
 

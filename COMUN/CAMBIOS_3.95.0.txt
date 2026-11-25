@@ -1,0 +1,45 @@
+GeoCAD - versión 3.95.0
+=======================
+IngeCAD y QGIS: aviso automático de versiones nuevas publicadas en GitHub.
+
+Por qué
+   (Fernando, 24/11/2026.) «¿Se les puede avisar a los usuarios de nuevas
+   actualizaciones? ¿De forma automática?» Hasta ahora Actualizar buscaba
+   sólo en una carpeta de esta computadora: quien bajó GeoCAD de GitHub no
+   se enteraba de las versiones nuevas.
+
+Qué cambia
+   Al abrir IngeCAD (con el primer dibujo) o QGIS, a lo sumo una vez por
+   día, GeoCAD le pregunta a GitHub cuál es la última versión publicada.
+   Lo hace en otro hilo: el programa no se demora, y sin internet no pasa
+   nada (se vuelve a intentar la próxima vez que se abra).
+   Si es más nueva que la instalada, baja la entrega GeoCAD_<v>.zip
+   (unos 3 MB) a ~/.config/geocad/descargas y muestra el aviso, con lo que
+   trae la versión (su CAMBIOS) y un enlace a su página en GitHub:
+     - Actualizar ahora: la instala con el mismo instalador de siempre y le
+       avisa al otro programa, que ofrece actualizarse desde la misma
+       descarga.
+     - Más tarde: no hace nada; se vuelve a avisar al otro día.
+     - No avisar de esta versión: no se avisa más de ésa (en los dos
+       programas); la siguiente sí. Se puede instalar igual con Actualizar.
+   Se apaga en Configuración común: «Avisar cuando haya una versión nueva
+   en GitHub» (prendido de fábrica).
+   No se manda ningún dato del usuario: sólo se pide la página pública de
+   la última versión, como cualquier visita.
+
+   Actualizar (con la carpeta de esta computadora) reconoce ahora también
+   el instalador de QGIS que viene dentro de GeoCAD_<v>.zip
+   (opcional_QGIS_geocad_qgis_<v>.zip).
+
+Lo que NO cambia
+   GeoCAD > Actualizar sigue buscando en la carpeta de actualizaciones. Si
+   la versión instalada es igual o más nueva que la de GitHub, no aparece
+   ningún aviso.
+
+Pruebas
+   test_aviso_versiones (GitHub de mentira: consulta, descarga, una vez por
+   día, los tres botones en IngeCAD y en QGIS). Ninguna prueba sale a la red
+   (GEOCAD_SIN_AVISO en tmp_pruebas y en el QGIS de mentira; los bancos sin
+   pantalla tampoco). La ventana del aviso, probada con el Qt de IngeCAD
+   (PySide6) y de QGIS 4.2.3 (PyQt6), y la consulta y la descarga con
+   GitHub de verdad (la 3.94.1).

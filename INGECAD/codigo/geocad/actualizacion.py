@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from . import actualizar, buzon, config
+from . import actualizar, aviso_versiones, buzon, config
 
 TITULO = "Actualizar GeoCAD Yaguareté"
 
@@ -139,10 +139,14 @@ def actualizar_ingecad(window, echo, carpeta: str, avisar_qgis: bool = True,
     if not quiere:
         echo("Actualizar GeoCAD Yaguareté: no se instaló nada.")
         return False
+    _instalar(window, echo, cand)
+    return True
+
+
+def _instalar(window, echo, cand) -> None:
     ruta = actualizar.extraer(cand)
     echo(f"Instalando GeoCAD Yaguareté {cand.version} desde {cand.nombre}...")
     _diferir(lambda: _correr_instalador(window, ruta, echo))
-    return True
 
 
 def cmd_actualizar(ctx, *args) -> None:
@@ -162,3 +166,83 @@ def desde_qgis(window, msg: dict, echo) -> None:
     if not carpeta or not Path(carpeta).is_dir():
         return
     actualizar_ingecad(window, echo, carpeta, avisar_qgis=False, silencioso=True)
+
+
+# -- aviso de versiones nuevas publicadas en GitHub (3.95.0) -------------------------
+_AVISO = {"iniciado": False}
+
+
+def iniciar_aviso(window, echo) -> None:
+    """Al abrir el primer dibujo: una vez por día se le pregunta a GitHub, en otro
+    hilo (IngeCAD no se demora; sin internet no pasa nada)."""
+    if _AVISO["iniciado"]:
+        return
+    _AVISO["iniciado"] = True
+    try:
+        from PySide6.QtCore import QTimer
+    except ImportError:
+        return
+    actual = version_instalada()
+    if not aviso_versiones.toca_consultar("ingecad"):
+        return
+    import threading
+
+    caja = {}
+
+    def fondo():
+        try:
+            caja["r"] = aviso_versiones.revisar("ingecad", actual)
+        except Exception:  # noqa: BLE001 -- el aviso nunca molesta
+            caja["r"] = None
+        caja["listo"] = True
+
+    threading.Thread(target=fondo, daemon=True, name="geocad-aviso").start()
+    reloj = QTimer(window)
+    reloj.setInterval(500)
+
+    def mirar():
+        if not caja.get("listo"):
+            return
+        reloj.stop()
+        reloj.deleteLater()
+        if caja.get("r"):
+            mostrar_aviso(window, echo, *caja["r"])
+
+    reloj.timeout.connect(mirar)
+    reloj.start()
+
+
+def _preguntar_aviso(window, texto: str, pagina: str) -> str:
+    from PySide6 import QtWidgets
+
+    return aviso_versiones.preguntar(QtWidgets, window, TITULO, texto, pagina)
+
+
+def mostrar_aviso(window, echo, publicada, carpeta) -> str:
+    """El aviso con la versión bajada de GitHub; devuelve lo elegido."""
+    if _hay_aviso_abierto():
+        return ""
+    actual = version_instalada()
+    cand = actualizar.mas_nueva(carpeta, "ingecad", actual)
+    if cand is None:
+        return ""
+    texto = aviso_versiones.texto_aviso("IngeCAD", actual, publicada, actualizar.cambios(cand))
+    elegido = _preguntar_aviso(window, texto, publicada.pagina)
+    if elegido == aviso_versiones.NO_AVISAR:
+        aviso_versiones.saltear(publicada.version, "IngeCAD")
+        echo(f"GeoCAD Yaguareté: no se avisa más de la {publicada.version}. "
+             f"Se puede instalar igual con ACTUALIZARGEOCAD.")
+    elif elegido == aviso_versiones.ACTUALIZAR:
+        actual = version_instalada()
+        cand = actualizar.mas_nueva(carpeta, "ingecad", actual)
+        if cand is None:
+            echo(f"Actualizar GeoCAD Yaguareté: no se instaló nada; ya está la {actual}.")
+            return elegido
+        try:
+            buzon.send("qgis", {"tipo": "actualizar", "carpeta": str(carpeta)}, "ingecad")
+        except OSError:
+            pass
+        _instalar(window, echo, cand)
+    else:
+        echo(f"GeoCAD Yaguareté {publicada.version} está disponible; se vuelve a avisar mañana.")
+    return elegido

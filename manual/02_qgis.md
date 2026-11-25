@@ -368,5 +368,11 @@ IngeCAD. 🔁
 
 - **GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (QGIS e IngeCAD)…**:
   busca la versión nueva y la instala en los dos programas.
+- **Aviso de versiones nuevas** (desde la 3.95.0): al abrir QGIS, una vez por
+  día, GeoCAD le pregunta a GitHub si hay una versión más nueva. Si la hay,
+  avisa con sus cambios: **Actualizar ahora**, **Más tarde** (vuelve a avisar
+  al otro día) o **No avisar de esta versión**. No se manda ningún dato; sin
+  internet no pasa nada. Se apaga en **Configuración común…** («Avisar cuando
+  haya una versión nueva en GitHub»).
 - **Acerca de…**: la versión instalada.
 - **Configuración común…**: las opciones que comparten QGIS e IngeCAD.

@@ -397,6 +397,12 @@ objeto(s) … El dibujo adoptó el sistema POSGAR 2007 / Argentina faja 6
 - **GeoCAD Yaguareté > Actualizar GeoCAD Yaguareté (IngeCAD y QGIS)…**
   (ACTUALIZARGEOCAD): busca la versión nueva y la instala en los dos
   programas. Sólo ofrece versiones más nuevas que la instalada.
+- **Aviso de versiones nuevas** (desde la 3.95.0): al abrir el primer dibujo,
+  una vez por día, GeoCAD le pregunta a GitHub si hay una versión más nueva.
+  Si la hay, avisa con sus cambios: **Actualizar ahora**, **Más tarde** (vuelve
+  a avisar al otro día) o **No avisar de esta versión**. No se manda ningún
+  dato; sin internet no pasa nada. Se apaga en **Configuración común…**
+  («Avisar cuando haya una versión nueva en GitHub»).
 - **Diagnóstico de GeoCAD Yaguareté en esta computadora**
   (DIAGNOSTICOGEOCAD): un informe para adjuntar si algo no anda.
 - **Acerca de GEO-CAD-YAGUARETÉ…** (ACERCAGEOCAD): la versión instalada.

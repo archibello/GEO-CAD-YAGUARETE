@@ -51,7 +51,7 @@ from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.94.1"
+VERSION = "3.95.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -134,6 +134,7 @@ def _document_open(ctx, document):
     soltar_imagen.aplicar(ctx.host)
     if modulos.activo(PROGRAMA, "puente"):
         puente.ensure_started(ctx.host)
+    actualizacion.iniciar_aviso(ctx.host, getattr(ctx, "echo", print))   # 3.95.0
     if not modulos.elegido(PROGRAMA) or modulos.nuevos(PROGRAMA):
         # instalado desde la Consola: la primera vez que se abre, se eligen los módulos
         try:
@@ -480,7 +481,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.94.1",
+        version="3.95.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

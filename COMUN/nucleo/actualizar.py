@@ -6,6 +6,7 @@ carpeta del proyecto o una copia de COMUN/entregas) la versión más nueva:
 
     instalar_geocad_<v>.py  /  2_IngeCAD_instalar_geocad_<v>.py   (IngeCAD)
     geocad_qgis_<v>.zip     /  1_QGIS_geocad_qgis_<v>.zip         (QGIS)
+    opcional_QGIS_geocad_qgis_<v>.zip   (el de QGIS dentro de GeoCAD_<v>.zip; 3.95.0)
     GeoCAD_<v>.zip          (la entrega completa: trae los dos)
 
 Python puro (sin Qt): el complemento de QGIS usa una copia idéntica.
@@ -24,7 +25,7 @@ from typing import Optional
 _V = r"(\d+\.\d+\.\d+)"
 PATRONES = {
     "ingecad": re.compile(rf"^(?:\d+_IngeCAD_)?instalar_geocad_{_V}\.py$"),
-    "qgis": re.compile(rf"^(?:\d+_QGIS_)?geocad_qgis_{_V}\.zip$"),
+    "qgis": re.compile(rf"^(?:\d+_QGIS_|opcional_QGIS_)?geocad_qgis_{_V}\.zip$"),
 }
 ENTREGA = re.compile(rf"^GeoCAD_{_V}\.zip$")
 PROFUNDIDAD = 3

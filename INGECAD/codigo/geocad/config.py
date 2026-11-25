@@ -103,6 +103,9 @@ SETTINGS = (
     Setting("carpeta_actualizaciones", "Carpeta de donde se actualiza GeoCAD Yaguareté", "text", "",
             "La carpeta del proyecto (o donde se copian las entregas). "
             "Se busca ahí la versión más nueva."),
+    Setting("avisar_versiones", "Avisar cuando haya una versión nueva en GitHub", "bool", True,
+            "Una vez por día, al abrir, se pregunta a GitHub cuál es la última versión "
+            "publicada. No se manda ningún dato."),
     Setting("ingecad_windows", "IngeCAD en Windows (ruta de ingecad.exe)", "text", "",
             "Vacío: QGIS lo busca solo (Registro, C:\\Program Files\\IngeCAD). "
             "Sólo hace falta si IngeCAD está instalado en otro lado."),
@@ -115,6 +118,11 @@ OCULTOS = (
     Setting("envio_altura", "Altura de los textos al enviar a IngeCAD", "float", 2.5, "",
             (), 0.01, 100000),
     Setting("grilla_hoja", "Grilla de hoja prendida (GRILLAHOJA)", "bool", False),
+    # 3.95.0: aviso de versiones nuevas (el día de la última consulta, por programa,
+    # y la versión de «No avisar de esta versión»)
+    Setting("aviso_consultado_ingecad", "Última consulta a GitHub desde IngeCAD", "text", ""),
+    Setting("aviso_consultado_qgis", "Última consulta a GitHub desde QGIS", "text", ""),
+    Setting("aviso_saltear", "Versión de la que no se avisa", "text", ""),
     Setting("grilla_hoja_intensidad", "Intensidad de la grilla de hoja", "choice", "media", "",
             (("suave", "Suave"), ("media", "Media"), ("marcada", "Marcada"))),
 )
