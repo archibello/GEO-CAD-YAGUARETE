@@ -92,7 +92,7 @@ assert json.loads(BT.archivo().read_text(encoding="utf-8"))["qgis"]["migraciones
                                                                                       "capas-panel", "capas-banco",
                                                                                       "capas-relleno", "unir",
                                                                                       "imagenes-qgis", "imagenes-geo-qgis",
-                                                                                      "aspecto-qgis", "limpiar-plano-qgis", "filtro-qgis"]
+                                                                                      "aspecto-qgis", "limpiar-plano-qgis", "filtro-qgis", "escala-qgis"]
 # 3.60.7: lo que ya pasó por la 3.60.2: LAYISO y los demás sólo en el banco Capas CAD
 BT.archivo().write_text(json.dumps({"qgis": {"categorias": [{"nombre": "Mía", "botones": [
     "capas:layiso", "dibujo:line", "capas:lwdisplay"]}], "ocultos": ["capas:layoff", "dibujo:arc"],

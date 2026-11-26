@@ -62,7 +62,7 @@ DEFECTO = {
         ("Yaguá Imagenes", ("dibujo:insertgeo", "dibujo:georref", "dibujo:exportgeo",
                             "dibujo:aspecto", "dibujo:limpiarplano", "dibujo:pasteimage")),
         ("Yaguá Edición", (
-            "dibujo:select", "dibujo:filter", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
+            "dibujo:select", "dibujo:filter", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:scale", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:stretch", "dibujo:offset", "dibujo:trim",
             "dibujo:extend", "dibujo:chamfer", "dibujo:fillet", "dibujo:perp", "dibujo:breakpt", "dibujo:break",
             "dibujo:join", "dibujo:explode", "dibujo:divide", "dibujo:measure", "dibujo:copybase",
@@ -161,7 +161,7 @@ TEMA_BANCO = {
             "dibujo:line", "dibujo:pline", "dibujo:arc", "dibujo:circle", "dibujo:rect",
             "dibujo:rumbos", "dibujo:perp"),
         "Edición": (
-            "dibujo:select", "dibujo:filter", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:erase",
+            "dibujo:select", "dibujo:filter", "dibujo:move", "dibujo:copy", "dibujo:rotate", "dibujo:scale", "dibujo:erase",
             "dibujo:mirror", "dibujo:align", "dibujo:aligncopy", "dibujo:stretch",
             "dibujo:offset", "dibujo:trim", "dibujo:extend", "dibujo:chamfer", "dibujo:fillet",
             "dibujo:breakpt", "dibujo:break", "dibujo:join", "dibujo:explode", "dibujo:divide",
@@ -303,10 +303,11 @@ CAPAS_RELLENO = ("capas:fill", "capas:filltr")
 #: «limpiar-plano-qgis» (3.92.0): LIMPIARPLANO detrás de ASPECTOIMAGEN (o delante de
 #: PEGARIMAGEN), con la misma regla.
 #: «filtro-qgis» (3.97.0): FILTRO detrás de DESIGNA (dibujo:select), donde esté.
+#: «escala-qgis» (3.98.0): ESCALA detrás de GIRA (dibujo:rotate), donde esté.
 IMAGENES_GEO_QGIS = ("dibujo:insertgeo", "dibujo:georref", "dibujo:exportgeo")
 MIGRACIONES = {"qgis": ("capas-ingecad", "capas-panel", "capas-banco", "capas-relleno", "unir",
                         "imagenes-qgis", "imagenes-geo-qgis", "aspecto-qgis",
-                        "limpiar-plano-qgis", "filtro-qgis"),
+                        "limpiar-plano-qgis", "filtro-qgis", "escala-qgis"),
                "ingecad": ("limpiar-plano", "rumbos")}
 
 
@@ -383,6 +384,15 @@ def _migrar(programa: str, crudo: dict) -> bool:
                 bs = list(destino.get("botones") or ())
                 at = bs.index("dibujo:select") + 1
                 destino["botones"] = bs[:at] + ["dibujo:filter"] + bs[at:]
+        elif nombre == "escala-qgis":           # 3.98.0: ESCALA detrás de GIRA, donde esté
+            cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
+            if any("dibujo:scale" in (c.get("botones") or ()) for c in cats):
+                continue
+            destino = next((c for c in cats if "dibujo:rotate" in (c.get("botones") or ())), None)
+            if destino is not None:
+                bs = list(destino.get("botones") or ())
+                at = bs.index("dibujo:rotate") + 1
+                destino["botones"] = bs[:at] + ["dibujo:scale"] + bs[at:]
         elif nombre == "imagenes-qgis":
             cats = [c for c in crudo.get("categorias") or () if isinstance(c, dict)]
             if any("dibujo:pasteimage" in (c.get("botones") or ()) for c in cats):

@@ -189,7 +189,8 @@ toca la tabla de la capa.
 
 | Orden | Para qué |
 |---|---|
-| **DESPLAZA** (MOVER), **COPIA**, **GIRAR** (ROTAR), **ESCALA**, **SIMETRIA** (ESPEJO) | mover, copiar, girar, escalar, reflejar, con punto base y referencias |
+| **DESPLAZA** (MOVER), **COPIA**, **GIRAR** (ROTAR), **ESCALA** (SCALE, SC), **SIMETRIA** (ESPEJO) | mover, copiar, girar, escalar, reflejar, con punto base y referencias |
+| **ESCALA** (SC) en detalle | como en IngeCAD: punto base; el factor se escribe (2, 0,5) o es la distancia del clic a la base; **Copia** deja el original; **Referencia**: la longitud de hoy (escrita o con dos puntos) y la nueva (escrita, desde la base o con **Puntos**). Los textos cambian su altura y los bloques su escala |
 | **MATRIZ** | copias en filas y columnas o alrededor de un centro |
 | **ESTIRA** | estirar lo atrapado por una ventana |
 | **EQDIST** (DESFASE, OFFSET) | paralela a una distancia o por un punto |

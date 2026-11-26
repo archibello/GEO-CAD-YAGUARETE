@@ -334,6 +334,136 @@ class RotateCommand(EditCommand):
         return None
 
 
+class ScaleCommand(EditCommand):
+    """ESCALA (3.98.0), la misma que SCALE (SC) de IngeCAD: punto base; factor escrito o la
+    distancia desde la base; Copia; Referencia (longitud escrita o dos puntos) y nueva
+    longitud o [Puntos]. Textos (ALTURA) y bloques (ESCALA_X/Y) escalan con el objeto."""
+    title = 'ESCALA'
+
+    def after_selection(self):
+        self.state = 'base'
+        self.copy = False
+        self.ref_len = None
+        self.p1 = None
+        self.prompt()
+
+    def step_prompt(self):
+        st, u = self.state, self.mgr.units
+        uno = format_length(1.0, u)
+        if st == 'base':
+            self.cl.set_prompt('Precise punto base')
+        elif st == 'factor':
+            self.cl.set_prompt('Precise factor de escala o', [('C', 'Copia'), ('R', 'Referencia')])
+        elif st == 'ref':
+            self.cl.set_prompt('Precise longitud de referencia', None, uno)
+        elif st in ('ref2', 'pts2'):
+            self.cl.set_prompt('Precise segundo punto')
+        elif st == 'new':
+            self.cl.set_prompt('Precise nueva longitud o', [('P', 'Puntos')], uno)
+        elif st == 'pts1':
+            self.cl.set_prompt('Precise primer punto')
+
+    def base(self):
+        if self.selecting:
+            return None
+        if self.state in ('ref2', 'pts2'):
+            return self.p1
+        return self.base_pt
+
+    def _fn(self, k):
+        b = self.base_pt
+        return lambda g: affine(g, k, 0.0, b, b)
+
+    def _dist_factor(self, p):
+        k = math.hypot(p.x() - self.base_pt.x(), p.y() - self.base_pt.y())
+        return k / self.ref_len if self.state == 'new' and self.ref_len else k
+
+    @staticmethod
+    def _positivo(v):
+        if not v > 0:
+            raise InputError('El valor debe ser positivo.')
+        return v
+
+    def do(self, k):
+        self._positivo(k)
+        attrs = dict(text_scale_fn(k))
+        attrs.update(block_scale_fn(k))
+        n = self.apply_geoms(self._fn(k), 'ESCALA', copy=self.copy, attr_fn=attrs)
+        self.cl.echo('%d objeto(s) %s.' % (n, 'copiado(s) y escalado(s)' if self.copy else 'escalado(s)'))
+        self.end()
+
+    def _ref_taken(self, v):
+        self.ref_len = self._positivo(v)
+        self._set_last(self.base_pt)
+        self.state = 'new'
+
+    def step_point(self, p):
+        st = self.state
+        if st == 'base':
+            self.base_pt = p
+            self._set_last(p)
+            self.state = 'factor'
+        elif st in ('factor', 'new'):
+            self.do(self._dist_factor(p))
+            return
+        elif st == 'ref':
+            self.p1 = p
+            self._set_last(p)
+            self.state = 'ref2'
+        elif st == 'ref2':
+            self._ref_taken(math.hypot(p.x() - self.p1.x(), p.y() - self.p1.y()))
+        elif st == 'pts1':
+            self.p1 = p
+            self._set_last(p)
+            self.state = 'pts2'
+        elif st == 'pts2':
+            self.do(math.hypot(p.x() - self.p1.x(), p.y() - self.p1.y()) / self.ref_len)
+            return
+        self.prompt()
+
+    def step_text(self, text):
+        k, st = _key(text), self.state
+        if st == 'factor' and k in ('C', 'COPIA', 'COPIAR', 'COPY'):
+            self.copy = True
+            self.cl.echo('Escalando una copia de los objetos designados.')
+        elif st == 'factor' and k in ('R', 'REFERENCIA', 'REFERENCE'):
+            self.state = 'ref'
+        elif st == 'new' and k in ('P', 'PUNTOS', 'POINTS'):
+            self.p1 = None
+            self.state = 'pts1'
+        elif st in ('factor', 'ref', 'new'):
+            try:
+                v = parse_distance(text)
+            except (InputError, ValueError):
+                self._resolve_and_apply(text)
+                return
+            if st == 'ref':
+                self._ref_taken(v)
+            else:
+                self.do(self._positivo(v) / (self.ref_len if st == 'new' else 1.0))
+                return
+        else:
+            self._resolve_and_apply(text)
+            return
+        self.prompt()
+
+    def step_enter(self):
+        if self.state == 'ref':
+            self._ref_taken(1.0)
+            self.prompt()
+        elif self.state == 'new':
+            self.do(1.0 / self.ref_len)
+        else:
+            self.end()
+
+    def preview_geoms(self, cur):
+        if self.state in ('factor', 'new'):
+            k = self._dist_factor(cur)
+            if k > 1e-9:
+                return self.transformed(self._fn(k))
+        return None
+
+
 # ==========================================================================
 class AlignCommand(EditCommand):
     """ALINEAR (AL). Opción Copia (C): deja el original y alinea una copia, como
@@ -2671,6 +2801,9 @@ EDIT_COMMANDS = [
      ('line', 'polygon', 'point'), 'Copia objetos (múltiple y matriz)', 'copy'),
     ('ROTATE', ('GIRA', 'GIRAR', 'ROTAR', 'GI', 'RO'), RotateCommand, 'GIRA',
      ('line', 'polygon', 'point'), 'Gira objetos (copia y referencia)', 'rotate'),
+    ('SCALE', ('ESCALA', 'SC', 'ES', 'ESCALAR'), ScaleCommand, 'ESCALA',
+     ('line', 'polygon', 'point'), 'Escala objetos desde un punto base (copia y referencia, como en IngeCAD)',
+     'scale'),
     ('SELECT', ('DESIGNA', 'SELECCIONAR', 'SELECCION', 'SEL'), SelectCommand, 'DESIGNA',
      ('line', 'polygon', 'point'), 'Designar objetos (PV, PC, Borde...) y dejarlos seleccionados', 'select'),
     ('FILTER', ('FILTRO', 'FI'), FilterCommand, 'FILTRO',

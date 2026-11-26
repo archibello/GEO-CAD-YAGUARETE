@@ -1,0 +1,42 @@
+GeoCAD - versión 3.98.0
+=======================
+QGIS: ESCALA (SCALE, SC), la misma orden que SCALE (SC) de IngeCAD.
+
+Por qué
+   (Fernando, 26/11/2026.) «En QGIS está faltando agregar la orden
+   "SCALE" (SC)»; «la misma que corre sobre IngeCAD "SCALE" (SC)».
+
+Qué cambia
+   Nueva orden ESCALA en Dibujo (nombres: SCALE, ESCALA, SC, ES, ESCALAR;
+   S sigue siendo ESTIRA). Las mismas preguntas que en IngeCAD 0.8.0:
+     Designe objetos
+     Precise punto base
+     Precise factor de escala o [Copia/Referencia]
+       - un número (2, 0,5, 2,5): escala por ese factor;
+       - un clic: el factor es la distancia a la base (vista previa
+         creciendo con el cursor);
+       - C: escala una copia, el original queda;
+       - R: «Precise longitud de referencia <1>» (escrita o con dos
+         puntos) y «Precise nueva longitud o [Puntos] <1>» (escrita,
+         con un clic desde la base o con dos puntos).
+   El valor debe ser positivo: 0 o negativos se rechazan y la orden
+   sigue. Intro en el factor sale sin cambiar nada. Un solo U deshace.
+   Los textos cambian su altura (ALTURA) y los bloques su escala
+   (ESCALA_X, ESCALA_Y); el giro no cambia.
+   Botón en la barra «Yaguá Edición» y en el banco Edición de Administrar
+   botones, detrás de GIRA; a las barras ya guardadas se agrega solo
+   (migración «escala-qgis»), sólo si tienen GIRA. También en la barra
+   Edición CAD, en el grupo Desplaza-Copia-Gira-Borra.
+   botones.py del núcleo (COMUN/nucleo; build.py lo copia a los dos).
+   Manual 02: ESCALA (SC) en Editar.
+
+Pruebas
+   banco_escala_qgis con QGIS 4.2.3: nombres, factor escrito (coma
+   decimal), un solo U, factor por distancia, vista previa, Copia,
+   Referencia escrita, con dos puntos y con Intro, nueva longitud con
+   Puntos y desde la base, valores no positivos, Intro, textos y
+   bloques, botón, migración e ícono: TODO OK. banco_botones_qgis,
+   banco_recorta_qgis, banco_unir_qgis, banco_filtro_qgis,
+   banco_copiabase_qgis, banco_primera_qgis y banco_combinar_qgis:
+   TODO OK. test_botones y test_relleno_capas: lista de migraciones con
+   «escala-qgis». 107/107 con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
