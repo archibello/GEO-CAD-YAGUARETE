@@ -1,0 +1,63 @@
+GeoCAD - versión 3.97.0
+=======================
+QGIS: lo que no se ve no se designa, FILTRO (FI) de IngeCAD y «Cerrada» en Propiedades.
+
+Por qué
+   (Fernando, 26/11/2026, con dos capturas de QGIS.) «Quiero que las
+   parcelas apagadas en el listado de layers no puedan estar disponibles en
+   la selección cuando existan layers visibles, por barrido o por otros
+   métodos F, WP, CP.» «A partir de este problema me di cuenta que debemos
+   incorporar a QGIS la herramienta FILTER (FI) de IngeCAD.» «Y también
+   disponer de la elección Cerrar Polígono en el Panel de Propiedades.»
+
+Qué cambia
+   1. Designar (QGIS). Los objetos que QGIS no dibuja no se designan: los de
+      una capa CAD apagada en el panel de capas (la categoría sin tildar), y
+      también los que una regla o la escala dejan sin dibujar. Vale para el
+      clic, la ventana, la captura, PV, PC, Borde, Todo, y para elegir el
+      objeto en las órdenes de edición. Un clic sobre un objeto apagado no
+      lo elige: empieza una ventana, como en AutoCAD.
+
+   2. FILTRO (FI, FILTER) en QGIS, el de IngeCAD. La misma ventana
+      «Filtros de selección de objetos» (lista de condiciones, Agregar a la
+      lista, Sustituir, Agregar objeto seleccionado, Editar, Suprimir, Borrar
+      lista, filtros guardados, Aplicar). Las condiciones en QGIS:
+        tipo de objeto como lo muestra Propiedades (Línea, Polilínea,
+        Polígono, Punto, Texto, Bloque) y Polilínea cerrada;
+        capa CAD, color (PorCapa o el número), tipo de línea, grosor;
+        largo, área, perímetro, número de vértices, inicio y fin de línea,
+        posiciones y centro;
+        valor, altura, giro y fuente de texto; nombre de bloque;
+        cualquier campo de la tabla;
+        grupos Y, O, XO y NO. Textos sin distinguir mayúsculas, con
+        comodines * y ?, y la coma para alternativas (MUROS,EJES).
+      Después de Aplicar: «Designe objetos a filtrar» (Intro = toda la
+      capa); si ya había objetos seleccionados, se filtran ésos. Lo que
+      cumple queda seleccionado para la orden siguiente y como selección
+      Previa (P). Sólo cuentan los objetos visibles.
+      Dentro de cualquier «Designe objetos» se puede escribir FI (abre la
+      ventana) o FI <nombre> (un filtro guardado): lo que cumple se suma (o
+      se quita, con E).
+      Los filtros guardados de QGIS van aparte de los de IngeCAD
+      (~/.config/geocad/filtros_qgis.json).
+      Botón en «Yaguá Edición» detrás de DESIGNA (también en las barras ya
+      guardadas) y en el banco Edición de Administrar botones.
+
+   3. Propiedades (QGIS): «Cerrada» Sí/No en polilíneas, una o varias, como
+      en AutoCAD: Sí agrega el tramo de cierre y No lo saca; un solo U por
+      capa. En polígonos sigue siendo Sí (QGIS no guarda polígonos
+      abiertos); en una línea de dos vértices no aparece.
+
+   IngeCAD: la ventana de FILTRO y las reglas de las condiciones pasaron al
+   núcleo (filtro_ui.py y filtro_base.py), las mismas para los dos
+   programas. En IngeCAD FILTRO sigue igual.
+
+Pruebas
+   test_filtro_qgis (las propiedades de QGIS, grupos, «Agregar objeto»,
+   FI <nombre>, filtros guardados aparte). banco_filtro_qgis con QGIS 4.2.3
+   real: capas CAD apagadas fuera de la ventana, la captura, el clic, Todo y
+   PC; FILTRO con Intro, con preselección, designando, FI dentro de DESIGNA,
+   FI <nombre> y Cancelar; la ventana con el Qt de QGIS; Cerrada Sí/No con U.
+   La ventana con el Qt de IngeCAD (PySide6). test_filtro y test_seleccion
+   (IngeCAD) sin cambios; test_botones y test_modulos al día. Bancos de QGIS
+   de edición y botones TODO OK.

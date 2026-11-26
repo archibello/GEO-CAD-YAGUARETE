@@ -25,6 +25,7 @@ class GeomIO:
     """Convierte geometrías entre el SRC de la capa y el del mapa."""
 
     def __init__(self, canvas, layer):
+        self.canvas = canvas
         self.ccrs = canvas.mapSettings().destinationCrs()
         self.lcrs = layer.crs()
         self.same = self.ccrs == self.lcrs
@@ -87,6 +88,61 @@ def _pick_geom(layer, f, blocks):
     return f.geometry()
 
 
+class Visibles:
+    """¿QGIS dibuja este objeto? (3.97.0, Fernando: los objetos de las capas CAD
+    apagadas no se designan). Pregunta al simbolizador de la capa, con la
+    escala del mapa: una capa CAD apagada en Capas (categoría sin tildar), una
+    regla que no aplica o fuera de escala = no se dibuja = no se designa. Si
+    algo falla, todo cuenta como visible (como antes)."""
+
+    def __init__(self, canvas, layer):
+        self.r = self.ctx = None
+        try:
+            from qgis.core import QgsExpressionContextUtils, QgsRenderContext
+            r = layer.renderer()
+            if r is None:
+                return
+            ms = canvas.mapSettings() if canvas is not None else None
+            ctx = QgsRenderContext.fromMapSettings(ms) if ms is not None else QgsRenderContext()
+            ctx.expressionContext().appendScopes(
+                QgsExpressionContextUtils.globalProjectLayerScopes(layer))
+            r = r.clone()
+            r.startRender(ctx, layer.fields())
+            self.r, self.ctx = r, ctx
+        except Exception:
+            self.r = self.ctx = None
+
+    def __call__(self, f):
+        if self.r is None:
+            return True
+        try:
+            self.ctx.expressionContext().setFeature(f)
+            return bool(self.r.willRenderFeature(f, self.ctx))
+        except Exception:
+            return True
+
+    def cerrar(self):
+        if self.r is not None:
+            try:
+                self.r.stopRender(self.ctx)
+            except Exception:
+                pass
+            self.r = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.cerrar()
+
+
+def visibles_de(canvas, layer, fids=None):
+    """Los objetos de la capa que QGIS dibuja (todos, o de ``fids``)."""
+    req = QgsFeatureRequest() if fids is None else QgsFeatureRequest().setFilterFids(list(fids))
+    with Visibles(canvas, layer) as ve:
+        return [f.id() for f in layer.getFeatures(req) if ve(f)]
+
+
 def pick_feature(canvas, io, layer, p, exclude=()):
     """Objeto más cercano al punto p (SRC del mapa) dentro de la tolerancia: (fid, feature) o (None, None)."""
     tol = search_radius(canvas)
@@ -97,12 +153,13 @@ def pick_feature(canvas, io, layer, p, exclude=()):
     best, best_d = (None, None), None
     blocks = _is_block(layer)
     req = QgsFeatureRequest() if blocks else QgsFeatureRequest().setFilterRect(rl)
-    for f in layer.getFeatures(req):
-        if f.id() in exclude or not f.hasGeometry():
-            continue
-        d = _pick_geom(layer, f, blocks).distance(pg)
-        if d <= tol_l and (best_d is None or d < best_d):
-            best, best_d = (f.id(), f), d
+    with Visibles(canvas, layer) as ve:
+        for f in layer.getFeatures(req):
+            if f.id() in exclude or not f.hasGeometry() or not ve(f):
+                continue
+            d = _pick_geom(layer, f, blocks).distance(pg)
+            if d <= tol_l and (best_d is None or d < best_d):
+                best, best_d = (f.id(), f), d
     return best
 
 
@@ -117,12 +174,13 @@ def pick_stack(canvas, io, layer, p):
     out = []
     blocks = _is_block(layer)
     req = QgsFeatureRequest() if blocks else QgsFeatureRequest().setFilterRect(rl)
-    for f in layer.getFeatures(req):
-        if not f.hasGeometry():
-            continue
-        d = _pick_geom(layer, f, blocks).distance(pg)
-        if d <= tol_l:
-            out.append((d, f.id()))
+    with Visibles(canvas, layer) as ve:
+        for f in layer.getFeatures(req):
+            if not f.hasGeometry() or not ve(f):
+                continue
+            d = _pick_geom(layer, f, blocks).distance(pg)
+            if d <= tol_l:
+                out.append((d, f.id()))
     out.sort(key=lambda x: x[0])
     return [fid for _d, fid in out]
 
@@ -141,12 +199,13 @@ def query_rect(io, layer, a, b, crossing):
     out = []
     blocks = _is_block(layer)
     req = QgsFeatureRequest() if blocks else QgsFeatureRequest().setFilterRect(rl)
-    for f in layer.getFeatures(req):
-        if not f.hasGeometry():
-            continue
-        g = _pick_geom(layer, f, blocks)
-        if (crossing and g.intersects(rg)) or (not crossing and rg.contains(g)):
-            out.append(f.id())
+    with Visibles(getattr(io, 'canvas', None), layer) as ve:
+        for f in layer.getFeatures(req):
+            if not f.hasGeometry() or not ve(f):
+                continue
+            g = _pick_geom(layer, f, blocks)
+            if (crossing and g.intersects(rg)) or (not crossing and rg.contains(g)):
+                out.append(f.id())
     return out
 
 
@@ -156,12 +215,13 @@ def query_geom(io, layer, geom_canvas, predicate):
     out = []
     blocks = _is_block(layer)
     req = QgsFeatureRequest() if blocks else QgsFeatureRequest().setFilterRect(gl.boundingBox())
-    for f in layer.getFeatures(req):
-        if not f.hasGeometry():
-            continue
-        g = _pick_geom(layer, f, blocks)
-        if (predicate == 'contains' and gl.contains(g)) or (predicate == 'intersects' and g.intersects(gl)):
-            out.append(f.id())
+    with Visibles(getattr(io, 'canvas', None), layer) as ve:
+        for f in layer.getFeatures(req):
+            if not f.hasGeometry() or not ve(f):
+                continue
+            g = _pick_geom(layer, f, blocks)
+            if (predicate == 'contains' and gl.contains(g)) or (predicate == 'intersects' and g.intersects(gl)):
+                out.append(f.id())
     return out
 
 
@@ -450,12 +510,19 @@ class EditCommand(_DrawCommand):
             return
         self._sel_init()
         k = _key(text)
+        if not self.poly and self.win is None:
+            from .. import filtro as FQ
+            nombre = FQ.pedido(text)
+            if nombre is not None:            # 3.97.0: FI dentro de «Designe objetos», como IngeCAD
+                self._filtro_en_seleccion(nombre)
+                self.prompt()
+                return
         if self.sel_mode in ('wpoly', 'cpoly', 'fence') and self.poly and k in ('H', 'U', 'DESHACER', 'UNDO'):
             self.poly.pop()
         elif k in self.SEL_MODES and not self.poly and self.win is None:
             self.sel_mode = self.SEL_MODES[k]
         elif k in ('TODO', 'T', 'ALL'):
-            self._add([f.id() for f in self.layer.getFeatures()])
+            self._add(visibles_de(self.canvas, self.layer))
         elif k in ('U', 'ULTIMO', 'ÚLTIMO', 'L', 'LAST'):
             last = self.mgr.last_added.get(self.layer.id()) if hasattr(self.mgr, 'last_added') else None
             if last is None:
@@ -572,6 +639,35 @@ class EditCommand(_DrawCommand):
         else:
             self.cl.echo('%d encontrado(s), %d en total' % (len(self.sel) - before, len(self.sel)))
         self.prompt()
+
+    def _filtro_en_seleccion(self, nombre=''):
+        """FI (o FI <nombre>) dentro de «Designe objetos»: los objetos visibles
+        de la capa que cumplen el filtro se suman (o se quitan, con E)."""
+        from .. import filtro as FQ, filtro_ui
+        if nombre:
+            conds = FQ.buscar(nombre)
+            if conds is None:
+                nombres = ', '.join(n for n in FQ.guardados() if n != FQ.SIN_NOMBRE)
+                self.cl.echo('No hay un filtro guardado «%s». %s' % (
+                    nombre, ('Guardados: %s.' % nombres) if nombres else 'No hay filtros guardados.'))
+                return 0
+        else:
+            objs = FQ.candidatos(self.canvas, self.layer)
+            r = filtro_ui.editar(self.canvas.window(), FQ.ultimo(), objs, self.layer, con_objeto=False)
+            if r is filtro_ui.SIN_QT or r is None:
+                self.cl.echo('Filtro cancelado.')
+                return 0
+            conds = r['conds']
+        try:
+            objs = FQ.candidatos(self.canvas, self.layer)
+            ok = FQ.filtrar(objs, conds)
+        except FQ.FiltroError as e:
+            self.cl.echo('Filtro no válido: %s.' % e)
+            return 0
+        FQ.recordar(conds)
+        self.cl.echo('Filtro: %d de %d objeto(s) lo cumplen.' % (len(ok), len(objs)))
+        self._add([o.fid for o in ok], self.removing)
+        return len(ok)
 
     def _selection_done(self):
         self.selecting = False

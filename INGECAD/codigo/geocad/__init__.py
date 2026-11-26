@@ -45,13 +45,14 @@ from .estirar import EstirarTool
 from .texto import TextoTool
 from .partir import PartirTool
 from .rumbos import RumbosTool
+from .unir_poligonos import UnirTool
 from .pegartabla import PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.95.0"
+VERSION = "3.97.4"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -230,6 +231,11 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     if est["rumbos"]:
         tools["RUMBOS"] = RumbosTool
         aliases.update({"RB": "RUMBOS", "GMS": "RUMBOS", "POLIGONAL": "RUMBOS"})
+    if est["unir_poligonos"]:
+        # 3.96.0: JOIN (J, UNIR) arranca ésta (dibujo.REEMPLAZOS); con líneas
+        # hace el JOIN de IngeCAD. No se registra como JOIN: IngeCAD rechaza
+        # todas las herramientas de un plugin que repite un nombre suyo.
+        tools["GEOJOIN"] = UnirTool
     if est["estirar"]:
         tools["GEOSTRETCH"] = EstirarTool
     if est["igualar"]:
@@ -481,7 +487,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.95.0",
+        version="3.97.4",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,

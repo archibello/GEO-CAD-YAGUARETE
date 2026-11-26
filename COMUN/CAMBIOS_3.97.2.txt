@@ -1,0 +1,25 @@
+GeoCAD - versión 3.97.2
+=======================
+IngeCAD y QGIS: UNIR (J) con polígonos, la pregunta del final.
+
+Por qué
+   (Fernando, 26/11/2026.) «La pregunta "¿Dónde dejo el resultado? [capa
+   Nueva] <en la misma capa>" quiero que la reemplaces por ¿quieres crear
+   una capa nueva con el resultado? Yes or Not. Por defecto después de
+   ENTER es Not.» «En ambos programas lo mismo.»
+
+Qué cambia
+   La pregunta es ahora, en IngeCAD y en QGIS:
+       ¿Quiere crear una capa nueva con el resultado? [Sí/No] <No>:
+   No (N, NO, NOT) o Intro: el resultado queda en la misma capa.
+   Sí (S, SI, SÍ, Y, YES): va a la capa «combinados de <capa>», como antes
+   con N.
+   OJO: la N ahora es «No» (antes era «capa Nueva»).
+   La pregunta y las respuestas están en el núcleo (combinar.py): las
+   mismas en los dos programas.
+
+Pruebas
+   test_unir_poligonos_ingecad (la pregunta, Enter, N, S, una respuesta que
+   no se entiende vuelve a preguntar), banco_unir_poligonos_ventana con la
+   ventana real de IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7, banco_combinar_qgis
+   y banco_unir_qgis con QGIS 4.2.3. TODO OK.

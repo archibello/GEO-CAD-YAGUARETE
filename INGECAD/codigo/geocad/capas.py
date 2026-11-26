@@ -7,7 +7,14 @@ ABIERTO en gris (capa libre) y uno CERRADO en rojo (capa bloqueada). El
 texto de la celda no se toca: IngeCAD lo lee para saber el estado al hacer
 clic. Retoque fijo, sin módulo («algo muy puntual y de uso tradicional»).
 
-Lo que no necesita Qt (qué se dibuja según el texto) se prueba sin Qt."""
+Lo que no necesita Qt (qué se dibuja según el texto) se prueba sin Qt.
+
+3.96.2: el COLOR de una capa. Una capa puede guardar, además del número de
+color (ACI), un color exacto (RGB, «true color»): así llegan las capas de
+QGIS con PEGARENLUGAR y las de AutoCAD con colores RGB. Al dibujar manda el
+RGB. El panel Layers (y -CAPA Color) de IngeCAD cambia sólo el ACI y deja el
+RGB: la capa decía 160 y se seguía viendo gris (Fernando, 26/11/2026). Como
+en AutoCAD, elegir un color de la lista quita el RGB; U lo devuelve."""
 from __future__ import annotations
 
 COLUMNA_BLOQUEO = 4            # Status, Name, On, Freeze, Lock, ...
@@ -112,9 +119,58 @@ def _envolver_init(original):
     return __init__
 
 
+# -- 3.96.2: el color elegido reemplaza al RGB de la capa -----------------------------
+def _capa_de(cmd, document):
+    try:
+        return document.doc.layers.get(cmd.layer_name)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _envolver_color_do(original):
+    def do(self, document):
+        self._geocad_rgb = None
+        if getattr(self, "prop", None) == "color":
+            capa = _capa_de(self, document)
+            if capa is not None and capa.dxf.hasattr("true_color"):
+                self._geocad_rgb = capa.dxf.true_color
+                capa.dxf.discard("true_color")
+        return original(self, document)
+    do._puente_original = original
+    do._puente_fabrica = _envolver_color_do
+    return do
+
+
+def _envolver_color_undo(original):
+    def undo(self, document):
+        resultado = original(self, document)
+        rgb = getattr(self, "_geocad_rgb", None)
+        if rgb is not None:
+            capa = _capa_de(self, document)
+            if capa is not None:
+                capa.dxf.true_color = rgb
+        return resultado
+    undo._puente_original = original
+    undo._puente_fabrica = _envolver_color_undo
+    return undo
+
+
+def instalar_color() -> bool:
+    """Sin Qt: el comando de IngeCAD que cambia propiedades de una capa."""
+    try:
+        from core.layers import LayerPropertyCommand
+    except Exception:  # noqa: BLE001 -- otro IngeCAD
+        return False
+    from .dibujo import envolver
+    envolver(LayerPropertyCommand, "do", _envolver_color_do, reemplazar=True)
+    envolver(LayerPropertyCommand, "undo", _envolver_color_undo, reemplazar=True)
+    return True
+
+
 def instalar() -> None:
     """Se llama al cargar el plugin: los paneles que se armen después y los
     que ya están abiertos."""
+    instalar_color()
     try:
         from views.layers_panel import LayersPanel
         from PySide6.QtWidgets import QApplication

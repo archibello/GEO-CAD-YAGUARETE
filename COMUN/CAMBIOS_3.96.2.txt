@@ -1,0 +1,31 @@
+GeoCAD - versión 3.96.2
+=======================
+IngeCAD: el color elegido para una capa se ve, aunque la capa traiga un color exacto (RGB).
+
+Por qué
+   (Fernando, 26/11/2026.) «El color de la capa "Nueva capa borrador" dice
+   By Layer y está asignado el color 160, pero no está representada en la
+   vista por ese color. ¿Esto se debe a un error de GeoCAD o de IngeCAD?»
+   Los dos: PEGARENLUGAR (lo copiado en QGIS) crea la capa con el número de
+   color (ACI) y además el color exacto de QGIS (RGB, #7d8b8f). Al dibujar
+   manda el RGB. El panel Layers de IngeCAD, al elegir otro color, cambiaba
+   sólo el número y dejaba el RGB: decía 160 y se seguía viendo gris.
+
+Qué cambia
+   Como en AutoCAD: al elegir un color para una capa (panel Layers, columna
+   Color, o -CAPA Color), se quita el color exacto que tuviera y la capa se
+   ve con el elegido. U lo devuelve como estaba (con su RGB). Vale para
+   todas las capas con RGB, también las de dibujos de AutoCAD.
+   PEGARENLUGAR sigue trayendo el color exacto de QGIS.
+
+Lo que NO cambia
+   Las capas sin RGB, y las otras propiedades de la capa (tipo de línea,
+   grosor, apagar, inutilizar, bloquear).
+   Detalle de IngeCAD: si en el panel se elige el MISMO número que ya tiene
+   la capa, IngeCAD no hace nada y el RGB queda; elegir cualquier otro.
+
+Pruebas
+   test_color_capa (160 se ve 160, U devuelve el RGB, rehacer lo quita,
+   apagada sigue apagada, otras propiedades y capas sin RGB igual) con
+   IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7. banco_color_capa_ventana con la
+   ventana real: clic en la columna Color del panel Layers y -CAPA Color.

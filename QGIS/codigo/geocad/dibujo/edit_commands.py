@@ -8,7 +8,7 @@ import math
 from types import SimpleNamespace
 
 from qgis.core import (QgsFeature, QgsFeatureRequest, QgsGeometry, QgsPointXY, QgsRectangle, QgsVectorLayer,
-                       QgsVectorLayerUtils)
+                       QgsVectorLayerUtils, QgsWkbTypes)
 
 from .commands import _key
 from .compat import geometry_kind
@@ -1604,6 +1604,16 @@ class ChamferCommand(_PickCommand):
 
 
 # ==========================================================================
+def _es_cerrada(g):
+    """¿Polilínea con todas sus partes cerradas (3 o más tramos)?"""
+    try:
+        kind, _s, flat, _i = explode(g)
+    except ValueError:
+        return False
+    return kind == 'line' and bool(flat) and all(
+        len(p) >= 4 and tuple(p[0]) == tuple(p[-1]) for p in flat)
+
+
 class TrimCommand(ExtendCommand):
     """RECORTA (TRIM), con el comportamiento del Trim de Fernando: primero las
     aristas de corte (quedan marcadas) y cada una corta también por su
@@ -1615,7 +1625,11 @@ class TrimCommand(ExtendCommand):
     (Intro) y cada clic sobre otro polígono de la capa le quita la parte que se
     superpone con ellos; los de corte quedan como están. Si queda partido, cada
     pedazo es un objeto con los atributos del original; si queda entero adentro,
-    se borra. Vista previa: el contorno de lo que se va."""
+    se borra. Vista previa: el contorno de lo que se va.
+
+    3.97.4 (Fernando): lo mismo en una capa de líneas cuando los cortes son
+    polilíneas CERRADAS (como polígonos en IngeCAD); los pedazos quedan como
+    polilíneas cerradas. Con algún corte abierto, RECORTA de siempre."""
     title = 'RECORTA'
     all_text = 'Aristas: todos los objetos visibles (modo rápido).'
     trims = True
@@ -1637,7 +1651,46 @@ class TrimCommand(ExtendCommand):
         return 'Designe aristas de corte o <todos>'
 
     def _poly(self):
-        return geometry_kind(self.layer) == 'polygon'
+        """Modo «quitar lo superpuesto»: en una capa de polígonos, y (3.97.4,
+        Fernando) en una de líneas cuando los cortes designados son todos
+        polilíneas cerradas."""
+        kind = geometry_kind(self.layer)
+        if kind == 'polygon':
+            return True
+        if kind != 'line' or not self.boundary:
+            return False
+        key = tuple(self.boundary)
+        if getattr(self, '_cerr_key', None) != key:
+            req = QgsFeatureRequest().setFilterFids(list(key))
+            fs = [f for f in self.layer.getFeatures(req) if f.hasGeometry()]
+            self._cerr_val = bool(fs) and all(_es_cerrada(f.geometry()) for f in fs)
+            self._cerr_key = key
+        return self._cerr_val
+
+    def _como_poligono(self, g):
+        """La geometría (SRC del mapa) como polígono: una polilínea cerrada pasa a
+        ser el polígono que encierra; un polígono queda igual."""
+        if geometry_kind(self.layer) != 'line':
+            return g
+        try:
+            _k, _s, flat, _i = explode(g)
+        except ValueError:
+            return None
+        polis = [QgsGeometry.fromPolygonXY([[QgsPointXY(x, y) for x, y in r]]) for r in flat if len(r) >= 4]
+        if not polis:
+            return None
+        return QgsGeometry.unaryUnion(polis) if len(polis) > 1 else polis[0]
+
+    def _a_capa(self, poligono):
+        """Un pedazo (polígono, SRC del mapa) como geometría de la capa: en una
+        capa de líneas, la polilínea cerrada de su borde (y sus huecos, si la
+        capa es multi)."""
+        if geometry_kind(self.layer) != 'line':
+            return conform(self.io.to_layer(poligono), self.layer)
+        anillos = [[(p.x(), p.y()) for p in r] for r in poligono.asPolygon()]
+        if not QgsWkbTypes.isMultiType(self.layer.wkbType()):
+            anillos = anillos[:1]
+        return conform(self.io.to_layer(rebuild('line', anillos)), self.layer)
 
     def on_enter(self):
         if self._poly() and self.selecting and not self.sel:
@@ -1652,7 +1705,9 @@ class TrimCommand(ExtendCommand):
         key = tuple(self.boundary or ())
         if getattr(self, '_cutter_key', None) != key:
             req = QgsFeatureRequest().setFilterFids(list(key))
-            gs = [self.io.to_canvas(f.geometry()) for f in self.layer.getFeatures(req) if f.hasGeometry()]
+            gs = [self._como_poligono(self.io.to_canvas(f.geometry()))
+                  for f in self.layer.getFeatures(req) if f.hasGeometry()]
+            gs = [g for g in gs if g is not None and not g.isEmpty()]
             self._cutter_geom = QgsGeometry.unaryUnion(gs) if gs else None
             self._cutter_key = key
         return self._cutter_geom
@@ -1670,6 +1725,14 @@ class TrimCommand(ExtendCommand):
         if fid is None:
             return None
         g = self.io.to_canvas(f.geometry())
+        if geometry_kind(self.layer) == 'line':
+            if not _es_cerrada(f.geometry()):
+                if not quiet:
+                    self.cl.echo('Con polilíneas cerradas de corte, se recortan polilíneas cerradas.')
+                return None
+            g = self._como_poligono(g)
+            if g is None:
+                return None
         tiny = max(g.area(), cut.area()) * 1e-9
         se_va = g.intersection(cut) if g.intersects(cut) else None
         if se_va is None or se_va.isEmpty() or se_va.area() <= tiny:
@@ -1693,9 +1756,9 @@ class TrimCommand(ExtendCommand):
             if not queda:
                 lyr.deleteFeature(fid)          # estaba entero dentro del de corte
             else:
-                lyr.changeGeometry(fid, conform(self.io.to_layer(queda[0]), lyr))
+                lyr.changeGeometry(fid, self._a_capa(queda[0]))
                 for parte in queda[1:]:
-                    lyr.addFeature(copy_feature(lyr, f, conform(self.io.to_layer(parte), lyr)))
+                    lyr.addFeature(copy_feature(lyr, f, self._a_capa(parte)))
         except Exception:
             lyr.destroyEditCommand()
             raise
@@ -2230,7 +2293,15 @@ class JoinCommand(EditCommand):
     """UNIR (JOIN, J), 3.87.0: las líneas designadas que comparten un extremo
     quedan en una sola polilínea. Los datos (la fila de la tabla) son los del
     objeto MAYOR de cada unión: el más largo (Criterio = Longitud, de fábrica)
-    o el de más tramos (Criterio = Tramos); los demás se borran. Un solo U."""
+    o el de más tramos (Criterio = Tramos); los demás se borran. Un solo U.
+
+    3.96.0, con POLÍGONOS: como «Combinar objetos espaciales» de QGIS. Los que
+    se tocan quedan en uno, con los datos del de mayor superficie; se rellenan
+    los huecos encerrados entre ellos (no los que ya tenía cada uno); cada
+    grupo aislado queda aparte. Al final pregunta «¿Quiere crear una capa
+    nueva con el resultado? [Sí/No] <No>» (3.97.2): No o Intro = en la misma
+    capa; Sí = capa «combinados de <capa>» (GeoPackage; la original no se
+    toca; las siguientes con Sí van a la misma)."""
     title = 'UNIR'
     OPT_CRITERIO = ('CR', 'CRITERIO', 'CRITERION')
 
@@ -2245,13 +2316,103 @@ class JoinCommand(EditCommand):
 
     def prompt(self):
         self._sel_init()
+        if self.kind == 'polygon':
+            if (self.selecting and self.sel_mode == 'auto' and self.win is None
+                    and not self.removing):
+                self.cl.set_prompt('Designe polígonos a unir')
+                return
+            super().prompt()
+            return
         if (self.selecting and self.sel_mode == 'auto' and self.win is None
                 and not self.removing):
-            self.cl.set_prompt('Designe líneas a unir o', [('CR', 'Criterio=' + self._crit_txt())])
+            self.cl.set_prompt('Designe líneas (o polilíneas cerradas) a unir o',
+                               [('CR', 'Criterio=' + self._crit_txt())])
             return
         super().prompt()
 
+    # ---- 3.96.0: polígonos -----------------------------------------------
+    # 3.96.1 (Fernando): de fábrica queda en la misma capa (Enter).
+    # 3.97.2 (Fernando): «¿Quiere crear una capa nueva con el resultado?
+    # [Sí/No] <No>»; Sí la manda a «combinados de <capa>» (la misma cada vez).
+    def step_prompt(self):
+        if getattr(self, 'islas', None) is None:
+            return
+        from .. import combinar
+        self.cl.set_prompt(combinar.PREGUNTA, [('S', 'Sí'), ('N', 'No')], 'No')
+
+    def step_text(self, text):
+        if getattr(self, 'islas', None) is None:
+            super().step_text(text)
+            return
+        from .. import combinar
+        destino = combinar.respuesta(text)
+        if destino is None:
+            self.cl.echo('Sí: capa nueva «%s». No (o Intro): en la misma capa.' % self._nombre_nueva())
+            self.step_prompt()
+            return
+        self._terminar_poligonos(destino)
+
+    def step_enter(self):
+        if getattr(self, 'islas', None) is None:
+            super().step_enter()
+            return
+        self._terminar_poligonos('original')
+
+    def _nombre_nueva(self):
+        from .. import combinar
+        return combinar.nombre_combinados(self.layer.name())
+
+    def _poligonos(self):
+        from .. import combinar
+        from .combinar_qgis import objetos_de
+        objetos = objetos_de(self.geoms)
+        if len(objetos) < 2:
+            self.cl.echo('UNIR: hacen falta al menos dos polígonos.')
+            self.end()
+            return
+        otros = len(self.geoms) - len(objetos)
+        if otros:
+            self.cl.echo('%d objeto(s) que no son polígonos ni polilíneas cerradas: quedan como estaban.'
+                         % otros)
+        islas = combinar.combinar(objetos)
+        if all(i['sin_cambio'] for i in islas):
+            self.cl.echo('UNIR: los polígonos designados no se tocan; no se unió nada.')
+            self.end()
+            return
+        self.islas = islas
+        unidas = [i for i in islas if len(i['miembros']) > 1]
+        rellenos = sum(i['rellenos'] for i in islas)
+        self.cl.echo('%d polígono(s) en %d isla(s)%s; datos del polígono de mayor superficie de cada una.'
+                     % (len(objetos), len(islas),
+                        ', %d hueco(s) encerrado(s) relleno(s)' % rellenos if rellenos else ''))
+        if len(islas) > len(unidas):
+            self.cl.echo('%d isla(s) no tocan a las demás: quedan aparte.' % (len(islas) - len(unidas)))
+        self.prompt()
+
+    def _terminar_poligonos(self, destino):
+        from .combinar_qgis import en_capa_nueva, en_original
+        islas, self.islas = self.islas, None
+        if destino == 'original':
+            cambiados, creados, borrados = en_original(self, islas)
+            self.marks.append(self.layer.undoStack().index())
+            self.cl.echo('Capa «%s» modificada: %d polígono(s) cambiado(s), %d nuevo(s), %d borrado(s). '
+                         '(U para deshacer)' % (self.layer.name(), cambiados, creados, borrados))
+        else:
+            try:
+                capa, ruta, creada = en_capa_nueva(self, islas)
+            except (IOError, OSError) as e:
+                self.cl.echo('UNIR: %s. La capa original no se tocó.' % e)
+                self.end()
+                return
+            self.cl.echo('%s «%s»: %d polígono(s)%s. La capa original no se tocó.'
+                         % ('Capa nueva' if creada else 'Agregado a la capa', capa.name(), len(islas),
+                            ' (%s)' % ruta if creada else ''))
+        self.end()
+
     def on_text(self, text):
+        if self.kind == 'polygon':
+            super().on_text(text)
+            return
         if self.selecting and _key(text) in self.OPT_CRITERIO:
             self.criterio = 'tramos' if self.criterio == 'longitud' else 'longitud'
             set_setting('join_criterio', self.criterio)
@@ -2262,6 +2423,16 @@ class JoinCommand(EditCommand):
         super().on_text(text)
 
     def after_selection(self):
+        if self.kind == 'polygon':
+            self._poligonos()
+            return
+        # 3.97.3 (Fernando: «en QGIS se perdió la función de Join polígonos»): en
+        # una capa de líneas, dos o más polilíneas CERRADAS se unen como polígonos,
+        # como en IngeCAD; las abiertas, como siempre
+        from .combinar_qgis import objetos_de
+        if len(objetos_de(self.geoms)) >= 2:
+            self._poligonos()
+            return
         from .unir import unir
         lyr = self.layer
         objetos = {}
@@ -2380,6 +2551,111 @@ class SelectCommand(EditCommand):
             _DrawCommand_end(self)
 
 
+class FilterCommand(EditCommand):
+    """FILTRO (FI, FILTER), 3.97.0: el de IngeCAD. La ventana de filtros;
+    después «Designe objetos a filtrar» (Intro = toda la capa). Con objetos ya
+    seleccionados, se filtran ésos. Sólo cuentan los que QGIS dibuja (no los de
+    capas CAD apagadas). Lo que cumple queda seleccionado para la orden
+    siguiente (y como selección Previa)."""
+    title = 'FILTRO'
+    select_prompt = 'Designe objetos a filtrar (Intro = toda la capa)'
+
+    def start(self):
+        from .. import filtro as FQ
+        self._previos = list(self.layer.selectedFeatureIds())
+        self._conds = list(FQ.ultimo())
+        self._fase = ''
+        self._ventana()
+
+    def _ventana(self):
+        from .. import filtro as FQ, filtro_ui
+        objs = FQ.candidatos(self.canvas, self.layer)
+        r = filtro_ui.editar(self.canvas.window(), self._conds, objs, self.layer, con_objeto=True)
+        if r is filtro_ui.SIN_QT or r is None:
+            self.cl.echo('FILTRO: cancelado.')
+            self.selecting = False             # la selección que había queda
+            self._fase = ''
+            self.end()
+            return
+        self._conds = r['conds']
+        if r['accion'] == 'objeto':
+            self._fase = 'objeto'
+            self.selecting = False
+            self.cl.set_prompt('Designe el objeto cuyas propiedades van al filtro')
+            return
+        FQ.recordar(self._conds)
+        if self._previos:
+            self._resultado(self._previos)
+            return
+        self._fase = 'filtrar'
+        self.layer.removeSelection()
+        self.sel = []
+        self.selecting = True
+        self.prompt()
+
+    def step_prompt(self):
+        if self._fase == 'objeto':
+            self.cl.set_prompt('Designe el objeto cuyas propiedades van al filtro')
+
+    def step_point(self, p):
+        if self._fase != 'objeto':
+            return
+        from .. import filtro as FQ
+        fid, f = pick_feature(self.canvas, self.io, self.layer, p)
+        if fid is None:
+            self.cl.echo('No hay ningún objeto ahí.')
+            return
+        self._conds = self._conds + FQ.de_objeto(FQ.objeto(self.layer, f))
+        self._fase = ''
+        self._ventana()
+
+    def step_text(self, text):
+        if self._fase == 'objeto':
+            self.cl.echo('Haga clic sobre un objeto.')
+            return
+        super().step_text(text)
+
+    def step_enter(self):
+        if self._fase == 'objeto':
+            self._fase = ''
+            self._ventana()
+            return
+        self.end()
+
+    def on_enter(self):
+        self._sel_init()
+        if (self.selecting and self._fase == 'filtrar' and not self.sel and self.win is None
+                and not self.poly):
+            self._resultado(None)                 # Intro sin designar: toda la capa
+            return
+        super().on_enter()
+
+    def after_selection(self):
+        self._resultado(list(self.sel))
+
+    def _resultado(self, fids):
+        from .. import filtro as FQ
+        try:
+            objs = FQ.candidatos(self.canvas, self.layer, fids)
+            ok = [o.fid for o in FQ.filtrar(objs, self._conds)]
+        except FQ.FiltroError as e:
+            self.cl.echo('Filtro no válido: %s.' % e)
+            self.end()
+            return
+        self.layer.selectByIds(ok)
+        self.mgr.prev_selection[self.layer.id()] = list(ok)
+        self.cl.echo('%d de %d objeto(s) cumplen el filtro; quedan seleccionados para la orden '
+                     'siguiente (y como selección Previa).' % (len(ok), len(objs)))
+        self.selecting = False
+        _DrawCommand_end(self)
+
+    def end(self):
+        if self.selecting or self._fase == 'objeto':
+            super().end()
+        else:
+            _DrawCommand_end(self)
+
+
 def _DrawCommand_end(cmd):
     """Termina sin borrar la selección (a diferencia del resto de los comandos de edición)."""
     if cmd.mgr.command is cmd:
@@ -2397,6 +2673,9 @@ EDIT_COMMANDS = [
      ('line', 'polygon', 'point'), 'Gira objetos (copia y referencia)', 'rotate'),
     ('SELECT', ('DESIGNA', 'SELECCIONAR', 'SELECCION', 'SEL'), SelectCommand, 'DESIGNA',
      ('line', 'polygon', 'point'), 'Designar objetos (PV, PC, Borde...) y dejarlos seleccionados', 'select'),
+    ('FILTER', ('FILTRO', 'FI'), FilterCommand, 'FILTRO',
+     ('line', 'polygon', 'point'), 'Filtros de selección por tipo, capa CAD, color, medidas, textos y '
+     'campos de la tabla (como en IngeCAD)', 'filter'),
     ('ERASE', ('BORRA', 'BORRAR', 'BO', 'E', 'SUPR'), EraseCommand, 'BORRA',
      ('line', 'polygon', 'point'), 'Borra los objetos designados (UPS los recupera)', 'erase'),
     ('MIRROR', ('SIMETRIA', 'SIMETRÍA', 'SI', 'MI', 'ESPEJO'), MirrorCommand, 'SIMETRÍA',
@@ -2433,7 +2712,8 @@ EDIT_COMMANDS = [
      ('line', 'polygon', 'point'), 'Descompone bloques, polilíneas en tramos y multipartes en partes',
      'explode'),
     ('JOIN', ('UNIR', 'UNE', 'J'), JoinCommand, 'UNIR',
-     ('line',), 'Une líneas que comparten un extremo; quedan los datos de la más larga (CR: la de más tramos)',
+     ('line', 'polygon'), 'Une líneas que comparten un extremo (datos de la más larga; CR: la de más tramos) '
+     'o polígonos que se tocan (datos del de mayor superficie; rellena los huecos encerrados)',
      'join'),
     ('DIVIDE', ('DIVIDIR', 'DIV'), DivideCommand, 'DIVIDE',
      ('line',), 'Puntos a intervalos iguales (opción Partir)', 'divide'),

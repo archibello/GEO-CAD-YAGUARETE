@@ -16,7 +16,7 @@ lp = load_plugin(ROOT / "INGECAD" / "codigo" / "geocad", bundled=False); assert 
 M = import_module("ingecad_plugin_geocad.modulos")
 cfg = import_module("ingecad_plugin_geocad.config")
 assert not M.elegido("ingecad") and not M.elegido("qgis")
-assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "rumbos": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "googleearth": True, "referencias": True, "angulos_relativos": True, "teclado": True, "pegar_lugar": True, "agarres": True}
+assert M.estado("ingecad") == {"puente": True, "datos": True, "boton_derecho": True, "empalme": True, "chaflan": True, "bloques": True, "texto": True, "estirar": True, "partir": True, "rumbos": True, "unir_poligonos": True, "orden": True, "uniones": True, "seleccion": True, "igualar": True, "georref": True, "propiedades": True, "papel": True, "impresion": True, "cotas": True, "tablas": True, "intercambio": True, "dwg": True, "googleearth": True, "referencias": True, "angulos_relativos": True, "teclado": True, "pegar_lugar": True, "agarres": True}
 assert M.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False, "capas": False, "referencias": True, "tablas": True, "imagen_base": True, "googleearth": True, "teclado": True, "cursor_geocad": True, "apilados": True, "agarres": True, "boton_derecho": True, "pegar_lugar": True, "capa_seleccion": True}
 M.guardar("qgis", {"dibujo": False, "capas": False, "inventado": True})          # (Dibujo y Capas: test_submodulos)
 assert M.estado("qgis")["bloques"] is False                                      # Bloques necesita Dibujo
@@ -32,6 +32,7 @@ assert M.resumen("ingecad") == ("Puente con QGIS, Datos (barra y submenú), Bot�
                                 "Texto como AutoCAD (TEXTO / DT), "
                                 "Estirar al instante y con vista previa (ESTIRA / S), "
                                 "Partir en punto (PARTEENPUNTO), Poligonal por rumbos (RUMBOS / RB), "
+                                "UNIR (J) con polígonos, como Combinar objetos espaciales de QGIS, "
                                 "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO), "
                                 "Orden de dibujo (ALFRENTE, ALFONDO), "
                                 "Uniones de los grosores en pantalla, "
@@ -105,7 +106,7 @@ assert "SHPCONNECT" in spec.tools and mgr.is_active("geocad") and "menus_changed
 # apagar el Puente: queda sólo lo de GeoCAD (módulos, configuración, actualizar, acerca, dibujo)
 Mi.guardar("ingecad", {"puente": False}); P.aplicar_modulos(host)
 spec = mgr.loaded["geocad"].spec
-assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "RUMBOS", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEODROPIMAGE", "GEOPASTETABLE", "ASPECTOIMAGEN", "LIMPIARPLANO", "GEOEARTHINSERT", "GEOPASTEORIG"} and "QGISEXPORT" not in items(spec.menu)
+assert set(spec.tools) == {"SHPCONFIG", "GEOFILLET", "GEOCHAMFER", "BREAKATPOINT", "RUMBOS", "GEOJOIN", "GEOSTRETCH", "GEOTEXT", "GEOBLOCK", "GEOINSERT", "GEOREFEDIT", "GEOREFADD", "GEOREFREMOVE", "GEOBLOCKBASE", "SELECT", "GEOFILTER", "GEOMATCHPROP", "GEORREF", "INSERTARGEO", "EXPORTARGEO", "GEOPASTEIMAGE", "GEODROPIMAGE", "GEOPASTETABLE", "ASPECTOIMAGEN", "LIMPIARPLANO", "GEOEARTHINSERT", "GEOPASTEORIG"} and "QGISEXPORT" not in items(spec.menu)
 assert {"GEOCADMODULES", "QGISUPDATE", "GEOCADABOUT", "ANGREL"} <= set(spec.commands)
 # GEOCADMODULES sin ventana: informa; ACERCAGEOCAD dice la versión y los módulos
 log = []; ctx = types.SimpleNamespace(host=None, echo=log.append)
@@ -199,7 +200,7 @@ data["qgis"] = {"puente": True, "dibujo": False, "capas": False}       # lo que 
 Mq.archivo().write_text(json.dumps(data))
 assert Mq.nuevos("qgis") == ["dibujo", "bloques", "boton_derecho", "teclado", "cursor_geocad", "apilados", "agarres", "papel", "capas", "referencias", "pegar_lugar", "capa_seleccion", "tablas", "imagen_base", "googleearth"]
 assert Mq.estado("qgis") == {"puente": True, "dibujo": True, "bloques": True, "papel": False, "capas": False, "referencias": True, "tablas": True, "imagen_base": True, "googleearth": True, "teclado": True, "cursor_geocad": True, "apilados": True, "agarres": True, "boton_derecho": True, "pegar_lugar": True, "capa_seleccion": True}
-assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "rumbos", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "pegar_lugar", "intercambio", "dwg", "googleearth", "referencias", "teclado", "agarres"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1), Google Earth (3.33), Teclado (3.59), Pegar en el lugar (3.66), Rumbos (3.87)
+assert Mq.nuevos("ingecad") == ["empalme", "chaflan", "bloques", "texto", "estirar", "partir", "rumbos", "unir_poligonos", "georref", "orden", "uniones", "seleccion", "igualar", "propiedades", "papel", "impresion", "cotas", "tablas", "pegar_lugar", "intercambio", "dwg", "googleearth", "referencias", "teclado", "agarres"]  # Empalme (2.3), Partir (2.4), Orden (3.16), Selección (2.8), Propiedades (3.3), Papel (3.5), Impresión (3.7), Cotas (3.9), Estirar (3.12), Georref (3.18), Tablas (3.22), Intercambio (3.25), DWG (3.28.1), Google Earth (3.33), Teclado (3.59), Pegar en el lugar (3.66), Rumbos (3.87), Unir polígonos (3.96)
 QDialog.abiertos.clear(); QDialog.respuesta = 0                          # Cancelar: quedan sus valores por defecto
 G._primer_inicio()
 assert QDialog.abiertos and Mq.nuevos("qgis") == [] and not Mq.activo("qgis", "capas")
@@ -266,7 +267,7 @@ _grupos = next(ast.literal_eval(n.value) for n in _arbol.body
 _edit = (_dib / "edit_commands.py").read_text(encoding="utf-8")
 _nombres = _re.findall(r"^    \('(\w+)', \(", _edit[_edit.index("EDIT_COMMANDS = ["):], _re.M)
 _planos = [n for g in _grupos for n in g]
-assert _grupos[0] == ("SELECT",) and len(_planos) == len(set(_planos))
+assert _grupos[0] == ("SELECT", "FILTER") and len(_planos) == len(set(_planos))
 assert sorted(_planos) == sorted(_nombres), (_planos, _nombres)
 print("ok QGIS Edición CAD por temas")
 print("TODO OK MODULOS")

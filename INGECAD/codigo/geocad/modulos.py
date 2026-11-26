@@ -74,6 +74,13 @@ CATALOGO = {
                "(interior o deflexión; también 30dI/30dD, rumbos N45d30'E y '<<'). "
                "Polilínea o una línea por tramo; Cerrar, desHacer; longitud y acumulado "
                "en la línea de comandos."),
+        Modulo("unir_poligonos", "UNIR (J) con polígonos, como Combinar objetos espaciales de QGIS",
+               "Con dos o más polígonos (polilíneas cerradas, círculos), UNIR deja en uno "
+               "los que se tocan, con los datos del de mayor superficie; rellena los huecos "
+               "encerrados entre ellos (no los que ya tenía cada uno) y deja aparte los "
+               "grupos aislados. Al final pregunta: capa nueva «combinados de <capa>» o "
+               "modificar la original. Con líneas, UNIR queda como el de IngeCAD.",
+               cambia_programa=True),
         Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO)",
                "GEORREF ajusta una imagen con puntos de control, como el "
                "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin "

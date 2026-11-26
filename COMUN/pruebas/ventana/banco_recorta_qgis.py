@@ -219,6 +219,64 @@ canvas.setLayers([lyr])
 print("ok RECORTA con polígonos: quita lo superpuesto, pedazos con sus atributos, desHacer")
 
 
+# ---- 3c. RECORTA con polilíneas cerradas en una capa de líneas (3.97.4) --------------------
+cl = QgsVectorLayer("LineString?crs=EPSG:32721&field=nombre:string", "cerradas", "memory")
+QgsProject.instance().addMapLayer(cl)
+canvas.setLayers([cl, lyr])
+cl.startEditing()
+iface.activeLayer.return_value = cl
+
+
+def cerrada(nombre, *pts):
+    f = QgsFeature(cl.fields())
+    f.setAttributes([nombre])
+    f.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(*p) for p in pts + pts[:1]]))
+    cl.addFeature(f)
+    return f.id()
+
+
+def cgeoms():
+    return {f.id(): f for f in cl.getFeatures()}
+
+
+def area_cerrada(f):
+    return QgsGeometry.fromPolygonXY([f.geometry().asPolyline()]).area()
+
+
+corte = cerrada("corte", (0, 0), (4, 0), (4, 4), (0, 4))
+a = cerrada("a", (2, 2), (8, 2), (8, 3), (2, 3))
+b = cerrada("b", (-2, 1), (6, 1), (6, 1.5), (-2, 1.5))
+c = cerrada("c", (1, 3.2), (2, 3.2), (2, 3.8), (1, 3.8))
+mgr.run("RECORTA")
+clic(0, 2)                                       # el borde del de corte
+mgr.enter()
+assert mgr.command.boundary == [corte] and mgr.command._poly(), "cortes cerrados: quitar lo superpuesto"
+pv = mgr.command.preview_geoms(P(8, 2.5))
+assert pv and abs(pv[0].area() - 2.0) < 1e-6, pv
+clic(8, 2.5)
+fa = cgeoms()[a]
+v = fa.geometry().asPolyline()
+assert v[0] == v[-1] and abs(area_cerrada(fa) - 4.0) < 1e-6 and abs(fa.geometry().boundingBox().xMinimum() - 4) < 1e-6
+n0 = len(cgeoms())
+clic(6, 1.25)                                    # partido en dos polilíneas cerradas
+fs = [f for f in cgeoms().values() if f["nombre"] == "b"]
+assert len(cgeoms()) == n0 + 1 and sorted(round(area_cerrada(f), 6) for f in fs) == [1.0, 1.0]
+clic(1, 3.5)                                     # entera adentro: se borra
+assert c not in cgeoms()
+mgr.submit("H")
+assert c in cgeoms()
+mgr.cancel()
+# un corte ABIERTO: el RECORTA de siempre (corta líneas)
+abierta = QgsFeature(cl.fields()); abierta.setAttributes(["tijera"])
+abierta.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(20, -1), QgsPointXY(20, 5)])); cl.addFeature(abierta)
+mgr.run("RECORTA"); clic(20, 2); mgr.enter()
+assert not mgr.command._poly()
+mgr.cancel()
+iface.activeLayer.return_value = lyr
+canvas.setLayers([lyr])
+print("ok RECORTA con polilíneas cerradas en capa de líneas: como con polígonos; con un corte abierto, el de siempre")
+
+
 # ---- 4. F3 / F8 con otra herramienta de QGIS ---------------------------------------------
 def tecla(key, mods=Qt.KeyboardModifier.NoModifier):
     QApplication.sendEvent(canvas, QKeyEvent(QEvent.Type.KeyPress, key, mods))

@@ -1,0 +1,74 @@
+GeoCAD - versión 3.96.0
+=======================
+IngeCAD y QGIS: UNIR (J) con polígonos, como «Combinar objetos espaciales» de QGIS.
+
+Por qué
+   (Fernando, 26/11/2026.) «Agregar un comportamiento a la orden join (J)
+   cuando trabajamos con polígonos en QGIS y en IngeCAD»: que actúe como
+   «Combinar objetos espaciales» de QGIS, con los datos del polígono de
+   mayor superficie; que rellene los huecos que quedan encerrados entre
+   polígonos que no hacían contacto en algunos trayectos; que los polígonos
+   aislados queden aparte; y que al terminar pregunte si se crea una capa
+   nueva «combinados de <capa>» o se modifica la original.
+
+Qué cambia
+   UNIR (J, JOIN) con dos o más polígonos:
+     - los que se tocan quedan en uno, con los datos (la fila de la tabla)
+       del de MAYOR superficie;
+     - se rellenan los huecos encerrados entre ellos: las ranuras que quedan
+       cuando dos parcelas se tocan en los vértices pero sus bordes se
+       separan entre uno y otro. Dos polígonos que encierran una ranura
+       quedan unidos; los que se tocan en un solo punto, no;
+     - los huecos que cada polígono ya tenía (un patio, una dona) se
+       respetan;
+     - los grupos que no tocan a los demás quedan aparte: cada isla es un
+       objeto, con los datos del mayor de esa isla;
+     - al final pregunta «¿Dónde dejo el resultado? [capa Nueva/Modificar
+       la original]». Enter repite la última respuesta.
+         N  capa nueva «combinados de <capa>»; la original no se toca.
+         M  modifica la original: queda el mayor con la forma unida, los
+            demás se borran. U lo deshace de una vez.
+
+   QGIS (capa de polígonos activa)
+     La capa nueva es un GeoPackage «combinados de <capa>.gpkg» con los
+     mismos campos y el mismo estilo: en la carpeta del proyecto; si el
+     proyecto no está guardado, junto al archivo de la capa; si la capa es
+     temporal, en Documentos/GeoCAD. Si ya existe: «(2)», «(3)»...
+     Con capas de líneas, UNIR sigue igual que en la 3.87.0.
+
+   IngeCAD (submódulo «UNIR (J) con polígonos», prendido de fábrica; se
+   apaga en GeoCAD > Módulos)
+     Polígonos: polilíneas cerradas y círculos; los arcos pasan a tramos
+     rectos (cada 7,5°). La capa nueva es una capa del dibujo
+     «combinados de <capa>», con el color y el tipo de línea de la original.
+     Los datos:
+       - capa de QGIS (SHP o GPKG conectado): con M, al devolverla queda el
+         registro del mayor y los registros de los demás se borran; con N,
+         los datos viajan en cada objeto de la capa nueva (como los de
+         IMPORTARSHP, tabla «combinados de <capa>» en TABLASIG), sin
+         vínculo: la capa conectada y su archivo no se tocan;
+       - importados con IMPORTARSHP: quedan los del mayor;
+       - polilíneas sin datos: sólo la forma.
+     Con líneas, o con un solo polígono, UNIR es el de IngeCAD, sin
+     cambios. Con el submódulo apagado, también.
+
+   La cuenta (unión, huecos, islas y quién da los datos) es una sola para
+   los dos programas: nucleo/combinar.py, en Python puro (IngeCAD no trae
+   una biblioteca de geometría). Comparada con shapely en 300 casos al azar:
+   mismo resultado. 400 parcelas, en 0,2 s.
+
+Lo que NO cambia
+   UNIR con líneas en QGIS (3.87.0) y el JOIN de IngeCAD con líneas, arcos
+   o polilíneas abiertas.
+
+Pruebas
+   test_combinar (la cuenta: el caso de las capturas de Fernando, huecos
+   propios y encerrados, islas, contacto en un punto, superpuestos,
+   contactos en T, tolerancia en UTM, plan para la capa original, nombre y
+   carpeta de la capa nueva, 400 parcelas). test_unir_poligonos_ingecad
+   (N, M, U, islas, nombre libre, círculo y arcos, capa conectada a un SHP
+   con el plan de guardado, importados, submódulo). banco_combinar_qgis con
+   QGIS 4.2.3 real y banco_unir_poligonos_ventana con la ventana real de
+   IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7 (GEOJOIN no choca con el JOIN de
+   IngeCAD; J, JOIN y el submódulo apagado). banco_unir_qgis (líneas) sigue
+   bien. test_modulos al día.

@@ -30,33 +30,13 @@ from dataclasses import dataclass
 
 from . import buzon
 
-#: operadores: números y coordenadas usan todos; textos, = y !=
-OPS = ("=", "!=", "<", "<=", ">", ">=", "*")
-OPS_TEXTO = ("=", "!=")
-
-#: grupos: clave -> (operador, abre)
-GRUPOS = {
-    "**Y(": ("Y", True), "**Y)": ("Y", False),
-    "**O(": ("O", True), "**O)": ("O", False),
-    "**XO(": ("XO", True), "**XO)": ("XO", False),
-    "**NO(": ("NO", True), "**NO)": ("NO", False),
-}
-NOMBRE_GRUPO = {"Y": "Y", "O": "O", "XO": "XO (uno u otro)", "NO": "NO"}
-
-
-@dataclass(frozen=True)
-class Prop:
-    clave: str
-    nombre: str
-    clase: str              # tipo, texto, numero, punto, color, campo, grupo
-    tipos: tuple = ()       # dxftypes a los que se aplica (vacío = todos)
-
-
-def _P(clave, nombre, clase, *tipos):
-    return Prop(clave, nombre, clase, tuple(tipos))
-
+from . import filtro_base as B
+from .filtro_base import (GRUPOS, NOMBRE_GRUPO, OPS, OPS_TEXTO, FiltroError, Prop, _P,  # noqa: F401
+                          _num, comparar_numero, comparar_texto, COLORES, numero_de_color,
+                          SIN_NOMBRE, NOMBRES_ORDEN, pedido)
 
 LINEALES = ("LINE", "ARC", "CIRCLE", "ELLIPSE", "LWPOLYLINE", "POLYLINE", "SPLINE")
+
 
 #: el catálogo, en el orden de la lista de la ventana
 PROPIEDADES = (
@@ -119,16 +99,9 @@ PROPIEDADES = (
     _P("fondo_rotulo", "Fondo de rótulo de QGIS", "tipo"),
     _P("simbolo", "Símbolo de punto de GeoCAD Yaguareté", "tipo", "INSERT"),
     # grupos
-    _P("**Y(", "** Comenzar Y", "grupo"), _P("**Y)", "** Terminar Y", "grupo"),
-    _P("**O(", "** Comenzar O", "grupo"), _P("**O)", "** Terminar O", "grupo"),
-    _P("**XO(", "** Comenzar XO", "grupo"), _P("**XO)", "** Terminar XO", "grupo"),
-    _P("**NO(", "** Comenzar NO", "grupo"), _P("**NO)", "** Terminar NO", "grupo"),
+    *B.PROP_GRUPOS,
 )
 POR_CLAVE = {p.clave: p for p in PROPIEDADES}
-
-
-class FiltroError(ValueError):
-    pass
 
 
 # --------------------------------------------------------------- lectura
@@ -339,63 +312,6 @@ def _cumple_tipo(e, clave: str) -> bool:
 
 
 # ---------------------------------------------------------- comparación
-def _num(v):
-    if isinstance(v, (int, float)):
-        return float(v)
-    try:
-        return float(str(v).strip().replace(",", "."))
-    except (TypeError, ValueError):
-        return None
-
-
-def comparar_numero(actual, op: str, buscado) -> bool:
-    if op == "*":
-        return actual is not None
-    a, b = _num(actual), _num(buscado)
-    if a is None or b is None:
-        return False
-    tol = 1e-6 * max(1.0, abs(b))
-    return {"=": abs(a - b) <= tol, "!=": abs(a - b) > tol, "<": a < b - tol,
-            "<=": a <= b + tol, ">": a > b + tol, ">=": a >= b - tol}.get(op, False)
-
-
-def comparar_texto(actual, op: str, buscado) -> bool:
-    """Sin distinguir mayúsculas; * y ? comodines; la coma separa opciones.
-    Con una lista (atributos), se cumple si alguno coincide."""
-    if isinstance(actual, (list, tuple)):
-        hit = any(comparar_texto(a, "=", buscado) for a in actual)
-        return hit if op != "!=" else not hit
-    if actual is None:
-        return False
-    a = str(actual).upper()
-    patrones = [p.strip().upper() for p in str(buscado if buscado is not None else "").split(",")]
-    hit = any(fnmatch.fnmatchcase(a, p) for p in patrones)
-    if op == "*":
-        return True
-    return hit if op != "!=" else not hit
-
-
-COLORES = {"PORCAPA": 256, "BYLAYER": 256, "PORBLOQUE": 0, "BYBLOCK": 0,
-           "ROJO": 1, "RED": 1, "AMARILLO": 2, "YELLOW": 2, "VERDE": 3, "GREEN": 3,
-           "CIAN": 4, "CYAN": 4, "AZUL": 5, "BLUE": 5, "MAGENTA": 6,
-           "BLANCO": 7, "WHITE": 7, "NEGRO": 7}
-
-
-def numero_de_color(v):
-    """1-255, 256 = PorCapa, 0 = PorBloque; acepta el número o el nombre."""
-    if isinstance(v, (int, float)):
-        return int(v)
-    t = str(v or "").strip().upper()
-    if t in COLORES:
-        return COLORES[t]
-    if " - " in t:                               # «1 - Rojo», como AutoCAD
-        t = t.split(" - ", 1)[0]
-    try:
-        return int(float(t))
-    except ValueError:
-        return None
-
-
 class Campos:
     """Los valores de la tabla de QGIS de cada conexión, leídos una sola vez
     por filtrado."""
@@ -467,33 +383,8 @@ def cumple(e, cond: dict, ctx=None) -> bool:
 
 # ---------------------------------------------------------------- grupos
 def arbol(conds):
-    """La lista de condiciones como árbol ("Y", [hijos]); FiltroError si los
-    grupos no están bien abiertos y cerrados."""
-    pila = [("Y", [])]
-    for c in conds:
-        clave = c.get("p")
-        if clave in GRUPOS:
-            op, abre = GRUPOS[clave]
-            if abre:
-                pila.append((op, []))
-                continue
-            if len(pila) == 1 or pila[-1][0] != op:
-                raise FiltroError(f"«Terminar {op}» sin su «Comenzar {op}»")
-            op_, hijos = pila.pop()
-            if op_ == "NO" and len(hijos) != 1:
-                raise FiltroError("NO lleva exactamente una condición (o un grupo)")
-            if op_ == "XO" and len(hijos) != 2:
-                raise FiltroError("XO lleva exactamente dos condiciones (o grupos)")
-            if not hijos:
-                raise FiltroError(f"el grupo {op_} está vacío")
-            pila[-1][1].append((op_, hijos))
-        else:
-            if POR_CLAVE.get(clave) is None:
-                raise FiltroError(f"propiedad desconocida: {clave}")
-            pila[-1][1].append(c)
-    if len(pila) > 1:
-        raise FiltroError(f"falta «Terminar {pila[-1][0]}»")
-    return pila[0]
+    """La lista de condiciones como árbol (ver filtro_base.arbol)."""
+    return B.arbol(conds, POR_CLAVE)
 
 
 def _evaluar(e, nodo, ctx) -> bool:
@@ -517,50 +408,12 @@ def filtrar(entidades, conds, document=None) -> list:
 
 
 # ----------------------------------------------------- texto para la lista
-def _fmt(v) -> str:
-    if isinstance(v, float):
-        return f"{v:.6g}"
-    return str(v)
-
-
 def describir(cond: dict) -> tuple:
     """(propiedad, operador y valor) como los muestra la lista de la ventana."""
-    clave = cond.get("p")
-    prop = POR_CLAVE.get(clave)
-    if prop is None:
-        return (str(clave), "")
-    if prop.clase in ("tipo", "grupo"):
-        return (prop.nombre, "")
-    if prop.clase == "punto":
-        partes = []
-        for eje in ("x", "y"):
-            op, v = (cond.get(eje) or ["*", 0])[:2]
-            partes.append(f"{eje.upper()} {op}" + ("" if op == "*" else f" {_fmt(v)}"))
-        return (prop.nombre, ",  ".join(partes))
-    op = cond.get("op", "=")
-    if prop.clase == "campo":
-        return (f"{prop.nombre}: {cond.get('campo', '')}",
-                f"{op}" + ("" if op == "*" else f" {_fmt(cond.get('v', ''))}"))
-    if prop.clase == "color":
-        n = numero_de_color(cond.get("v"))
-        nombre = {256: "PorCapa", 0: "PorBloque", 1: "1 - Rojo", 2: "2 - Amarillo",
-                  3: "3 - Verde", 4: "4 - Cian", 5: "5 - Azul", 6: "6 - Magenta",
-                  7: "7 - Blanco"}.get(n, str(n))
-        return (prop.nombre, f"{op}" + ("" if op == "*" else f" {nombre}"))
-    return (prop.nombre, f"{op}" + ("" if op == "*" else f" {_fmt(cond.get('v', ''))}"))
+    return B.describir(cond, POR_CLAVE)
 
 
-def sangrias(conds) -> list:
-    """Cuánto sangrar cada renglón de la lista (dentro de los grupos)."""
-    out, nivel = [], 0
-    for c in conds:
-        g = GRUPOS.get(c.get("p"))
-        if g is not None and not g[1]:
-            nivel = max(0, nivel - 1)
-        out.append(nivel)
-        if g is not None and g[1]:
-            nivel += 1
-    return out
+sangrias = B.sangrias
 
 
 # ------------------------------------------------- «agregar objeto seleccionado»
@@ -593,62 +446,29 @@ def de_objeto(e) -> list:
 
 
 # ---------------------------------------------------------- guardados
-SIN_NOMBRE = "*sin nombre"
-
-
 def _archivo():
     return buzon.base_dir() / "filtros.json"
 
 
+_GUARDADOS = B.Guardados(lambda: _archivo(), POR_CLAVE)
+
+
 def guardados() -> dict:
     """{nombre: [condiciones]} (incluye «*sin nombre», el último usado)."""
-    try:
-        data = json.loads(_archivo().read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    filtros = data.get("filtros") if isinstance(data, dict) else None
-    if not isinstance(filtros, dict):
-        return {}
-    return {str(k): list(v) for k, v in filtros.items() if isinstance(v, list)}
-
-
-def _escribir(filtros: dict) -> None:
-    ruta = _archivo()
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-    tmp = ruta.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"version": 1, "filtros": filtros}, ensure_ascii=False,
-                              indent=1), encoding="utf-8")
-    tmp.replace(ruta)
+    return _GUARDADOS.todos()
 
 
 def guardar(nombre: str, conds) -> None:
-    nombre = str(nombre).strip()
-    if not nombre:
-        raise FiltroError("falta el nombre")
-    arbol(conds)                                # no se guarda un filtro roto
-    filtros = guardados()
-    filtros[nombre] = list(conds)
-    _escribir(filtros)
+    _GUARDADOS.guardar(nombre, conds)
 
 
 def borrar(nombre: str) -> bool:
-    filtros = guardados()
-    if nombre not in filtros:
-        return False
-    del filtros[nombre]
-    _escribir(filtros)
-    return True
+    return _GUARDADOS.borrar(nombre)
 
 
 def buscar(nombre: str):
     """El filtro guardado con ese nombre (sin distinguir mayúsculas), o None."""
-    filtros = guardados()
-    if nombre in filtros:
-        return filtros[nombre]
-    for k, v in filtros.items():
-        if k.upper() == str(nombre).strip().upper():
-            return v
-    return None
+    return _GUARDADOS.buscar(nombre)
 
 
 # ------------------------------------------------------------ en el dibujo
@@ -681,27 +501,45 @@ def candidatos(document, handles=None) -> list:
 
 def recordar(conds) -> None:
     """El último filtro aplicado queda como «*sin nombre» (como AutoCAD)."""
-    try:
-        guardar(SIN_NOMBRE, conds)
-    except (OSError, FiltroError):
-        pass
+    _GUARDADOS.recordar(conds)
 
 
 def ultimo() -> list:
-    return guardados().get(SIN_NOMBRE, [])
+    return _GUARDADOS.ultimo()
 
 
-#: lo que se escribe para filtrar (en la línea de comandos o en «Designar»)
-NOMBRES_ORDEN = ("FI", "FILTRO", "FILTER", "'FI", "'FILTRO", "'FILTER", "_FILTER", "'_FILTER")
+# ---------------------------------------------- para la ventana (filtro_ui, núcleo)
+#: los valores que ofrece «Elegir...» para cada propiedad de texto
+ELEGIBLES = ("capa", "tipo_linea", "nombre_bloque", "estilo_texto", "estilo_cota",
+             "patron_sombreado", "conexion", "etiqueta_atributo")
 
 
-def pedido(texto: str):
-    """«FI» -> ""; «FI nombre» -> "nombre"; otra cosa -> None."""
-    t = str(texto).strip()
-    partes = t.split(None, 1)
-    if not partes or partes[0].upper() not in NOMBRES_ORDEN:
-        return None
-    return partes[1].strip() if len(partes) > 1 else ""
+def valores_en(entidades, clave: str) -> list:
+    """Los valores distintos de una propiedad de texto en el dibujo."""
+    out = set()
+    for e in entidades:
+        try:
+            v = valor(e, clave)
+        except Exception:  # noqa: BLE001
+            continue
+        for x in (v if isinstance(v, (list, tuple)) else [v]):
+            if x not in (None, ""):
+                out.add(str(x))
+    return sorted(out, key=str.upper)
+
+
+def campos_en(document) -> list:
+    """Los campos de las tablas de QGIS conectadas al dibujo."""
+    out = []
+    try:
+        from . import datos, enlace
+        for key in enlace.read_links(document.doc):
+            for f in datos.LayerData(document, key).fields:
+                if f.name not in out:
+                    out.append(f.name)
+    except Exception:  # noqa: BLE001
+        pass
+    return out
 
 
 def _clase_tool():

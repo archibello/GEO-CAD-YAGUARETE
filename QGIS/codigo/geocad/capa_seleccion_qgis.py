@@ -9,12 +9,22 @@ escribe en la fuente, y la capa original queda como estaba.
 
 La capa nueva se arma y se mide aparte; sólo entra al proyecto si muestra
 exactamente lo elegido. Las reglas del filtro están en capa_seleccion.py.
+
+3.97.1 (Fernando, 26/11/2026: «es muy importante esta operación para luego
+utilizar las selecciones para crear nuevos layers»): si entre lo elegido hay
+elementos todavía SIN GUARDAR (por ejemplo, lo que deja FILTRO en una capa
+en edición), no se puede filtrar: se crea una COPIA aparte, un GeoPackage
+con todos los elegidos y sus datos, con el mismo estilo. La original no se
+toca ni se guarda. Decidido con Fernando («Crea una copia aparte»).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from qgis.core import Qgis, QgsFeatureRequest, QgsProject, QgsVectorLayer
+import os
+
+from qgis.core import (Qgis, QgsFeature, QgsFeatureRequest, QgsFields, QgsProject,
+                       QgsVectorFileWriter, QgsVectorLayer, QgsWkbTypes)
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
@@ -49,12 +59,78 @@ def _condicion(capa, ids):
     return condicion, "" if condicion else "no se pudo armar el filtro con su clave primaria"
 
 
+def copiar_seleccion(capa, proyecto=None):
+    """(capa nueva, ruta, motivo): una copia aparte de lo elegido, en un
+    GeoPackage junto al proyecto (o a la capa; si no, Documentos/GeoCAD),
+    con sus datos y el estilo de la original. La original no se toca."""
+    from . import combinar as C
+    proyecto = proyecto or QgsProject.instance()
+    elegidos = list(capa.selectedFeatureIds())
+    if not elegidos:
+        return None, "", "no tiene elementos elegidos"
+    nombre = CS.nombre_libre(capa.name(), (c.name() for c in proyecto.mapLayers().values()))
+    carpeta = C.carpeta_para(proyecto.fileName(), capa.source() if capa.providerType() == "ogr" else "")
+    try:
+        os.makedirs(carpeta, exist_ok=True)
+    except OSError as e:
+        return None, "", "no se pudo crear la carpeta %s (%s)" % (carpeta, e)
+    ruta = C.archivo_libre(carpeta, nombre)
+    pk = set(capa.primaryKeyAttributes())
+    campos = QgsFields()
+    for i, f in enumerate(capa.fields()):
+        if i in pk or f.name().lower() == "fid":
+            continue
+        campos.append(f)
+    uri = "%s?crs=%s" % (QgsWkbTypes.displayString(capa.wkbType()), capa.crs().authid() or "EPSG:4326")
+    mem = QgsVectorLayer(uri, nombre, "memory")
+    if not capa.crs().authid():
+        mem.setCrs(capa.crs())
+    mem.dataProvider().addAttributes(campos.toList())
+    mem.updateFields()
+    copias = []
+    for f in capa.getFeatures(QgsFeatureRequest().setFilterFids(elegidos)):   # con la edición sin guardar
+        n = QgsFeature(mem.fields())
+        n.setGeometry(f.geometry())
+        for c in campos:
+            n.setAttribute(c.name(), f.attribute(c.name()))
+        copias.append(n)
+    mem.dataProvider().addFeatures(copias)
+    opts = QgsVectorFileWriter.SaveVectorOptions()
+    opts.driverName = "GPKG"
+    opts.layerName = nombre
+    opts.fileEncoding = "UTF-8"
+    try:
+        res = QgsVectorFileWriter.writeAsVectorFormatV3(mem, ruta, proyecto.transformContext(), opts)
+    except AttributeError:
+        res = QgsVectorFileWriter.writeAsVectorFormatV2(mem, ruta, proyecto.transformContext(), opts)
+    if res[0] != QgsVectorFileWriter.NoError:
+        return None, "", "no se pudo escribir %s" % ruta
+    nueva = QgsVectorLayer("%s|layername=%s" % (ruta, nombre), nombre, "ogr")
+    if not nueva.isValid() or nueva.featureCount() != len(copias):
+        return None, "", "la copia no quedó con lo elegido"
+    try:
+        nueva.setRenderer(capa.renderer().clone())
+    except Exception:  # noqa: BLE001 - queda el estilo de fábrica
+        pass
+    for prop in capa.customPropertyKeys():              # sólo las capas CAD (Layer Properties):
+        if not str(prop).startswith("cad_layer_manager/"):   # no las marcas de textos o bloques
+            continue
+        try:
+            nueva.setCustomProperty(prop, capa.customProperty(prop))
+        except Exception:  # noqa: BLE001
+            pass
+    proyecto.addMapLayer(nueva)
+    return nueva, ruta, ""
+
+
 def crear_capa(capa, proyecto=None):
-    """(capa nueva, sin guardar, motivo). La capa nueva es None si no se creó."""
+    """(capa nueva, sin guardar, motivo). La capa nueva es None si no se creó.
+    3.97.1: con elegidos sin guardar, una copia aparte (``sin guardar`` = 0)."""
     proyecto = proyecto or QgsProject.instance()
     ids, sin_guardar = CS.separar(capa.selectedFeatureIds())
-    if not ids:
-        return None, len(sin_guardar), "sus elementos elegidos todavía no se guardaron"
+    if sin_guardar:
+        nueva, _ruta, motivo = copiar_seleccion(capa, proyecto)
+        return nueva, 0, motivo
     condicion, motivo = _condicion(capa, ids)
     if condicion is None:
         return None, len(sin_guardar), motivo
@@ -127,7 +203,12 @@ class CapaSeleccionQgis:
             if sin_guardar:
                 problemas.append("«%s»: %d sin guardar no entraron" % (capa.name(), sin_guardar))
         if nuevas:
-            self._aviso("Capa creada: " + ", ".join("«%s» (%d)" % (c.name(), c.featureCount()) for c in nuevas) + ".",
+            def como(c):
+                copia = c.providerType() == "ogr" and c.source().split("|")[0].endswith(".gpkg") \
+                    and not c.subsetString()
+                return "«%s» (%d%s)" % (c.name(), c.featureCount(),
+                                        ", copia aparte: había elegidos sin guardar" if copia else "")
+            self._aviso("Capa creada: " + ", ".join(como(c) for c in nuevas) + ".",
                         Qgis.MessageLevel.Success)
         if problemas:
             self._aviso("No se pudo completar: " + "; ".join(problemas) + ".", Qgis.MessageLevel.Warning)

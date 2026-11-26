@@ -222,7 +222,8 @@ def _envolver_clic_derecho(original):
 REEMPLAZOS = {"FILLET": ("empalme", "GEOFILLET"), "CHAMFER": ("chaflan", "GEOCHAMFER"),
               "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT"),
               "STRETCH": ("estirar", "GEOSTRETCH"), "TEXT": ("texto", "GEOTEXT"),
-              "MATCHPROP": ("igualar", "GEOMATCHPROP")}
+              "MATCHPROP": ("igualar", "GEOMATCHPROP"),
+              "JOIN": ("unir_poligonos", "GEOJOIN")}      # 3.96.0: con polígonos
 
 
 def herramienta_para(nombre: str, window=None, registradas=None) -> str:

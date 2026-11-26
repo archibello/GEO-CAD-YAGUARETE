@@ -25,6 +25,29 @@ from qgis.core import (QgsCoordinateTransform, QgsFeatureRequest, QgsField, QgsG
 from .compat import geometry_kind, qt
 from .units import InputError, format_angle, format_length, parse_angle, parse_distance
 
+
+def cerrar_partes(partes, cerrar):
+    """3.97.0 (Fernando: «Cerrar polígono» en Propiedades): las polilíneas
+    ``partes`` (listas de (x, y)) cerradas o abiertas. Cerrar repite el primer
+    vértice al final (si tiene 3 o más y no estaba); abrir saca el repetido.
+    Devuelve (partes nuevas, cambió)."""
+    out, cambio = [], False
+    for pts in partes:
+        pts = list(pts)
+        cerrada = len(pts) > 2 and tuple(pts[0]) == tuple(pts[-1])
+        if cerrar and not cerrada and len(pts) >= 3:
+            pts.append(pts[0])
+            cambio = True
+        elif not cerrar and cerrada and len(pts) >= 4:
+            pts.pop()
+            cambio = True
+        out.append(pts)
+    return out, cambio
+
+
+def es_cerrada(partes):
+    return bool(partes) and all(len(p) > 2 and tuple(p[0]) == tuple(p[-1]) for p in partes)
+
 VARIES = '*VARIAS*'
 TEXT_FLAG = 'dibujo_cad/text_layer'
 BLOCK_FLAG = 'dibujo_cad/block_layer'
@@ -566,6 +589,8 @@ class PropertiesPanel(QDockWidget):
                 g = self._geom_canvas(lyr, self._feat(lyr, fid))
                 total_len += g.length()
                 total_area += g.area()
+            if kind == 'Polilínea':
+                self._fila_cerrada(sel)
             self._text_row('Longitud total', self._fmt(total_len))
             if kind == 'Polígono':
                 self._text_row('Área total', self._fmt(total_area))
@@ -599,11 +624,61 @@ class PropertiesPanel(QDockWidget):
             self._text_row('Vértice X', self._fmt(p.x()), lambda t: self._move_vertex(lyr, fid, g, k, x=t))
             self._text_row('Vértice Y', self._fmt(p.y()), lambda t: self._move_vertex(lyr, fid, g, k, y=t))
         self._text_row('Número de vértices', str(n))
-        self._text_row('Cerrada', 'Sí' if closed else 'No')
+        if kind == 'Polilínea':
+            self._fila_cerrada(sel)
+        else:
+            self._text_row('Cerrada', 'Sí' if closed else 'No')
         self._text_row('Longitud' if kind != 'Polígono' else 'Perímetro', self._fmt(g.length()))
         if closed:
             area = g.area() if kind == 'Polígono' else QgsGeometry.fromPolygonXY([pts]).area()
             self._text_row('Área', self._fmt(area))
+
+    def _partes_linea(self, lyr, fid, fresca=False):
+        from .editkit import explode
+        f = lyr.getFeature(fid) if fresca else self._feat(lyr, fid)
+        try:
+            kind, _s, flat, _i = explode(f.geometry())
+        except ValueError:
+            return None
+        return flat if kind == 'line' else None
+
+    def _fila_cerrada(self, sel):
+        """«Cerrada» Sí/No para polilíneas (una o varias), como en AutoCAD."""
+        estados = set()
+        for lyr, fid, _t in sel:
+            partes = self._partes_linea(lyr, fid)
+            if partes is not None:
+                estados.add(es_cerrada(partes))
+        cur = None if len(estados) != 1 else ('si' if estados.pop() else 'no')
+        self._combo_row('Cerrada', [('Sí', 'si'), ('No', 'no')], cur,
+                        lambda v: self._set_closed(sel, v == 'si'))
+
+    def _set_closed(self, sel, cerrar):
+        from .editkit import conform, rebuild
+        por_capa = {}
+        for lyr, fid, _t in sel:
+            partes = self._partes_linea(lyr, fid, fresca=True)     # no la de la caché del panel
+            if partes is None:
+                continue
+            nuevas, cambio = cerrar_partes(partes, cerrar)
+            if cambio:
+                por_capa.setdefault(lyr, []).append((fid, nuevas))
+        n = 0
+        for lyr, cambios in por_capa.items():
+            if not lyr.isEditable():
+                lyr.startEditing()
+            lyr.beginEditCommand('Cerrar polilínea' if cerrar else 'Abrir polilínea')
+            for fid, nuevas in cambios:
+                lyr.changeGeometry(fid, conform(rebuild('line', nuevas), lyr))
+                n += 1
+            lyr.endEditCommand()
+            lyr.triggerRepaint()
+        if n:
+            self.mgr.cmdline.echo('%d polilínea(s) %s.' % (n, 'cerrada(s)' if cerrar else 'abierta(s)'))
+        else:
+            self.mgr.cmdline.echo('Propiedades: no hay polilíneas de 3 o más vértices para %s.'
+                                  % ('cerrar' if cerrar else 'abrir'))
+        self.schedule()
 
     def _set_vertex(self, k):
         if self._building:

@@ -47,6 +47,7 @@ conciencia.
 | Empalme, Chaflán, Partir en punto, Estirar, Igualar propiedades | edición como AutoCAD |
 | Texto como AutoCAD | TEXTO / DT con altura y dirección por puntos |
 | Poligonal por rumbos | RUMBOS / RB: distancia<ángulo desde un tramo base, como en QGIS |
+| UNIR (J) con polígonos | como Combinar objetos espaciales de QGIS; con líneas, el UNIR de IngeCAD |
 | Ángulos relativos | @d<ángulo como ángulo interior desde el tramo anterior |
 | Agarres de vértices | escribir el punto, varios agarres, agregar o borrar vértices |
 | Perpendicular y Apparent Intersection con guías | referencias con prolongación punteada |
@@ -223,6 +224,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 | **Empalme** (EMPALME / F) | también entre tramos de polilíneas, respetando el lado elegido. |
 | **Chaflán** (CHAFLAN / CHA) | con **Ochava** por defecto (largo del bisel, ángulos iguales); Distancia, Ángulo, Polilínea, Múltiple. |
 | **Partir en punto** (PARTEENPUNTO) | corta en un punto con referencias; muestra los dos pedazos antes del clic. |
+| **Unir polígonos** (UNIR / J) | con dos o más polígonos (polilíneas cerradas, círculos), como en QGIS: los que se tocan quedan en uno, con los datos del de **mayor superficie**; se rellenan los huecos encerrados entre ellos (no los que ya tenía cada uno) y los grupos aislados quedan aparte. Al final pregunta «¿Quiere crear una capa nueva con el resultado? [Sí/No] <No>»: **No** o **Intro** lo deja en la misma capa (un solo U; en una capa de QGIS, al devolverla queda el registro del mayor y los demás se borran) y **Sí** en la capa «combinados de *capa*», en rojo (los datos viajan en cada objeto, como con IMPORTARSHP; la original y su SHP no se tocan). Las siguientes con **Sí** sobre la misma capa van a esa misma capa y a su tabla. Los arcos pasan a tramos. Con líneas, el UNIR de IngeCAD. |
 | **Estirar** (ESTIRA / S) | con vista previa al instante. |
 | **Igualar propiedades** (IGUALARPROP / MA) | origen resaltado; cada destino cambia a la vista; R y U los devuelven. |
 | **Texto** (TEXTO / DT) | 1.er punto ubica, 2.º da la altura, 3.º la dirección. |
@@ -231,7 +233,7 @@ Quien viene de AutoCAD encuentra lo mismo, con los mismos nombres.
 | **Teclado** | lo que se escribe va a la línea de comandos esté donde esté el foco. |
 | **Orden de dibujo** | **ALFRENTE** y **ALFONDO**; AutoCAD lo respeta al abrir el DXF. |
 | **Propiedades en masa** | Ctrl+1 con muchos objetos: cambiar todos a la vez, largo y área totales. |
-| **Pegar en el lugar** | **PEGARORIG** (Ctrl+Alt+V): pega con sus mismas coordenadas, capa y color; también lo copiado en QGIS. |
+| **Pegar en el lugar** | **PEGARORIG** (Ctrl+Alt+V): pega con sus mismas coordenadas, capa y color; también lo copiado en QGIS. Las capas que vienen de QGIS traen su color exacto; si después se les elige otro color en el panel Layers (o con -CAPA Color), queda el elegido. |
 
 ### Práctica 2.C — Una parcela por rumbos y una ochava
 

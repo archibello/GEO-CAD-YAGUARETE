@@ -1,0 +1,32 @@
+GeoCAD - versión 3.97.1
+=======================
+QGIS: «Crear capa a partir de elementos seleccionados» también con objetos sin guardar.
+
+Por qué
+   (Fernando, 26/11/2026, con una captura.) FILTRO dejó 6 objetos
+   seleccionados en «Nueva capa borrador» (capa en edición) y «Crear capa a
+   partir de elementos seleccionados» avisó «sus elementos elegidos todavía
+   no se guardaron». «Es muy importante esta operación para luego utilizar
+   las selecciones para crear nuevos layers.»
+   La capa que crea esa orden es un filtro de la original, y un filtro sólo
+   ve lo guardado en la fuente: los objetos agregados en la edición, sin
+   guardar, todavía no existen ahí.
+
+Qué cambia
+   Si entre lo elegido hay objetos sin guardar, se crea una COPIA aparte
+   (decidido con Fernando): un GeoPackage «<capa>_filtered» junto al
+   proyecto (si no está guardado, junto a la capa; si la capa es temporal,
+   en Documentos/GeoCAD), con todos los elegidos —guardados y sin guardar—,
+   sus datos, el estilo de la original y su configuración de capas CAD. La
+   capa original no se guarda ni se toca y sigue en edición. El aviso dice
+   «copia aparte: había elegidos sin guardar».
+   Si todo lo elegido está guardado, como antes: una capa filtrada, sin
+   archivos nuevos.
+
+Pruebas
+   banco_capa_seleccion_qgis_real con QGIS 4.2.3 real: copia con los
+   elegidos guardados y sin guardar, GeoPackage aparte junto al proyecto,
+   con las capas CAD y sin las marcas de textos o bloques, la original en
+   edición sin guardar; sólo sin guardar, también copia. TODO OK (también
+   se puso al día su chequeo de Administrar Herramientas: desde la 3.94.0
+   el botón está en el banco Capas).

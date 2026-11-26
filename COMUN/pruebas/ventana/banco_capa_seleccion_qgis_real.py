@@ -123,8 +123,9 @@ def correr():
     check("el módulo arrancó", herr is not None)
     check("está en el menú Vectorial", herr.accion in iface.vectorMenu().actions())
     check("no está en el menú GeoCAD", CS.TITULO not in [a.text() for a in plug.menu.actions()])
-    check("Administrar Herramientas: banco Edición",
-          any("Edici" in n and any(a.property("geocad_id") == "geocad:capaseleccion" for a in fila)
+    # desde la 3.94.0 (bancos por familia) el botón está en el banco «Capas»
+    check("Administrar Herramientas: banco Capas",
+          any(n.endswith("Capas") and any(a.property("geocad_id") == "geocad:capaseleccion" for a in fila)
               for n, fila in plug._bancos()), str([n for n, _f in plug._bancos()]))
 
     # memoria, con un hueco en la numeración: la capa clonada conserva los ids
@@ -236,8 +237,13 @@ def correr():
           sorted(c.featureCount() for c in nuevas) == [1, 2]
           and len({c.name() for c in nuevas}) == 2, str([(c.name(), c.featureCount()) for c in nuevas]))
 
-    # lo que se agregó sin guardar no entra
+    # 3.97.1: con elegidos sin guardar, una COPIA aparte (GeoPackage) con todos los elegidos
+    # un proyecto en una carpeta temporal: la copia va junto a él (nunca a la carpeta personal)
+    OBRA = tempfile.mkdtemp(prefix="banco-copia-")
+    QgsProject.instance().setFileName(os.path.join(OBRA, "obra.qgz"))
     ed = memoria("edicion", 2)
+    ed.setCustomProperty("cad_layer_manager/config", '{"layers": [{"name": "LOTES"}]}')
+    ed.setCustomProperty("dibujo_cad/text_layer", "1")          # una marca que NO se copia
     ed.startEditing()
     f = QgsFeature(ed.fields())
     f.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(9, 9)))
@@ -248,14 +254,22 @@ def correr():
     check("edición: hay un id negativo", len(negativos) == 1, str(todos))
     ed.selectByIds([negativos[0], max(todos)])
     elegir_panel(ed)
-    herr.crear()
+    nuevas = herr.crear()
     nueva = por_nombre("edicion_filtered")
-    check("edición: sólo lo guardado", nueva is not None and nueva.featureCount() == 1)
-    check("edición: la original sigue editándose", ed.isEditable() and ed.editBuffer().addedFeatures())
-    cuantas = len(QgsProject.instance().mapLayers())
+    check("edición: copia con los dos elegidos", nueva is not None and nueva.featureCount() == 2
+          and sorted(nombres_de(nueva)) == sorted(["singuardar"] + [g["nombre"] for g in ed.getFeatures([max(todos)])]),
+          str(nombres_de(nueva) if nueva else None))
+    check("edición: es un GeoPackage aparte, sin filtro", nueva is not None and nueva.providerType() == "ogr"
+          and nueva.source().split("|")[0] == os.path.join(OBRA, "edicion_filtered.gpkg") and not nueva.subsetString())
+    check("edición: lleva las capas CAD y no la marca de textos", nueva is not None
+          and nueva.customProperty("cad_layer_manager/config") == ed.customProperty("cad_layer_manager/config")
+          and nueva.customProperty("dibujo_cad/text_layer") is None)
+    check("edición: la original sigue editándose, sin guardar",
+          ed.isEditable() and ed.editBuffer().addedFeatures() and ed.isModified())
     ed.selectByIds(negativos)
     elegir_panel(ed)
-    check("edición: sólo sin guardar, nada", herr.crear() == [] and len(QgsProject.instance().mapLayers()) == cuantas)
+    nuevas = herr.crear()
+    check("edición: sólo sin guardar, también copia", len(nuevas) == 1 and nuevas[0].featureCount() == 1)
     ed.rollBack()
 
     # sin selección: avisa y no crea nada

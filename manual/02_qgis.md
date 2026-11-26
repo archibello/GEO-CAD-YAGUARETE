@@ -193,7 +193,7 @@ toca la tabla de la capa.
 | **MATRIZ** | copias en filas y columnas o alrededor de un centro |
 | **ESTIRA** | estirar lo atrapado por una ventana |
 | **EQDIST** (DESFASE, OFFSET) | paralela a una distancia o por un punto |
-| **RECORTA**, **ALARGA** | cortar o prolongar hasta un borde |
+| **RECORTA**, **ALARGA** | cortar o prolongar hasta un borde. En polígonos (y en polilíneas cerradas de una capa de líneas, cuando los cortes son cerrados) RECORTA quita al elegido la parte que se superpone con los de corte |
 | **EMPALME**, **CHAFLAN** | redondear o biselar esquinas |
 | **OCHAVA** | la ochava de una esquina |
 | **PARTE**, **PARTEENPUNTO** | partir en dos puntos o en uno |
@@ -202,7 +202,9 @@ toca la tabla de la capa.
 | **PERPENDICULAR** | una línea perpendicular desde un punto |
 | **IGUALARPROP** | copiar capa CAD, color y estilo de un objeto a otros |
 | **COPIABASE**, **PEGARBASE** | copiar y pegar con punto base |
+| **Propiedades**: Cerrada | en polilíneas (una o varias), **Sí** agrega el tramo de cierre y **No** lo saca; un solo U. En polígonos es siempre Sí. |
 | **UNIR** (J, JOIN) | une líneas que comparten un extremo en una sola; quedan los datos de la más larga (**CR**: la de más tramos) y las demás se borran |
+| **UNIR** (J) con polígonos | también con **polilíneas cerradas** en una capa de líneas (como en IngeCAD). Como *Combinar objetos espaciales*: los que se tocan quedan en uno, con los datos del de **mayor superficie**; rellena los huecos encerrados entre ellos (las ranuras de la digitalización; los que ya tenía cada uno quedan) y los grupos aislados quedan aparte, cada uno con su mayor. Al final pregunta «¿Quiere crear una capa nueva con el resultado? [Sí/No] <No>»: **No** o **Intro** lo deja en la misma capa (U lo deshace) y **Sí** en la capa «combinados de *capa*» (GeoPackage en la carpeta del proyecto, con el borde en rojo y sin relleno; la original no se toca). Las siguientes con **Sí** sobre la misma capa se agregan a esa misma capa combinada. |
 | **DESCOMP** (DESCOMPONER) | separar en partes |
 | **BORRA** | borrar |
 
@@ -212,6 +214,18 @@ toca la tabla de la capa.
   el mapa se mueve con la rueda o el botón del medio. **Esc** deselecciona.
 - **Objetos tapados:** cada clic en el mismo punto pasa al objeto de abajo;
   Mayús + clic quita uno de la selección.
+- **Capas CAD apagadas:** lo que no se ve no se designa. Los objetos de una
+  capa CAD apagada (o fuera de escala) no entran en el clic, la ventana, la
+  captura, PV, PC, Borde ni Todo.
+- **FILTRO (FI):** el de IngeCAD. Una lista de condiciones —tipo de objeto,
+  capa CAD (con comodines: `LOTES*`, `MUROS,EJES`), color, tipo y grosor de
+  línea, largo, área, perímetro, vértices, polilínea cerrada, textos,
+  bloques y cualquier campo de la tabla— con grupos Y, O, XO y NO, y
+  «Agregar objeto seleccionado». Después: designar los objetos a filtrar
+  (Intro = toda la capa) o, si ya había selección, filtra ésa. Lo que cumple
+  queda seleccionado para la orden siguiente. Dentro de cualquier «Designe
+  objetos» se puede escribir **FI** (o **FI nombre**, un filtro guardado).
+  Los filtros guardados de QGIS son aparte de los de IngeCAD.
 - **Referencias (Shift + clic derecho):** Punto final, Punto medio,
   Intersección, Intersección aparente, Extensión, Centro, Cuadrante,
   Tangente, **Perpendicular**, Paralela, Nodo, Inserción, Cercano, Desde…
@@ -345,6 +359,13 @@ elementos seleccionados**. De cada capa con selección sale una capa nueva
 > 💡 Es un **filtro**: no crea archivos ni escribe en la fuente. Reemplaza
 > al complemento externo «Create layer from selected features», que GeoCAD
 > retira al instalarse.
+>
+> Si entre lo elegido hay objetos **todavía sin guardar** (por ejemplo, lo
+> que deja **FILTRO** en una capa en edición), no se puede filtrar: sale una
+> **copia aparte**, un GeoPackage «*capa*_filtered» junto al proyecto, con
+> todos los elegidos, sus datos, su estilo y sus capas CAD. La capa original
+> no se guarda ni se toca. Así, FILTRO → Crear capa arma capas nuevas con
+> lo seleccionado.
 
 ## 1.8 Pegar en el lugar
 

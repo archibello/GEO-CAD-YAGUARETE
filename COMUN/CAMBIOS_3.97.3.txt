@@ -1,0 +1,29 @@
+GeoCAD - versión 3.97.3
+=======================
+QGIS: UNIR (J) con polígonos también con polilíneas cerradas en una capa de líneas.
+
+Por qué
+   (Fernando, 26/11/2026, con la 3.97.2.) «En QGIS se perdió la función de
+   Join polígonos, no se cumple con lo solicitado en la operación anterior.
+   En IngeCAD quedó perfecto.»
+   La capa «Nueva capa borrador» de QGIS es ahora una capa de LÍNEAS: las
+   parcelas son polilíneas cerradas. UNIR con polígonos sólo se activaba en
+   capas de polígonos; en una de líneas hacía el UNIR de líneas, que deja
+   aparte las cerradas. En IngeCAD los polígonos son, justamente, polilíneas
+   cerradas: por eso allí andaba.
+
+Qué cambia
+   En una capa de líneas, con dos o más polilíneas cerradas designadas, UNIR
+   hace lo mismo que con polígonos y que en IngeCAD: los que se tocan quedan
+   en uno con los datos del de mayor superficie, las ranuras encerradas se
+   rellenan, las islas quedan aparte y pregunta «¿Quiere crear una capa nueva
+   con el resultado? [Sí/No] <No>». El resultado sigue siendo polilínea
+   cerrada: en la misma capa (No o Intro) o en «combinados de <capa>» (Sí),
+   una capa de líneas con la línea en rojo.
+   Las líneas abiertas que se designen junto con ellas quedan como estaban
+   (se avisa). Con sólo líneas abiertas, UNIR es el de siempre.
+
+Pruebas
+   banco_combinar_qgis (parte 7: capa de líneas con las parcelas de las
+   capturas como polilíneas cerradas y una abierta; Intro y Sí, rojo como
+   línea) y banco_unir_qgis con QGIS 4.2.3: TODO OK.

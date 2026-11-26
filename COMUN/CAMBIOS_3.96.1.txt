@@ -1,0 +1,47 @@
+GeoCAD - versión 3.96.1
+=======================
+IngeCAD y QGIS: UNIR (J) con polígonos, corrección del final.
+
+Por qué
+   (Fernando, 26/11/2026, sobre la 3.96.0.) «Por defecto el resultado final
+   va a unir en la misma capa, por consiguiente no va a ser necesaria la
+   opción (M) Modificar la original: con un ENTER se confirma. Pero si
+   elegimos (N) capa Nueva recién ahí se crea la capa con las nuevas
+   entidades.» «Si optamos por la creación de una capa nueva, todas las
+   operaciones similares realizadas sobre la capa original irán a parar a la
+   capa nueva, no es necesario crear otras con cada operación.» «Al crear
+   la capa nueva identificarla con un color rojo para diferenciarla de la
+   original.» «El rojo siempre va a referirse al polígono, nunca al
+   relleno, en QGIS.»
+
+Qué cambia
+   - La pregunta del final es ahora
+         ¿Dónde dejo el resultado? [capa Nueva] <en la misma capa>:
+     Intro (o botón derecho) lo deja en la misma capa: queda el mayor con la
+     forma unida y los demás se borran; U lo deshace de una vez. Ya no se
+     recuerda la respuesta anterior: siempre es la misma capa salvo N.
+   - N lo manda a la capa «combinados de <capa>». La primera vez se crea;
+     las siguientes UNIR con N sobre la misma capa se AGREGAN a esa misma
+     capa (ya no aparecen «combinados de <capa> (2)», «(3)»...).
+       QGIS: la capa combinada recuerda de qué capa salió; si se la quitó
+       del proyecto, o el proyecto se volvió a abrir, se usa el mismo
+       «combinados de <capa>.gpkg».
+       IngeCAD: la misma capa del dibujo y la misma tabla «combinados de
+       <capa>» (los registros siguen numerándose); el U de una UNIR
+       posterior no borra la capa.
+   - La capa nueva se distingue en rojo:
+       QGIS: el borde del polígono en rojo y sin relleno (el rojo nunca va al
+       relleno).
+       IngeCAD: capa de color rojo; los polígonos van PorCapa (aunque el
+       original tuviera un color propio).
+
+Lo que NO cambia
+   La unión, los huecos encerrados, las islas, los datos del de mayor
+   superficie, y UNIR con líneas.
+
+Pruebas
+   test_unir_poligonos_ingecad (Enter en la misma capa, N en rojo y
+   PorCapa, la segunda N a la misma capa y tabla, U), banco_combinar_qgis
+   con QGIS 4.2.3 real (Enter, N con borde rojo sin relleno, la segunda N a
+   la misma capa y al mismo archivo aunque se haya quitado del proyecto) y
+   banco_unir_poligonos_ventana con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.

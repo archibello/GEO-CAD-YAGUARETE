@@ -38,7 +38,7 @@ from .units_dialog import UnitsDialog
 
 #: La barra Edición CAD por temas: primero seleccionar (3.10.1).
 EDIT_GRUPOS = (
-    ('SELECT',),
+    ('SELECT', 'FILTER'),
     ('MOVE', 'COPY', 'ROTATE', 'ERASE'),
     ('COPYBASE', 'PASTECLIP'),
     ('MIRROR', 'ALIGN', 'ALIGNCOPY', 'STRETCH', 'OFFSET'),

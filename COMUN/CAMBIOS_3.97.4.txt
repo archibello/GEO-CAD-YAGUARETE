@@ -1,0 +1,23 @@
+GeoCAD - versión 3.97.4
+=======================
+QGIS: RECORTA (TRIM) entre polilíneas cerradas en una capa de líneas, como entre polígonos.
+
+Por qué
+   (Fernando, 26/11/2026, después de la 3.97.3.) «También tendría que
+   afectar el comportamiento de la orden TRIM entre polígonos cerrados en
+   capas de polilíneas.» Decidido: «Sí, como con polígonos»; 3.97.4 aparte.
+
+Qué cambia
+   En una capa de líneas, si los objetos de corte designados son todos
+   polilíneas cerradas, RECORTA hace lo mismo que en una capa de polígonos
+   (3.58.0): con cada clic sobre otra polilínea cerrada le quita la parte
+   que se superpone con las de corte (con vista previa). Si queda partida,
+   cada pedazo es una polilínea cerrada con los mismos datos; si quedaba
+   entera adentro, se borra. desHacer (H) y U como siempre.
+   Si alguno de los cortes es una línea abierta (o Intro sin designar, el
+   modo rápido), es el RECORTA de siempre, que corta líneas.
+
+Pruebas
+   banco_recorta_qgis con QGIS 4.2.3 (parte 3c: cortes cerrados, vista
+   previa, recorte, partida en dos, entera adentro, H; un corte abierto =
+   RECORTA de siempre) y todo lo que ya probaba: TODO OK.

@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Ventana «Filtros de selección de objetos» de GeoCAD (FILTRO / FI, 3.2.0).
 
+3.97.0: en el núcleo, la misma para IngeCAD y QGIS. Las propiedades, los
+valores para «Elegir...», los campos de la tabla y los filtros guardados los
+da el filtro.py de cada programa (``from . import filtro``); el Qt, el de cada
+programa (qgis.PyQt o PySide6).
+
 Como la de AutoCAD: arriba la lista de condiciones; abajo, a la izquierda,
 «Seleccionar filtro» con su valor (operador y valor, o X / Y para los
 puntos) y los botones Agregar a la lista / Sustituir / Agregar objeto
@@ -17,47 +22,22 @@ from . import filtro as F
 
 SIN_QT = object()
 
-#: los valores que ofrece «Elegir...» para cada propiedad de texto
-ELEGIBLES = ("capa", "tipo_linea", "nombre_bloque", "estilo_texto", "estilo_cota",
-             "patron_sombreado", "conexion", "etiqueta_atributo")
 COLORES = ["PorCapa", "PorBloque", "1 - Rojo", "2 - Amarillo", "3 - Verde", "4 - Cian",
            "5 - Azul", "6 - Magenta", "7 - Blanco"]
 
 
 def _qt():
+    """El Qt del programa: el de QGIS (qgis.PyQt) o el de IngeCAD (PySide6)."""
+    try:
+        from qgis.PyQt import QtCore, QtWidgets
+        return QtCore, QtWidgets
+    except Exception:  # noqa: BLE001
+        pass
     try:
         from PySide6 import QtCore, QtWidgets
         return QtCore, QtWidgets
     except Exception:  # noqa: BLE001
         return None
-
-
-def valores_en(entidades, clave: str) -> list:
-    """Los valores distintos de una propiedad de texto en el dibujo."""
-    out = set()
-    for e in entidades:
-        try:
-            v = F.valor(e, clave)
-        except Exception:  # noqa: BLE001
-            continue
-        for x in (v if isinstance(v, (list, tuple)) else [v]):
-            if x not in (None, ""):
-                out.add(str(x))
-    return sorted(out, key=str.upper)
-
-
-def campos_en(document) -> list:
-    """Los campos de las tablas de QGIS conectadas al dibujo."""
-    out = []
-    try:
-        from . import datos, enlace
-        for key in enlace.read_links(document.doc):
-            for f in datos.LayerData(document, key).fields:
-                if f.name not in out:
-                    out.append(f.name)
-    except Exception:  # noqa: BLE001
-        pass
-    return out
 
 
 def editar(parent, conds=None, entidades=(), document=None, con_objeto=True):
@@ -67,7 +47,7 @@ def editar(parent, conds=None, entidades=(), document=None, con_objeto=True):
     QtCore, QtWidgets = qt
     dlg = _Dialogo(QtCore, QtWidgets, parent, list(conds or []), list(entidades),
                    document, con_objeto)
-    if dlg.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+    if not dlg.exec():                          # 1 = Aceptado (PyQt5, PyQt6 y PySide6)
         return None
     return {"accion": dlg.accion, "conds": list(dlg.conds)}
 
@@ -174,12 +154,16 @@ def _Dialogo(QtCore, QtWidgets, parent, conds, entidades, document, con_objeto):
             self.aviso = W.QLabel("")
             self.aviso.setWordWrap(True)
             raiz.addWidget(self.aviso)
-            botones = W.QDialogButtonBox()
-            botones.addButton("Aplicar", W.QDialogButtonBox.ButtonRole.AcceptRole)
-            botones.addButton("Cancelar", W.QDialogButtonBox.ButtonRole.RejectRole)
-            botones.accepted.connect(self._aplicar)
-            botones.rejected.connect(self.reject)
-            raiz.addWidget(botones)
+            botones = W.QHBoxLayout()            # sin enums: igual en PyQt5, PyQt6 y PySide6
+            botones.addStretch(1)
+            b = W.QPushButton("Aplicar")
+            b.setDefault(True)
+            b.clicked.connect(self._aplicar)
+            botones.addWidget(b)
+            b = W.QPushButton("Cancelar")
+            b.clicked.connect(self.reject)
+            botones.addWidget(b)
+            raiz.addLayout(botones)
             self.resize(860, 520)
 
         # ------------------------------------------------------- estado
@@ -225,7 +209,7 @@ def _Dialogo(QtCore, QtWidgets, parent, conds, entidades, document, con_objeto):
                 for w in (self.etq[1], self.ops[1], self.vals[1]):
                     w.setVisible(True)
                 self.ops[0].setVisible(False)
-                self.vals[0].addItems(campos_en(document))
+                self.vals[0].addItems(F.campos_en(document))
                 self.ops[1].addItems(ops)
                 self.elegir.setEnabled(False)
                 return
@@ -233,11 +217,11 @@ def _Dialogo(QtCore, QtWidgets, parent, conds, entidades, document, con_objeto):
             self.ops[0].addItems(ops)
             if prop.clase == "color":
                 self.vals[0].addItems(COLORES)
-            self.elegir.setEnabled(self._clave() in ELEGIBLES)
+            self.elegir.setEnabled(self._clave() in F.ELEGIBLES)
 
         def _elegir(self):
             clave = self._clave()
-            items = valores_en(entidades, clave)
+            items = F.valores_en(entidades, clave)
             if not items:
                 self.aviso.setText("No hay valores para elegir en el dibujo.")
                 return
