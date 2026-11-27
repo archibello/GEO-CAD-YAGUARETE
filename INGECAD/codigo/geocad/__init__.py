@@ -46,13 +46,15 @@ from .texto import TextoTool
 from .partir import PartirTool
 from .rumbos import RumbosTool
 from .unir_poligonos import UnirTool
+from . import sombreado
+from .sombreado_herramienta import GeoHatchTool, GeoTrimTool
 from .pegartabla import PegarTablaTool
 from .herramientas_datos import DATA_TOOLS
 from .tools import TOOL_CLASSES
 
 PLUGIN_ID = "geocad"
 PROGRAMA = "ingecad"
-VERSION = "3.98.0"
+VERSION = "3.101.0"
 ICONS = Path(__file__).parent / "iconos"
 
 
@@ -120,6 +122,7 @@ def _document_open(ctx, document):
     redibujo_imagenes.instalar()
     orden.instalar()
     uniones.instalar()
+    sombreado.instalar()
     guias_ingecad.instalar()
     barra.instalar()
     capas.instalar()
@@ -236,6 +239,14 @@ def construir_spec(completo: bool = False) -> PluginSpec:
         # hace el JOIN de IngeCAD. No se registra como JOIN: IngeCAD rechaza
         # todas las herramientas de un plugin que repite un nombre suyo.
         tools["GEOJOIN"] = UnirTool
+    if est["sombreado"]:
+        # 3.99.0: HATCH (H, BH) arranca ésta (dibujo.REEMPLAZOS): la de IngeCAD
+        # con la categoría Custom; el botón abre la ventana ya en Custom
+        tools["GEOHATCH"] = GeoHatchTool
+        tools["GEOTRIM"] = GeoTrimTool              # 3.100.0: TRIM corta sombreados
+        commands["GEOHATCHCUSTOM"] = sombreado.cmd_custom
+        aliases["HATCHCUSTOM"] = "GEOHATCHCUSTOM"
+        toolbar.append(ToolbarItem("Custom hatch (HATCH)", "GEOHATCHCUSTOM", _icon("sombreado_custom")))
     if est["estirar"]:
         tools["GEOSTRETCH"] = EstirarTool
     if est["igualar"]:
@@ -420,6 +431,8 @@ def construir_spec(completo: bool = False) -> PluginSpec:
              if est["georref"] else ())
           + ((MenuItem("Paste table (PASTETABLE)", "GEOPASTETABLE", _qgis_table_icon()),)
              if est["tablas"] else ())
+          + ((MenuItem("Custom hatch (HATCH)", "GEOHATCHCUSTOM", _icon("sombreado_custom")),)
+             if est["sombreado"] else ())
           + ((MenuItem("Bring to front (DRAWORDER)", "GEODRAWFRONT", _icon("al_frente")),
               MenuItem("Send to back (DRAWORDER)", "GEODRAWBACK", _icon("al_fondo")))
              if est["orden"] else ())
@@ -487,7 +500,7 @@ def construir_spec(completo: bool = False) -> PluginSpec:
     return PluginSpec(
         id=PLUGIN_ID,
         name="GeoCAD Yaguareté",
-        version="3.98.0",
+        version="3.101.0",
         description="GIS to CAD and CAD to GIS with QGIS: edit GeoPackage and shapefile layers with CAD tools, with backup and conflict checks. Modules are chosen at install time.",
         tools=tools,
         commands=commands,
@@ -553,6 +566,7 @@ recorte_imagen.instalar()
 redibujo_imagenes.instalar()
 orden.instalar()
 uniones.instalar()
+sombreado.instalar()
 guias_ingecad.instalar()
 pegartabla.instalar()
 pegarimagen.instalar()

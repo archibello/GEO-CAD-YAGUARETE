@@ -1,0 +1,54 @@
+GeoCAD - versión 3.99.0
+=======================
+IngeCAD: HATCH con la categoría «Custom» (líneas a 45° de una dirección,
+separación, origen, color de fondo y grosor; o sólo el color de fondo).
+
+Por qué
+   (Fernando, 27/11/2026.) «Vamos a agregar una nueva Category "Custom"»:
+   una o dos capas de líneas paralelas, perpendiculares entre sí, a una
+   distancia dada; un punto de origen y una dirección dada por un segundo
+   punto; el ángulo, siempre 45° respecto de esa dirección; color de fondo
+   aparte del color de las líneas; el espesor de las líneas; salvar
+   obstáculos, giros y quiebres con la máxima precisión; varias superficies
+   juntas o por separado respetando las islas. Y: «que una de las opciones
+   fuera también sin líneas, sólo color de fondo». Que se comporten como
+   polígonos (TRIM, JOIN, puntos de control) queda para la entrega siguiente.
+
+Qué cambia
+   Módulo nuevo «Sombreado Custom (HATCH)» (GeoCAD > Módulos; prendido).
+   En la ventana Hatch de IngeCAD, Category trae «Custom». Elegida, la
+   galería muestra una sola muestra y, en lugar de Angle y Scale:
+     Líneas        Ninguna (sólo fondo) / Simples / Dobles
+     Separación    entre líneas (las dos familias, la misma)
+     Origen        X e Y: por ahí pasa una línea de cada familia
+     Dirección     las líneas van a 45° de ella (las dobles, también a 135°)
+     Elegir en el dibujo <   la ventana se cierra, pide «Punto de origen» y
+                   «Segundo punto de la dirección» (con línea elástica,
+                   referencias a objeto, ORTO y coordenadas escritas; Intro
+                   deja el valor de antes, un número es el ángulo, Esc vuelve)
+                   y la ventana vuelve con ellos, como el Origen de AutoCAD
+     Color         el de las líneas (el de siempre)
+     Color de fondo Ninguno, un color de la lista o Elegir color...
+     Grosor        PorCapa, PorBloque, Por defecto o 0,00-2,11 mm
+     Crear sombreados separados   como AutoCAD: sin tildar, todas las áreas
+                   elegidas en un sombreado; tildada, uno por área, cada uno
+                   con sus islas (también al elegir objetos anidados)
+   HATCH (H, BH) sigue igual con cualquier otro patrón. Las áreas se eligen
+   como siempre (clic dentro u Objetos); los bordes encontrados con un clic
+   guardan sus arcos como arcos (como BOUNDARY), no como tramos.
+   Es un HATCH común: «Definido por el usuario» (_USER, Doble) con el color
+   de fondo de AutoCAD (HATCHBACKGROUNDCOLOR); sin líneas, un relleno
+   sólido del color de fondo. AutoCAD lo abre igual. IngeCAD no pintaba el
+   color de fondo de los sombreados: GeoCAD lo pinta (pantalla e impresión),
+   también en los que vienen de AutoCAD.
+   HATCHEDIT (doble clic) vuelve a abrirlo en Custom y lo cambia; pasarlo a
+   otro patrón le quita lo de Custom.
+   Botón «Sombreado Custom (SOMBREADOCUSTOM)» en la barra y el menú GeoCAD
+   y en el banco Dibujo de Administrar botones: abre HATCH ya en Custom.
+   Apagado el módulo, HATCH y su ventana quedan como los trae IngeCAD.
+
+Pruebas
+   test_sombreado (nueva) y banco_sombreado_ventana (nuevo, ventana real):
+   TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7. El banco encontró
+   que «2,13» escrito como segundo punto se leía como 2,13°: corregido (con
+   coma son coordenadas, como en AutoCAD).

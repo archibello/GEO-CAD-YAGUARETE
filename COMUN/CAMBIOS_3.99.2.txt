@@ -1,0 +1,31 @@
+GeoCAD - versión 3.99.2
+=======================
+IngeCAD: estilos guardados en la categoría Custom del HATCH.
+
+Por qué
+   (Fernando, 27/11/2026, con una captura de la ventana Hatch en Custom.)
+   «Me gustaría saber por qué dejaste tanto espacio en este sector ... ¿es
+   para guardar estilos para que podamos usarlos nuevamente?, si fuera así,
+   falta una opción de guardar estilo». Era la galería de IngeCAD con una
+   sola muestra: un descuido. Ahora ese espacio guarda los estilos.
+
+Qué cambia
+   - Botón «Guardar estilo...» en el grupo Custom: pide un nombre y guarda
+     Líneas, Separación, Giro, Color (de las líneas), Color de fondo y
+     Grosor. El origen y la dirección no se guardan: cambian con cada
+     dibujo. Con un nombre que ya existe pregunta si lo reemplaza.
+   - Cada estilo aparece en la galería de Custom, después de CUSTOM, con su
+     nombre y una muestra con sus colores. Un clic lo carga en los campos
+     (el origen y la dirección quedan como estaban); después se puede
+     retocar y Aceptar, o guardarlo de nuevo.
+   - Botón derecho sobre un estilo: Renombrar... o Borrar (pregunta antes).
+   - Los estilos quedan en ~/.config/geocad/sombreados.json: están en todos
+     los dibujos y en HATCHEDIT.
+
+Pruebas
+   test_sombreado (estilos: guardar, sin origen ni dirección, cargar,
+   renombrar, borrar, nombre vacío, archivo roto) y banco_sombreado_ventana
+   (Guardar estilo..., galería con el nombre, otra ventana, clic que carga,
+   renombrar, borrar): TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+   El banco encontró que la señal de Category llegaba con un número de más
+   a la galería: corregido antes de entregar.

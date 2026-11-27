@@ -45,6 +45,14 @@ from .modelo import AddToModelCommand
 ROJO = 1                    # color ACI de la capa nueva
 
 
+def _sombreado_activo() -> bool:
+    try:
+        from . import sombreado
+        return sombreado.activo()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 # -- geometría de las entidades ---------------------------------------------------------
 def es_poligono(e) -> bool:
     t = e.dxftype()
@@ -281,8 +289,15 @@ class UnirTool(JoinTool):
     def start(self) -> None:
         super().start()
         self._islas = None
+        self._sombreados = None             # 3.100.0: los que esperan la pregunta del estilo
 
     def on_selection(self, entities: list) -> None:
+        # 3.100.0 (Fernando): «poder unir con join» los sombreados; «sólo ... con el mismo
+        # diseño o estilo», «o otorgar el diseño del de mayor superficie al de menor»
+        sombreados = [e for e in entities if e.dxftype() == "HATCH"]
+        if len(sombreados) >= 2 and _sombreado_activo():
+            self._unir_sombreados(sombreados, len(entities) - len(sombreados))
+            return
         polis = [e for e in entities if es_poligono(e)]
         if len(polis) < 2:
             super().on_selection(entities)
@@ -326,7 +341,54 @@ class UnirTool(JoinTool):
         # 3.97.2 (Fernando): «¿Quiere crear una capa nueva con el resultado?», No de fábrica
         self.prompt(f"{C.PREGUNTA} [Sí/No] <No>:")
 
+    # -- sombreados (3.100.0) ----------------------------------------------------------
+    def _unir_sombreados(self, sombreados, otros: int) -> None:
+        from . import sombreado_edicion as E
+        if otros:
+            self.ctx.echo(f"{otros} objeto(s) que no son sombreados: quedan como estaban.")
+        if len({E.estilo(h) for h in sombreados}) > 1:
+            self._sombreados = sombreados
+            self._preguntar_estilo()
+            return
+        self._terminar_sombreados(sombreados, False)
+
+    def _preguntar_estilo(self) -> None:
+        self.prompt("Los sombreados tienen estilos distintos. ¿Unirlos con el estilo del de "
+                    "mayor superficie? [Sí/No] <No>:")
+
+    def _terminar_sombreados(self, sombreados, con_el_mayor: bool) -> None:
+        from . import sombreado_edicion as E
+        self._sombreados = None
+        cambios, aparte = E.plan_unir(sombreados, con_el_mayor)
+        if not cambios:
+            self.ctx.echo("UNIR: los sombreados designados no se tocan"
+                          + ("" if con_el_mayor or not aparte else " o son de estilos distintos")
+                          + "; no se unió nada.")
+            self.ctx.finish()
+            return
+        self.ctx.execute(E.orden_unir(cambios))
+        unidos = sum(len(m) for _mo, m, _a, _r in cambios)
+        rellenos = sum(r for *_x, r in cambios)
+        self.ctx.echo(f"{unidos} sombreado(s) unidos en {len(cambios)}"
+                      + (f", {rellenos} hueco(s) encerrado(s) relleno(s)" if rellenos else "")
+                      + ("; con el estilo del de mayor superficie." if con_el_mayor
+                         else "; cada uno con su estilo.") + " (U para deshacer)")
+        if aparte and not con_el_mayor:
+            self.ctx.echo(f"{len(aparte)} sombreado(s) de otro estilo quedaron aparte.")
+        self.ctx.finish()
+
     def on_option(self, text: str) -> bool:
+        if self._sombreados is not None:
+            t = text.strip().upper()
+            if t in ("S", "SI", "SÍ", "Y", "YES"):
+                self._terminar_sombreados(self._sombreados, True)
+            elif t in ("", "N", "NO"):
+                self._terminar_sombreados(self._sombreados, False)
+            else:
+                self.ctx.echo("Sí: todos con el estilo del de mayor superficie. "
+                              "No (o Intro): sólo los del mismo estilo.")
+                self._preguntar_estilo()
+            return True
         if self._islas is None:
             return False
         destino = C.respuesta(text)
@@ -339,6 +401,9 @@ class UnirTool(JoinTool):
         return True
 
     def on_enter(self) -> None:
+        if self._sombreados is not None:
+            self._terminar_sombreados(self._sombreados, False)
+            return
         if self._islas is None:
             super().on_enter()
             return
@@ -346,6 +411,7 @@ class UnirTool(JoinTool):
 
     def on_cancel(self) -> None:
         self._islas = None
+        self._sombreados = None
         self.ctx.finish()
 
     def _terminar(self, destino: str) -> None:

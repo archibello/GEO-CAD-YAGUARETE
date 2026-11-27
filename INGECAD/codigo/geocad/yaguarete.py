@@ -103,6 +103,7 @@ DESCRIPCIONES = {
     "EXTEND": "Alarga objetos hasta los bordes elegidos.",
     "BREAK": "Quita el pedazo de un objeto entre dos puntos.",
     "JOIN": "Une objetos en uno solo.",
+    "GEOHATCHCUSTOM": "Sombreado Custom: líneas paralelas (y perpendiculares) a una dirección, separación, origen, color de fondo y grosor; o sólo el fondo.",
     "CHAMFER": "Bisela la esquina entre dos objetos; por defecto, ochava de largo dado.",
     "MATCHPROP": "Copia las propiedades del objeto resaltado a los que se eligen (W C WP CP F ALL...).",
     "FILLET": "Redondea la esquina entre dos objetos; también polilíneas, del lado elegido.",

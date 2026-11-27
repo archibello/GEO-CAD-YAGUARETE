@@ -804,6 +804,14 @@ def _desenganchar(controlador) -> None:
 def _envolver_agarres(original):
     def entity_grips(entity):
         try:
+            if entity.dxftype() == "HATCH":
+                # 3.99.1: los sombreados con un agarre en el medio de cada lado
+                from . import sombreado
+                if sombreado.activo():
+                    return sombreado.agarres(entity)
+        except Exception:  # noqa: BLE001 -- los de IngeCAD
+            pass
+        try:
             if entity.dxftype() == "IMAGE" and _activo():
                 propios = agarres(entity)
                 if propios:
@@ -819,6 +827,15 @@ def _envolver_agarres(original):
 
 def _envolver_agarre(original):
     def apply_grip_edit(entity, grip_index, role, new_point):
+        try:
+            if entity.dxftype() == "HATCH":
+                from . import sombreado
+                if sombreado.activo():
+                    hecho = sombreado.mover_agarre(entity, grip_index, role, new_point)
+                    if hecho is not None:
+                        return hecho
+        except Exception:  # noqa: BLE001 -- lo hace IngeCAD
+            pass
         if _recortando(entity):
             return True       # con Ctrl la imagen no se escala: se recorta al soltar
         if role in (ROL_MEDIO, ROL_LADO):

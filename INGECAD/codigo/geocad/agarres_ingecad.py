@@ -73,7 +73,11 @@ def coincidentes(grips, principales) -> list:
 
 
 def tramo_recto(entidad, indice: int) -> bool:
-    """¿El agarre del medio ``indice`` es de un tramo recto de esta polilínea?"""
+    """¿El agarre del medio ``indice`` es de un tramo recto de esta polilínea (o de un
+    lado de un sombreado, 3.99.1)?"""
+    if entidad.dxftype() == "HATCH":
+        from . import sombreado
+        return sombreado.activo() and sombreado.lado_recto(entidad, indice)
     puntos = entidad.get_points("xyseb")
     tramo = indice - len(puntos)
     return 0 <= tramo < len(puntos) and not puntos[tramo][4]
@@ -81,6 +85,9 @@ def tramo_recto(entidad, indice: int) -> bool:
 
 def agregar_vertice(entidad, indice: int, punto) -> int:
     """El vértice nuevo en el tramo del agarre del medio ``indice``. Devuelve su índice."""
+    if entidad.dxftype() == "HATCH":
+        from . import sombreado
+        return sombreado.agregar_vertice(entidad, indice, punto)
     from core import ocs
 
     ocs.upright(entidad)          # como apply_grip_edit: lo que se escribe queda en el mundo
@@ -181,7 +188,7 @@ def _agregar(controlador, grip, todos) -> None:
 
 def _polilinea_recta(controlador, grip) -> bool:
     entidad = controlador.index.entity(grip[3])
-    return (entidad is not None and entidad.dxftype() == "LWPOLYLINE"
+    return (entidad is not None and entidad.dxftype() in ("LWPOLYLINE", "HATCH")
             and tramo_recto(entidad, grip[4]))
 
 
@@ -204,7 +211,7 @@ def _tomar(controlador, grip) -> None:
     if accion == "nada":
         return
     if accion == "agregar" and not _polilinea_recta(controlador, grip):
-        _echo(controlador, "GeoCAD Yaguareté: sólo se agrega un vértice en un tramo recto de una polilínea.")
+        _echo(controlador, "GeoCAD Yaguareté: sólo se agrega un vértice en un tramo recto de una polilínea o de un sombreado.")
         return
     principales = sorted(marcas, key=lambda g: g != grip) if accion == "mover_marcados" else [grip]
     if accion != "mover_marcados":

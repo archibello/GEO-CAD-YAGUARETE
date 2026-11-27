@@ -1,0 +1,42 @@
+GeoCAD - versión 3.101.0
+========================
+IngeCAD: el HATCH elige como el de AutoCAD (cuadradito, lo elegido resaltado,
+desHacer y Quitar contornos) y el sombreado no tiene agarre fuera de la figura.
+
+Por qué
+   (Fernando, 27/11/2026.) «Me gustaría que en la herramienta haya
+   disponible un puntero que me permita elegir polígonos cerrados, varios. O
+   espacios entre líneas varios, sumándolos de a uno en uno, como el puntero
+   que tiene la herramienta de AutoCAD.» Y antes: «la interpretación de las
+   geometrías debe ser como la geometría de los polígonos, no debe quedar un
+   control por fuera de la geometría como el punto que se muestra en la
+   selección».
+
+Qué cambia
+   - HATCH (H) con el módulo Sombreado Custom prendido, con cualquier patrón:
+       - al elegir, el cursor es el cuadradito de elección (sin referencias
+         a objeto, como «Designe un punto interno» de AutoCAD); al pedir el
+         origen o la dirección de Custom vuelve la cruz con referencias;
+       - se suman de a uno: un clic adentro toma ese espacio (con sus
+         islas), un clic sobre un polígono lo toma como objeto; lo elegido
+         se ve resaltado con trazos; un objeto ya elegido no se suma dos
+         veces;
+       - opciones: «Designe un punto interno u objeto o [Seleccionar
+         objetos(S)/desHacer(H)/Quitar contornos(Q)/parámeTros(T)], Intro
+         para aplicar:». desHacer quita el último elegido; Quitar contornos
+         pide clics sobre lo elegido (un objeto, o adentro de un espacio;
+         en una isla no cuenta) y con Intro o Agregar contornos (A) vuelve a
+         sumar; Intro crea el sombreado.
+   - Agarres de un sombreado: ya no está el del centro de IngeCAD (quedaba
+     fuera de la figura): sólo vértices y el medio de cada lado, como un
+     polígono; se mueve con MOVE. Un sombreado asociativo, que no tiene
+     vértices propios, lo conserva.
+   Con el módulo apagado, HATCH y sus agarres como los trae IngeCAD.
+
+Pruebas
+   test_sombreado (cuadradito y cruz, varias áreas y un objeto, resaltado,
+   repetido, desHacer, Quitar con isla, Agregar, Seleccionar objetos, con
+   patrón de IngeCAD; sin agarre central) y banco_sombreado_ventana (cursor
+   «pick» al elegir y «point» al pedir el origen, resaltado en el
+   controlador, H, Q, Intro; sin agarre central): TODO OK con IngeCAD
+   0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.

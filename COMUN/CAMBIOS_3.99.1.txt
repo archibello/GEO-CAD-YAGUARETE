@@ -1,0 +1,41 @@
+GeoCAD - versión 3.99.1
+=======================
+IngeCAD: correcciones al sombreado Custom (HATCH) de la 3.99.0.
+
+Por qué
+   (Fernando, 27/11/2026, probando la 3.99.0.) «Correcciones»: con una sola
+   capa de líneas, el trazado paralelo a la dirección ingresada; con dos,
+   una paralela y la otra perpendicular. Una geometría abierta o mal
+   cerrada se interpreta cerrada. Al elegir un objeto y no un espacio
+   interior, la opción principal es tomar el objeto. Las separaciones con
+   punto decimal (0.15), en unidades del dibujo. Todos los lados de los
+   sombreados con un agarre en el medio, desde donde agregar vértices.
+
+Qué cambia
+   - Dirección: las líneas Simples van PARALELAS a la dirección; las
+     Dobles, paralelas y perpendiculares (la 3.99.0 las ponía a 45° y 135°).
+     Campo nuevo «Giro» (0 por defecto) para girarlas respecto de la
+     dirección. Los sombreados hechos con la 3.99.0 conservan sus 45°.
+   - Separación, Origen, Dirección y Giro se escriben y se ven con punto
+     decimal (0.1500), en unidades del dibujo.
+   - Un clic SOBRE un objeto (polilínea, también abierta; círculo, elipse,
+     spline cerrada) lo toma de contorno: «Objeto elegido como contorno.».
+     Un clic ADENTRO busca el área como siempre; si no cierra, toma como
+     cerradas las polilíneas abiertas y salva las aberturas chicas entre
+     puntas sueltas (hasta 1 % de lo que se ve, como la tolerancia de
+     huecos de AutoCAD): «Contorno abierto o mal cerrado: se tomó como
+     cerrado.». Con cualquier patrón, no sólo Custom. Con Objetos, también
+     se aceptan polilíneas abiertas.
+   - Agarres: todos los sombreados (con el módulo prendido) tienen un
+     agarre en el medio de cada lado recto, como las polilíneas: arrastrarlo
+     mueve el lado; Ctrl + clic agrega un vértice ahí y queda en la mano
+     (módulo Agarres de vértices). También en los sombreados que vienen de
+     AutoCAD con bordes de lados (EdgePath). En IngeCAD 0.6.7 a 0.8.0.
+
+Pruebas
+   test_sombreado (ampliada: paralelas, Giro, los de la 3.99.0, abiertas,
+   mal cerradas, clic sobre el objeto, agarres del medio, agregar vértice,
+   caminos de lados) y banco_sombreado_ventana (ampliado: punto decimal,
+   ángulos, agarres en el controlador real, clic sobre el objeto,
+   polilínea abierta): TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+   banco_agarres_ventana sin cambios: TODO OK.

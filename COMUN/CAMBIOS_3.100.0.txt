@@ -1,0 +1,43 @@
+GeoCAD - versión 3.100.0
+========================
+IngeCAD: los sombreados se cortan con TRIM y se unen con JOIN.
+
+Por qué
+   (Fernando, 27/11/2026.) «Próximo arreglo, poder cortar con trim los hatch
+   y poder unir con join»; «tener en cuenta que sólo podemos unir hatch con
+   el mismo diseño o estilo», «o otorgar el diseño del de mayor superficie
+   al de menor superficie». Con TRIM, el clic borra la parte del sombreado
+   donde se hizo (lo elegido el mismo día).
+
+Qué cambia
+   - TRIM (TR, RECORTA): con el módulo Sombreado Custom prendido arranca la
+     de GeoCAD (GEOTRIM), que es el TRIM de IngeCAD; sólo cuando el objeto
+     del clic es un sombreado:
+       los bordes de corte elegidos (o todos, con Intro) parten el
+       sombreado; el clic borra la parte donde se hizo y el resto queda en
+       el mismo sombreado: mismo patrón, color, fondo, grosor y datos de
+       Custom, con su borde nuevo y sus islas; los arcos siguen siendo
+       arcos. Con cualquier patrón, no sólo Custom. Un U lo devuelve. Si
+       ningún borde lo atraviesa ahí: «Ningún borde de corte atraviesa el
+       sombreado en ese lugar.». Corta con líneas, polilíneas, arcos,
+       círculos, elipses y splines.
+   - JOIN (J, UNIR) con dos o más sombreados (módulos UNIR con polígonos y
+     Sombreado Custom): los que se tocan quedan en uno, como UNIR con
+     polígonos (se rellenan las ranuras encerradas entre ellos, los huecos
+     propios se respetan, los grupos aislados quedan aparte):
+       - del mismo estilo (patrón, separación o escala, ángulo, simple o
+         doble, color, fondo y grosor; el origen no cuenta) se unen;
+       - con estilos distintos pregunta «¿Unirlos con el estilo del de
+         mayor superficie? [Sí/No] <No>»: Sí, todos con el diseño del de
+         mayor superficie; No o Intro, sólo los del mismo estilo, y avisa
+         cuántos quedaron aparte.
+     Un U lo deshace.
+   Con el módulo apagado, TRIM y JOIN como los trae IngeCAD.
+
+Pruebas
+   test_sombreado (TRIM: corte con un borde y con todos, islas, Custom,
+   fondo, arco que sigue arco, sin cruce, U; JOIN: mismo estilo, estilos
+   distintos con No y con Sí, que no se tocan, módulo apagado) y
+   banco_sombreado_ventana (TR arranca GEOTRIM, el clic adentro entrega el
+   sombreado, TRIM y U, J con dos sombreados): TODO OK con IngeCAD 0.8.0,
+   0.7.0, 0.6.8.2 y 0.6.7.

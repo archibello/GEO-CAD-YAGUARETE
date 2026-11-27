@@ -1,0 +1,37 @@
+GeoCAD - versión 3.99.3
+=======================
+IngeCAD: sombreado Custom, dos correcciones de la 3.99.2.
+
+Por qué
+   (Fernando, 27/11/2026, con capturas.) «Primero, el hatch debe cubrir
+   toda la superficie, no como quedó en el ejercicio» (una L de pared: en
+   cada punta quedaba un triángulo sin sombrear). «Segundo, el ángulo
+   ingresado para otorgar dirección siempre es relativo a la dirección
+   elegida, nunca al centro de coordenadas del espacio modelo.»
+
+Qué cambia
+   - Toda la superficie. La L estaba hecha en pedazos que casi se tocan
+     (dos lados y dos puntas de 3 vértices). La 3.99.1 cerraba cada
+     polilínea abierta sobre sí misma, también las que eran un pedazo de
+     un contorno más grande, y la punta quedaba cortada por su diagonal.
+     Ahora, como la tolerancia de huecos de AutoCAD:
+       1) cada punta suelta se une con la punta suelta más cercana (de a
+          pares, primero los más cercanos, hasta 1 % de lo que se ve);
+       2) sólo se cierra sobre sí misma una polilínea cuyas dos puntas
+          quedan sueltas;
+       3) una punta que toca otro objeto, también a mitad de un tramo, no
+          está suelta.
+     Los vértices casi repetidos por esos saltos quedan en uno (sin
+     agarres dobles). La L sale con sus 8 vértices.
+   - Ángulo respecto de la dirección elegida. La Dirección se da sólo con
+     «Elegir en el dibujo <» (origen y segundo punto): en la ventana se
+     ve, no se escribe. El campo que se escribe se llama «Ángulo» (antes
+     «Giro») y gira las líneas respecto de esa dirección, nunca respecto
+     de la X del dibujo; 0 = paralelas. En «Segundo punto de la
+     dirección», un número solo ya no se toma como dirección: avisa que
+     la dirección se da con un punto.
+
+Pruebas
+   test_sombreado (con la L de la captura y el número en la dirección) y
+   banco_sombreado_ventana (Dirección de sólo lectura, Ángulo): TODO OK
+   con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.

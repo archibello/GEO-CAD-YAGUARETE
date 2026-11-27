@@ -81,6 +81,15 @@ CATALOGO = {
                "grupos aislados. Al final pregunta: capa nueva «combinados de <capa>» o "
                "modificar la original. Con líneas, UNIR queda como el de IngeCAD.",
                cambia_programa=True),
+        Modulo("sombreado", "Sombreado Custom (HATCH)",
+               "En la ventana Hatch, la categoría Custom: líneas simples paralelas a una "
+               "dirección dada con dos puntos (dobles: paralelas y perpendiculares), separación, origen, color de las líneas, "
+               "color de fondo y grosor; o sólo el color de fondo, sin líneas. Varias áreas "
+               "en un sombreado o cada una por separado, con sus islas; los arcos del borde "
+               "quedan arcos. Es un HATCH común (Definido por el usuario, con fondo), que "
+               "AutoCAD abre igual. TRIM corta sombreados (el clic borra esa parte) y JOIN "
+               "los une si son del mismo estilo. Botón en la barra y el menú GeoCAD.",
+               cambia_programa=True),
         Modulo("georref", "Imágenes georreferenciadas (GEORREF, INSERTARGEO, EXPORTARGEO, ASPECTOIMAGEN, LIMPIARPLANO)",
                "GEORREF ajusta una imagen con puntos de control, como el "
                "Georreferenciador de QGIS (Lineal, Helmert, Polinómica 1, 2 y 3, Thin "

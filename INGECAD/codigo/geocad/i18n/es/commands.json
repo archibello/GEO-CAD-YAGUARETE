@@ -173,5 +173,8 @@
   },
   "GEOEARTHMANUAL": {
     "name": "MANUALGE"
+  },
+  "GEOHATCHCUSTOM": {
+    "name": "SOMBREADOCUSTOM"
   }
 }

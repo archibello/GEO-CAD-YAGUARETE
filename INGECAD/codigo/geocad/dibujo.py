@@ -223,7 +223,9 @@ REEMPLAZOS = {"FILLET": ("empalme", "GEOFILLET"), "CHAMFER": ("chaflan", "GEOCHA
               "BLOCK": ("bloques", "GEOBLOCK"), "INSERT": ("bloques", "GEOINSERT"),
               "STRETCH": ("estirar", "GEOSTRETCH"), "TEXT": ("texto", "GEOTEXT"),
               "MATCHPROP": ("igualar", "GEOMATCHPROP"),
-              "JOIN": ("unir_poligonos", "GEOJOIN")}      # 3.96.0: con polígonos
+              "JOIN": ("unir_poligonos", "GEOJOIN"),      # 3.96.0: con polígonos
+              "HATCH": ("sombreado", "GEOHATCH"),         # 3.99.0: categoría Custom
+              "TRIM": ("sombreado", "GEOTRIM")}           # 3.100.0: también sombreados
 
 
 def herramienta_para(nombre: str, window=None, registradas=None) -> str:

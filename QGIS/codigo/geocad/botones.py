@@ -127,7 +127,7 @@ _VISTA = ("dibujo:zoomwin", "dibujo:zoomext", "dibujo:zoomprev", "dibujo:zoomobj
 TEMA_BANCO = {
     "ingecad": {
         "Modos y ajustes": ("ANGREL", "RIGHTCLICK"),
-        "Dibujo": ("RECTANG", "RUMBOS"),
+        "Dibujo": ("RECTANG", "RUMBOS", "GEOHATCHCUSTOM"),
         "Edición": (
             "SELECT", "GEOFILTER", "STRETCH", "CHAMFER", "FILLET", "BREAKATPOINT",
             "GEOPASTEORIG", "MATCHPROP", "GEODRAWFRONT", "GEODRAWBACK"),
