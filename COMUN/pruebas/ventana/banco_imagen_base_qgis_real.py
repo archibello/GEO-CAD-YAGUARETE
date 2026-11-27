@@ -589,8 +589,8 @@ def correr():
     check("complemento: módulo activo", plug.imagen_base is not None)
     claves = {a.property("geocad_id") for _b, fila in plug._bancos() for a in fila}
     check("en el banco los tres", {"geocad:imgbase_mover", "geocad:imgbase_bloquear", "geocad:imgbase_guardar"} <= claves)
-    edicion = [fila for b, fila in plug._bancos() if b == BOT.BANCO + "Edición"][0]
-    check("banco Edición", "geocad:imgbase_mover" in [a.property("geocad_id") for a in edicion])
+    edicion = [fila for b, fila in plug._bancos() if b == BOT.BANCO + "Imágenes"][0]
+    check("banco Imágenes (3.94.0)", "geocad:imgbase_mover" in [a.property("geocad_id") for a in edicion])
     en_menu = [a.property("geocad_id") for a in plug.menu.actions()]
     check("no están en el menú GeoCAD", not [i for i in en_menu if i and "imgbase" in str(i)], en_menu)
     plug.actions["imgbase_mover"].trigger()

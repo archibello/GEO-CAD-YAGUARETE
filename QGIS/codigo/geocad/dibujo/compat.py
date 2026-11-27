@@ -18,6 +18,29 @@ def enum(owner, scope, member):
     return getattr(owner, member)
 
 
+#: nombres viejos de QgsRubberBand.IconType -> Qgis.RubberBandIconType (QGIS 3.40+)
+_ICONOS_BANDA = {'ICON_NONE': 'NoIcon', 'ICON_CROSS': 'CrossPlus', 'ICON_X': 'CrossX',
+                 'ICON_BOX': 'Box', 'ICON_CIRCLE': 'Circle', 'ICON_FULL_BOX': 'BoxFilled',
+                 'ICON_DIAMOND': 'Diamond', 'ICON_FULL_DIAMOND': 'DiamondFilled',
+                 'ICON_SVG': 'SVG'}
+
+
+def icono_banda(nombre, banda=None, qgis_ns=None):
+    """El ícono de QgsRubberBand con su nombre viejo (ICON_FULL_BOX...).
+
+    QGIS 4.4 quitó algunos (ICON_FULL_BOX) de QgsRubberBand: están en
+    Qgis.RubberBandIconType (BoxFilled). Prueba el nombre viejo y, si no está,
+    el nuevo (3.102.2)."""
+    if banda is None:
+        from qgis.gui import QgsRubberBand as banda
+    try:
+        return enum(banda, 'IconType', nombre)
+    except AttributeError:
+        if qgis_ns is None:
+            from qgis.core import Qgis as qgis_ns
+        return getattr(qgis_ns.RubberBandIconType, _ICONOS_BANDA[nombre])
+
+
 def qt(scope, member):
     return enum(Qt, scope, member)
 

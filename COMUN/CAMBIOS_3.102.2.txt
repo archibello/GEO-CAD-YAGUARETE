@@ -1,0 +1,46 @@
+GeoCAD - versión 3.102.2
+========================
+QGIS 4.4: vuelve la línea de comandos (el módulo Dibujo arranca otra vez).
+
+Por qué
+   (Fernando, 27/11/2026, el día que el Flatpak de QGIS pasó a la 4.4.0.)
+   «No estoy viendo la barra de comandos.»
+
+Qué pasaba (sólo con QGIS 4.4.0; con 4.2.3 y antes andaba)
+   - QGIS 4.4 quitó de QgsRubberBand el ícono ICON_FULL_BOX (el cuadrado
+     lleno); ahora está en Qgis.RubberBandIconType.BoxFilled.
+   - Los agarres de vértices lo pedían al iniciar el módulo Dibujo: el inicio
+     se cortaba y Dibujo entero quedaba sin cargar. Sin línea de comandos, ni
+     las barras ni las órdenes de Dibujo (Capas sí cargaba). El aviso quedaba
+     en la barra de mensajes de QGIS («No se pudo iniciar Dibujo CAD:
+     AttributeError ... ICON_FULL_BOX»).
+
+Qué cambia
+   - Los íconos de las bandas se piden por su nombre de siempre y, si esa
+     QGIS ya no lo tiene, por el nuevo (dibujo/compat.py: icono_banda). Igual
+     que antes con QGIS 3 y 4.2; con 4.4, los agarres llenos se ven como
+     siempre.
+   - No hace falta tocar nada: con GeoCAD > Actualizar (o el instalador) y
+     reiniciando QGIS, la línea de comandos vuelve donde estaba.
+
+Además, en QGIS (visto al pasar todos los bancos con la 4.4.0; no es de la 4.4)
+   - IGUALARPROP (MA): al hacer clic en un objeto de destino daba «Error:
+     MatchPropCommand._add() takes from 2 to 3 positional arguments but 4
+     were given» y no copiaba nada (designar con ventana sí andaba). Venía de
+     la 3.68.0 (Objetos tapados), que agregó un dato al clic de designación.
+     Ahora copia con el clic, también cuando un clic repetido pasa al objeto
+     de abajo.
+   - Bancos puestos al día: banco_imagen_base_qgis_real busca los botones de
+     la imagen base en el banco «Imágenes» (allí están desde la 3.94.0) y
+     banco_listas_qgis arma el menú Edición real que necesita «Pegar en el
+     lugar».
+
+Probado con QGIS 4.4.0 (Flatpak, Qt 6.11.2, PyQt 6.11.0, Python 3.13)
+   - Con una copia del perfil de Fernando: sin el arreglo, Dibujo no arranca;
+     con el arreglo, la línea de comandos está abajo y visible.
+   - Los 38 bancos con QGIS real (COMUN/pruebas/ventana/*_qgis*.py): TODO OK.
+
+Pruebas
+   test_icono_banda_qgis.py (nueva): con QGIS 4.4 el ícono que falta sale del
+   nombre nuevo; con 4.2 y QGIS 3, del de siempre; ningún archivo vuelve a
+   pedir ICON_FULL_BOX directo a QgsRubberBand.

@@ -17,7 +17,7 @@ from qgis.gui import QgsRubberBand
 from ..agarres import (LIMITE_AGARRES, LIMITE_OBJETOS, accion_clic, conserva_forma,
                        indices_para_borrar, mas_cercano)
 from .commands import CommandSpec, _DrawCommand
-from .compat import enum, point_geometry_type
+from .compat import icono_banda, point_geometry_type
 from .editkit import GeomIO, search_radius
 
 #: dos vértices a menos que esto, en unidades de la capa, son el mismo
@@ -105,7 +105,7 @@ class Agarres:
     def _banda(self, color, icono, tam):
         rb = QgsRubberBand(self.canvas, point_geometry_type())
         rb.setColor(color)
-        rb.setIcon(enum(QgsRubberBand, 'IconType', icono))
+        rb.setIcon(icono_banda(icono, QgsRubberBand))     # QGIS 4.4 sin ICON_FULL_BOX (3.102.2)
         rb.setIconSize(tam)
         return rb
 

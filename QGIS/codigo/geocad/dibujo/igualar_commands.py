@@ -161,12 +161,14 @@ class MatchPropCommand(EditCommand):
         self.prompt()
 
     # ---------------------------------------------------- destinos
-    def _add(self, fids, remove=False):
+    def _add(self, fids, remove=False, soltar=None):
+        # soltar: el de antes en el mismo punto (Objetos tapados, 3.68.0); sin él, el clic
+        # en un destino daba TypeError y no copiaba nada (3.102.2)
         src_lyr, src_f = self.origen
         if src_lyr is self.layer:
             fids = [x for x in fids if x != src_f.id()]
         antes = list(self.sel)
-        super()._add(fids, remove)
+        super()._add(fids, remove, soltar)
         self.layer.removeSelection()            # que se vea ya con lo nuevo
         ya = set(antes)
         ahora = set(self.sel)

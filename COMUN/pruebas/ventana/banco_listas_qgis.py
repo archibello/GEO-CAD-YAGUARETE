@@ -46,6 +46,16 @@ iface.mapCanvas.return_value = canvas
 iface.cadDockWidget.return_value = QgsAdvancedDigitizingDockWidget(canvas)
 iface.addToolBar.side_effect = lambda nombre: ventana().addToolBar(nombre)
 iface.addDockWidget.side_effect = lambda area, dock: ventana().addDockWidget(area, dock)
+# el menú Edición y sus acciones, de verdad: «Pegar en el lugar» (3.66.0) se cuelga de ellos
+# (como banco_botones_qgis; sin esto el banco fallaba con «Mock is not iterable», 3.102.2)
+from qgis.PyQt.QtWidgets import QAction, QMenu
+_editar = QMenu("Edición", ventana())
+_copiar, _pegar = QAction("Copiar objetos espaciales", ventana()), QAction("Pegar objetos espaciales", ventana())
+_editar.addAction(_copiar)
+_editar.addAction(_pegar)
+iface.editMenu.return_value = _editar
+iface.actionCopyFeatures.return_value = _copiar
+iface.actionPasteFeatures.return_value = _pegar
 QApplication.processEvents()
 
 # como QGIS: su gancho de import anota los módulos de cada complemento, y
