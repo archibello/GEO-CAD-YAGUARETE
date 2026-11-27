@@ -343,6 +343,11 @@ def deshacer_ajuste_1x() -> None:
 #: (color RGBA, ancho en píxeles, punteado) de cada capa del resaltado, en el
 #: orden en que se dibujan
 ESTILO_RESALTADO = {
+    # HATCH (3.101.1, Fernando): lo elegido más intenso y grueso; lo que tomaría
+    # el clic, más suave; en Quitar contornos, lo que se quitaría, en rojo
+    "sombreado_elegido": ((0, 110, 255, 255), 4, False),
+    "sombreado_cursor": ((110, 195, 255, 190), 2, False),
+    "sombreado_quitar": ((235, 60, 60, 255), 4, False),
     "cursor": ((60, 170, 255, 150), 5, False),    # lo que tomaría un clic: más grueso
     "elegido": ((60, 170, 255, 255), 3, False),   # lo ya elegido: azul de selección
     "vista": ((255, 170, 40, 255), 2, True),      # el empalme que va a quedar

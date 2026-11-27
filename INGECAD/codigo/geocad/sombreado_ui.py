@@ -377,6 +377,42 @@ def _mostrar(dialog) -> None:
     dialog.adjustSize()
 
 
+class PanelContornos(QGroupBox):
+    """3.101.1 (Fernando: «quiero que haya dos opciones, una, elegir islas y otra
+    elegir objetos (polilíneas cerradas)»; antes: «ver en herramienta de hatch de
+    AutoCAD»): el grupo Contornos del cuadro de AutoCAD. Cada botón cierra la
+    ventana y sigue en el dibujo con esa forma de elegir; el marcado es la de ahora."""
+
+    BOTONES = (
+        ("pick", "Elegir islas", "Un clic en el espacio vacío toma el área con sus islas, "
+                                 "aunque toque un borde."),
+        ("select", "Elegir objetos", "Un clic sobre el borde de una polilínea cerrada "
+                                     "(o de una abierta, que se toma cerrada) la toma de contorno."),
+        ("quitar", "Quitar contornos", "Un clic sobre lo ya elegido lo quita."),
+    )
+
+    def __init__(self, dialog, settings: dict) -> None:
+        super().__init__("Contornos", dialog)
+        self._dialog = dialog
+        dialog._geo_contornos = None
+        fila = QHBoxLayout(self)
+        modo = settings.get("_modo") or "pick"
+        self.botones = {}
+        for clave, texto, ayuda in self.BOTONES:
+            b = QPushButton(texto, self)
+            b.setToolTip(ayuda)
+            b.setCheckable(True)
+            b.setChecked(clave == modo)
+            b.clicked.connect(lambda _c=False, k=clave: self._elegir(k))
+            fila.addWidget(b)
+            self.botones[clave] = b
+        self.botones["quitar"].setEnabled(bool(settings.get("_hay_elegidos")))
+
+    def _elegir(self, clave: str) -> None:
+        self._dialog._geo_contornos = clave
+        self._dialog.accept()
+
+
 def agregar(dialog, settings: dict) -> None:
     """Custom en una ventana Hatch ya armada por IngeCAD."""
     dialog.category.addItem("Custom", CLAVE_CAT)
@@ -390,6 +426,9 @@ def agregar(dialog, settings: dict) -> None:
         if isinstance(sub, QFormLayout):
             dialog._geo_form = sub
     layout.insertWidget(max(0, layout.count() - 1), panel)
+    if settings.get("_puede_pedir"):              # sólo desde GEOHATCH (no en HATCHEDIT)
+        dialog._geo_panel_contornos = PanelContornos(dialog, settings)
+        layout.insertWidget(max(0, layout.count() - 1), dialog._geo_panel_contornos)
     if dialog._geo_form is not None:
         lbl = dialog._geo_form.labelForField(dialog.color)
         if lbl is not None:
@@ -468,6 +507,9 @@ def _envolver_settings(original):
             resultado["custom"] = c
             resultado["scale"] = c["separacion"]
             resultado["angle"] = c["direccion"]
+        if getattr(self, "_geo_contornos", None):
+            resultado = dict(resultado)
+            resultado["_contornos"] = self._geo_contornos
         return resultado
     settings._puente_original = original
     settings._puente_fabrica = _envolver_settings

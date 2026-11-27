@@ -303,13 +303,13 @@ print("ok polilínea abierta y líneas mal cerradas: se toman cerradas; la L, en
 hz = Harness([custom()])
 abierta = hz.msp.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)])
 hz.servicios()
-t = H.GeoHatchTool(hz.ctx); t.start(); t.on_point((0.0, 0.0))          # sobre la polilínea
-assert t.selected == [abierta] and "Objeto elegido como contorno." in hz.msgs, hz.msgs
+t = H.GeoHatchTool(hz.ctx); t.start(); t.on_option("O"); t.on_point((0.0, 0.0))   # sobre la polilínea
+assert t.selected == [abierta] and "1 contorno agregado." in hz.msgs, hz.msgs
 t.on_enter()
 assert len(hz.hatches()) == 1 and len(hz.hatches()[0].paths) == 1
 hz = Harness([lambda _s: {"pattern": "ANSI31", "scale": 1.0, "angle": 0.0, "color": 256}])
 abierta = hz.msp.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)]); hz.servicios()
-t = H.GeoHatchTool(hz.ctx); t.start(); t.on_point((10.0, 10.0)); t.on_enter()
+t = H.GeoHatchTool(hz.ctx); t.start(); t.on_option("objetos"); t.on_point((10.0, 10.0)); t.on_enter()
 assert len(hz.hatches()) == 1 and hz.hatches()[0].dxf.pattern_name == "ANSI31", (hz.msgs, t.selected, [h.dxf.pattern_name for h in hz.hatches()])
 print("ok clic sobre un objeto lo toma de contorno, con cualquier patrón")
 
@@ -320,10 +320,11 @@ lejos = hz.msp.add_lwpolyline(cuadrado(50, 0, 5), close=True); hz.servicios()
 t = H.GeoHatchTool(hz.ctx); t.start()
 assert t.entity_picker is True and "desHacer(H)" in t._prompt_source   # cuadradito, sin referencias
 assert t.preview_segments((0.0, 0.0)) == []
-t.on_point((1.0, 1.0)); t.on_point((25.0, 5.0)); t.on_point((50.0, 0.0))   # 2 áreas y 1 objeto
+t.on_point((1.0, 1.0)); t.on_point((25.0, 5.0))
+t.on_option("O"); t.on_point((50.0, 0.0)); t.on_option("I")                # 2 áreas y 1 objeto
 assert [k for k, _d in t._elegidos] == ["area", "area", "objeto"] and t.selected == [lejos]
 assert len(t.preview_segments((0.0, 0.0))) == 4 * 4          # exterior, isla, el otro y el objeto
-t.on_point((50.0, 0.0))
+t.on_option("O"); t.on_point((50.0, 0.0)); t.on_option("I")
 assert "Ese objeto ya está elegido." in hz.msgs and len(t._elegidos) == 3
 t.on_option("H")                                    # desHacer: el último (el objeto)
 assert t.selected == [] and len(t._regiones) == 2 and len(t.preview_segments((0, 0))) == 12
@@ -355,6 +356,80 @@ t = H.GeoHatchTool(hz.ctx); t.start(); t.on_point((1.0, 1.0)); t.on_point((25.0,
 t.on_enter()
 assert len(hz.hatches()) == 1 and len(hz.hatches()[0].paths) == 2, [len(x.paths) for x in hz.hatches()]
 print("ok puntero de elección: cuadradito, lo elegido resaltado, desHacer, Quitar contornos y Agregar")
+
+# 3i. resaltado (3.101.1, Fernando): al pasar, la silueta de lo que tomaría el clic
+# (suave); lo elegido, intenso y grueso; en Quitar, en rojo lo que se quitaría
+hz = Harness([custom()])
+dibujar(hz)                                         # 0..10 con isla 3..7, y 20..30
+lejos = hz.msp.add_lwpolyline(cuadrado(50, 0, 5), close=True); hz.servicios()
+t = H.GeoHatchTool(hz.ctx); t.start(); t.PAUSA_AREA = 0.0
+r = t.resaltado((1.0, 1.0))                         # espacio vacío: el área con su isla
+assert r["sombreado_elegido"] == [] and len(r["sombreado_cursor"]) == 8, r
+assert t.resaltado((60.0, 60.0)).get("sombreado_cursor") is None   # afuera de todo: nada
+# Islas (3.101.1, Fernando: «dos opciones»): un clic sobre un borde nunca toma el objeto
+assert "Elegir islas" in t._prompt_source and "Objetos(O)" in t._prompt_source
+t.on_point((50.0, 0.0))
+assert all(k == "area" for k, _d in t._elegidos) and t.selected == [], t._elegidos
+if t._elegidos:
+    t.on_option("H")
+t.on_option("O"); assert t.mode == "select" and "Elegir objetos" in t._prompt_source \
+    and "Islas(I)" in t._prompt_source
+t.on_option("I"); assert t.mode == "pick"
+t.on_point((1.0, 1.0)); t.on_option("O")
+r = t.resaltado((50.0, 0.0))                        # Objetos, sobre el borde: el objeto
+assert len(r["sombreado_cursor"]) == 4
+assert all(50.0 <= x <= 55.0 for seg in r["sombreado_cursor"] for x, _y in seg)
+t.on_point((50.0, 0.0)); t.on_option("I")
+r = t.resaltado((25.0, 5.0))
+assert len(r["sombreado_elegido"]) == 12 and len(r["sombreado_cursor"]) == 4
+t.on_option("S")                                    # objetos: sólo por el borde, no el vacío
+assert t.resaltado((25.0, 5.0)).get("sombreado_cursor") is None
+assert len(t.resaltado((20.0, 0.0))["sombreado_cursor"]) == 4
+t.on_option("Q")
+assert t.resaltado((5.0, 5.0)).get("sombreado_quitar") is None     # en la isla: no está elegida
+assert len(t.resaltado((1.0, 1.0))["sombreado_quitar"]) == 8       # el área con su isla, en rojo
+assert len(t.resaltado((50.0, 0.0))["sombreado_quitar"]) == 4
+assert "sombreado_cursor" not in t.resaltado((1.0, 1.0))
+t.on_point((1.0, 1.0)); assert len(t._elegidos) == 1               # lo rojo es lo que se quita
+# la búsqueda del área se guarda: dentro de la misma no se vuelve a buscar
+t.on_enter()
+cuentas = []
+orig = hz.ctx.services.hatch_region_at
+hz.ctx.services.hatch_region_at = lambda p: (cuentas.append(p), orig(p))[1]
+t.mode = "pick"; t._area_cursor = None
+t.resaltado((21.0, 1.0)); t.resaltado((25.0, 5.0)); t.resaltado((29.0, 9.0))
+assert len(cuentas) == 1, cuentas
+t._area_lenta = True; t._area_cursor = None          # dibujo muy grande: al pasar no se busca
+assert t.resaltado((25.0, 5.0)).get("sombreado_cursor") is None and len(cuentas) == 1
+# pidiendo origen o dirección no se resalta nada
+t._pedir = "origen"; assert t.resaltado((1.0, 1.0)) == {}
+t._pedir = None; t._area_lenta = False
+# dibujo.py los pinta con sus estilos: elegido más grueso que lo del cursor
+assert dib.ESTILO_RESALTADO["sombreado_elegido"][1] > dib.ESTILO_RESALTADO["sombreado_cursor"][1]
+assert dib.ESTILO_RESALTADO["sombreado_elegido"][0][3] > dib.ESTILO_RESALTADO["sombreado_cursor"][0][3]
+
+
+class _Pintor:
+    def __init__(self): self.plumas = []; self.lineas = 0
+    def save(self): pass
+    def restore(self): pass
+    def setPen(self, p): self.plumas.append(p)
+    def drawLine(self, a, b): self.lineas += 1
+
+
+class _Vista:
+    def _space_to_screen(self, x, y): return (x, y)
+
+
+t.mode = "pick"
+vista = _Vista()
+vista.tool_delegate = type("D", (), {"tool": t, "_cursor": (25.0, 5.0)})()
+pintor = _Pintor()
+n = dib.dibujar_resaltado(vista, pintor, qt=(lambda c, w, s: (c, w), lambda *c: c,
+                                              lambda x, y: (x, y), type("Qt", (), {"SolidLine": 1, "DashLine": 2})))
+assert n == 4 + 4 and [w for _c, w in pintor.plumas] == [4, 2], pintor.plumas
+print("ok resaltado: al pasar la silueta (vacío con islas, u objeto por el borde), lo elegido "
+      "más intenso y grueso, en Quitar en rojo")
 
 # 3g. agarres: uno en el medio de cada lado; moverlo y agregar un vértice
 from core import select

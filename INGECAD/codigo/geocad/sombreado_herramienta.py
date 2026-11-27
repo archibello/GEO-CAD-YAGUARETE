@@ -32,10 +32,14 @@ class GeoHatchTool(HatchTool):
     #: «Designe un punto interno» de AutoCAD); al pedir origen o dirección, la cruz
     entity_picker = True
 
-    PROMPT = ("Designe un punto interno u objeto o [Seleccionar objetos(S)/desHacer(H)/"
+    #: 3.101.1 (Fernando: «quiero que haya dos opciones, una, elegir islas y otra
+    #: elegir objetos (polilíneas cerradas)»): en Islas el clic toma siempre el
+    #: espacio vacío con sus islas, aunque toque un borde; en Objetos, sólo el
+    #: objeto por su borde. Arranca en Islas.
+    PROMPT = ("Elegir islas: designe un punto interno o [Objetos(O)/desHacer(H)/"
               "Quitar contornos(Q)/parámeTros(T)], Intro para aplicar:")
-    PROMPT_SELECCION = ("Designe objetos de contorno o [desHacer(H)/Quitar contornos(Q)], "
-                        "Intro para aplicar:")
+    PROMPT_SELECCION = ("Elegir objetos: designe polilíneas cerradas o [Islas(I)/desHacer(H)/"
+                        "Quitar contornos(Q)/parámeTros(T)], Intro para aplicar:")
     PROMPT_QUITAR = "Designe contornos para quitar o [Agregar contornos(A)], Intro para volver:"
 
     def start(self) -> None:
@@ -75,6 +79,8 @@ class GeoHatchTool(HatchTool):
     def _ventana(self, primera: bool = False) -> None:
         pedido = dict(self.settings)
         pedido["_puede_pedir"] = True
+        pedido["_modo"] = self._antes if self.mode == "quitar" else self.mode
+        pedido["_hay_elegidos"] = bool(getattr(self, "_elegidos", None))
         chosen = self.ctx.ask_hatch(pedido)
         if chosen is None:
             if primera:
@@ -83,7 +89,15 @@ class GeoHatchTool(HatchTool):
                 self._prompt()
             return
         chosen = dict(chosen)
-        chosen.pop("_puede_pedir", None)
+        for k in ("_puede_pedir", "_modo", "_hay_elegidos"):
+            chosen.pop(k, None)
+        contornos = chosen.pop("_contornos", None)      # botón del grupo Contornos
+        if contornos == "quitar" and self._elegidos:
+            if self.mode != "quitar":
+                self._antes = self.mode
+            self.mode = "quitar"
+        elif contornos in ("pick", "select"):
+            self.mode = contornos
         custom = dict(chosen.get("custom") or {})
         pedir = custom.pop("_pedir", None)
         if S.es_custom(chosen):
@@ -167,30 +181,7 @@ class GeoHatchTool(HatchTool):
     def _quitar_en(self, point) -> None:
         """Quita lo elegido donde se hizo clic: el objeto tocado, o el área que
         lo contiene (la más chica, si hay varias)."""
-        servicios = self.ctx.services
-        objeto = None
-        if servicios is not None:
-            try:
-                objeto = servicios.pick_entity(point)
-            except Exception:  # noqa: BLE001
-                objeto = None
-        quitar = None
-        for i, (k, d) in enumerate(self._elegidos):
-            if k == "objeto" and d is objeto:
-                quitar = i
-        if quitar is None:
-            p = (float(point[0]), float(point[1]))
-            mejor = None
-            for i, (k, d) in enumerate(self._elegidos):
-                lazo = d[0] if k == "area" else self._puntos_de(d)
-                if k == "area" and any(len(i) >= 3 and S.adentro(p, [(q[0], q[1]) for q in i])
-                                       for i in d[1]):
-                    continue                    # en una isla: fuera del área
-                if len(lazo) >= 3 and S.adentro(p, [(q[0], q[1]) for q in lazo]):
-                    a = abs(S.area([(q[0], q[1]) for q in lazo]))
-                    if mejor is None or a < mejor[0]:
-                        mejor = (a, i)
-            quitar = mejor[1] if mejor else None
+        quitar = self._elegido_bajo(point)      # lo mismo que se ve en rojo
         if quitar is None:
             self.ctx.echo("Ahí no hay un contorno elegido.")
             return
@@ -231,10 +222,10 @@ class GeoHatchTool(HatchTool):
             self._poner(direccion=math.degrees(math.atan2(dy, dx)) % 360.0)
             self._volver()
             return
-        # 3.99.1 (Fernando): un clic SOBRE un objeto lo toma de contorno (también una
-        # polilínea abierta, que se cierra); uno ADENTRO busca el área y, si no cierra,
-        # toma como cerradas las abiertas y salva las aberturas chicas. Con todos los
-        # patrones, no sólo con Custom.
+        # 3.99.1 (Fernando): en Objetos, un clic SOBRE un objeto lo toma de contorno
+        # (también una polilínea abierta, que se cierra); en Islas (3.101.1: siempre,
+        # aunque toque un borde) busca el área y, si no cierra, toma como cerradas las
+        # abiertas y salva las aberturas chicas. Con todos los patrones.
         servicios = self.ctx.services
         objeto = None
         if servicios is not None:
@@ -245,13 +236,12 @@ class GeoHatchTool(HatchTool):
         if self.mode == "quitar":
             self._quitar_en(point)
             return
-        if objeto is not None and S.contorno_posible(objeto):
+        if self.mode == "select" and objeto is not None and S.contorno_posible(objeto):
             if objeto in self.selected:
                 self.ctx.echo("Ese objeto ya está elegido.")
             else:
                 self._sumar("objeto", objeto)
-                self.ctx.echo("Objeto elegido como contorno." if self.mode != "select"
-                              else "1 contorno agregado.")
+                self.ctx.echo("1 contorno agregado.")
             return
         if self.mode == "select":
             self.ctx.echo("Ahí no hay un objeto que sirva de contorno.")
@@ -309,8 +299,13 @@ class GeoHatchTool(HatchTool):
             self.mode = "quitar"
             self._prompt()
             return True
-        if self.mode != "select" and t in ("S", "SELECCIONAR", "SELECCIONAR OBJETOS", "SELECT"):
+        if t in ("O", "OBJETOS", "ELEGIR OBJETOS", "S", "SELECCIONAR", "SELECCIONAR OBJETOS",
+                 "SELECT"):
             self.mode = "select"
+            self._prompt()
+            return True
+        if t in ("I", "ISLAS", "ELEGIR ISLAS", "P", "PUNTOS", "PICK"):
+            self.mode = "pick"
             self._prompt()
             return True
         if t in ("T", "K", "PARAMETROS", "SETTINGS"):
@@ -323,6 +318,111 @@ class GeoHatchTool(HatchTool):
             self._volver()
             return
         super().on_cancel()
+
+    # -- resaltado (3.101.1; lo pinta dibujo.py sobre la vista de IngeCAD) ----------
+    #: el área bajo el cursor se busca a lo sumo cada tanto (segundos), y no se
+    #: busca más al pasar si una búsqueda tardó demasiado (dibujo muy grande)
+    PAUSA_AREA = 0.12
+    DEMASIADO = 0.35
+
+    def _objeto_bajo(self, cursor):
+        """El objeto de contorno cuyo BORDE está bajo el cursor (no su interior)."""
+        servicios = self.ctx.services
+        if servicios is None:
+            return None
+        try:
+            e = servicios.pick_entity(cursor)
+        except Exception:  # noqa: BLE001
+            return None
+        return e if e is not None and S.contorno_posible(e) else None
+
+    def _area_bajo(self, cursor):
+        """(exterior, islas) del espacio vacío bajo el cursor, o None. Se guarda la
+        última: mientras el cursor siga dentro de ella no se vuelve a buscar."""
+        import time
+
+        p = (float(cursor[0]), float(cursor[1]))
+        hecho = getattr(self, "_area_cursor", None)
+        if hecho is not None:
+            ext, islas = hecho
+            if S.adentro(p, [(q[0], q[1]) for q in ext]) and not any(
+                    len(i) >= 3 and S.adentro(p, [(q[0], q[1]) for q in i]) for i in islas):
+                return hecho
+        if getattr(self, "_area_lenta", False):
+            return None
+        ahora = time.monotonic()
+        if ahora - getattr(self, "_area_cuando", 0.0) < self.PAUSA_AREA:
+            return None
+        servicios = self.ctx.services
+        region = None
+        try:
+            region = servicios.hatch_region_at(p)
+            if region is None and time.monotonic() - ahora < self.DEMASIADO:
+                region = S.region_abierta(servicios, p)
+        except Exception:  # noqa: BLE001 -- un resaltado nunca corta la orden
+            region = None
+        fin = time.monotonic()
+        self._area_cuando = fin
+        if fin - ahora > self.DEMASIADO:
+            self._area_lenta = True
+        self._area_cursor = (list(region[0]), list(region[1])) if region else None
+        return self._area_cursor
+
+    def _elegido_bajo(self, cursor):
+        """Índice en _elegidos de lo que quitaría un clic (como _quitar_en)."""
+        objeto = self._objeto_bajo(cursor)
+        for i, (k, d) in enumerate(self._elegidos):
+            if k == "objeto" and d is objeto:
+                return i
+        p = (float(cursor[0]), float(cursor[1]))
+        mejor = None
+        for i, (k, d) in enumerate(self._elegidos):
+            lazo = d[0] if k == "area" else self._puntos_de(d)
+            if k == "area" and any(len(j) >= 3 and S.adentro(p, [(q[0], q[1]) for q in j])
+                                   for j in d[1]):
+                continue
+            if len(lazo) >= 3 and S.adentro(p, [(q[0], q[1]) for q in lazo]):
+                a = abs(S.area([(q[0], q[1]) for q in lazo]))
+                if mejor is None or a < mejor[0]:
+                    mejor = (a, i)
+        return mejor[1] if mejor else None
+
+    @staticmethod
+    def _tramos_de_lazos(lazos) -> list:
+        tramos = []
+        for lazo in lazos:
+            pts = [(float(q[0]), float(q[1])) for q in lazo]
+            if len(pts) >= 2:
+                tramos.extend(zip(pts, pts[1:] + pts[:1]))
+        return tramos
+
+    def _tramos_elegido(self, k, d) -> list:
+        return self._tramos_de_lazos([d[0], *d[1]] if k == "area" else [self._puntos_de(d)])
+
+    def resaltado(self, cursor) -> dict:
+        """Fernando (27/11/2026): la silueta de lo que tomaría el clic se resalta
+        al pasar por arriba, y lo ya elegido, más intenso y grueso. Con objetos,
+        por el borde; con un punto interno, el espacio vacío bajo el cursor con
+        sus islas. En Quitar contornos, en rojo lo que se quitaría."""
+        if self._pedir is not None:
+            return {}
+        datos = {"sombreado_elegido": list(self.trazos())}
+        if cursor is None:
+            return datos
+        if self.mode == "quitar":
+            i = self._elegido_bajo(cursor)
+            if i is not None:
+                datos["sombreado_quitar"] = self._tramos_elegido(*self._elegidos[i])
+            return datos
+        if self.mode == "select":
+            objeto = self._objeto_bajo(cursor)
+            if objeto is not None:
+                datos["sombreado_cursor"] = self._tramos_de_lazos([self._puntos_de(objeto)])
+        else:
+            area = self._area_bajo(cursor)
+            if area is not None:
+                datos["sombreado_cursor"] = self._tramos_de_lazos([area[0], *area[1]])
+        return datos
 
     def preview_segments(self, cursor):
         if self._pedir == "direccion":

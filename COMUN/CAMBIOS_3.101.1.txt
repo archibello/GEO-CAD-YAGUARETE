@@ -1,0 +1,43 @@
+GeoCAD - versión 3.101.1
+========================
+IngeCAD: el HATCH resalta lo que va a tomar y lo elegido, y tiene dos formas de
+elegir, Islas y Objetos, también como botones en la ventana Hatch.
+
+Por qué
+   (Fernando, 27/11/2026.) «Resaltar con un color la silueta del objeto
+   seleccionado, en dos instancias, una antes de hacer click, cuando pasamos
+   por arriba, y otra cuando hacemos click más intenso o de un mayor espesor
+   de línea colorida», «en especial cuando elegimos la opción islas de
+   selección»; con polígonos cerrados, «por los bordes, no en el espacio
+   vacío». Y: «quiero que haya dos opciones, una, elegir islas y otra elegir
+   objetos (polilíneas cerradas)». Antes, al probar la 3.101.0: «no encontré
+   el puntero solicitado, ver en herramienta de hatch de AutoCAD».
+
+Qué cambia
+   - HATCH (H) con el módulo Sombreado Custom prendido, con cualquier patrón:
+       - dos formas de elegir:
+           Elegir islas (I, con la que arranca): un clic en el espacio vacío
+           toma esa área con sus islas, aunque toque un borde;
+           Elegir objetos (O; S sigue valiendo): un clic sobre el borde de
+           una polilínea cerrada (o abierta, que se toma cerrada) la toma de
+           contorno; en el vacío no toma nada.
+         «Elegir islas: designe un punto interno o [Objetos(O)/desHacer(H)/
+         Quitar contornos(Q)/parámeTros(T)], Intro para aplicar:»
+       - al pasar por arriba se resalta, suave, la silueta de lo que tomaría
+         el clic (el área con sus islas, o el objeto); lo ya elegido, más
+         intenso y grueso; en Quitar contornos, en rojo lo que se quitaría;
+       - la ventana Hatch trae el grupo Contornos, como el cuadro de AutoCAD:
+         Elegir islas, Elegir objetos y Quitar contornos (encendido cuando ya
+         hay algo elegido); el marcado es la forma de ahora; cada botón cierra
+         la ventana y sigue en el dibujo con esa forma (T vuelve a abrirla).
+     En un dibujo muy grande, si buscar el área bajo el cursor tarda, al pasar
+     deja de buscarla (el clic sigue funcionando).
+   Con el módulo apagado, HATCH como lo trae IngeCAD.
+
+Pruebas
+   test_sombreado (resaltado al pasar, elegido y en rojo; Islas no toma el
+   objeto sobre un borde; Objetos sólo por el borde; I/O; la búsqueda del
+   área se guarda) y banco_sombreado_ventana (7d: píxeles pintados de cada
+   color en la vista real; 7e: grupo Contornos en la ventana real, marcado,
+   Quitar apagado/encendido y los tres botones): TODO OK con IngeCAD 0.8.0,
+   0.7.0, 0.6.8.2 y 0.6.7.

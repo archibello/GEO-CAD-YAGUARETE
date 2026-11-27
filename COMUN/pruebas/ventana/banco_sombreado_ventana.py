@@ -303,9 +303,10 @@ ver("clic adentro de una polilínea abierta: se toma cerrada", len(hatches()) ==
 escribir("U")
 responder(lambda d: (custom(d), ok(d)))
 escribir("H"); esperar(0.5)
+escribir("O")                    # 3.101.1: los objetos, con Elegir objetos (O)
 escribir("50,5")                                                              # sobre el lado derecho
 t = win.tools.tool
-ver("clic sobre el objeto: es el contorno", isinstance(t, SH.GeoHatchTool) and abierta in t.selected,
+ver("Objetos(O), clic sobre el objeto: es el contorno", isinstance(t, SH.GeoHatchTool) and abierta in t.selected,
     str(getattr(t, "selected", None)))
 escribir()
 ver("sombreado con ese objeto", len(hatches()) == 1)
@@ -371,6 +372,105 @@ escribir()
 hs = hatches()
 ver("Intro: el sombreado sólo con la que quedó", len(hs) == 1 and abs(E.superficie(hs[0]) - 100) < 1e-6
     and min(v[0] for v in hs[0].paths[0].vertices) >= 20, str([E.superficie(h) for h in hs]))
+
+print("7d. resaltado al pasar y al elegir (3.101.1)")
+from PySide6.QtGui import QImage, QPainter
+DIB = import_module("ingecad_plugin_geocad.dibujo")
+
+
+def pintado(x, y, rgba, r=3):
+    """Píxeles del color (rgba sobre negro) alrededor de (x, y) en lo que pinta la vista."""
+    v = win.viewport
+    img = QImage(v.width(), v.height(), QImage.Format_RGB32); img.fill(0)
+    q = QPainter(img)
+    # IngeCAD 0.8 pinta la herramienta en _draw_tool_feedback; las anteriores, en
+    # _draw_tool_preview (el que envuelve dibujo.py)
+    (getattr(v, "_draw_tool_feedback", None) or v._draw_tool_preview)(q)
+    q.end()
+    a = rgba[3] / 255.0
+    quiero = [round(c * a) for c in rgba[:3]]
+    sx, sy = v._space_to_screen(x, y)
+    n = 0
+    for i in range(int(sx) - r, int(sx) + r + 1):
+        for j in range(int(sy) - r, int(sy) + r + 1):
+            if 0 <= i < img.width() and 0 <= j < img.height():
+                c = img.pixelColor(i, j)
+                if all(abs(u - w) <= 3 for u, w in zip((c.red(), c.green(), c.blue()), quiero)):
+                    n += 1
+    return n
+
+
+def pasar(x, y):
+    sx, sy = win.viewport._space_to_screen(x, y)
+    wx, wy = win.viewport.view.screen_to_world(sx, sy)
+    win.tools.on_hover(wx, wy)
+    t = win.tools.tool
+    if t is not None:
+        t._area_cuando = 0.0                     # sin la pausa entre búsquedas
+
+
+SUAVE = DIB.ESTILO_RESALTADO["sombreado_cursor"][0]
+FUERTE = DIB.ESTILO_RESALTADO["sombreado_elegido"][0]
+ROJO = DIB.ESTILO_RESALTADO["sombreado_quitar"][0]
+borrar_sombreados()
+responder(lambda d: (custom(d, lineas="simples", separacion=1.0), ok(d)))
+escribir("H"); esperar(0.5)
+t = win.tools.tool
+pasar(5.0, 5.0)
+ver("al pasar por el vacío: su silueta, suave", pintado(0.0, 5.0, SUAVE) > 2 and pintado(0.0, 5.0, FUERTE) == 0,
+    f"{pintado(0.0, 5.0, SUAVE)} / {pintado(0.0, 5.0, FUERTE)}")
+ver("la otra área no se resalta", pintado(20.0, 5.0, SUAVE) == 0)
+escribir("5,5"); pasar(25.0, 5.0)
+ver("elegida: más intensa y gruesa; la de al lado, suave",
+    pintado(0.0, 5.0, FUERTE) > pintado(20.0, 5.0, SUAVE) > 2,
+    f"{pintado(0.0, 5.0, FUERTE)} / {pintado(20.0, 5.0, SUAVE)}")
+escribir("S"); pasar(25.0, 5.0)
+ver("Seleccionar objetos: en el vacío nada", pintado(20.0, 5.0, SUAVE) == 0)
+pasar(20.0, 5.0)
+ver("Seleccionar objetos: sobre el borde, el objeto", pintado(20.0, 5.0, SUAVE) > 2, str(pintado(20.0, 5.0, SUAVE)))
+escribir("Q"); pasar(5.0, 5.0)
+ver("Quitar contornos: en rojo lo que se quitaría", pintado(0.0, 5.0, ROJO) > 2, str(pintado(0.0, 5.0, ROJO)))
+QTest.keyClick(win.command_line.input, Qt.Key_Escape); esperar()
+
+print("7e. Contornos en la ventana: Elegir islas / Elegir objetos / Quitar (3.101.1)")
+visto = {}
+
+
+def apretar(clave):
+    def paso(d):
+        p = getattr(d, "_geo_panel_contornos", None)
+        visto["panel"] = p is not None
+        if p is None:
+            ok(d)
+            return
+        visto["marcado"] = [k for k, b in p.botones.items() if b.isChecked()]
+        visto["quitar"] = p.botones["quitar"].isEnabled()
+        p.botones[clave].click()
+    return paso
+
+
+borrar_sombreados()
+responder(apretar("select"))
+escribir("H"); esperar(0.5)
+t = win.tools.tool
+ver("la ventana trae el grupo Contornos, arranca en Elegir islas, Quitar apagado",
+    visto.get("panel") and visto.get("marcado") == ["pick"] and visto.get("quitar") is False, str(visto))
+ver("Elegir objetos: sigue en el dibujo eligiendo objetos", t is not None and t.mode == "select"
+    and "Elegir objetos" in win.command_line.prompt_label.text() if hasattr(win.command_line, "prompt_label")
+    else t.mode == "select", t.mode if t else "sin herramienta")
+escribir("20,0")
+ver("en Objetos, el clic en el borde toma el objeto", len(t.selected) == 1, str(len(t.selected)))
+responder(apretar("pick"))
+escribir("T"); esperar(0.5)
+ver("al volver a la ventana: marcado Elegir objetos, Quitar encendido",
+    visto.get("marcado") == ["select"] and visto.get("quitar") is True, str(visto))
+ver("Elegir islas desde la ventana", t.mode == "pick", t.mode)
+escribir("0,0")
+ver("en Islas, el clic sobre un borde no toma el objeto", len(t.selected) == 1, str(len(t.selected)))
+responder(apretar("quitar"))
+escribir("T"); esperar(0.5)
+ver("Quitar contornos desde la ventana", t.mode == "quitar", t.mode)
+QTest.keyClick(win.command_line.input, Qt.Key_Escape); esperar()
 
 print("8. módulo apagado")
 mods.guardar("ingecad", {**mods.estado("ingecad"), "sombreado": False})
