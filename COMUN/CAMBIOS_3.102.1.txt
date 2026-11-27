@@ -1,0 +1,38 @@
+GeoCAD - versión 3.102.1
+========================
+IngeCAD: el orden de dibujo se respeta en las hojas (espacio papel), la vista
+previa, el PDF y la impresión.
+
+Por qué
+   (Fernando, 27/11/2026, con capturas de unos muros: sombreado gris enviado
+   al fondo y borde de polilínea negra.) «En el espacio papel, las líneas del
+   Hatch permanecen sobre las polilíneas del contorno, por más que el orden
+   es que estén por detrás»; «en el espacio modelo no pasa y en la vista
+   previa es mucho más notorio»; «si esto tiene solución, es el trabajo más
+   importante del día».
+
+Qué pasaba (en IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7)
+   - En pantalla, al armar una hoja IngeCAD toma la tabla de orden de la HOJA:
+     lo del modelo que muestran sus ventanas quedaba todo como «normal», sin
+     lo enviado al fondo ni lo traído al frente.
+   - En la vista previa, el PDF y la impresión (ezdxf), cada ventana de la hoja
+     recorre el modelo en el orden en que se crearon los objetos, sin mirar la
+     tabla: un sombreado hecho después de su borde se pintaba encima.
+
+Qué cambia
+   Con el módulo Orden de dibujo prendido (el de ALFRENTE / ALFONDO):
+     - la hoja suma el orden del modelo (el de la hoja sigue mandando para lo
+       dibujado en la hoja misma);
+     - lo que muestra cada ventana de la hoja va en el orden de dibujo del
+       modelo: primero lo enviado al fondo, al final lo traído al frente.
+   El modelo no cambia: ya se veía bien. Apagado el módulo, como viene IngeCAD.
+
+Pruebas
+   test_orden (la hoja con el grupo del modelo; la ventana en orden de dibujo;
+   el orden en que pinta ezdxf la hoja: sombreado y después borde; apagado,
+   como antes) y banco_sombreado_ventana 7g (con IngeCAD real: la escena de la
+   vista previa / PDF / impresión de una hoja con un muro como el de Fernando,
+   pintada y medida: 0 píxeles grises sobre el borde negro; apagado el módulo,
+   88: el problema): TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.
+   La hoja en la pantalla (OpenGL) no se puede pintar sin pantalla en este
+   equipo: está probado el orden que recibe (el grupo del fondo), no el píxel.

@@ -131,6 +131,22 @@ assert sel.estado(c).quitar is False and sel.estado(c).pasos == []
 # sin «Select objects» en curso no se toca nada
 c._selecting_for = None
 assert sel.on_text(c, "WP") is False
+# 3.102.0: la captura escrita (C, CP) queda anotada para STRETCH, como la del ratón
+# (sin eso, ESTIRA movía entero lo que tenía que estirar); con R (quitar), no
+from core import modify
+c = Ctrl(doc); c._crossing_rects = []
+escribir("C", "21,19", "23,21")
+assert c._crossing_rects == [(21.0, 19.0, 23.0, 21.0)], c._crossing_rects
+escribir("CP", "7,1", "13,1", "13,3", "")
+if hasattr(modify, "_in_polygon"):                  # IngeCAD 0.8: STRETCH entiende polígonos
+    assert c._crossing_rects[-1] == ((7.0, 1.0), (13.0, 1.0), (13.0, 3.0)), c._crossing_rects
+else:                                               # antes, sólo rectángulos
+    assert len(c._crossing_rects) == 1
+n = len(c._crossing_rects)
+escribir("R", "C", "21,19", "23,21")
+assert len(c._crossing_rects) == n                  # quitar no agrega captura
+escribir("A", "W", "1,1", "5,3")
+assert len(c._crossing_rects) == n                  # la ventana tampoco
 print("ok designar objetos")
 
 # ------------------------------------------------------------- 5. vista previa

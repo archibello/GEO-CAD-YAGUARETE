@@ -472,6 +472,132 @@ escribir("T"); esperar(0.5)
 ver("Quitar contornos desde la ventana", t.mode == "quitar", t.mode)
 QTest.keyClick(win.command_line.input, Qt.Key_Escape); esperar()
 
+print("7f. STRETCH con sombreados (3.102.0)")
+EST = import_module("ingecad_plugin_geocad.estirar")
+S_ = import_module("ingecad_plugin_geocad.sombreado")
+borrar_sombreados()
+caja = msp.add_lwpolyline([(100, 0), (110, 0), (110, 10), (100, 10)], close=True)
+isla = msp.add_lwpolyline([(104, 4), (106, 4), (106, 6), (104, 6)], close=True)
+win.regen_in_memory() if hasattr(win, "regen_in_memory") else None
+esperar()
+responder(lambda d: (custom(d, lineas="dobles", separacion=1.0), ok(d)))
+escribir("H"); esperar(0.5); escribir("101,1"); escribir(); esperar(0.3)
+hs = hatches()
+ver("el sombreado con su isla", len(hs) == 1 and len(hs[0].paths) == 2, str([len(h.paths) for h in hs]))
+h = hs[0]
+custom_antes = S_.leer_custom(h)
+
+
+def xs(h, i=0):
+    return sorted({round(float(v[0]), 6) for v in h.paths[i].vertices}) if hasattr(h.paths[i], "vertices") \
+        else sorted({round(float(e.start[0]), 6) for e in h.paths[i].edges})
+
+
+def sin_elegidos():
+    """Esc como el usuario: lo que H dejó elegido no es una preselección de STRETCH."""
+    for _ in range(2):
+        QTest.keyClick(win.command_line.input, Qt.Key_Escape); esperar(0.1)
+    win.tools.selection = set()
+    esperar(0.1)
+
+
+win.tools.osnap_on = False
+if getattr(win.tools, "index", None) is not None:      # las polilíneas se agregaron por debajo
+    win.tools.index._dirty = True
+sin_elegidos()
+win.viewport.view.zoom_extents(90.0, -15.0, 125.0, 25.0)   # que se vea hasta 113, con margen
+win.viewport.update(); esperar(0.3)
+sin_elegidos()
+for texto in ("STRETCH", "C", "108,-1", "112,11", "", "110,0"):
+    escribir(texto)
+t = win.tools.tool
+ver("S va a ESTIRA de GeoCAD y la ventana de captura toma el sombreado y su borde",
+    isinstance(t, EST.EstirarTool) and h in t._entities and caja in t._entities
+    and t._rects and t._rects[0][0] > -1e17, f"{type(t).__name__} {getattr(t, '_rects', None)}")
+pasar(113.0, 0.0)
+ROSA = DIB.ESTILO_RESALTADO["estirado"][0]
+ver("vista previa: el borde del sombreado estirado, antes del clic", pintado(113.0, 5.0, ROSA) > 2,
+    str(pintado(113.0, 5.0, ROSA)))
+escribir("113,0"); esperar(0.3)
+h = hatches()[0]
+ver("estirado: el lado derecho en 113, la isla queda", xs(h, 0) == [100, 113] and xs(h, 1) == [104, 106],
+    f"{xs(h, 0)} {xs(h, 1)}")
+ver("la polilínea del borde, igual", sorted({round(p[0], 6) for p in caja.get_points("xy")}) == [100, 113])
+ver("sigue siendo Custom, con el mismo origen y fondo", S_.leer_custom(h) == custom_antes
+    and custom_antes is not None, str(S_.leer_custom(h)))
+win.history.undo(); esperar(0.3)
+h = hatches()[0]
+ver("un U lo deshace", xs(h, 0) == [100, 110], str(xs(h, 0)))
+sin_elegidos()
+for texto in ("STRETCH", "C", "99,-1", "112,11", "", "100,0", "100,20"):
+    escribir(texto)
+esperar(0.3)
+h = hatches()[0]
+org = S_.leer_custom(h)["origen"]
+o0 = custom_antes["origen"]
+ver("atrapado entero: se mueve entero, con la isla y el origen de Custom",
+    xs(h, 0) == [100, 110] and min(float(v[1]) for v in h.paths[0].vertices) == 20.0
+    and min(float(v[1]) for v in h.paths[1].vertices) == 24.0
+    and abs(org[0] - o0[0]) < 1e-9 and abs(org[1] - o0[1] - 20) < 1e-9, f"{o0} -> {org}")
+QTest.keyClick(win.command_line.input, Qt.Key_Escape); esperar()
+
+print("7g. hoja y vista previa: el sombreado enviado al fondo queda debajo del borde (3.102.1)")
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QColor
+from core.draworder import DrawOrderCommand
+from formats import pdf_out
+ORD = import_module("ingecad_plugin_geocad.orden")
+muro = msp.add_lwpolyline([(200, 0), (210, 0), (210, 10), (200, 10)], close=True,
+                          dxfattribs={"const_width": 0.5, "color": 7})
+gris = msp.add_hatch(color=8)                          # hecho después de su borde, como el de Fernando
+gris.paths.add_polyline_path([(200, 0), (210, 0), (210, 10), (200, 10)], is_closed=True)
+gris.set_pattern_fill("ANSI31", scale=0.2)
+gris.rgb = (150, 150, 150)                             # gris de verdad: el estilo de trazado pasa ACI 8 a negro
+DrawOrderCommand([gris], "back").do(win.document)
+hoja = win.document.doc.layouts.new("HojaOrden")
+vpo = hoja.add_viewport(center=(100, 100), size=(100, 100), view_center_point=(205, 5), view_height=12)
+vpo.dxf.status = 2
+
+
+def grises_en_el_borde():
+    """(gris sobre negro, negro) en la esquina del muro (210, 10 del modelo) de lo
+    que arma IngeCAD para la vista previa, el PDF y la impresión. Cuenta como
+    «encima» un píxel gris con negro a los dos lados (las líneas sobre el blanco
+    y los bordes suavizados del muro no cuentan)."""
+    escena = pdf_out.build_graphics_scene(win.document, "HojaOrden")
+    k = 100.0 / 12.0
+    x = 100.0 + (210.0 - 205.0) * k                    # la esquina, en la hoja
+    mejores = (0, 0)
+    for y in (100.0 - 5.0 * k, 100.0 + 5.0 * k):       # el eje Y de la escena puede ir invertido
+        img = QImage(800, 800, QImage.Format_RGB32); img.fill(QColor(255, 255, 255))
+        q = QPainter(img)
+        escena.render(q, QRectF(0, 0, 800, 800), QRectF(x - 12.0, y - 8.0, 20.0, 20.0))
+        q.end()
+        sobre = negro = 0
+
+        def rojo(i, j):
+            return img.pixelColor(i, j).red()
+        for i in range(4, 796, 2):
+            for j in range(0, 800):                # todas las filas: la línea es de 1 píxel, en diagonal
+                r = rojo(i, j)
+                if r < 40:
+                    negro += 1
+                elif r < 220 and rojo(i - 4, j) < 40 and rojo(i + 4, j) < 40:
+                    sobre += 1                     # gris con negro a los dos lados: encima del borde
+        if negro > mejores[1]:
+            mejores = (sobre, negro)
+    return mejores
+
+
+g, n = grises_en_el_borde()
+ver("vista previa: el borde negro entero, sin líneas del sombreado encima", n > 10000 and g == 0, f"gris {g} / negro {n}")
+ver("la hoja en pantalla: el sombreado en el grupo del fondo",
+    import_module("core.draworder").order_groups(hoja).get(gris.dxf.handle) == -1)
+mods.guardar("ingecad", {**mods.estado("ingecad"), "orden": False})
+g0, n0 = grises_en_el_borde()
+ver("con el módulo Orden apagado se ve el problema (líneas encima del borde)", g0 > 20, f"gris {g0} / negro {n0}")
+mods.guardar("ingecad", {**mods.estado("ingecad"), "orden": True})
+
 print("8. módulo apagado")
 mods.guardar("ingecad", {**mods.estado("ingecad"), "sombreado": False})
 d = HatchDialog(win, {"pattern": "SOLID", "scale": 1.0, "angle": 0.0, "color": 256})

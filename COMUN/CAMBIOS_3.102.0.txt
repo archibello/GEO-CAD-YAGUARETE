@@ -1,0 +1,38 @@
+GeoCAD - versión 3.102.0
+========================
+IngeCAD: ESTIRA (STRETCH) también estira los sombreados.
+
+Por qué
+   (Fernando, 27/11/2026.) «Algo maravilloso sería que "Stretch" pudiera
+   modificar también los "hatch"; esa simple diferencia nos diferenciaría de
+   AutoCAD y de muchos otros programas que utilizan "hatch".» El STRETCH de
+   IngeCAD (0.8.0 y anteriores) no toca los sombreados: ni los estira ni los
+   mueve, aunque la ventana los tome enteros.
+
+Qué cambia
+   - ESTIRA (S, STRETCH) con el módulo Estirar prendido, con cualquier patrón
+     (también Custom):
+       - si la ventana de captura toma el sombreado entero, se mueve entero,
+         con el origen de Custom y el patrón (las líneas no se corren);
+       - si toma una parte, se mueven sólo los vértices que caen adentro,
+         también los de las islas; un lado curvo sigue curvo, con la misma
+         comba, como en una polilínea;
+       - antes del clic se ve el borde estirado, como lo demás;
+       - quedan el patrón, el estilo Custom, el fondo, el grosor y las islas;
+         U lo deshace todo junto;
+       - si una isla queda fuera del borde o el borde se cruza, avisa:
+         «Atención: en un sombreado una isla quedó fuera del borde.»;
+       - un borde de elipse o spline tomado a medias no se estira (sería
+         inventarle la forma); entero, se mueve.
+   - Designar objetos: la captura escrita (C, o CP) queda anotada como la del
+     ratón. Antes ESTIRA, con C escrita, movía entero todo lo elegido (también
+     las polilíneas) en vez de estirarlo.
+   Con el módulo Estirar apagado, el STRETCH de IngeCAD.
+
+Pruebas
+   test_estirar (en parte, entero con origen y patrón, elegido sin ventana,
+   islas, avisos, arcos antihorarios y horarios en caminos de polilínea y de
+   aristas, elipse, deshacer), test_seleccion (C y CP escritas anotadas; R y
+   W no) y banco_sombreado_ventana 7f (con la ventana real: S, C escrita,
+   vista previa pintada, estirado con su polilínea, Custom igual, U, entero
+   con el origen): TODO OK con IngeCAD 0.8.0, 0.7.0, 0.6.8.2 y 0.6.7.

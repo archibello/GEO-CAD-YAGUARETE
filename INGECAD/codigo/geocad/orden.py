@@ -18,6 +18,16 @@ escena se anota dónde empieza y termina cada grupo en cada tanda (IngeCAD
 ya los guarda en ese orden) y el pintado de la escena se hace grupo por
 grupo con los mismos datos. Apagado el módulo, IngeCAD pinta como venía.
 
+Hojas e impresión (3.102.1, Fernando: «en el espacio papel, las líneas del
+Hatch permanecen sobre las polilíneas del contorno, por más que el orden es que
+estén por detrás»; «en la vista previa es mucho más notorio»). Dos causas:
+  - al armar una hoja, IngeCAD toma la tabla de orden de la HOJA; lo del modelo
+    que muestran sus ventanas quedaba todo en el grupo «normal» (sin fondo ni
+    frente): ahora la hoja suma el orden del modelo;
+  - dentro de una ventana, ezdxf (vista previa, PDF, imprimir) recorre el modelo
+    en el orden en que se crearon los objetos, sin mirar la tabla: un sombreado
+    hecho después de su borde se pintaba encima. Ahora va en el orden de dibujo.
+
 Encima de / Debajo de un objeto no se ofrece: IngeCAD sólo sabe «debajo de
 todo», «normal» y «encima de todo».
 """
@@ -273,12 +283,87 @@ def _quitar(batches, backend) -> None:
         desenvolver(Viewport, nombre, fabrica)
 
 
+def _envolver_grupos(original):
+    """order_groups de IngeCAD: en una hoja, también el orden del modelo (los
+    identificadores no se repiten entre espacios; el de la hoja manda)."""
+    def order_groups(layout):
+        grupos = original(layout)
+        if not activo():
+            return grupos
+        try:
+            if not getattr(layout, "is_any_paperspace", False):
+                return grupos
+            modelo = original(layout.doc.modelspace())
+        except Exception:  # noqa: BLE001 -- sin el del modelo, como venía
+            return grupos
+        if not modelo:
+            return grupos
+        juntos = dict(modelo)
+        juntos.update(grupos)
+        return juntos
+    order_groups._puente_original = original
+    order_groups._puente_fabrica = _envolver_grupos
+    return order_groups
+
+
+def en_orden_de_dibujo(msp, entidades) -> list:
+    """Las entidades del modelo en su orden de dibujo (la tabla SORTENTS, como
+    ezdxf.reorder.ascending): primero lo enviado al fondo, al final lo traído
+    al frente; sin tabla, como vienen."""
+    lista = list(entidades)
+    try:
+        tabla = dict(msp.get_redraw_order())
+    except Exception:  # noqa: BLE001
+        return lista
+    if not tabla:
+        return lista
+
+    def clave(par):
+        i, e = par
+        try:
+            h = e.dxf.handle
+            return (int(tabla.get(h, h), 16), i)
+        except Exception:  # noqa: BLE001 -- sin identificador: donde estaba
+            return (-1, i)
+    return [e for _i, e in sorted(enumerate(lista), key=clave)]
+
+
+def _envolver_filtro(original):
+    """filter_vp_entities de ezdxf: lo que dibuja una ventana de la hoja, en el
+    orden de dibujo del modelo (vista previa, PDF e impresión lo pintan en ese
+    orden, uno encima del otro)."""
+    def filter_vp_entities(msp, limits, bbox_cache=None):
+        entidades = original(msp, limits, bbox_cache)
+        if not activo():
+            return entidades
+        return iter(en_orden_de_dibujo(msp, entidades))
+    filter_vp_entities._puente_original = original
+    filter_vp_entities._puente_fabrica = _envolver_filtro
+    return filter_vp_entities
+
+
+def _instalar_hojas() -> None:
+    for nombre_mod, nombre, fabrica in (("core.draworder", "order_groups", _envolver_grupos),
+                                        ("ezdxf.addons.drawing.pipeline", "filter_vp_entities",
+                                         _envolver_filtro)):
+        try:
+            import importlib
+            modulo = importlib.import_module(nombre_mod)
+        except Exception:  # noqa: BLE001
+            continue
+        actual = getattr(modulo, nombre, None)
+        if actual is None or getattr(actual, "_puente_fabrica", None) is fabrica:
+            continue
+        setattr(modulo, nombre, fabrica(getattr(actual, "_puente_original", actual)))
+
+
 def instalar() -> None:
     """Se llama al cargar el plugin. El envoltorio de la escena mira
     ``activo()`` al armarla: prender o apagar el módulo no necesita
     reinstalarlos. Con un IngeCAD que ya pinta por grupos no se envuelve
     nada: los botones quedan y la pantalla es la de IngeCAD."""
     from .dibujo import envolver
+    _instalar_hojas()          # hojas e impresión: también con IngeCAD 0.8 (3.102.1)
     try:
         from render import backend, batches
     except Exception:  # noqa: BLE001

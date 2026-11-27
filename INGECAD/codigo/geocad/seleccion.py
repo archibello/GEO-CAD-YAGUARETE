@@ -370,6 +370,25 @@ def _punto_escrito(ctrl, texto: str):
     return None if p is None else (p.x, p.y)
 
 
+def _anotar_captura(ctrl, st, region) -> None:
+    """3.102.0: la captura escrita (C, CP) queda anotada como la del ratón, para
+    que STRETCH estire lo que toca y no lo mueva entero. Un polígono, sólo si el
+    STRETCH de esa IngeCAD los entiende (0.8 en adelante)."""
+    if st.quitar:
+        return
+    lista = getattr(ctrl, "_crossing_rects", None)
+    if not isinstance(lista, list):
+        return
+    if not isinstance(region[0], (int, float)):
+        try:
+            from core import modify
+        except Exception:  # noqa: BLE001
+            return
+        if not hasattr(modify, "_in_polygon"):
+            return
+    lista.append(tuple(region))
+
+
 def agregar_punto(ctrl, st, punto) -> None:
     """Un punto (clic o escrito) para la ventana, el polígono o el borde."""
     st.puntos.append((float(punto[0]), float(punto[1])))
@@ -378,6 +397,8 @@ def agregar_punto(ctrl, st, punto) -> None:
         rect = (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
         indice = _indice(ctrl)
         hits = indice.window(rect) if st.modo == "W" else indice.crossing(rect)
+        if st.modo == "C":
+            _anotar_captura(ctrl, st, rect)
         st.modo, st.puntos = "", []
         aplicar(ctrl, st, hits)
     _pedir(ctrl, st)
@@ -392,6 +413,8 @@ def cerrar(ctrl, st) -> None:
     if len(puntos) < minimo:
         _echo(ctrl, f"Hacen falta al menos {minimo} puntos.")
     else:
+        if modo == "CP":
+            _anotar_captura(ctrl, st, tuple((float(x), float(y)) for x, y in puntos))
         aplicar(ctrl, st, seleccionar(_indice(ctrl), modo, puntos))
     _pedir(ctrl, st)
 

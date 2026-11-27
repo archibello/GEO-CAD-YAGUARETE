@@ -289,4 +289,52 @@ orden.cmd_frente(ctx_con(types.SimpleNamespace(_invoke_command=llamadas.append))
 assert llamadas == ["DRAWORDER"], llamadas
 log.clear(); orden.cmd_fondo(ctx_con(None)); assert "0.6.5" in log[0], log
 
+# ---- hojas e impresión (3.102.1, Fernando: «en el espacio papel, las líneas del
+# Hatch permanecen sobre las polilíneas del contorno, por más que el orden es que
+# estén por detrás»; «en la vista previa es mucho más notorio») ----------------
+import ezdxf
+from core import draworder
+from ezdxf.addons.drawing import pipeline, Frontend, RenderContext
+from ezdxf.addons.drawing.recorder import Recorder
+d3 = Document.new(); m3 = d3.doc.modelspace()
+borde = m3.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True,
+                          dxfattribs={"const_width": 0.5, "color": 7})
+relleno = m3.add_hatch(color=8)                       # creado DESPUÉS de su borde
+relleno.paths.add_polyline_path([(0, 0), (10, 0), (10, 10), (0, 10)], is_closed=True)
+relleno.set_pattern_fill("ANSI31", scale=0.5)
+DrawOrderCommand([relleno], "back").do(d3)            # y enviado al fondo
+hoja = d3.doc.layouts.new("Hoja")
+vp = hoja.add_viewport(center=(100, 100), size=(100, 100), view_center_point=(5, 5), view_height=12)
+vp.dxf.status = 2                                      # 1 es la de la hoja misma: ezdxf no la dibuja
+# 1) la hoja en pantalla: el grupo del modelo cuenta (antes, todo en «normal»)
+assert draworder.order_groups(hoja).get(relleno.dxf.handle) == -1, draworder.order_groups(hoja)
+assert draworder.order_groups(m3).get(relleno.dxf.handle) == -1        # el modelo, como siempre
+# 2) vista previa / PDF: la ventana recorre el modelo en el orden de dibujo
+lista = list(pipeline.filter_vp_entities(m3, vp.get_modelspace_limits()))
+assert lista.index(relleno) < lista.index(borde), [e.dxftype() for e in lista]
+
+
+def orden_pintado(layout):
+    """En qué orden pinta ezdxf (lo mismo que hace la vista previa y el PDF)."""
+    vistos = []
+
+    class F(Frontend):
+        def draw_entity(self, entity, properties):
+            if entity.dxf.handle in (borde.dxf.handle, relleno.dxf.handle):
+                vistos.append(entity.dxftype())
+            return super().draw_entity(entity, properties)
+    F(RenderContext(d3.doc), Recorder()).draw_layout(layout)
+    return vistos
+
+
+assert orden_pintado(hoja) == ["HATCH", "LWPOLYLINE"], orden_pintado(hoja)
+# 3) apagado el módulo, como viene ezdxf (por orden de creación) e IngeCAD
+modulos.poner("ingecad", "orden", False)
+assert orden_pintado(hoja) == ["LWPOLYLINE", "HATCH"]
+assert relleno.dxf.handle not in draworder.order_groups(hoja)
+modulos.poner("ingecad", "orden", True)
+# sin tabla de orden, como vienen
+assert orden.en_orden_de_dibujo(ezdxf.new().modelspace(), [borde, relleno]) == [borde, relleno]
+print("ok hojas e impresión: el orden de dibujo del modelo también en las ventanas de la hoja")
+
 print("TODO OK orden de dibujo")
